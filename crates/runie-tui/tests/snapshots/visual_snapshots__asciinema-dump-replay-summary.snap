@@ -1,0 +1,7 @@
+---
+source: crates/runie-tui/tests/visual_snapshots.rs
+expression: summary
+---
+grok-full: 120x36, 72 events, final-screen-bytes=118, final-screen-lines=7
+grok-rich: 80x24, 212 events, final-screen-bytes=1948, final-screen-lines=23
+runie-full: 120x36, 1015 events, final-screen-bytes=2516, final-screen-lines=21

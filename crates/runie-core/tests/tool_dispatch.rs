@@ -10,8 +10,9 @@ use futures::stream;
 
 use runie_core::provider::stream_fn::{AssistantMessageEventStream, StreamError, StreamFn};
 use runie_core::types::{
-    AgentContext, AgentMessage, AgentTool, AgentToolResult, AssistantMessageEvent, Model,
-    SimpleStreamOptions, StopReason, ToolCall, ToolResultContent, Usage, UserContent, UserMessage,
+    AfterToolCallResult, AgentContext, AgentMessage, AgentTool, AgentToolResult,
+    AssistantMessageEvent, BeforeToolCallResult, Model, SimpleStreamOptions, StopReason, ToolCall,
+    ToolResultContent, Usage, UserContent, UserMessage,
 };
 
 use common::TestLoopBuilder;
@@ -110,6 +111,7 @@ impl StreamFn for TwoToolStream {
                         id: "f".into(),
                         name: "fast_tool".into(),
                         arguments: serde_json::json!({}),
+                        thought_signature: None,
                     },
                 },
                 AssistantMessageEvent::ToolCallDelta {
@@ -118,17 +120,20 @@ impl StreamFn for TwoToolStream {
                         id: "s".into(),
                         name: "slow_tool".into(),
                         arguments: serde_json::json!({}),
+                        thought_signature: None,
                     },
                 },
                 AssistantMessageEvent::Done {
                     stop_reason: StopReason::ToolUse,
                     usage: Usage::default(),
+                    message: None,
                 },
             ]
         } else {
             vec![AssistantMessageEvent::Done {
                 stop_reason: StopReason::Stop,
                 usage: Usage::default(),
+                message: None,
             }]
         };
         Ok(Box::pin(stream::iter(events)))
@@ -158,6 +163,8 @@ async fn parallel_end_events_fire_in_completion_order() {
 
     // Collect ToolExecutionEnd order from the bus.
     let events = test.events.lock();
+    assert_tool_lifecycle_order(&events, "fast_tool");
+    assert_tool_lifecycle_order(&events, "slow_tool");
     let ends: Vec<String> = events
         .iter()
         .filter_map(|e| match e {
@@ -173,5 +180,126 @@ async fn parallel_end_events_fire_in_completion_order() {
     assert!(
         fast_pos < slow_pos,
         "tool_execution_end should fire in completion order (fast_tool first)"
+    );
+}
+
+#[tokio::test]
+#[allow(
+    clippy::too_many_lines,
+    reason = "the hook integration keeps all override assertions in one scenario"
+)]
+async fn after_tool_call_overrides_result_fields() {
+    let (go_tx, go_rx) = tokio::sync::watch::channel(false);
+    let before_context_lengths = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let before_context_lengths_for_hook = before_context_lengths.clone();
+    let hook_context_lengths = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let hook_context_lengths_for_hook = hook_context_lengths.clone();
+    let mut builder = TestLoopBuilder::new(Arc::new(TwoToolStream {
+        calls: std::sync::Mutex::new(0),
+    }));
+    builder.hooks.before_tool_call = Some(Arc::new(move |input| {
+        let lengths = before_context_lengths_for_hook.clone();
+        Box::pin(async move {
+            assert!(!input.signal.is_cancelled());
+            lengths
+                .lock()
+                .expect("before hook context lock")
+                .push(input.context.messages.len());
+            BeforeToolCallResult::default()
+        })
+    }));
+    builder.hooks.after_tool_call = Some(Arc::new(move |input| {
+        let lengths = hook_context_lengths_for_hook.clone();
+        Box::pin(async move {
+            assert!(!input.signal.is_cancelled());
+            lengths
+                .lock()
+                .expect("hook context lock")
+                .push(input.context.messages.len());
+            AfterToolCallResult {
+                content: Some(vec![ToolResultContent::Text {
+                    text: "overridden".into(),
+                }]),
+                details: Some(serde_json::json!({"hook": true})),
+                is_error: Some(true),
+                usage: Some(Usage {
+                    output: 7,
+                    ..Usage::default()
+                }),
+                terminate: Some(true),
+            }
+        })
+    }));
+    builder = builder.tool(Arc::new(FastTool { go: go_tx }));
+    builder = builder.tool(Arc::new(SlowTool { go: go_rx }));
+    let test = builder.build();
+    let output = test
+        .actor
+        .prompt(
+            vec![AgentMessage::User(UserMessage {
+                content: vec![UserContent::Text { text: "go".into() }],
+                timestamp: 1,
+            })],
+            AgentContext::default(),
+        )
+        .await
+        .unwrap();
+    let results: Vec<_> = output
+        .iter()
+        .filter_map(|message| match message {
+            AgentMessage::ToolResult(result) => Some(result),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(results.len(), 2);
+    assert!(results.iter().all(|result| result.is_error));
+    assert!(results.iter().all(|result| result.details["hook"] == true));
+    assert!(results
+        .iter()
+        .all(|result| result.usage.as_ref().is_some_and(|usage| usage.output == 7)));
+    assert!(results.iter().all(|result| matches!(
+        result.content.first(),
+        Some(ToolResultContent::Text { text }) if text == "overridden"
+    )));
+    assert_eq!(
+        hook_context_lengths
+            .lock()
+            .expect("hook context lock")
+            .as_slice(),
+        &[2, 2]
+    );
+    assert_eq!(
+        before_context_lengths
+            .lock()
+            .expect("before hook context lock")
+            .as_slice(),
+        &[2, 2]
+    );
+}
+
+fn assert_tool_lifecycle_order(events: &[runie_core::types::AgentEvent], tool_name: &str) {
+    let start = events
+        .iter()
+        .position(|event| {
+            matches!(
+                event,
+                runie_core::types::AgentEvent::ToolExecutionStart { tool_name: name, .. }
+                    if name == tool_name
+            )
+        })
+        .expect("tool start event");
+    let end = events
+        .iter()
+        .position(|event| {
+            matches!(
+                event,
+                runie_core::types::AgentEvent::ToolExecutionEnd { tool_name: name, .. }
+                    if name == tool_name
+            )
+        })
+        .expect("tool end event");
+    assert!(
+        start < end,
+        "tool start must precede tool end for {tool_name}"
     );
 }

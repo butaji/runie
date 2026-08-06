@@ -2,12 +2,16 @@
 //!
 //! Reuses the `MockStreamFn` pattern from `runie-core` tests.
 
+#![allow(
+    clippy::too_many_lines,
+    reason = "the E2E test keeps actor setup and transcript assertions in one scenario"
+)]
+
+use std::path::PathBuf;
 use std::sync::Arc;
 
-use parking_lot::Mutex;
 use ratatui::backend::TestBackend;
 use ratatui::buffer::Buffer;
-use ratatui::layout::Rect;
 use ratatui::Terminal;
 use runie_core::events::EventBus;
 use runie_core::provider::stream_fn::{AssistantMessageEventStream, StreamError, StreamFn};
@@ -25,9 +29,12 @@ use runie_core::types::{
 use runie_tui::app::App;
 use runie_tui::event_renderer::EventRenderer;
 use runie_tui::layout::chat_layout;
+use runie_tui::yaml_runner::{assert_scenario_async, load_scenario, run_scenario};
 
 mod common;
 use common::test_model;
+
+static E2E_TEST_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 struct TwoTurnMock;
 
@@ -51,6 +58,7 @@ impl StreamFn for TwoTurnMock {
             AssistantMessageEvent::Done {
                 stop_reason: StopReason::Stop,
                 usage: Usage::default(),
+                message: None,
             },
             // After Done, recv returns Err(Closed) and the inner loop exits.
         ];
@@ -109,6 +117,9 @@ fn build_app() -> App {
         hooks: ToolExecHooks::default(),
         turn_hooks: runie_core::hooks::TurnHooks::default(),
         transform_context: None,
+        api_key_resolver: None,
+        convert_to_llm: None,
+        stream_options: Default::default(),
         abort: None,
         tool_execution_mode: ToolExecutionMode::Parallel,
         steering_mode: runie_core::types::QueueMode::OneAtATime,
@@ -120,7 +131,8 @@ fn build_app() -> App {
 
 #[tokio::test]
 async fn end_to_end_prompt_renders_transcript() {
-    let mut app = build_app();
+    let _test_lock = E2E_TEST_LOCK.lock().await;
+    let app = build_app();
     eprintln!("[e2e] built app");
 
     // Spawn the renderer.
@@ -185,4 +197,34 @@ async fn end_to_end_prompt_renders_transcript() {
         haystack.contains("world"),
         "expected 'world' in rendered buffer"
     );
+}
+
+#[tokio::test]
+async fn every_yaml_fixture_is_discovered_and_exercised() {
+    let _test_lock = E2E_TEST_LOCK.lock().await;
+    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/e2e");
+    let mut fixtures = std::fs::read_dir(&dir)
+        .unwrap_or_else(|error| panic!("cannot read {}: {error}", dir.display()))
+        .map(|entry| entry.expect("fixture directory entry").path())
+        .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("yaml"))
+        .collect::<Vec<_>>();
+    fixtures.sort();
+    assert!(
+        !fixtures.is_empty(),
+        "no YAML fixtures found in {}",
+        dir.display()
+    );
+
+    for path in fixtures {
+        let scenario = load_scenario(&path)
+            .unwrap_or_else(|error| panic!("malformed YAML fixture {}: {error}", path.display()));
+        let outcome = run_scenario(&scenario)
+            .await
+            .unwrap_or_else(|error| panic!("fixture failed to run {}: {error}", path.display()));
+        assert_scenario_async(&outcome, &scenario)
+            .await
+            .unwrap_or_else(|error| {
+                panic!("fixture assertions failed {}: {error}", path.display())
+            });
+    }
 }

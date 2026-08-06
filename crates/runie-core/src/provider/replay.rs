@@ -32,7 +32,17 @@ impl ReplayProvider {
     }
 
     pub async fn from_http(http: Arc<dyn HttpActor>) -> Result<Self, StreamError> {
-        let response = http.post(String::new()).await?;
+        Self::from_http_with_options(http, Model::default(), None).await
+    }
+
+    pub async fn from_http_with_options(
+        http: Arc<dyn HttpActor>,
+        model: Model,
+        options: Option<SimpleStreamOptions>,
+    ) -> Result<Self, StreamError> {
+        let response = http
+            .post_with_options(String::new(), model, options)
+            .await?;
         if response.status >= 400 {
             return Err(StreamError::Api(format!("HTTP {}", response.status)));
         }
@@ -57,128 +67,141 @@ impl ReplayProvider {
             if value.get("type").and_then(|v| v.as_str()) == Some("error") {
                 return Err(StreamError::Api(value.to_string()));
             }
-            if let Some(text) = value
-                .pointer("/choices/0/delta/content")
-                .and_then(|v| v.as_str())
-            {
-                if !text.is_empty() {
-                    events.push(AssistantMessageEvent::TextDelta { delta: text.into() });
-                }
-            }
-            if let Some(text) = value
-                .pointer("/choices/0/delta/reasoning_content")
-                .and_then(|v| v.as_str())
-            {
-                if !text.is_empty() {
-                    events.push(AssistantMessageEvent::ThinkingDelta { delta: text.into() });
-                }
-            }
-            if let Some(text) = value.pointer("/delta/text").and_then(|v| v.as_str()) {
-                if !text.is_empty() {
-                    events.push(AssistantMessageEvent::TextDelta { delta: text.into() });
-                }
-            }
-            if let Some(text) = value.pointer("/delta/thinking").and_then(|v| v.as_str()) {
-                if !text.is_empty() {
-                    events.push(AssistantMessageEvent::ThinkingDelta { delta: text.into() });
-                }
-            }
-            if let Some(text) = value.pointer("/delta/reasoning").and_then(|v| v.as_str()) {
-                if !text.is_empty() {
-                    events.push(AssistantMessageEvent::ThinkingDelta { delta: text.into() });
-                }
-            }
-            if let Some(partial) = value
-                .pointer("/delta/partial_json")
-                .and_then(|v| v.as_str())
-            {
-                let entry =
-                    tool_calls
-                        .entry(0)
-                        .or_insert((String::new(), String::new(), String::new()));
-                entry.2.push_str(partial);
-            }
-            if let Some(block) = value
-                .pointer("/content_block")
-                .filter(|v| v.get("type").and_then(|x| x.as_str()) == Some("tool_use"))
-            {
-                let entry = tool_calls
-                    .entry(value.get("index").and_then(|v| v.as_u64()).unwrap_or(0) as usize)
-                    .or_insert((String::new(), String::new(), String::new()));
-                entry.0 = block
-                    .get("id")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("trace-tool")
-                    .into();
-                entry.1 = block
-                    .get("name")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("unknown")
-                    .into();
-            }
-            if let Some(calls) = value
-                .pointer("/choices/0/delta/tool_calls")
-                .and_then(|v| v.as_array())
-            {
-                for call in calls {
-                    let index = call.get("index").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
-                    let entry = tool_calls.entry(index).or_insert((
-                        String::new(),
-                        String::new(),
-                        String::new(),
-                    ));
-                    if let Some(id) = call.get("id").and_then(|v| v.as_str()) {
-                        entry.0 = id.into();
-                    }
-                    if let Some(name) = call.pointer("/function/name").and_then(|v| v.as_str()) {
-                        entry.1 = name.into();
-                    }
-                    if let Some(args) = call.pointer("/function/arguments").and_then(|v| v.as_str())
-                    {
-                        entry.2.push_str(args);
-                    }
-                }
-            }
-            if value.get("type").and_then(|v| v.as_str()) == Some("message_stop") {
-                finished = true;
-            }
-            if value
-                .pointer("/delta/stop_reason")
-                .is_some_and(|v| !v.is_null())
-            {
-                finished = true;
-            }
-            if value
-                .pointer("/choices/0/finish_reason")
-                .is_some_and(|v| !v.is_null())
-            {
-                finished = true;
-            }
+            finished |= append_text_events(&value, &mut events);
+            collect_tool_calls(&value, &mut tool_calls);
+            finished |= has_terminal_marker(&value);
         }
         if !finished {
             return Err(StreamError::Invalid("trace has no terminal event".into()));
         }
-        for (_, (id, name, arguments)) in tool_calls {
-            let args = serde_json::from_str(&arguments)
-                .unwrap_or(serde_json::Value::Object(Default::default()));
-            events.push(AssistantMessageEvent::ToolCallDelta {
-                index: 0,
-                partial: ToolCall {
-                    id,
-                    name,
-                    arguments: args,
-                },
-            });
-        }
-        events.push(AssistantMessageEvent::Done {
-            stop_reason: StopReason::Stop,
-            usage: Usage::default(),
-        });
+        finish_replay_events(&mut events, tool_calls);
         Ok(Self {
             events,
             calls: Mutex::new(0),
         })
     }
+}
+
+fn finish_replay_events(
+    events: &mut Vec<AssistantMessageEvent>,
+    tool_calls: std::collections::BTreeMap<usize, (String, String, String)>,
+) {
+    for (_, (id, name, arguments)) in tool_calls {
+        let args = serde_json::from_str(&arguments)
+            .unwrap_or(serde_json::Value::Object(Default::default()));
+        events.push(AssistantMessageEvent::ToolCallDelta {
+            index: 0,
+            partial: ToolCall {
+                id,
+                name,
+                arguments: args,
+                thought_signature: None,
+            },
+        });
+    }
+    events.push(AssistantMessageEvent::Done {
+        stop_reason: StopReason::Stop,
+        usage: Usage::default(),
+        message: None,
+    });
+}
+
+fn append_text_events(value: &serde_json::Value, events: &mut Vec<AssistantMessageEvent>) -> bool {
+    for (pointer, thinking) in [
+        ("/choices/0/delta/content", false),
+        ("/delta/text", false),
+        ("/choices/0/delta/reasoning_content", true),
+        ("/delta/thinking", true),
+        ("/delta/reasoning", true),
+    ] {
+        if let Some(text) = value
+            .pointer(pointer)
+            .and_then(|v| v.as_str())
+            .filter(|s| !s.is_empty())
+        {
+            events.push(if thinking {
+                AssistantMessageEvent::ThinkingDelta { delta: text.into() }
+            } else {
+                AssistantMessageEvent::TextDelta { delta: text.into() }
+            });
+        }
+    }
+    false
+}
+
+fn collect_tool_calls(
+    value: &serde_json::Value,
+    tool_calls: &mut std::collections::BTreeMap<usize, (String, String, String)>,
+) {
+    collect_anthropic_tool_call(value, tool_calls);
+    collect_openai_tool_calls(value, tool_calls);
+}
+
+fn collect_anthropic_tool_call(
+    value: &serde_json::Value,
+    tool_calls: &mut std::collections::BTreeMap<usize, (String, String, String)>,
+) {
+    if let Some(partial) = value
+        .pointer("/delta/partial_json")
+        .and_then(|v| v.as_str())
+    {
+        tool_calls.entry(0).or_default().2.push_str(partial);
+    }
+    let Some(block) = value
+        .pointer("/content_block")
+        .filter(|v| v.get("type").and_then(|x| x.as_str()) == Some("tool_use"))
+    else {
+        return;
+    };
+    let entry = tool_calls
+        .entry(value.get("index").and_then(|v| v.as_u64()).unwrap_or(0) as usize)
+        .or_default();
+    entry.0 = block
+        .get("id")
+        .and_then(|v| v.as_str())
+        .unwrap_or("trace-tool")
+        .into();
+    entry.1 = block
+        .get("name")
+        .and_then(|v| v.as_str())
+        .unwrap_or("unknown")
+        .into();
+}
+
+fn collect_openai_tool_calls(
+    value: &serde_json::Value,
+    tool_calls: &mut std::collections::BTreeMap<usize, (String, String, String)>,
+) {
+    let Some(calls) = value
+        .pointer("/choices/0/delta/tool_calls")
+        .and_then(|v| v.as_array())
+    else {
+        return;
+    };
+    for call in calls {
+        let entry = tool_calls
+            .entry(call.get("index").and_then(|v| v.as_u64()).unwrap_or(0) as usize)
+            .or_default();
+        if let Some(id) = call.get("id").and_then(|v| v.as_str()) {
+            entry.0 = id.into();
+        }
+        if let Some(name) = call.pointer("/function/name").and_then(|v| v.as_str()) {
+            entry.1 = name.into();
+        }
+        if let Some(args) = call.pointer("/function/arguments").and_then(|v| v.as_str()) {
+            entry.2.push_str(args);
+        }
+    }
+}
+
+fn has_terminal_marker(value: &serde_json::Value) -> bool {
+    value.get("type").and_then(|v| v.as_str()) == Some("message_stop")
+        || value
+            .pointer("/delta/stop_reason")
+            .is_some_and(|v| !v.is_null())
+        || value
+            .pointer("/choices/0/finish_reason")
+            .is_some_and(|v| !v.is_null())
 }
 
 impl ReplayProvider {
@@ -202,6 +225,7 @@ impl StreamFn for ReplayProvider {
             return Ok(Box::pin(stream::iter(vec![AssistantMessageEvent::Done {
                 stop_reason: StopReason::Stop,
                 usage: Usage::default(),
+                message: None,
             }])));
         }
         Ok(Box::pin(stream::iter(self.events.clone())))

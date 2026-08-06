@@ -1,0 +1,26 @@
+name: visual-tool-structured
+description: Structured tool updates render as separate indented output rows.
+initial_prompt: "read structured output"
+tools:
+  - name: structured_tool
+    kind: structured_update
+events:
+  - start
+  - tool_call:
+      name: structured_tool
+      args: { value: "rows" }
+  - done: { stop_reason: tool_use }
+assertions:
+  transcript_contains:
+    - first
+    - second
+  visual:
+    cols: 80
+    rows: 30
+    screen_text:
+      - "◆ structured_tool"
+      - "first"
+      - "second"
+      - "✓"
+    screen_excludes:
+      - "panicked"

@@ -63,8 +63,11 @@ mod tests {
                 id: "x".into(),
                 name: "echo".into(),
                 arguments: serde_json::json!({}),
+                thought_signature: None,
             },
             args: serde_json::json!({}),
+            context: crate::types::AgentContext::default(),
+            signal: tokio_util::sync::CancellationToken::new(),
         });
         assert!(!r.block);
     }

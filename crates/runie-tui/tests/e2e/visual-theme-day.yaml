@@ -1,0 +1,23 @@
+name: visual-theme-day
+description: ThemeChanged events update the actor-owned feed projection through Opaline tokens.
+initial_prompt: "Hey"
+events:
+  - theme: grok_day
+  - start
+  - text_delta: "Hello from the day theme"
+  - done: { stop_reason: stop }
+assertions:
+  events:
+    - theme_changed
+    - agent_start
+    - message_start
+    - message_update
+    - message_end
+    - agent_end
+  visual:
+    cols: 80
+    rows: 24
+    screen_text:
+      - "❯"
+      - "Hello from the day theme"
+      - "Enter:send"

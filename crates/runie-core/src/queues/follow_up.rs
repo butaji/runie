@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use tokio::sync::{mpsc, Notify};
 
+use crate::task_owner::{mailbox_call, spawn_actor_worker, TaskOwner};
 use crate::types::AgentMessage;
 
 #[derive(Debug, Clone, Default)]
@@ -14,50 +15,59 @@ pub struct FollowUpQueueSnapshot {
 
 #[derive(Debug)]
 enum FollowUpCommand {
-    Push(AgentMessage),
+    Push(Box<AgentMessage>),
     DrainOne(mpsc::Sender<Option<AgentMessage>>),
     DrainAll(mpsc::Sender<Vec<AgentMessage>>),
     Clear,
+    Len(mpsc::Sender<usize>),
 }
 
 #[derive(Clone)]
 pub struct FollowUpQueueActor {
     tx: mpsc::Sender<FollowUpCommand>,
     notify: Arc<Notify>,
+    _worker: Arc<TaskOwner>,
 }
 
 impl FollowUpQueueActor {
     pub fn new() -> Self {
-        let (tx, rx) = mpsc::channel(64);
         let notify = Arc::new(Notify::new());
 
         // OWNER: FollowUpQueueActor
-        tokio::spawn(async move {
+        let (tx, worker) = spawn_actor_worker!(64, move |rx| async move {
             run_follow_up_worker(rx).await;
         });
 
-        Self { tx, notify }
+        Self {
+            tx,
+            notify,
+            _worker: worker,
+        }
     }
 
     pub async fn push(&self, msg: AgentMessage) {
-        let _ = self.tx.send(FollowUpCommand::Push(msg)).await;
+        let _ = self.tx.send(FollowUpCommand::Push(Box::new(msg))).await;
         self.notify.notify_one();
     }
 
     pub async fn drain_one(&self) -> Option<AgentMessage> {
-        let (reply_tx, mut reply_rx) = mpsc::channel(1);
-        let _ = self.tx.send(FollowUpCommand::DrainOne(reply_tx)).await;
-        reply_rx.recv().await.flatten()
+        mailbox_call!(self.tx, FollowUpCommand::DrainOne, None)
     }
 
     pub async fn drain_all(&self) -> Vec<AgentMessage> {
-        let (reply_tx, mut reply_rx) = mpsc::channel(1);
-        let _ = self.tx.send(FollowUpCommand::DrainAll(reply_tx)).await;
-        reply_rx.recv().await.unwrap_or_default()
+        mailbox_call!(self.tx, FollowUpCommand::DrainAll, Vec::new())
     }
 
     pub async fn clear(&self) {
         let _ = self.tx.send(FollowUpCommand::Clear).await;
+    }
+
+    pub async fn len(&self) -> usize {
+        mailbox_call!(self.tx, FollowUpCommand::Len, 0)
+    }
+
+    pub async fn is_empty(&self) -> bool {
+        self.len().await == 0
     }
 
     pub fn notifier(&self) -> Arc<Notify> {
@@ -76,7 +86,7 @@ async fn run_follow_up_worker(mut rx: mpsc::Receiver<FollowUpCommand>) {
 
     while let Some(cmd) = rx.recv().await {
         match cmd {
-            FollowUpCommand::Push(msg) => queue.push(msg),
+            FollowUpCommand::Push(msg) => queue.push(*msg),
             FollowUpCommand::DrainOne(reply) => {
                 // `Vec::drain(..1)` panics on an empty queue; pop instead.
                 let popped = if queue.is_empty() {
@@ -91,6 +101,9 @@ async fn run_follow_up_worker(mut rx: mpsc::Receiver<FollowUpCommand>) {
                 let _ = reply.send(drained).await;
             }
             FollowUpCommand::Clear => queue.clear(),
+            FollowUpCommand::Len(reply) => {
+                let _ = reply.send(queue.len()).await;
+            }
         }
     }
 }
@@ -118,5 +131,16 @@ mod tests {
         assert_eq!(all.len(), 2);
         assert_eq!(all[0].timestamp(), 1);
         assert_eq!(all[1].timestamp(), 2);
+    }
+
+    #[tokio::test]
+    async fn length_and_empty_projection_follow_queue_owner() {
+        let q = FollowUpQueueActor::new();
+        assert!(q.is_empty().await);
+        q.push(msg(1)).await;
+        assert_eq!(q.len().await, 1);
+        assert!(!q.is_empty().await);
+        q.clear().await;
+        assert!(q.is_empty().await);
     }
 }

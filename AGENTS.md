@@ -2,9 +2,10 @@
 
 Every change needs fast automatic tests (unit + replay). No `sleep()` in tests.
 
-There is **no GitHub CI** for this repository. Do not create or reference one
-(no `.github/workflows`, no GitHub Actions). All verification is local via the
-`justfile` (`just ci`: fmt-check + clippy + lint + test) or `cargo` directly.
+There is **no GitHub CI** for this repository. Do not create, restore, or
+reference GitHub Actions or any `.github/workflows` configuration; remove it if
+encountered. All verification is local via the `justfile` (`just ci`:
+fmt-check + clippy + lint + test) or `cargo` directly.
 
 ## Architecture Principles
 
@@ -13,6 +14,9 @@ There is **no GitHub CI** for this repository. Do not create or reference one
 - **Async, reactive, pure functions.** State transitions are pure functions of the event; side effects live in actors; the whole system is async and reactive (no blocking waits, no polling loops).
 - **TUI is MVU + actors.** The TUI is a Model-View-Update loop: the model (view state) is held by actors, the view is a pure function of the model, and updates are driven by events/messages. The TUI does not mutate core state directly.
 - Every spawned task has an owner (`JoinHandle`, `JoinSet`, or completion event). No orphan `tokio::spawn`.
+- TUI render paths are pure reads: resolve filesystem/process metadata before
+  entering the redraw loop and cache it; never spawn commands or block while
+  drawing a frame.
 
 ## File Structure
 

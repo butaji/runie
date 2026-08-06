@@ -1,5 +1,11 @@
 # p05 — Core loop: auto-continue after tool batches
 
+**Latest parity note (2026-08-05):** Steering and follow-up queue polling now
+matches pi's two-phase loop: steering is checked after every turn, while
+follow-up messages are drained only when no tool continuation or steering
+message remains. This prevents follow-ups from being consumed during an
+unfinished tool batch.
+
 **Parity target:** pi-agent-core inner-loop continuation.
 
 ## Pi reference

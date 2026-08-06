@@ -1,0 +1,16 @@
+name: visual-command-palette
+description: Grok command palette opens, filters entries, and preserves actor-owned query state.
+events: []
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    steps:
+      - Ctrl+P
+      - "new"
+    screen_text:
+      - "Echo Command Query Title"
+      - "> new"
+      - "New Session"
+    screen_excludes:
+      - "Resume Session"

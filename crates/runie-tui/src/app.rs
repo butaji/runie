@@ -1,17 +1,22 @@
 //! `App` — the top-level TUI controller.
 
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 
+use crossterm::event::KeyEvent;
 use parking_lot::Mutex;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use runie_core::events::EventBus;
 use runie_core::r#loop::LoopActor;
-use runie_core::types::AgentMessage;
+use runie_core::types::{AgentEvent, AgentMessage};
+use tokio::sync::{mpsc, watch};
 
 use crate::event_renderer::EventRenderer;
-use crate::layout::chat_layout;
-use crate::widgets::{PromptOutcome, PromptWidget, Scrollback, Status, StatusBar};
+use crate::layout::chat_layout_with_prompt_height;
+use crate::scrollback_actor::ScrollbackActor;
+use crate::status_actor::StatusActor;
+use crate::widgets::{PromptOutcome, PromptWidget, Scrollback, StatusBar};
 
 #[derive(Debug)]
 pub enum AppExit {
@@ -19,24 +24,367 @@ pub enum AppExit {
     Error(String),
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct UiState {
+    pub show_welcome: bool,
+    pub shortcuts_open: bool,
+    pub command_palette_open: bool,
+    pub command_palette_query: String,
+    pub command_palette_index: usize,
+    pub last_palette_command: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UiMsg {
+    HideWelcome,
+    ToggleShortcuts,
+    ToggleCommandPalette,
+    CommandPaletteChar(char),
+    CommandPaletteBackspace,
+    CommandPaletteMove(isize),
+    ActivateCommandPalette,
+    Reset,
+}
+
+impl UiState {
+    pub fn new() -> Self {
+        Self {
+            show_welcome: false,
+            shortcuts_open: false,
+            command_palette_open: false,
+            command_palette_query: String::new(),
+            command_palette_index: 0,
+            last_palette_command: None,
+        }
+    }
+
+    pub fn with_welcome() -> Self {
+        Self {
+            show_welcome: true,
+            shortcuts_open: false,
+            command_palette_open: false,
+            command_palette_query: String::new(),
+            command_palette_index: 0,
+            last_palette_command: None,
+        }
+    }
+
+    pub fn update(mut self, msg: UiMsg) -> Self {
+        match msg {
+            UiMsg::HideWelcome => self.show_welcome = false,
+            UiMsg::ToggleShortcuts => self.shortcuts_open = !self.shortcuts_open,
+            UiMsg::ToggleCommandPalette => {
+                self.command_palette_open = !self.command_palette_open;
+                if !self.command_palette_open {
+                    self.command_palette_query.clear();
+                    self.command_palette_index = 0;
+                }
+            }
+            UiMsg::CommandPaletteChar(ch) => self.command_palette_query.push(ch),
+            UiMsg::CommandPaletteBackspace => {
+                self.command_palette_query.pop();
+            }
+            UiMsg::CommandPaletteMove(delta) => {
+                self.command_palette_index =
+                    self.command_palette_index.saturating_add_signed(delta);
+            }
+            UiMsg::ActivateCommandPalette => {
+                self.last_palette_command = crate::widgets::CommandPaletteWidget::selected_entry(
+                    &self.command_palette_query,
+                    self.command_palette_index,
+                )
+                .map(str::to_owned);
+                self.command_palette_open = false;
+                self.command_palette_query.clear();
+                self.command_palette_index = 0;
+            }
+            UiMsg::Reset => self = Self::new(),
+        }
+        self
+    }
+}
+
+struct UiTaskOwner(tokio::task::JoinHandle<()>);
+
+impl Drop for UiTaskOwner {
+    fn drop(&mut self) {
+        self.0.abort();
+    }
+}
+
+#[derive(Clone)]
+pub struct UiActor {
+    tx: mpsc::Sender<(UiMsg, tokio::sync::oneshot::Sender<()>)>,
+    snapshot: watch::Receiver<UiState>,
+    _owner: Arc<UiTaskOwner>,
+}
+
+impl UiActor {
+    pub fn new(bus: &EventBus) -> Self {
+        Self::new_with_welcome(bus, false)
+    }
+
+    pub fn new_with_welcome(bus: &EventBus, show_welcome: bool) -> Self {
+        let (tx, mut rx) = mpsc::channel::<(UiMsg, tokio::sync::oneshot::Sender<()>)>(32);
+        let initial = if show_welcome {
+            UiState::with_welcome()
+        } else {
+            UiState::new()
+        };
+        let (snapshot_tx, snapshot) = watch::channel(initial.clone());
+        let mut events = bus.subscribe();
+        // OWNER: UiActor — mailbox worker is retained by the actor handle.
+        let owner = Arc::new(UiTaskOwner(tokio::spawn(async move {
+            let mut state = initial;
+            loop {
+                tokio::select! {
+                    message = rx.recv() => {
+                        let Some((message, applied)) = message else { break };
+                        state = state.update(message);
+                        let _ = snapshot_tx.send(state.clone());
+                        let _ = applied.send(());
+                    }
+                    event = events.recv() => {
+                        if matches!(event, Ok(AgentEvent::Reset)) {
+                            state = state.update(UiMsg::Reset);
+                            let _ = snapshot_tx.send(state.clone());
+                        }
+                    }
+                }
+            }
+        })));
+        Self {
+            tx,
+            snapshot,
+            _owner: owner,
+        }
+    }
+
+    pub async fn send(&self, message: UiMsg) {
+        let (applied, acknowledged) = tokio::sync::oneshot::channel();
+        if self.tx.send((message, applied)).await.is_ok() {
+            let _ = acknowledged.await;
+        }
+    }
+
+    pub fn snapshot(&self) -> UiState {
+        self.snapshot.borrow().clone()
+    }
+}
+
+enum PromptMsg {
+    Key(KeyEvent, tokio::sync::oneshot::Sender<PromptOutcome>),
+    Clear(tokio::sync::oneshot::Sender<()>),
+    CycleMode(tokio::sync::oneshot::Sender<()>),
+    OpenFileSearch(tokio::sync::oneshot::Sender<()>),
+    SetCaption(String, tokio::sync::oneshot::Sender<()>),
+    SetPlaceholderVisible(bool, tokio::sync::oneshot::Sender<()>),
+}
+
+#[derive(Clone)]
+pub struct PromptActor {
+    tx: mpsc::Sender<PromptMsg>,
+    snapshot: watch::Receiver<PromptWidget>,
+    _owner: Arc<UiTaskOwner>,
+}
+
+impl PromptActor {
+    pub fn new(bus: &EventBus) -> Self {
+        let (tx, rx) = mpsc::channel(32);
+        let (snapshot_tx, snapshot) = watch::channel(PromptWidget::new());
+        let events = bus.subscribe();
+        // OWNER: PromptActor — mailbox worker is retained by the actor handle.
+        let owner = Arc::new(UiTaskOwner(tokio::spawn(run_prompt_actor(
+            rx,
+            events,
+            snapshot_tx,
+        ))));
+        Self {
+            tx,
+            snapshot,
+            _owner: owner,
+        }
+    }
+
+    async fn unit(&self, message: PromptMsg) {
+        let _ = self.tx.send(message).await;
+    }
+
+    pub async fn handle_key(&self, key: KeyEvent) -> PromptOutcome {
+        let (reply, result) = tokio::sync::oneshot::channel();
+        if self.tx.send(PromptMsg::Key(key, reply)).await.is_err() {
+            return PromptOutcome::Ignored;
+        }
+        result.await.unwrap_or(PromptOutcome::Ignored)
+    }
+
+    pub async fn clear(&self) {
+        let (reply, result) = tokio::sync::oneshot::channel();
+        self.unit(PromptMsg::Clear(reply)).await;
+        let _ = result.await;
+    }
+
+    pub async fn cycle_mode(&self) {
+        let (reply, result) = tokio::sync::oneshot::channel();
+        self.unit(PromptMsg::CycleMode(reply)).await;
+        let _ = result.await;
+    }
+
+    pub async fn set_placeholder_visible(&self, visible: bool) {
+        let (reply, result) = tokio::sync::oneshot::channel();
+        self.unit(PromptMsg::SetPlaceholderVisible(visible, reply))
+            .await;
+        let _ = result.await;
+    }
+
+    pub async fn open_file_search(&self) {
+        let (reply, result) = tokio::sync::oneshot::channel();
+        self.unit(PromptMsg::OpenFileSearch(reply)).await;
+        let _ = result.await;
+    }
+
+    pub async fn set_model_caption(&self, caption: String) {
+        let (reply, result) = tokio::sync::oneshot::channel();
+        self.unit(PromptMsg::SetCaption(caption, reply)).await;
+        let _ = result.await;
+    }
+
+    pub fn snapshot(&self) -> PromptWidget {
+        self.snapshot.borrow().clone()
+    }
+}
+
+async fn run_prompt_actor(
+    mut rx: mpsc::Receiver<PromptMsg>,
+    mut events: tokio::sync::broadcast::Receiver<AgentEvent>,
+    snapshot_tx: watch::Sender<PromptWidget>,
+) {
+    let mut prompt = PromptWidget::new();
+    loop {
+        tokio::select! {
+            message = rx.recv() => {
+                let Some(message) = message else { break };
+                handle_prompt_message(&mut prompt, message);
+                let _ = snapshot_tx.send(prompt.clone());
+            }
+            event = events.recv() => {
+                if matches!(event, Ok(AgentEvent::Reset)) {
+                    prompt = PromptWidget::new();
+                    let _ = snapshot_tx.send(prompt.clone());
+                }
+            }
+        }
+    }
+}
+
+fn handle_prompt_message(prompt: &mut PromptWidget, message: PromptMsg) {
+    match message {
+        PromptMsg::Key(key, reply) => {
+            let _ = reply.send(prompt.handle_key(key));
+        }
+        PromptMsg::Clear(reply) => {
+            prompt.clear();
+            let _ = reply.send(());
+        }
+        PromptMsg::CycleMode(reply) => {
+            prompt.cycle_mode();
+            let _ = reply.send(());
+        }
+        PromptMsg::OpenFileSearch(reply) => {
+            prompt.open_file_search();
+            let _ = reply.send(());
+        }
+        PromptMsg::SetCaption(caption, reply) => {
+            prompt.set_model_caption(caption);
+            let _ = reply.send(());
+        }
+        PromptMsg::SetPlaceholderVisible(visible, reply) => {
+            prompt.set_placeholder_visible(visible);
+            let _ = reply.send(());
+        }
+    }
+}
+
 pub struct App {
     pub scrollback: Arc<Mutex<Scrollback>>,
-    pub prompt: PromptWidget,
+    pub prompt: PromptActor,
     pub status: Arc<Mutex<StatusBar>>,
+    pub status_actor: Arc<Mutex<Option<StatusActor>>>,
+    pub scrollback_actor: Arc<Mutex<Option<ScrollbackActor>>>,
     pub loop_actor: LoopActor,
     pub bus: EventBus,
-    pub show_welcome: bool,
+    pub ui: UiActor,
 }
 
 impl App {
     pub fn new(loop_actor: LoopActor, bus: EventBus) -> Self {
+        let ui = UiActor::new(&bus);
         Self {
             scrollback: Arc::new(Mutex::new(Scrollback::new())),
-            prompt: PromptWidget::new(),
+            prompt: PromptActor::new(&bus),
             status: Arc::new(Mutex::new(StatusBar::new())),
+            status_actor: Arc::new(Mutex::new(None)),
+            scrollback_actor: Arc::new(Mutex::new(None)),
             loop_actor,
             bus,
-            show_welcome: true,
+            ui,
+        }
+    }
+
+    pub fn new_with_welcome(loop_actor: LoopActor, bus: EventBus) -> Self {
+        let ui = UiActor::new_with_welcome(&bus, true);
+        Self {
+            scrollback: Arc::new(Mutex::new(Scrollback::new())),
+            prompt: PromptActor::new(&bus),
+            status: Arc::new(Mutex::new(StatusBar::new())),
+            status_actor: Arc::new(Mutex::new(None)),
+            scrollback_actor: Arc::new(Mutex::new(None)),
+            loop_actor,
+            bus,
+            ui,
+        }
+    }
+
+    pub async fn toggle_shortcuts(&self) {
+        self.ui.send(UiMsg::ToggleShortcuts).await;
+    }
+
+    pub async fn toggle_command_palette(&self) {
+        self.ui.send(UiMsg::ToggleCommandPalette).await;
+    }
+
+    pub async fn command_palette_key(&self, msg: UiMsg) {
+        self.ui.send(msg).await;
+    }
+
+    pub async fn activate_command_palette(&self) -> Option<String> {
+        self.ui.send(UiMsg::ActivateCommandPalette).await;
+        self.ui.snapshot().last_palette_command
+    }
+
+    pub async fn hide_welcome(&self) {
+        self.ui.send(UiMsg::HideWelcome).await;
+    }
+
+    pub async fn toggle_activity_fold(&self) {
+        let actor = { self.scrollback_actor.lock().clone() };
+        if let Some(actor) = actor {
+            actor
+                .apply(crate::widgets::ScrollbackMsg::ToggleActivityExpanded)
+                .await;
+            return;
+        }
+        let mut scrollback = self.scrollback.lock();
+        let expanded = scrollback.activity_expanded();
+        scrollback.set_activity_expanded(!expanded);
+    }
+
+    pub async fn refresh_model_caption(&self) {
+        let model = self.loop_actor.state_snapshot().model;
+        if !model.name.is_empty() {
+            self.prompt
+                .set_model_caption(format!("{} (high)", model.name))
+                .await;
         }
     }
 
@@ -44,16 +392,19 @@ impl App {
     pub async fn handle_prompt_outcome(&mut self, outcome: PromptOutcome) -> Option<String> {
         match outcome {
             PromptOutcome::Submitted(text) => {
-                self.status.lock().set(Status::Thinking);
+                const MILLIS_PER_SECOND: u128 = 1_000;
+                let timestamp = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .map(|duration| duration.as_millis() / MILLIS_PER_SECOND)
+                    .unwrap_or_default() as i64;
                 let user_msg = AgentMessage::User(runie_core::types::UserMessage {
                     content: vec![runie_core::types::UserContent::Text { text: text.clone() }],
-                    timestamp: 0,
+                    timestamp,
                 });
                 let _ = self
                     .loop_actor
                     .prompt(vec![user_msg], runie_core::types::AgentContext::default())
                     .await;
-                self.status.lock().set(Status::Ready);
                 Some(text)
             }
             PromptOutcome::Edited | PromptOutcome::Ignored => None,
@@ -67,7 +418,13 @@ impl App {
         tokio::task::JoinHandle<()>,
         tokio::sync::watch::Sender<bool>,
     ) {
-        let renderer = EventRenderer::new(self.scrollback.clone(), self.status.clone());
+        let status_actor = StatusActor::new();
+        *self.status_actor.lock() = Some(status_actor.clone());
+        let scrollback_actor = ScrollbackActor::new();
+        *self.scrollback_actor.lock() = Some(scrollback_actor.clone());
+        let mut renderer = EventRenderer::new(self.scrollback.clone(), self.status.clone());
+        renderer.status_actor = Some(status_actor);
+        renderer.scrollback_actor = Some(scrollback_actor);
         let rx = self.bus.subscribe();
         let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
         // OWNER: App — drives the renderer to completion.
@@ -75,13 +432,98 @@ impl App {
         (handle, shutdown_tx)
     }
 
+    pub fn status_snapshot(&self) -> StatusBar {
+        self.status_actor
+            .lock()
+            .as_ref()
+            .map(StatusActor::snapshot)
+            .unwrap_or_else(|| self.status.lock().clone())
+    }
+
+    pub fn scrollback_snapshot(&self) -> Scrollback {
+        self.scrollback_actor
+            .lock()
+            .as_ref()
+            .map(ScrollbackActor::snapshot)
+            .unwrap_or_else(|| self.scrollback.lock().clone())
+    }
+
     /// Lay out the widgets and render them into the given area using `f`.
-    pub fn render<F: FnMut(Rect, &mut Buffer)>(&mut self, area: Rect, mut f: F) {
-        let layout = chat_layout(area);
-        let mut sb = self.scrollback.lock();
+    pub fn render<F: FnMut(Rect, &mut Buffer)>(&self, area: Rect, mut f: F) {
+        let layout = chat_layout_with_prompt_height(area, self.prompt.snapshot().render_height());
+        let mut sb = self.scrollback_snapshot();
         let mut buf = Buffer::empty(area);
         sb.render(layout.scrollback, &mut buf);
         f(layout.prompt, &mut buf);
         f(layout.status, &mut buf);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{PromptActor, UiActor, UiMsg, UiState};
+    use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
+    use runie_core::events::EventBus;
+    use runie_core::types::AgentEvent;
+
+    #[test]
+    fn ui_reducer_owns_welcome_and_shortcut_transitions() {
+        let initial = UiState::with_welcome();
+        assert!(initial.show_welcome);
+        assert!(!initial.shortcuts_open);
+        let open = initial.clone().update(UiMsg::ToggleShortcuts);
+        assert!(open.shortcuts_open);
+        let palette = initial.update(UiMsg::ToggleCommandPalette);
+        assert!(palette.command_palette_open);
+        let activated = palette
+            .update(UiMsg::CommandPaletteChar('n'))
+            .update(UiMsg::ActivateCommandPalette);
+        assert_eq!(
+            activated.last_palette_command.as_deref(),
+            Some("New Session")
+        );
+        assert!(!activated.command_palette_open);
+        let hidden = open.update(UiMsg::HideWelcome);
+        assert!(!hidden.show_welcome);
+        assert!(hidden.shortcuts_open);
+        assert_eq!(hidden.update(UiMsg::Reset), UiState::new());
+    }
+
+    #[tokio::test]
+    async fn ui_actor_keeps_welcome_disabled_after_reset() {
+        let bus = EventBus::new();
+        let actor = UiActor::new(&bus);
+        assert!(!actor.snapshot().show_welcome);
+        bus.publish(AgentEvent::Reset);
+        for _ in 0..4 {
+            tokio::task::yield_now().await;
+            if !actor.snapshot().show_welcome {
+                return;
+            }
+        }
+        panic!("UiActor enabled the removed welcome surface");
+    }
+
+    #[tokio::test]
+    async fn prompt_actor_reacts_to_reset_events() {
+        let bus = EventBus::new();
+        let actor = PromptActor::new(&bus);
+        actor
+            .handle_key(KeyEvent {
+                code: KeyCode::Char('x'),
+                modifiers: KeyModifiers::NONE,
+                kind: KeyEventKind::Press,
+                state: KeyEventState::NONE,
+            })
+            .await;
+        assert!(!actor.snapshot().is_empty());
+        bus.publish(AgentEvent::Reset);
+        for _ in 0..4 {
+            tokio::task::yield_now().await;
+            if actor.snapshot().is_empty() {
+                return;
+            }
+        }
+        panic!("PromptActor did not apply the bus reset event");
     }
 }

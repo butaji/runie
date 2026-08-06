@@ -1,0 +1,7 @@
+---
+source: crates/runie-tui/tests/visual_snapshots.rs
+assertion_line: 156
+expression: "summary.join(\"\\n\")"
+---
+grok-full.cast: blank=5, command_palette=2, completed=3, header_only=1, prompt=10, responding=2, thinking=33, waiting=11, welcome=5
+grok-rich.cast: blank=2, completed=2, header_only=11, responding=102, thinking=39, waiting=53, welcome=3

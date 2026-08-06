@@ -67,6 +67,38 @@ pub struct ToolResultMessage {
   - `ToolResultContent` (types.rs:125): `Text | Image` — matches pi.
 - Ensure serde `role`/`type` tags match pi exactly (`"assistant"`, `"toolResult"`, snake_case `"tool_call"` id, `"thinking"` block).
 
+## Progress
+
+- **Terminal wire keys (2026-08-05):** Assistant and tool-result metadata now
+  serializes with pi-compatible camelCase keys (`stopReason`,
+  `errorMessage`, `rawStopReason`, `toolCallId`, `toolName`, and
+  `addedToolNames`), with round-trip coverage.
+- **Role-tagged union wire (2026-08-05):** `AgentMessage` serialization now
+  injects pi's required `user`, `assistant`, and `toolResult` role tags at the
+  union boundary; all three variants round-trip through serde coverage.
+- **Content wire parity (2026-08-05):** Image blocks now carry base64 strings
+  with pi's `mimeType` key rather than byte arrays/`mime_type`, and thinking
+  blocks serialize their payload as `thinking` rather than `text`. Focused
+  serde coverage pins the exact JSON shape and round-trip behavior.
+- **Assistant response metadata (2026-08-05):** Added pi's optional
+  `responseModel`, `responseId`, and typed `diagnostics` fields, including
+  diagnostic error/details payloads and complete serde round-trip coverage.
+- **User content compatibility (2026-08-05):** User-message deserialization
+  now accepts pi's string-content shorthand and normalizes it to one text
+  block for the actor/event pipeline, with focused serde coverage.
+- **Tool-call metadata (2026-08-05):** Added optional provider-specific
+  `thoughtSignature` to tool calls and preserved it through argument
+  preparation and event reconstruction, with wire-shape coverage.
+- **Optional tool additions (2026-08-05):** Empty `addedToolNames` arrays are
+  omitted from tool-result wire payloads like pi, while non-empty additions
+  retain the camelCase key; serde coverage pins both forms.
+- **Optional termination hint (2026-08-05):** `AgentToolResult.terminate`
+  now omits `false` on the wire and retains `true`, matching pi's optional
+  termination hint and error-result shape.
+- **Error-result details parity (2026-08-05):** Synthetic, truncated, and
+  executor-drop tool errors now use `{}` details, matching pi's
+  `createErrorToolResult` payload rather than serializing JSON `null`.
+
 ## Acceptance
 
 - `cargo test -p runie-core` green; new round-trip serde tests fill every new field and assert exact JSON keys match pi's TS shapes.

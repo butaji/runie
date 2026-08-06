@@ -27,3 +27,9 @@ Pure transform, no state machine. Variants the transform may return: any subset/
 
 - Integration test: a `transform_context` that drops a user message → assert the provider receives a wire context without it; a transform that injects a message → assert it appears.
 - `cargo test -p runie-core` green.
+## Progress
+
+- **LLM conversion parity (2026-08-05):** Added an async loop-owned
+  `convert_to_llm` callback after `transform_context`, with the existing
+  converter as the default. Integration coverage proves the callback can
+  replace the wire message sent to the provider.

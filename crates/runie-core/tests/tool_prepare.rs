@@ -1,6 +1,11 @@
 //! Tool argument preparation + validation parity (p09, pi agent-loop.ts:586,
 //! validation logic in pi/packages/ai/src/utils/validation.ts).
 
+#![allow(
+    clippy::too_many_lines,
+    reason = "tool preparation tests keep the complete wire-contract setup together"
+)]
+
 mod common;
 
 use std::sync::Arc;
@@ -38,17 +43,20 @@ fn tool_call_stream(name: &str) -> impl StreamFn {
                             id: "c1".into(),
                             name: self.name.clone(),
                             arguments: serde_json::json!({ "raw": 1 }),
+                            thought_signature: None,
                         },
                     },
                     AssistantMessageEvent::Done {
                         stop_reason: StopReason::ToolUse,
                         usage: Usage::default(),
+                        message: None,
                     },
                 ]
             } else {
                 vec![AssistantMessageEvent::Done {
                     stop_reason: StopReason::Stop,
                     usage: Usage::default(),
+                    message: None,
                 }]
             };
             Ok(Box::pin(stream::iter(events)))

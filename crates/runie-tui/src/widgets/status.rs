@@ -1,17 +1,21 @@
 //! 1-row status bar.
 
+use crate::appearance;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use ratatui::style::{Color, Modifier, Style};
+use ratatui::style::{Modifier, Style};
 use ratatui::text::Line;
 use ratatui::widgets::{Paragraph, Widget};
+use runie_core::types::{StopReason, ThemeKind, Usage, WaitingReason};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum Status {
+    #[default]
     Ready,
     Loading,
     Thinking,
     Streaming,
+    Waiting(WaitingReason),
     Aborted,
     Error(String),
 }
@@ -23,20 +27,36 @@ impl Status {
             Self::Loading => "loading".into(),
             Self::Thinking => "thinking...".into(),
             Self::Streaming => "streaming".into(),
+            Self::Waiting(reason) => format!("waiting: {}", waiting_label(reason)),
             Self::Aborted => "aborted".into(),
             Self::Error(e) => format!("error: {e}"),
         }
     }
 
     pub fn style(&self) -> Style {
+        self.style_for(ThemeKind::GrokNight)
+    }
+
+    pub fn style_for(&self, theme: ThemeKind) -> Style {
         match self {
-            Self::Ready => Style::default().fg(Color::Green),
-            Self::Loading => Style::default().fg(Color::DarkGray),
-            Self::Thinking => Style::default().fg(Color::Yellow),
-            Self::Streaming => Style::default().fg(Color::Blue),
-            Self::Aborted => Style::default().fg(Color::DarkGray),
-            Self::Error(_) => Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+            Self::Ready => appearance::success_style_for(theme),
+            Self::Loading => appearance::muted_style_for(theme),
+            Self::Thinking => appearance::accent_style_for(theme),
+            Self::Streaming => appearance::secondary_style_for(theme),
+            Self::Waiting(_) => appearance::warning_style_for(theme),
+            Self::Aborted => appearance::muted_style_for(theme),
+            Self::Error(_) => appearance::error_style_for(theme),
         }
+    }
+}
+
+fn waiting_label(reason: &WaitingReason) -> &'static str {
+    match reason {
+        WaitingReason::Model => "model",
+        WaitingReason::Subagent => "subagent",
+        WaitingReason::TaskOutput { .. } => "task output",
+        WaitingReason::TasksComplete => "tasks complete",
+        WaitingReason::Sleep => "sleep",
     }
 }
 
@@ -61,16 +81,25 @@ pub fn dot_spinner_fallback() -> &'static [&'static str] {
     &[".", ":", "·"]
 }
 
-impl Default for Status {
-    fn default() -> Self {
-        Self::Ready
-    }
-}
-
 #[derive(Debug, Clone, Default)]
 pub struct StatusBar {
     state: Status,
+    theme: opaline::Theme,
     animation_frame: usize,
+    elapsed_ticks: u64,
+    turn_usage: Option<Usage>,
+    turn_stop_reason: Option<StopReason>,
+}
+
+/// Messages accepted by the status projection owner. The reducer is pure so
+/// an actor can apply the same transition and publish a watch snapshot.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum StatusMsg {
+    Set(Status),
+    BeginTurn,
+    FinishTurn(Usage, StopReason),
+    SetTheme(ThemeKind),
+    AdvanceAnimation,
 }
 
 /// Grok's one-row foreground activity indicator above the prompt.
@@ -90,6 +119,10 @@ pub enum TurnStatusPhase {
 }
 
 impl TurnStatus {
+    /// Runie advances its actor-owned animation clock at 20 Hz. Grok holds
+    /// each braille frame for four 30 Hz ticks (~133 ms), so three Runie
+    /// ticks is the closest stable equivalent (~150 ms).
+    const SPINNER_DIVISOR: usize = 3;
     const FRAMES: [&'static str; 8] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"];
 
     pub fn new(frame: usize) -> Self {
@@ -121,15 +154,41 @@ impl TurnStatus {
         };
         format!(
             "  {} {label}{}",
-            Self::FRAMES[self.frame % Self::FRAMES.len()],
+            Self::FRAMES[(self.frame / Self::SPINNER_DIVISOR) % Self::FRAMES.len()],
             self.chrome
         )
     }
 
     pub fn render(self, area: Rect, buf: &mut Buffer) {
-        Paragraph::new(self.text())
-            .style(Style::default().add_modifier(Modifier::DIM))
-            .render(area, buf);
+        let label = match self.phase {
+            TurnStatusPhase::Starting => "Starting session… 0.0s",
+            TurnStatusPhase::Waiting => "Waiting for response…",
+            TurnStatusPhase::Thinking => "Thinking…",
+            TurnStatusPhase::Responding => "Responding…",
+        };
+        let spinner = Self::FRAMES[(self.frame / Self::SPINNER_DIVISOR) % Self::FRAMES.len()];
+        let waiting = self.phase == TurnStatusPhase::Waiting;
+        let spinner_style = if waiting {
+            appearance::base_style()
+        } else {
+            appearance::accent_style()
+        };
+        let text_style = if waiting {
+            appearance::base_style()
+        } else {
+            appearance::muted_style()
+        };
+        let mut line = Line::from(vec![
+            ratatui::text::Span::raw("  "),
+            ratatui::text::Span::styled(spinner, spinner_style),
+            ratatui::text::Span::raw(" "),
+            ratatui::text::Span::styled(label, text_style),
+        ]);
+        if !self.chrome.is_empty() {
+            line.spans
+                .push(ratatui::text::Span::styled(self.chrome, text_style));
+        }
+        Paragraph::new(line).render(area, buf);
     }
 }
 
@@ -137,28 +196,131 @@ impl StatusBar {
     pub fn new() -> Self {
         Self {
             state: Status::default(),
+            theme: appearance::load(ThemeKind::GrokNight),
             animation_frame: 0,
+            elapsed_ticks: 0,
+            turn_usage: None,
+            turn_stop_reason: None,
         }
     }
 
     pub fn set(&mut self, s: Status) {
-        self.state = s;
+        self.apply(StatusMsg::Set(s));
+    }
+
+    pub fn begin_turn(&mut self) {
+        self.apply(StatusMsg::BeginTurn);
+    }
+
+    pub fn finish_turn(&mut self, usage: Usage, stop_reason: StopReason) {
+        self.apply(StatusMsg::FinishTurn(usage, stop_reason));
+    }
+
+    pub fn set_theme(&mut self, theme: ThemeKind) {
+        self.apply(StatusMsg::SetTheme(theme));
+    }
+
+    pub fn advance_animation(&mut self) {
+        self.apply(StatusMsg::AdvanceAnimation);
+    }
+
+    /// Apply one status message. This is deliberately the only transition
+    /// entry point used by the imperative compatibility methods above.
+    pub fn apply(&mut self, message: StatusMsg) {
+        match message {
+            StatusMsg::Set(state) => self.state = state,
+            StatusMsg::BeginTurn => {
+                self.elapsed_ticks = 0;
+                self.turn_usage = None;
+                self.turn_stop_reason = None;
+            }
+            StatusMsg::FinishTurn(usage, stop_reason) => {
+                self.turn_usage = Some(usage);
+                self.turn_stop_reason = Some(stop_reason);
+            }
+            StatusMsg::SetTheme(theme) => self.theme = appearance::load(theme),
+            StatusMsg::AdvanceAnimation => {
+                if matches!(
+                    self.state,
+                    Status::Loading | Status::Thinking | Status::Streaming | Status::Waiting(_)
+                ) {
+                    self.animation_frame = self.animation_frame.wrapping_add(1);
+                    self.elapsed_ticks = self.elapsed_ticks.saturating_add(1);
+                }
+            }
+        }
+    }
+
+    pub fn worked_for_label(&self) -> String {
+        format!(
+            "Worked for {}.{}s",
+            self.elapsed_ticks / 20,
+            (self.elapsed_ticks / 2) % 10
+        )
+    }
+
+    /// Event-derived context meter for the live header. Keeping this on the
+    /// status projection avoids a second mutable source of truth in the
+    /// binary's render loop.
+    pub fn header_meter(&self) -> String {
+        let used = self
+            .turn_usage
+            .as_ref()
+            .map(|usage| usage.total_tokens)
+            .unwrap_or_default();
+        format!("{} / 500K", format_token_count(used).replace('k', "K"))
+    }
+
+    /// Build the pure foreground status projection consumed by the TUI view.
+    pub fn turn_status(&self) -> Option<TurnStatus> {
+        let phase = match self.state {
+            Status::Thinking => TurnStatusPhase::Thinking,
+            Status::Streaming => TurnStatusPhase::Responding,
+            Status::Waiting(_) => TurnStatusPhase::Waiting,
+            _ => return None,
+        };
+        let chrome = match (&self.turn_usage, &self.turn_stop_reason) {
+            (Some(usage), Some(reason)) => format!(
+                "  {}.{}s ⇣{} [{}]",
+                self.elapsed_ticks / 20,
+                (self.elapsed_ticks / 2) % 10,
+                format_token_count(usage.total_tokens),
+                stop_reason_label(*reason)
+            ),
+            _ => format!(
+                "  {}.{}s ⇣0 [stop]",
+                self.elapsed_ticks / 20,
+                (self.elapsed_ticks / 2) % 10
+            ),
+        };
+        Some(
+            TurnStatus::new(self.animation_frame)
+                .phase(phase)
+                .with_chrome(chrome),
+        )
     }
 
     pub fn current(&self) -> &Status {
         &self.state
     }
 
+    pub fn theme(&self) -> ThemeKind {
+        match self.theme.meta.name.as_str() {
+            "GrokDay" => ThemeKind::GrokDay,
+            _ => ThemeKind::GrokNight,
+        }
+    }
+
     /// Advance the deterministic spinner used by active full-mode states.
     /// The caller owns the cadence; tests can select exact frames without
     /// depending on wall-clock timing.
-    pub fn advance_animation(&mut self) {
-        if matches!(
+    /// Whether the renderer should schedule another animation wake-up.
+    /// Idle and terminal states do not create timer work.
+    pub fn animation_demand(&self) -> bool {
+        matches!(
             self.state,
-            Status::Loading | Status::Thinking | Status::Streaming
-        ) {
-            self.animation_frame = self.animation_frame.wrapping_add(1);
-        }
+            Status::Loading | Status::Thinking | Status::Streaming | Status::Waiting(_)
+        )
     }
 
     pub fn set_animation_frame(&mut self, frame: usize) {
@@ -170,71 +332,106 @@ impl StatusBar {
     }
 
     pub fn render(&self, area: Rect, buf: &mut Buffer) {
-        // Grok's full-mode footer is context-sensitive: idle/editing exposes
-        // send/mode/shortcuts, while an active turn exposes mode/cancel.
-        use ratatui::text::Span;
-        let left = match self.state {
-            Status::Ready => "Enter:send │ Shift+Tab:mode │ Ctrl+x:shortcuts".to_string(),
-            Status::Loading => String::new(),
-            Status::Thinking | Status::Streaming => String::new(),
-            _ => self.state.label(),
-        };
-        let mut spans = Vec::new();
-        if matches!(self.state, Status::Ready) {
-            spans.push(Span::styled(
-                "Enter",
-                Style::default().add_modifier(Modifier::BOLD),
-            ));
-            spans.push(Span::raw(":send  │  "));
-            spans.push(Span::styled(
-                "Shift+Tab",
-                Style::default().add_modifier(Modifier::BOLD),
-            ));
-            spans.push(Span::raw(":mode  │  "));
-            spans.push(Span::styled(
-                "Ctrl+x",
-                Style::default().add_modifier(Modifier::BOLD),
-            ));
-            spans.push(Span::raw(":shortcuts"));
-        } else if matches!(self.state, Status::Loading) {
-            // Grok's "{spinner} Loading..." foreground row (agent_view/render.rs).
-            let spinner = dot_spinner_frames()[self.animation_frame % dot_spinner_frames().len()];
-            spans.push(Span::styled(
-                format!("{spinner} Loading..."),
-                Style::default().add_modifier(Modifier::DIM),
-            ));
-        } else if matches!(self.state, Status::Thinking | Status::Streaming) {
-            spans.push(Span::styled(
-                "Shift+Tab",
-                Style::default().add_modifier(Modifier::BOLD),
-            ));
-            spans.push(Span::raw(":mode  │  "));
-            spans.push(Span::styled(
-                "Esc",
-                Style::default().add_modifier(Modifier::BOLD),
-            ));
-            spans.push(Span::raw(":cancel  │  "));
-            spans.push(Span::styled(
-                "Ctrl+.",
-                Style::default().add_modifier(Modifier::BOLD),
-            ));
-            spans.push(Span::raw(":shortcuts"));
-        } else {
-            spans.push(Span::styled(left, self.state.style()));
-        }
-        let line = Line::from(spans).style(Style::default());
-        let p = Paragraph::new(line);
-        Widget::render(p, area, buf);
+        Widget::render(Paragraph::new(self.footer_line()), area, buf);
     }
+
+    fn footer_line(&self) -> Line<'static> {
+        use ratatui::text::Span;
+        let spans = match self.state {
+            Status::Ready => ready_footer_spans(),
+            Status::Loading => loading_footer_spans(self.animation_frame),
+            Status::Thinking | Status::Streaming | Status::Waiting(_) => active_footer_spans(),
+            _ => vec![Span::styled(
+                self.state.label(),
+                self.state.style_for(self.theme()),
+            )],
+        };
+        Line::from(spans).style(Style::default())
+    }
+}
+
+fn stop_reason_label(reason: StopReason) -> &'static str {
+    match reason {
+        StopReason::Stop => "stop",
+        StopReason::ToolUse => "toolUse",
+        StopReason::MaxTokens => "length",
+        StopReason::Error => "error",
+        StopReason::Aborted => "aborted",
+        StopReason::Pending => "pending",
+    }
+}
+
+fn format_token_count(tokens: u64) -> String {
+    if tokens < 1_000 {
+        return tokens.to_string();
+    }
+    if tokens < 1_000_000 {
+        return format_trimmed_decimal(tokens as f64 / 1_000.0, 'k');
+    }
+    format_trimmed_decimal(tokens as f64 / 1_000_000.0, 'M')
+}
+
+fn format_trimmed_decimal(value: f64, suffix: char) -> String {
+    let rendered = format!("{value:.2}")
+        .trim_end_matches('0')
+        .trim_end_matches('.')
+        .to_owned();
+    format!("{rendered}{suffix}")
+}
+
+fn ready_footer_spans() -> Vec<ratatui::text::Span<'static>> {
+    let bold = Style::default().add_modifier(Modifier::BOLD);
+    vec![
+        ratatui::text::Span::styled("Enter", bold),
+        ratatui::text::Span::raw(":send  │  "),
+        ratatui::text::Span::styled("Shift+Tab", bold),
+        ratatui::text::Span::raw(":mode  │  "),
+        ratatui::text::Span::styled("Ctrl+x", bold),
+        ratatui::text::Span::raw(":shortcuts"),
+    ]
+}
+
+fn loading_footer_spans(frame: usize) -> Vec<ratatui::text::Span<'static>> {
+    let frames = dot_spinner_frames();
+    let spinner = frames[frame % frames.len()];
+    vec![ratatui::text::Span::styled(
+        format!("{spinner} Loading..."),
+        Style::default().add_modifier(Modifier::DIM),
+    )]
+}
+
+fn active_footer_spans() -> Vec<ratatui::text::Span<'static>> {
+    let bold = Style::default().add_modifier(Modifier::BOLD);
+    vec![
+        ratatui::text::Span::styled("Shift+Tab", bold),
+        ratatui::text::Span::raw(":mode  │  "),
+        ratatui::text::Span::styled("Esc", bold),
+        ratatui::text::Span::raw(":cancel  │  "),
+        ratatui::text::Span::styled("Ctrl+.", bold),
+        ratatui::text::Span::raw(":shortcuts"),
+    ]
 }
 
 #[cfg(test)]
 mod tests {
+    #![allow(
+        clippy::too_many_lines,
+        reason = "snapshot-style footer assertions compare idle and active frames together"
+    )]
     use super::*;
+    use ratatui::style::Color;
 
     #[test]
     fn default_is_ready() {
         assert_eq!(StatusBar::new().current(), &Status::Ready);
+    }
+
+    #[test]
+    fn theme_is_an_actor_owned_status_projection() {
+        let mut bar = StatusBar::new();
+        assert_eq!(bar.theme(), ThemeKind::GrokNight);
+        bar.set_theme(ThemeKind::GrokDay);
+        assert_eq!(bar.theme(), ThemeKind::GrokDay);
     }
 
     #[test]
@@ -336,6 +533,78 @@ mod tests {
     }
 
     #[test]
+    fn turn_status_projects_usage_and_stop_reason_from_event_state() {
+        let mut bar = StatusBar::new();
+        bar.begin_turn();
+        bar.finish_turn(
+            Usage {
+                total_tokens: 42,
+                ..Usage::default()
+            },
+            StopReason::ToolUse,
+        );
+        bar.set(Status::Streaming);
+        let text = bar.turn_status().expect("active turn status").text();
+        assert!(text.contains("⇣42"));
+        bar.finish_turn(
+            Usage {
+                total_tokens: 3_180,
+                ..Usage::default()
+            },
+            StopReason::Stop,
+        );
+        assert!(bar
+            .turn_status()
+            .expect("active turn status")
+            .text()
+            .contains("⇣3.18k"));
+        assert!(text.contains("toolUse"));
+    }
+
+    #[test]
+    fn worked_for_label_uses_owned_deterministic_elapsed_ticks() {
+        let mut bar = StatusBar::new();
+        bar.begin_turn();
+        for _ in 0..22 {
+            bar.set(Status::Thinking);
+            bar.advance_animation();
+        }
+        assert_eq!(bar.worked_for_label(), "Worked for 1.1s");
+    }
+
+    #[test]
+    fn header_meter_projects_event_owned_usage() {
+        let mut bar = StatusBar::new();
+        assert_eq!(bar.header_meter(), "0 / 500K");
+        bar.finish_turn(
+            Usage {
+                total_tokens: 18_000,
+                ..Usage::default()
+            },
+            StopReason::Stop,
+        );
+        assert_eq!(bar.header_meter(), "18K / 500K");
+    }
+
+    #[test]
+    fn status_messages_are_pure_event_projection_inputs() {
+        let mut bar = StatusBar::new();
+        bar.apply(StatusMsg::BeginTurn);
+        bar.apply(StatusMsg::Set(Status::Thinking));
+        bar.apply(StatusMsg::AdvanceAnimation);
+        assert_eq!(bar.current(), &Status::Thinking);
+        assert_eq!(bar.worked_for_label(), "Worked for 0.0s");
+        bar.apply(StatusMsg::FinishTurn(
+            Usage {
+                total_tokens: 1_200,
+                ..Usage::default()
+            },
+            StopReason::Stop,
+        ));
+        assert_eq!(bar.header_meter(), "1.2K / 500K");
+    }
+
+    #[test]
     fn animation_frame_is_deterministic_and_owned_by_status_bar() {
         let mut bar = StatusBar::new();
         assert_eq!(bar.animation_frame(), 0);
@@ -345,6 +614,18 @@ mod tests {
         bar.set(Status::Ready);
         bar.advance_animation();
         assert_eq!(bar.animation_frame(), 1);
+    }
+
+    #[test]
+    fn animation_demand_is_false_for_idle_and_terminal_states() {
+        let mut bar = StatusBar::new();
+        assert!(!bar.animation_demand());
+        bar.set(Status::Thinking);
+        assert!(bar.animation_demand());
+        bar.set(Status::Ready);
+        assert!(!bar.animation_demand());
+        bar.set(Status::Error("done".into()));
+        assert!(!bar.animation_demand());
     }
 
     #[test]
@@ -420,8 +701,8 @@ mod tests {
     #[test]
     fn turn_status_uses_groks_deterministic_braille_frames() {
         assert_eq!(TurnStatus::new(0).text(), "  ⠋ Starting session… 0.0s");
-        assert_eq!(TurnStatus::new(8).text(), "  ⠋ Starting session… 0.0s");
-        assert_eq!(TurnStatus::new(3).text(), "  ⠸ Starting session… 0.0s");
+        assert_eq!(TurnStatus::new(8).text(), "  ⠹ Starting session… 0.0s");
+        assert_eq!(TurnStatus::new(3).text(), "  ⠙ Starting session… 0.0s");
         assert!(TurnStatus::new(0)
             .phase(TurnStatusPhase::Waiting)
             .text()
@@ -430,5 +711,26 @@ mod tests {
             .phase(TurnStatusPhase::Responding)
             .text()
             .contains("Responding…"));
+    }
+
+    #[test]
+    fn turn_status_holds_frames_at_grok_equivalent_cadence_and_colors_roles() {
+        assert_eq!(TurnStatus::new(2).text(), TurnStatus::new(0).text());
+        assert_ne!(TurnStatus::new(3).text(), TurnStatus::new(0).text());
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 40, 1));
+        TurnStatus::new(0).render(Rect::new(0, 0, 40, 1), &mut buffer);
+        assert_eq!(
+            buffer.cell((2, 0)).expect("spinner").fg,
+            Color::Rgb(187, 154, 247)
+        );
+        assert_eq!(
+            buffer.cell((4, 0)).expect("label").fg,
+            Color::Rgb(108, 108, 108)
+        );
+        assert!(!buffer
+            .cell((2, 0))
+            .expect("spinner")
+            .modifier
+            .contains(Modifier::DIM));
     }
 }

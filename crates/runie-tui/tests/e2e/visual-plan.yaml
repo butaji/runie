@@ -1,0 +1,15 @@
+name: visual-plan-mode
+description: Shift+Tab cycles into plan mode with the gold prompt chrome.
+initial_prompt: null
+events: []
+assertions:
+  visual:
+    cols: 80
+    rows: 30
+    steps:
+      - "Shift+Tab"
+      - "Shift+Tab"
+    screen_text:
+      - "plan"
+    screen_excludes:
+      - "panicked"

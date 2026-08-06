@@ -29,7 +29,7 @@ pub fn decide_next_turn(
     if !steering_empty || !follow_up_empty {
         return TurnPlan::Continue;
     }
-    if let Some(err) = &snapshot.error_message {
+    if snapshot.error_message.is_some() {
         return TurnPlan::Stop { reason: "error" };
     }
     TurnPlan::Stop {
@@ -62,6 +62,7 @@ mod tests {
             id: "x".into(),
             name: "echo".into(),
             arguments: serde_json::json!({}),
+            thought_signature: None,
         }];
         assert!(matches!(
             decide_next_turn(&s, calls, true, true),

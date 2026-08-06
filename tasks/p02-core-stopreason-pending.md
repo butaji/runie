@@ -44,3 +44,8 @@ Reconcile serde: pi uses camelCase `"toolUse"`. runie uses `snake_case` → `"to
 
 - Serde round-trip test covers all six variants with pi's exact wire strings.
 - `cargo test -p runie-core` green; replay fixtures re-recorded if wire strings changed.
+
+## Progress
+
+- **Done (2026-08-05):** Added `Pending` and explicit pi wire names for all six
+  stop reasons, with a serde round-trip test for the exact values.

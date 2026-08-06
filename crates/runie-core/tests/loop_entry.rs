@@ -23,6 +23,27 @@ struct BlockingStream {
     release: Mutex<Option<tokio::sync::watch::Receiver<bool>>>,
 }
 
+struct SignalCaptureStream {
+    seen: tokio::sync::watch::Sender<bool>,
+}
+
+#[async_trait::async_trait]
+impl StreamFn for SignalCaptureStream {
+    async fn stream(
+        &self,
+        _model: &Model,
+        _context: &AgentContext,
+        options: Option<SimpleStreamOptions>,
+    ) -> Result<AssistantMessageEventStream, StreamError> {
+        let _ = self.seen.send(options.and_then(|o| o.signal).is_some());
+        Ok(Box::pin(stream::iter([AssistantMessageEvent::Done {
+            stop_reason: StopReason::Stop,
+            usage: Usage::default(),
+            message: None,
+        }])))
+    }
+}
+
 #[async_trait::async_trait]
 impl StreamFn for BlockingStream {
     async fn stream(
@@ -44,6 +65,7 @@ impl StreamFn for BlockingStream {
             AssistantMessageEvent::Done {
                 stop_reason: StopReason::Stop,
                 usage: Usage::default(),
+                message: None,
             }
         });
         Ok(Box::pin(head.chain(tail)))
@@ -94,6 +116,53 @@ async fn concurrent_prompt_rejected_as_busy() {
 }
 
 #[tokio::test]
+async fn prompt_propagates_abort_signal_to_provider_options() {
+    let (seen_tx, mut seen_rx) = tokio::sync::watch::channel(false);
+    let test = TestLoopBuilder::new(Arc::new(SignalCaptureStream { seen: seen_tx })).build();
+    test.actor
+        .prompt(vec![user("signal", 1)], AgentContext::default())
+        .await
+        .expect("prompt completes");
+    assert!(*seen_rx.borrow_and_update());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn abort_interrupts_active_stream_and_marks_partial_assistant() {
+    let (started_tx, mut started_rx) = tokio::sync::watch::channel(false);
+    let (release_tx, release_rx) = tokio::sync::watch::channel(false);
+    let stream = Arc::new(BlockingStream {
+        started: started_tx,
+        release: Mutex::new(Some(release_rx)),
+    });
+    let test = TestLoopBuilder::new(stream).build();
+    let actor = test.actor.clone();
+    let run = tokio::spawn(async move {
+        actor
+            .prompt(vec![user("abort", 1)], AgentContext::default())
+            .await
+    });
+    while !*started_rx.borrow() {
+        let _ = started_rx.changed().await;
+    }
+
+    test.actor.abort();
+    let output = run.await.expect("run task").expect("prompt completes");
+    let assistant = output
+        .iter()
+        .find_map(|message| match message {
+            AgentMessage::Assistant(message) => Some(message),
+            _ => None,
+        })
+        .expect("partial assistant is retained");
+    assert_eq!(assistant.stop_reason, Some(StopReason::Aborted));
+    assert_eq!(
+        test.state.snapshot().error_message.as_deref(),
+        Some("aborted")
+    );
+    let _ = release_tx.send(true);
+}
+
+#[tokio::test]
 async fn continue_run_rejects_empty_context() {
     let test = TestLoopBuilder::new(Arc::new(MockStreamFn::hello())).build();
     let err = test
@@ -126,6 +195,32 @@ async fn continue_run_rejects_last_assistant() {
         matches!(err, runie_core::r#loop::LoopError::LastIsAssistant),
         "expected LastIsAssistant, got {err:?}"
     );
+}
+
+#[tokio::test]
+async fn continue_run_from_assistant_consumes_queued_steering() {
+    let mut ctx = AgentContext::default();
+    ctx.messages.push(user("hi", 1));
+    ctx.messages.push(AgentMessage::Assistant(
+        runie_core::types::AssistantMessage {
+            content: vec![],
+            stop_reason: Some(StopReason::Stop),
+            model: "m".into(),
+            timestamp: 2,
+            ..Default::default()
+        },
+    ));
+    let test = TestLoopBuilder::new(Arc::new(MockStreamFn::hello())).build();
+    test.actor.steer(user("queued", 3)).await;
+
+    let out = test
+        .actor
+        .continue_run(ctx)
+        .await
+        .expect("queued continuation");
+    assert_eq!(out.len(), 2, "queued user + assistant");
+    assert!(matches!(out[0], AgentMessage::User(_)));
+    assert!(matches!(out[1], AgentMessage::Assistant(_)));
 }
 
 #[tokio::test]
@@ -169,11 +264,13 @@ impl StreamFn for AbortStream {
                     id: "c1".into(),
                     name: "echo".into(),
                     arguments: serde_json::json!({}),
+                    thought_signature: None,
                 },
             },
             AssistantMessageEvent::Done {
                 stop_reason: StopReason::ToolUse,
                 usage: Usage::default(),
+                message: None,
             },
         ];
         if n == 1 {

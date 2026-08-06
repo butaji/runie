@@ -1,0 +1,26 @@
+name: visual-activity-subagent
+description: |
+  Mixed file and subagent tools use Grok's grouped activity vocabulary.
+initial_prompt: "delegate a read"
+tools:
+  - name: read
+    kind: read
+  - name: subagent
+    kind: subagent
+events:
+  - start
+  - tool_call:
+      name: read
+      args: { path: "README.md" }
+  - tool_call:
+      name: subagent
+      args: { task: "summarize" }
+  - done: { stop_reason: tool_use }
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    screen_text:
+      - "◈ Read 1 file, Ran 1 subagent"
+      - "◆ Read README.md"
+      - "✓"

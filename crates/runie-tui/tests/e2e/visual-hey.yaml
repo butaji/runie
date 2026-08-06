@@ -1,0 +1,25 @@
+name: visual-hey
+description: >-
+  Baseline working-view conversation: submit the literal prompt "Hey" and
+  render one short assistant response with Grok's transcript rail geometry.
+initial_prompt: "Hey"
+prompt_timestamp: "9:27 PM"
+events:
+  - start
+  - text_delta: "Hi there!"
+  - done: { stop_reason: stop }
+assertions:
+  visual:
+    cols: 80
+    rows: 30
+    screen_text:
+      - "❯ Hey"
+      - "┃  Hi there!"
+      - "9:27 PM"
+      - "Worked for"
+      - "Enter:send"
+    screen_excludes:
+      - "assistant>"
+      - "user>"
+      - "Thinking…"
+      - "Thought"

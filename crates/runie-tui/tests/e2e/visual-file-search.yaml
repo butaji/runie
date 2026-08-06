@@ -1,0 +1,17 @@
+name: visual-file-search
+description: Ctrl+L enters the owned file-search prompt mode.
+initial_prompt: null
+events: []
+assertions:
+  visual:
+    cols: 80
+    rows: 30
+    steps:
+      - "Ctrl+L"
+      - "Tab"
+      - "Ctrl+L"
+    screen_text:
+      - "file viewer"
+      - "Grok 4.5"
+    screen_excludes:
+      - "panicked"

@@ -5,12 +5,12 @@ expression: screen
                                                                                 
    main ~/Code/GitHub/runie-tests/runie                                        
                                                                                 
-     ◆ session_start                                                            
+     ◆ session_start  [hooks: 1]                                                
+                                                                                
+                                                                                
      ❯ hi                                                                       
-     ┃ Hello from runie!                                                        
-                                                                                
-                                                                                
-                                                                                
+  ┃  Hello from runie!                                                          
+       Worked for 0.0s                                                          
                                                                                 
                                                                                 
                                                                                 
@@ -27,7 +27,7 @@ expression: screen
                                                                                 
                                                                                 
   ╭──────────────────────────────────────────────────────────────────────────╮  
-  │ ❯                                                                        │  
+  │ ❯ Type your message...                                                   │  
   ╰──────────────────────────────────────────────────────── Grok 4.5 (high) ─╯  
                                                                                 
   Enter:send  │  Shift+Tab:mode  │  Ctrl+x:shortcuts

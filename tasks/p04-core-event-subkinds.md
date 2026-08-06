@@ -65,3 +65,26 @@ start → (text|thinking|toolcall)* → done | error
 - `message_update` is emitted **only** for `*_delta`; `start`→`message_start`, `done`/`error`→`message_end` (matching `agent-loop.ts:319-371`).
 - runie-tui renderer consumes the new markers (reasoning fold, text/tool sections) — see p16.
 - `cargo test --workspace` green.
+## Progress
+
+- **Terminal payload parity (2026-08-05):** `Done` and `Error` now carry an
+  optional full terminal assistant message, matching pi's provider event
+  shape while allowing synthetic providers to omit it. The loop applies the
+  supplied terminal payload, and all provider, actor, replay, and TUI
+  constructors/tests were migrated through the shared event DSL.
+- **Event wire parity (2026-08-05):** Shared `AgentEvent` values now use pi's
+  tagged `type` form with camelCase payload keys, and assistant stream events
+  use matching camelCase fields plus pi's `toolcall_*` variant spellings.
+  Exact JSON-shape tests pin both boundaries.
+
+- **Marker reconstruction (2026-08-05):** `ToolCallStart`, `ToolCallDelta`,
+  and `ToolCallEnd` now upsert one assistant tool-call content block by id,
+  preserving partial-to-final reconstruction instead of ignoring start/end
+  markers or duplicating calls. Added a focused reconstruction test.
+- **Delta-only event boundary (2026-08-05):** the loop now publishes
+  `MessageUpdate` only for text/thinking/tool-call deltas; start/end markers
+  and `Done`/`Error` terminate through `MessageEnd`, matching pi's event-loop
+  contract. TUI error rendering reads the terminal assistant payload.
+- **Terminal-error UI oracle (2026-08-05):** added a renderer regression test
+  proving a `MessageEnd` assistant error sets `Status::Error` and appends the
+  visible system error line without relying on a `MessageUpdate` event.

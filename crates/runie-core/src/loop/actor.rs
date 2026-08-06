@@ -9,8 +9,11 @@ use crate::events::{EventBus, SubscriberRegistry};
 use crate::hooks::TurnHooks;
 use crate::provider::ProviderActor;
 use crate::queues::{FollowUpQueueActor, SteeringQueueActor};
-use crate::r#loop::driver::{run_loop, RunLoopDeps, RunLoopOutcome};
+use crate::r#loop::driver::{
+    run_loop, ApiKeyResolver, ConvertToLlm, RunLoopDeps, RunLoopOutcome, TransformContext,
+};
 use crate::state::AgentStateActor;
+use crate::task_owner::TaskOwner;
 use crate::tools::executor::ToolExecHooks;
 use crate::tools::ToolExecutorActor;
 use crate::types::{AgentContext, AgentMessage, QueueMode, ToolExecutionMode};
@@ -46,13 +49,10 @@ pub struct LoopDeps {
     pub subscribers: SubscriberRegistry,
     pub hooks: ToolExecHooks,
     pub turn_hooks: TurnHooks,
-    pub transform_context: Option<
-        Arc<
-            dyn Fn(Vec<AgentMessage>) -> futures::future::BoxFuture<'static, Vec<AgentMessage>>
-                + Send
-                + Sync,
-        >,
-    >,
+    pub transform_context: Option<TransformContext>,
+    pub convert_to_llm: Option<ConvertToLlm>,
+    pub api_key_resolver: Option<ApiKeyResolver>,
+    pub stream_options: crate::types::SimpleStreamOptions,
     /// Abort signal receiver; `LoopActor::new` injects its own channel.
     pub abort: Option<tokio::sync::watch::Receiver<bool>>,
     pub tool_execution_mode: ToolExecutionMode,
@@ -72,6 +72,9 @@ impl LoopDeps {
             hooks: self.hooks.clone(),
             turn_hooks: self.turn_hooks.clone(),
             transform_context: self.transform_context.clone(),
+            convert_to_llm: self.convert_to_llm.clone(),
+            api_key_resolver: self.api_key_resolver.clone(),
+            stream_options: self.stream_options.clone(),
             abort: self.abort.clone(),
             tool_execution_mode: self.tool_execution_mode,
             steering_mode: self.steering_mode,
@@ -87,24 +90,34 @@ pub struct LoopActor {
 
 struct Inner {
     deps: LoopDeps,
+    steering_mode: Mutex<QueueMode>,
+    follow_up_mode: Mutex<QueueMode>,
     current: Mutex<Option<JoinHandle<RunLoopOutcome>>>,
     /// True while a run is in flight; guards concurrent `prompt()` (pi's
     /// "Agent is already processing a prompt" rejection).
     running: Mutex<bool>,
     /// Abort channel sender (pi `Agent.abort()`).
     abort_tx: tokio::sync::watch::Sender<bool>,
+    /// Owns the bus-to-registry dispatch task for this actor lifetime.
+    _subscriber_bridge: Arc<TaskOwner>,
 }
 
 impl LoopActor {
     pub fn new(mut deps: LoopDeps) -> Self {
         let (abort_tx, abort_rx) = tokio::sync::watch::channel(false);
         deps.abort = Some(abort_rx);
+        let steering_mode = deps.steering_mode;
+        let follow_up_mode = deps.follow_up_mode;
+        let subscriber_bridge = spawn_subscriber_bridge(&deps.bus, &deps.subscribers);
         Self {
             inner: Arc::new(Inner {
                 deps,
+                steering_mode: Mutex::new(steering_mode),
+                follow_up_mode: Mutex::new(follow_up_mode),
                 current: Mutex::new(None),
                 running: Mutex::new(false),
                 abort_tx,
+                _subscriber_bridge: subscriber_bridge,
             }),
         }
     }
@@ -122,7 +135,7 @@ impl LoopActor {
             }
             *running = true;
         }
-        let result = self.run_inner(prompts, context).await;
+        let result = self.run_inner(prompts, context, false).await;
         *self.inner.running.lock().await = false;
         result
     }
@@ -131,10 +144,15 @@ impl LoopActor {
         &self,
         prompts: Vec<AgentMessage>,
         context: AgentContext,
+        skip_initial_steering_poll: bool,
     ) -> Result<Vec<AgentMessage>, LoopError> {
-        let deps = self.inner.deps.as_run_loop_deps();
+        let mut deps = self.inner.deps.as_run_loop_deps();
+        deps.steering_mode = *self.inner.steering_mode.lock().await;
+        deps.follow_up_mode = *self.inner.follow_up_mode.lock().await;
         // OWNER: LoopActor — handle stored in `current` for `wait_for_idle`.
-        let handle = tokio::spawn(async move { run_loop(prompts, context, deps).await });
+        let handle = tokio::spawn(async move {
+            run_loop(prompts, context, deps, skip_initial_steering_poll).await
+        });
         *self.inner.current.lock().await = Some(handle);
 
         let outcome = {
@@ -156,14 +174,70 @@ impl LoopActor {
         &self,
         context: AgentContext,
     ) -> Result<Vec<AgentMessage>, LoopError> {
+        self.acquire_run().await?;
+        let result = self.continue_inner(context).await;
+        self.release_run().await;
+        result
+    }
+
+    async fn continue_inner(&self, context: AgentContext) -> Result<Vec<AgentMessage>, LoopError> {
         // pi runAgentLoopContinue validation (agent-loop.ts:127,131).
         if context.messages.is_empty() {
             return Err(LoopError::EmptyContext);
         }
         if matches!(context.messages.last(), Some(AgentMessage::Assistant(_))) {
+            let steering = self.drain_steering_for_continue().await;
+            if !steering.is_empty() {
+                return self.run_inner(steering, context, true).await;
+            }
+            let follow_up = self.drain_follow_up_for_continue().await;
+            if !follow_up.is_empty() {
+                return self.run_inner(follow_up, context, false).await;
+            }
             return Err(LoopError::LastIsAssistant);
         }
-        self.prompt(vec![], context).await
+        self.run_inner(vec![], context, false).await
+    }
+
+    async fn acquire_run(&self) -> Result<(), LoopError> {
+        let mut running = self.inner.running.lock().await;
+        if *running {
+            return Err(LoopError::Busy);
+        }
+        *running = true;
+        Ok(())
+    }
+
+    async fn release_run(&self) {
+        *self.inner.running.lock().await = false;
+    }
+
+    async fn drain_steering_for_continue(&self) -> Vec<AgentMessage> {
+        match self.steering_mode().await {
+            QueueMode::OneAtATime => self
+                .inner
+                .deps
+                .steering
+                .drain_one()
+                .await
+                .into_iter()
+                .collect(),
+            QueueMode::All => self.inner.deps.steering.drain_all().await,
+        }
+    }
+
+    async fn drain_follow_up_for_continue(&self) -> Vec<AgentMessage> {
+        match self.follow_up_mode().await {
+            QueueMode::OneAtATime => self
+                .inner
+                .deps
+                .follow_up
+                .drain_one()
+                .await
+                .into_iter()
+                .collect(),
+            QueueMode::All => self.inner.deps.follow_up.drain_all().await,
+        }
     }
 
     pub async fn steer(&self, msg: AgentMessage) {
@@ -172,6 +246,53 @@ impl LoopActor {
 
     pub async fn follow_up(&self, msg: AgentMessage) {
         self.inner.deps.follow_up.push(msg).await;
+    }
+
+    /// Remove all queued steering messages.
+    pub async fn clear_steering_queue(&self) {
+        self.inner.deps.steering.clear().await;
+    }
+
+    /// Remove all queued follow-up messages.
+    pub async fn clear_follow_up_queue(&self) {
+        self.inner.deps.follow_up.clear().await;
+    }
+
+    /// Remove all queued steering and follow-up messages.
+    pub async fn clear_all_queues(&self) {
+        self.clear_steering_queue().await;
+        self.clear_follow_up_queue().await;
+    }
+
+    /// Whether either queue contains a pending message.
+    pub async fn has_queued_messages(&self) -> bool {
+        !self.inner.deps.steering.is_empty().await || !self.inner.deps.follow_up.is_empty().await
+    }
+
+    /// Clear transcript, projections, and queued messages through their owners.
+    pub async fn reset(&self) {
+        let event = crate::types::AgentEvent::Reset;
+        self.inner.deps.bus.publish(event.clone());
+        self.inner.deps.state.apply_event(&event).await;
+        self.clear_all_queues().await;
+    }
+
+    /// Controls how steering messages are drained on subsequent turns.
+    pub async fn set_steering_mode(&self, mode: QueueMode) {
+        *self.inner.steering_mode.lock().await = mode;
+    }
+
+    pub async fn steering_mode(&self) -> QueueMode {
+        *self.inner.steering_mode.lock().await
+    }
+
+    /// Controls how follow-up messages are drained on subsequent turns.
+    pub async fn set_follow_up_mode(&self, mode: QueueMode) {
+        *self.inner.follow_up_mode.lock().await = mode;
+    }
+
+    pub async fn follow_up_mode(&self) -> QueueMode {
+        *self.inner.follow_up_mode.lock().await
     }
 
     pub fn abort(&self) {
@@ -192,16 +313,64 @@ impl LoopActor {
     pub fn bus(&self) -> EventBus {
         self.inner.deps.bus.clone()
     }
+
+    /// Read-only state projection for UI consumers.
+    pub fn state_snapshot(&self) -> crate::state::AgentStateSnapshot {
+        self.inner.deps.state.snapshot()
+    }
+}
+
+fn spawn_subscriber_bridge(bus: &EventBus, subscribers: &SubscriberRegistry) -> Arc<TaskOwner> {
+    let mut events = bus.subscribe();
+    let subscribers = subscribers.clone();
+    // OWNER: LoopActor — retained in Inner and aborted with the actor.
+    Arc::new(TaskOwner::new(tokio::spawn(async move {
+        while let Ok(event) = events.recv().await {
+            subscribers.dispatch(&event).await;
+        }
+    })))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::AgentEvent;
+
+    struct DeliverySubscriber {
+        delivered: Option<tokio::sync::oneshot::Sender<AgentEvent>>,
+    }
+
+    #[async_trait::async_trait]
+    impl crate::events::Subscriber for DeliverySubscriber {
+        async fn handle(&mut self, event: &crate::types::AgentEvent) {
+            if let Some(delivered) = self.delivered.take() {
+                let _ = delivered.send(event.clone());
+            }
+        }
+    }
 
     #[tokio::test]
     async fn new_loop_actor_is_constructed() {
         // Smoke test: ensure the builder doesn't panic. Full behaviour is
         // covered by the driver + integration tests.
         let _a = std::mem::size_of::<LoopActor>();
+    }
+
+    #[tokio::test]
+    async fn subscriber_bridge_delivers_bus_events() {
+        let bus = EventBus::new();
+        let subscribers = SubscriberRegistry::new();
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        subscribers
+            .register(Box::new(DeliverySubscriber {
+                delivered: Some(tx),
+            }))
+            .await;
+        let _owner = spawn_subscriber_bridge(&bus, &subscribers);
+        bus.publish(crate::types::AgentEvent::AgentStart);
+        assert!(matches!(
+            rx.await.unwrap(),
+            crate::types::AgentEvent::AgentStart
+        ));
     }
 }

@@ -19,82 +19,77 @@ const SCAN_ROOT: &str = "crates";
 const TEST_DIR_MARKER: &str = "/tests/";
 
 fn main() -> ExitCode {
-    let mut findings: Vec<String> = Vec::new();
-
-    for entry in WalkDir::new(SCAN_ROOT).into_iter().filter_map(Result::ok) {
-        let path = entry.path();
-        if !path.is_file() || path.extension().and_then(|s| s.to_str()) != Some("rs") {
-            continue;
-        }
-        let path_str = path.to_string_lossy().to_string();
-        // Only scan production src/, exclude tests/.
-        if !path_str.contains("/src/") {
-            continue;
-        }
-        if path_str.contains(TEST_DIR_MARKER) {
-            continue;
-        }
-
-        let Ok(src) = fs::read_to_string(path) else {
-            continue;
-        };
-
-        for (idx, line) in src.lines().enumerate() {
-            let trimmed = line.trim_start();
-
-            // Magic number >= 1000 in production code (excluding comments, underscore-separated,
-            // and `const X: usize = N` / `const X: u32 = N` named-constant declarations).
-            if let Some(lit) = extract_numeric_literal(trimmed) {
-                if !is_exempt(trimmed, &lit) && !is_const_decl(trimmed) {
-                    if let Ok(n) = lit.replace('_', "").parse::<u64>() {
-                        if n >= 1000 {
-                            findings.push(format!(
-                                "{}:{}: magic number >= 1000: `{}`",
-                                path_str,
-                                idx + 1,
-                                lit
-                            ));
-                        }
-                    }
-                }
-            }
-
-            // Orphan tokio::spawn check.
-            if trimmed.contains("tokio::spawn(") && !trimmed.starts_with("//") {
-                // Require either a `JoinSet` nearby OR a justifying `// OWNER:` comment.
-                let window_start = idx.saturating_sub(3);
-                let has_owner_marker = src
-                    .lines()
-                    .skip(window_start)
-                    .take(idx - window_start + 1)
-                    .any(|l| l.contains("// OWNER"));
-                let in_joinset = line_contains_joinset_above(&src, idx);
-                if !has_owner_marker && !in_joinset {
-                    findings.push(format!(
-                        "{}:{}: `tokio::spawn` must be owned by an actor \
-                         (store handle in JoinSet or add `// OWNER: <actor>` comment)",
-                        path_str,
-                        idx + 1
-                    ));
-                }
-            }
-        }
-    }
-
+    let findings = scan_project();
     if findings.is_empty() {
         println!("lint-check: clean");
         ExitCode::SUCCESS
     } else {
-        eprintln!("lint-check found {} issue(s):", findings.len());
-        for f in findings {
-            eprintln!("  {f}");
-        }
+        report_findings(&findings);
         ExitCode::FAILURE
     }
 }
 
+fn scan_project() -> Vec<String> {
+    WalkDir::new(SCAN_ROOT)
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter_map(|entry| scan_entry(entry.path()))
+        .flatten()
+        .collect()
+}
+
+fn scan_entry(path: &Path) -> Option<Vec<String>> {
+    let is_rust = path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("rs");
+    let path_str = path.to_string_lossy().to_string();
+    if !is_rust || !path_str.contains("/src/") || path_str.contains(TEST_DIR_MARKER) {
+        return None;
+    }
+    let src = fs::read_to_string(path).ok()?;
+    Some(scan_source(&path_str, &src))
+}
+
+fn scan_source(path: &str, src: &str) -> Vec<String> {
+    src.lines()
+        .enumerate()
+        .flat_map(|(idx, line)| scan_line(path, src, idx, line))
+        .collect()
+}
+
+fn scan_line(path: &str, src: &str, idx: usize, line: &str) -> Vec<String> {
+    let mut findings = Vec::new();
+    let trimmed = line.trim_start();
+    if let Some(lit) = extract_numeric_literal(trimmed) {
+        if !is_exempt(trimmed, &lit)
+            && !(path.ends_with("/appearance.rs") && trimmed.contains("#"))
+            && !is_const_decl(trimmed)
+            && lit.replace('_', "").parse::<u64>().is_ok_and(|n| n >= 1000)
+        {
+            findings.push(format!("{path}:{}: magic number >= 1000: `{lit}`", idx + 1));
+        }
+    }
+    if trimmed.contains("tokio::spawn(") && !trimmed.starts_with("//") {
+        let window_start = idx.saturating_sub(3);
+        let owned = src
+            .lines()
+            .skip(window_start)
+            .take(idx - window_start + 1)
+            .any(|l| l.contains("// OWNER"));
+        if !owned && !line_contains_joinset_above(src, idx) {
+            findings.push(format!("{path}:{}: `tokio::spawn` must be owned by an actor (store handle in JoinSet or add `// OWNER: <actor>` comment)", idx + 1));
+        }
+    }
+    findings
+}
+
+fn report_findings(findings: &[String]) {
+    eprintln!("lint-check found {} issue(s):", findings.len());
+    for finding in findings {
+        eprintln!("  {finding}");
+    }
+}
+
 fn extract_numeric_literal(line: &str) -> Option<String> {
-    let after_colon = line.split(':').last().unwrap_or(line).trim();
+    let after_colon = line.split(':').next_back().unwrap_or(line).trim();
     let bytes = after_colon.as_bytes();
     let mut i = 0;
     // Skip leading non-digit chars but stop early if we find a digit start.

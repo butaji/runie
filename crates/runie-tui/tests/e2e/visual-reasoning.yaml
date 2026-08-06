@@ -7,12 +7,15 @@ events:
   - text_delta: "The answer is ready."
   - done: { stop_reason: stop }
 assertions:
+  state:
+    is_streaming: false
+    pending_tool_calls: 0
   visual:
     cols: 80
     rows: 30
     screen_text:
       - "❯ explain"
-      - "┃ Thought"
+      - "◆ Thought for 0.9s"
       - "ready."
       - "Enter:send"
     screen_excludes:

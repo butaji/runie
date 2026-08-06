@@ -17,7 +17,8 @@ assertions:
     screen_text:
       # Transcript lines.
       - "❯ hi"
-      - "┃ Hello from runie!"
+      - "┃  Hello from runie!"
+      - "Worked for"
       # Status.
       - "Enter:send"
       # Header still there.

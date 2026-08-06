@@ -1,0 +1,19 @@
+name: visual-reasoning-expanded
+description: YAML-driven expanded reasoning transcript with Grok dim/italic styling.
+initial_prompt: "explain"
+events:
+  - start
+  - thinking_delta: "checking the request"
+  - text_delta: "The answer is ready."
+  - done: { stop_reason: stop }
+assertions:
+  visual:
+    cols: 80
+    rows: 30
+    reasoning_expanded: true
+    screen_text:
+      - "checking the request"
+      - "The answer is ready."
+      - "Enter:send"
+    screen_excludes:
+      - "panicked"

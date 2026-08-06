@@ -711,6 +711,7 @@ dependencies = [
  "crossterm",
  "futures",
  "insta",
+ "libc",
  "opaline",
  "parking_lot",
  "ratatui",

@@ -1,0 +1,18 @@
+name: visual-multiline
+description: Shift+Enter keeps the prompt open and renders a multiline gutter.
+initial_prompt: null
+events: []
+assertions:
+  visual:
+    cols: 80
+    rows: 30
+    steps:
+      - "first"
+      - "Shift+Enter"
+      - "second"
+    screen_text:
+      - "❯ first"
+      - "second"
+      - "multiline"
+    screen_excludes:
+      - "panicked"

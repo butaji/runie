@@ -1,0 +1,14 @@
+name: visual-command-palette-activate
+description: Palette activation publishes Reset for the supported New Session action.
+events: []
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    steps:
+      - Ctrl+P
+      - "new"
+      - PaletteEnter
+    screen_excludes:
+      - "Command Palette"
+      - "Echo Command Query Title"

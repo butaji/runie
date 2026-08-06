@@ -4,7 +4,12 @@ use std::sync::Arc;
 
 use tokio::sync::{mpsc, oneshot};
 
-use crate::types::{AssistantMessage, ToolCall, ToolExecutionMode, ToolResultMessage};
+use crate::events::EventBus;
+use crate::task_owner::{spawn_actor_worker, TaskOwner};
+use crate::types::{
+    AgentContext, AgentEvent, AssistantMessage, ToolCall, ToolExecutionMode, ToolResultContent,
+    ToolResultMessage,
+};
 
 use super::executor::{execute_parallel, execute_sequential, DispatchOutcome, ToolExecContext};
 use super::registry::ToolRegistry;
@@ -24,6 +29,9 @@ pub enum ToolOutcome {
 pub enum ToolCommand {
     Execute {
         assistant_message: AssistantMessage,
+        context: AgentContext,
+        abort: Option<tokio::sync::watch::Receiver<bool>>,
+        bus: Option<EventBus>,
         calls: Vec<ToolCall>,
         mode: ToolExecutionMode,
         hooks: super::executor::ToolExecHooks,
@@ -35,46 +43,99 @@ pub enum ToolCommand {
 pub struct ToolExecutorActor {
     tx: mpsc::Sender<ToolCommand>,
     registry: Arc<ToolRegistry>,
+    _worker: Arc<TaskOwner>,
 }
 
 impl ToolExecutorActor {
     pub fn new(registry: Arc<ToolRegistry>) -> Self {
-        let (tx, rx) = mpsc::channel(64);
         let reg = registry.clone();
 
         // OWNER: ToolExecutorActor
-        tokio::spawn(async move {
+        let (tx, worker) = spawn_actor_worker!(64, move |rx| async move {
             run_tool_worker(rx, reg).await;
         });
 
-        Self { tx, registry }
+        Self {
+            tx,
+            registry,
+            _worker: worker,
+        }
     }
 
     pub fn registry(&self) -> Arc<ToolRegistry> {
         self.registry.clone()
     }
 
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "actor command mirrors the explicit async tool execution contract"
+    )]
     pub async fn execute(
         &self,
         assistant_message: AssistantMessage,
+        context: AgentContext,
+        abort: Option<tokio::sync::watch::Receiver<bool>>,
+        bus: Option<EventBus>,
         calls: Vec<ToolCall>,
         mode: ToolExecutionMode,
         hooks: super::executor::ToolExecHooks,
     ) -> ToolOutcome {
+        let fallback_calls = calls.clone();
         let (reply_tx, reply_rx) = oneshot::channel();
         let _ = self
             .tx
             .send(ToolCommand::Execute {
                 assistant_message,
+                context,
+                abort,
+                bus,
                 calls,
                 mode,
                 hooks,
                 reply: reply_tx,
             })
             .await;
-        reply_rx.await.unwrap_or(ToolOutcome::Aborted {
-            reason: "executor dropped".into(),
-        })
+        reply_rx
+            .await
+            .unwrap_or_else(|_| aborted_outcome(&fallback_calls, "executor dropped"))
+    }
+}
+
+fn aborted_outcome(calls: &[ToolCall], reason: &str) -> ToolOutcome {
+    let mut events = Vec::with_capacity(calls.len() * 2);
+    let mut tool_results = Vec::with_capacity(calls.len());
+    for call in calls {
+        let result = serde_json::json!({
+            "content": [{"type": "text", "text": reason}],
+            "details": {},
+            "terminate": false,
+        });
+        events.push(AgentEvent::ToolExecutionStart {
+            tool_call_id: call.id.clone(),
+            tool_name: call.name.clone(),
+            args: call.arguments.clone(),
+        });
+        events.push(AgentEvent::ToolExecutionEnd {
+            tool_call_id: call.id.clone(),
+            tool_name: call.name.clone(),
+            result: result.clone(),
+            is_error: true,
+        });
+        tool_results.push(ToolResultMessage {
+            tool_call_id: call.id.clone(),
+            tool_name: call.name.clone(),
+            content: vec![ToolResultContent::Text {
+                text: reason.to_string(),
+            }],
+            details: serde_json::json!({}),
+            is_error: true,
+            ..Default::default()
+        });
+    }
+    ToolOutcome::Completed {
+        tool_results,
+        all_terminated: false,
+        events,
     }
 }
 
@@ -82,6 +143,9 @@ async fn run_tool_worker(mut rx: mpsc::Receiver<ToolCommand>, registry: Arc<Tool
     while let Some(cmd) = rx.recv().await {
         let ToolCommand::Execute {
             assistant_message,
+            context,
+            abort,
+            bus,
             calls,
             mode,
             hooks,
@@ -100,8 +164,12 @@ async fn run_tool_worker(mut rx: mpsc::Receiver<ToolCommand>, registry: Arc<Tool
 
         let ctx = ToolExecContext {
             assistant_message,
+            context,
+            abort,
+            bus,
             registry: registry.clone(),
             hooks,
+            updates: Arc::new(std::sync::Mutex::new(Vec::new())),
         };
 
         let outcome: DispatchOutcome = match effective_mode {
@@ -134,6 +202,9 @@ mod tests {
                     timestamp: 0,
                     ..Default::default()
                 },
+                crate::types::AgentContext::default(),
+                None,
+                None,
                 vec![],
                 ToolExecutionMode::Parallel,
                 super::super::executor::ToolExecHooks::default(),
@@ -143,5 +214,30 @@ mod tests {
             ToolOutcome::Completed { tool_results, .. } => assert!(tool_results.is_empty()),
             ToolOutcome::Aborted { .. } => panic!("expected completed"),
         }
+    }
+
+    #[test]
+    fn dropped_executor_fallback_is_an_error_tool_result() {
+        let calls = vec![ToolCall {
+            id: "call-1".into(),
+            name: "echo".into(),
+            arguments: serde_json::json!({}),
+            thought_signature: None,
+        }];
+        let ToolOutcome::Completed {
+            tool_results,
+            events,
+            all_terminated,
+        } = aborted_outcome(&calls, "executor dropped")
+        else {
+            panic!("fallback must complete with synthetic tool results");
+        };
+        assert!(!all_terminated);
+        assert!(tool_results[0].is_error);
+        assert_eq!(tool_results[0].tool_call_id, "call-1");
+        assert!(matches!(
+            events[1],
+            AgentEvent::ToolExecutionEnd { is_error: true, .. }
+        ));
     }
 }

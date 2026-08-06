@@ -83,7 +83,7 @@ mod tests {
     impl Subscriber for CountingSub {
         async fn handle(&mut self, _event: &AgentEvent) {
             self.order.fetch_add(1, Ordering::SeqCst);
-            assert_eq!(self.order.load(Ordering::SeqCst) as usize, self.idx + 1);
+            assert_eq!(self.order.load(Ordering::SeqCst), self.idx + 1);
         }
     }
 

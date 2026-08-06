@@ -7,9 +7,10 @@ use serde::{Deserialize, Serialize};
 
 /// Reasoning level requested for the next turn. Some providers only support a
 /// subset; consult the model's metadata before using `XHigh` / `Max`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum ThinkingLevel {
+    #[default]
     Off,
     Minimal,
     Low,
@@ -19,39 +20,23 @@ pub enum ThinkingLevel {
     Max,
 }
 
-impl Default for ThinkingLevel {
-    fn default() -> Self {
-        Self::Off
-    }
-}
-
 /// Tool dispatch mode for a single batch of tool calls from one assistant
 /// message.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum ToolExecutionMode {
     Sequential,
+    #[default]
     Parallel,
 }
 
-impl Default for ToolExecutionMode {
-    fn default() -> Self {
-        Self::Parallel
-    }
-}
-
 /// How many queued user messages to drain at a queue-drain point.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
 pub enum QueueMode {
+    #[default]
     OneAtATime,
     All,
-}
-
-impl Default for QueueMode {
-    fn default() -> Self {
-        Self::OneAtATime
-    }
 }
 
 /// Why an assistant message finished generating.
@@ -61,14 +46,45 @@ impl Default for QueueMode {
 /// message and is replaced by a final reason when the stream ends. It is
 /// never a terminal stop reason.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
 pub enum StopReason {
+    #[serde(rename = "stop")]
     Stop,
+    #[serde(rename = "toolUse")]
     ToolUse,
+    #[serde(rename = "length")]
     MaxTokens,
+    #[serde(rename = "error")]
     Error,
+    #[serde(rename = "aborted")]
     Aborted,
+    #[serde(rename = "pending")]
     Pending,
+}
+
+#[cfg(test)]
+mod stop_reason_tests {
+    use super::StopReason;
+
+    #[test]
+    fn serializes_pi_wire_values() {
+        let cases = [
+            (StopReason::Stop, "stop"),
+            (StopReason::ToolUse, "toolUse"),
+            (StopReason::MaxTokens, "length"),
+            (StopReason::Error, "error"),
+            (StopReason::Aborted, "aborted"),
+            (StopReason::Pending, "pending"),
+        ];
+
+        for (reason, wire) in cases {
+            let encoded = serde_json::to_string(&reason).expect("stop reason serializes");
+            assert_eq!(encoded, format!("\"{wire}\""));
+            assert_eq!(
+                serde_json::from_str::<StopReason>(&encoded).unwrap(),
+                reason
+            );
+        }
+    }
 }
 
 /// Plain text content block.
@@ -80,7 +96,9 @@ pub struct TextContent {
 /// Image content block.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ImageContent {
-    pub data: Vec<u8>,
+    /// Base64-encoded image data, matching pi-ai's wire representation.
+    pub data: String,
+    #[serde(rename = "mimeType")]
     pub mime_type: String,
 }
 
@@ -88,36 +106,97 @@ pub struct ImageContent {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum UserContent {
-    Text { text: String },
-    Image { data: Vec<u8>, mime_type: String },
+    Text {
+        text: String,
+    },
+    Image {
+        data: String,
+        #[serde(rename = "mimeType")]
+        mime_type: String,
+    },
 }
 
 /// A user message.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct UserMessage {
     pub content: Vec<UserContent>,
     pub timestamp: i64,
 }
 
+impl<'de> Deserialize<'de> for UserMessage {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        struct WireUserMessage {
+            content: serde_json::Value,
+            timestamp: i64,
+        }
+
+        let wire = WireUserMessage::deserialize(deserializer)?;
+        let content = match wire.content {
+            serde_json::Value::String(text) => vec![UserContent::Text { text }],
+            value => serde_json::from_value(value).map_err(serde::de::Error::custom)?,
+        };
+        Ok(Self {
+            content,
+            timestamp: wire.timestamp,
+        })
+    }
+}
+
 /// Partial or complete tool call emitted by the assistant.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ToolCall {
     pub id: String,
     pub name: String,
     pub arguments: serde_json::Value,
+    /// Provider-specific opaque signature (pi: `thoughtSignature`).
+    #[serde(default)]
+    pub thought_signature: Option<String>,
+}
+
+/// Redacted provider/runtime diagnostic attached to an assistant response.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AssistantMessageDiagnostic {
+    #[serde(rename = "type")]
+    pub diagnostic_type: String,
+    pub timestamp: i64,
+    #[serde(default)]
+    pub error: Option<DiagnosticErrorInfo>,
+    #[serde(default)]
+    pub details: Option<serde_json::Map<String, serde_json::Value>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DiagnosticErrorInfo {
+    #[serde(default)]
+    pub name: Option<String>,
+    pub message: String,
+    #[serde(default)]
+    pub stack: Option<String>,
+    #[serde(default)]
+    pub code: Option<serde_json::Value>,
 }
 
 /// Content block on an assistant message.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum AssistantContent {
-    Text { text: String },
-    Thinking { text: String },
+    Text {
+        text: String,
+    },
+    Thinking {
+        #[serde(rename = "thinking")]
+        text: String,
+    },
     ToolCall(ToolCall),
 }
 
 /// A (possibly partial) assistant message.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct AssistantMessage {
     pub content: Vec<AssistantContent>,
     pub stop_reason: Option<StopReason>,
@@ -127,6 +206,15 @@ pub struct AssistantMessage {
     pub api: String,
     #[serde(default)]
     pub provider: String,
+    /// Concrete response model when a provider routes a requested alias.
+    #[serde(default)]
+    pub response_model: Option<String>,
+    /// Provider response/message identifier, when available.
+    #[serde(default)]
+    pub response_id: Option<String>,
+    /// Redacted provider/runtime diagnostics for failures and recoveries.
+    #[serde(default)]
+    pub diagnostics: Vec<AssistantMessageDiagnostic>,
     /// Token usage for the finished message (pi: `usage`).
     #[serde(default)]
     pub usage: Usage,
@@ -141,33 +229,24 @@ pub struct AssistantMessage {
     pub timestamp: i64,
 }
 
-impl Default for AssistantMessage {
-    fn default() -> Self {
-        Self {
-            content: Vec::new(),
-            stop_reason: None,
-            model: String::new(),
-            api: String::new(),
-            provider: String::new(),
-            usage: Usage::default(),
-            error_message: None,
-            raw_stop_reason: None,
-            timestamp: 0,
-        }
-    }
-}
-
 /// Tool result content block.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ToolResultContent {
-    Text { text: String },
-    Image { data: Vec<u8>, mime_type: String },
+    Text {
+        text: String,
+    },
+    Image {
+        data: String,
+        #[serde(rename = "mimeType")]
+        mime_type: String,
+    },
 }
 
 /// Result returned by a tool invocation, attached to the transcript as a
 /// `ToolResultMessage`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ToolResultMessage {
     pub tool_call_id: String,
     pub tool_name: String,
@@ -179,7 +258,7 @@ pub struct ToolResultMessage {
     #[serde(default)]
     pub usage: Option<Usage>,
     /// Tool names discovered/added by this tool (pi: `addedToolNames?`).
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub added_tool_names: Vec<String>,
     pub is_error: bool,
     pub timestamp: i64,
@@ -202,6 +281,7 @@ impl Default for ToolResultMessage {
 
 /// Token usage + cost accounting. Cost is per-million tokens in USD.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Usage {
     pub input: u64,
     pub output: u64,
@@ -218,14 +298,46 @@ pub struct Usage {
     pub cost: CostBreakdown,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CostBreakdown {
-    pub input: u64,
-    pub output: u64,
-    pub cache_read: u64,
-    pub cache_write: u64,
-    pub total: u64,
+    pub input: f64,
+    pub output: f64,
+    pub cache_read: f64,
+    pub cache_write: f64,
+    pub total: f64,
 }
+
+// Cost values are wire-level numeric USD amounts. The model never produces
+// NaN, so equality remains a valid state comparison for actor snapshots.
+impl Eq for CostBreakdown {}
+
+/// Model pricing rates and optional request-wide pricing tiers (pi `ModelCost`).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelCost {
+    pub input: f64,
+    pub output: f64,
+    pub cache_read: f64,
+    pub cache_write: f64,
+    #[serde(default)]
+    pub tiers: Vec<ModelCostTier>,
+}
+
+impl Eq for ModelCost {}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelCostTier {
+    pub input: f64,
+    pub output: f64,
+    pub cache_read: f64,
+    pub cache_write: f64,
+    #[serde(rename = "inputTokensAbove")]
+    pub input_tokens_above: u64,
+}
+
+impl Eq for ModelCostTier {}
 
 /// Extension trait for app-level custom message types. Mirrors the TS
 /// declaration-merging API.
@@ -251,15 +363,21 @@ pub enum AgentMessage {
 
 impl Serialize for AgentMessage {
     fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
-        match self {
-            AgentMessage::User(m) => m.serialize(s),
-            AgentMessage::Assistant(m) => m.serialize(s),
-            AgentMessage::ToolResult(m) => m.serialize(s),
+        let (role, value) = match self {
+            AgentMessage::User(m) => ("user", serde_json::to_value(m)),
+            AgentMessage::Assistant(m) => ("assistant", serde_json::to_value(m)),
+            AgentMessage::ToolResult(m) => ("toolResult", serde_json::to_value(m)),
             AgentMessage::Custom(_) => {
                 // Custom is opaque on the wire; represent as null.
-                s.serialize_none()
+                return s.serialize_none();
             }
-        }
+        };
+        let mut value = value.map_err(serde::ser::Error::custom)?;
+        let object = value
+            .as_object_mut()
+            .ok_or_else(|| serde::ser::Error::custom("agent message must serialize as object"))?;
+        object.insert("role".into(), serde_json::Value::String(role.into()));
+        value.serialize(s)
     }
 }
 
@@ -351,23 +469,28 @@ pub enum InputKind {
     Image,
 }
 
-/// Per-thinking-level token budgets (pi: `thinkingLevelMap?`).
+/// Provider-specific reasoning-effort mappings (pi: `thinkingLevelMap?`).
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ThinkingLevelMap {
-    #[serde(default)]
-    pub minimal: Option<u64>,
-    #[serde(default)]
-    pub low: Option<u64>,
-    #[serde(default)]
-    pub medium: Option<u64>,
-    #[serde(default)]
-    pub high: Option<u64>,
-    #[serde(default)]
-    pub xhigh: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub off: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub minimal: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub low: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub medium: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub high: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub xhigh: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max: Option<String>,
 }
 
 /// Static model description.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Model {
     pub id: String,
     pub name: String,
@@ -384,7 +507,7 @@ pub struct Model {
     pub input: Vec<InputKind>,
     /// Cost in USD per million tokens (pi: `cost`).
     #[serde(default)]
-    pub cost: CostBreakdown,
+    pub cost: ModelCost,
     #[serde(default)]
     pub context_window: u64,
     #[serde(default)]
@@ -392,15 +515,56 @@ pub struct Model {
     /// Extra HTTP headers for provider requests (pi: `headers?`).
     #[serde(default)]
     pub headers: std::collections::HashMap<String, String>,
+    /// Provider-specific compatibility overrides (pi `compat?`).
+    #[serde(default)]
+    pub compat: Option<serde_json::Value>,
 }
 
+/// Response metadata exposed to pi-compatible provider response hooks.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ProviderResponse {
+    pub status: u16,
+    pub headers: std::collections::HashMap<String, String>,
+}
+
+pub type PayloadHook = std::sync::Arc<
+    dyn Fn(
+            serde_json::Value,
+            Model,
+        ) -> futures::future::BoxFuture<'static, Option<serde_json::Value>>
+        + Send
+        + Sync,
+>;
+
+pub type ResponseHook = std::sync::Arc<
+    dyn Fn(ProviderResponse, Model) -> futures::future::BoxFuture<'static, ()> + Send + Sync,
+>;
+
 /// Options passed to a `StreamFn::stream` call.
-#[derive(Debug, Clone, Default)]
+#[derive(Clone, Default)]
 pub struct SimpleStreamOptions {
     pub session_id: Option<String>,
     pub api_key: Option<String>,
     pub signal: Option<tokio::sync::watch::Receiver<bool>>,
     pub thinking_budgets: Option<ThinkingBudgets>,
+    /// pi `onPayload`: provider adapters may inspect or replace request data.
+    pub on_payload: Option<PayloadHook>,
+    /// pi `onResponse`: provider adapters may observe response metadata.
+    pub on_response: Option<ResponseHook>,
+}
+
+impl std::fmt::Debug for SimpleStreamOptions {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("SimpleStreamOptions")
+            .field("session_id", &self.session_id)
+            .field("api_key", &self.api_key.as_ref().map(|_| "<redacted>"))
+            .field("signal", &self.signal.is_some())
+            .field("thinking_budgets", &self.thinking_budgets)
+            .field("on_payload", &self.on_payload.is_some())
+            .field("on_response", &self.on_response.is_some())
+            .finish()
+    }
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -466,23 +630,93 @@ pub trait AgentTool: Send + Sync + 'static {
 }
 
 /// Final or partial result produced by a tool.
+fn is_false(value: &bool) -> bool {
+    !*value
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AgentToolResult {
     pub content: Vec<ToolResultContent>,
     pub details: serde_json::Value,
     pub usage: Option<Usage>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub added_tool_names: Vec<String>,
+    #[serde(skip_serializing_if = "is_false")]
     pub terminate: bool,
 }
 
 /// Event emitted by the agent for UI updates and for downstream subscribers.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case", tag = "kind")]
+pub enum WaitingReason {
+    Model,
+    Subagent,
+    TaskOutput {
+        task_ids: Vec<String>,
+        subject: String,
+    },
+    TasksComplete,
+    Sleep,
+}
+
+/// Named appearance variants shared by the event bus and TUI projections.
+/// Rendering layers may quantize their palette to terminal capabilities.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum ThemeKind {
+    #[default]
+    GrokNight,
+    GrokDay,
+    TokyoNight,
+    RosePineMoon,
+    OscuraMidnight,
+    Auto,
+}
+
+/// Per-tool block display state used by Grok's scrollback renderer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ToolDisplayMode {
+    Collapsed,
+    Truncated,
+    Expanded,
+}
+
+/// Event emitted by the agent for UI updates and for downstream subscribers.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(
+    tag = "type",
+    rename_all = "snake_case",
+    rename_all_fields = "camelCase"
+)]
+#[allow(
+    clippy::large_enum_variant,
+    reason = "AgentEvent is the shared typed bus boundary; boxing would obscure the event DSL"
+)]
 pub enum AgentEvent {
     AgentStart,
     AgentEnd {
         messages: Vec<AgentMessage>,
     },
+    Error {
+        message: String,
+    },
+    ThinkingLevelChanged {
+        level: ThinkingLevel,
+    },
+    Reset,
     TurnStart,
+    Waiting {
+        reason: WaitingReason,
+    },
+    ThemeChanged {
+        theme: ThemeKind,
+    },
+    ToolDisplayModeChanged {
+        tool_call_id: String,
+        mode: ToolDisplayMode,
+    },
     TurnEnd {
         message: AgentMessage,
         tool_results: Vec<ToolResultMessage>,
@@ -522,7 +756,11 @@ pub enum AgentEvent {
 /// sectional `*_start` / `*_end` markers delimit content blocks, the `*_delta`
 /// events carry the streaming text, and `done`/`error` terminate the message.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
+#[serde(
+    tag = "type",
+    rename_all = "snake_case",
+    rename_all_fields = "camelCase"
+)]
 pub enum AssistantMessageEvent {
     Start,
     TextStart {
@@ -543,14 +781,17 @@ pub enum AssistantMessageEvent {
     ThinkingEnd {
         index: usize,
     },
+    #[serde(rename = "toolcall_start")]
     ToolCallStart {
         index: usize,
         partial: ToolCall,
     },
+    #[serde(rename = "toolcall_delta")]
     ToolCallDelta {
         index: usize,
         partial: ToolCall,
     },
+    #[serde(rename = "toolcall_end")]
     ToolCallEnd {
         index: usize,
         tool_call: ToolCall,
@@ -558,15 +799,23 @@ pub enum AssistantMessageEvent {
     Done {
         stop_reason: StopReason,
         usage: Usage,
+        /// Full terminal assistant payload when the provider supplies it.
+        /// Internal synthetic streams may leave this absent.
+        #[serde(default)]
+        message: Option<AssistantMessage>,
     },
     Error {
         error: String,
+        /// Pi's error event carries the terminal assistant message.
+        #[serde(default)]
+        message: Option<AssistantMessage>,
     },
 }
 
 /// Returned by `before_tool_call`. `{ block: true }` short-circuits to a
 /// synthetic error tool result.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BeforeToolCallResult {
     pub block: bool,
     pub reason: Option<String>,
@@ -575,6 +824,7 @@ pub struct BeforeToolCallResult {
 /// Returned by `after_tool_call`. Field-by-field override: any `Some` field
 /// replaces the corresponding field on the executed result.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AfterToolCallResult {
     pub content: Option<Vec<ToolResultContent>>,
     pub details: Option<serde_json::Value>,
@@ -583,23 +833,32 @@ pub struct AfterToolCallResult {
     pub terminate: Option<bool>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone)]
 pub struct BeforeToolCallContext {
     pub assistant_message: AssistantMessage,
     pub tool_call: ToolCall,
     pub args: serde_json::Value,
+    pub context: AgentContext,
+    pub signal: tokio_util::sync::CancellationToken,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct AfterToolCallContext {
     pub assistant_message: AssistantMessage,
     pub tool_call: ToolCall,
     pub args: serde_json::Value,
     pub result: AgentToolResult,
     pub is_error: bool,
+    pub context: AgentContext,
+    pub signal: tokio_util::sync::CancellationToken,
 }
 
 #[cfg(test)]
+#[allow(
+    clippy::field_reassign_with_default,
+    clippy::too_many_lines,
+    reason = "serialization tests exercise complete parity payloads in one round-trip"
+)]
 mod tests {
     use super::*;
 
@@ -631,6 +890,14 @@ mod tests {
             model: "m".into(),
             api: "anthropic".into(),
             provider: "anthropic".into(),
+            response_model: Some("claude-3".into()),
+            response_id: Some("resp-1".into()),
+            diagnostics: vec![AssistantMessageDiagnostic {
+                diagnostic_type: "recovery".into(),
+                timestamp: 8,
+                error: None,
+                details: None,
+            }],
             usage: usage.clone(),
             error_message: Some("boom".into()),
             raw_stop_reason: Some("max_tokens".into()),
@@ -640,13 +907,16 @@ mod tests {
         // pi AssistantMessage carries these keys.
         for key in [
             "content",
-            "stop_reason",
+            "stopReason",
             "model",
             "api",
             "provider",
+            "responseModel",
+            "responseId",
+            "diagnostics",
             "usage",
-            "error_message",
-            "raw_stop_reason",
+            "errorMessage",
+            "rawStopReason",
             "timestamp",
         ] {
             assert!(json.get(key).is_some(), "missing {key}");
@@ -655,6 +925,27 @@ mod tests {
         assert_eq!(back, m);
         assert_eq!(back.usage.input, 10);
         assert_eq!(back.usage.output, 20);
+    }
+
+    #[test]
+    fn agent_message_serialization_injects_pi_roles() {
+        let messages = [
+            AgentMessage::User(UserMessage {
+                content: vec![UserContent::Text {
+                    text: "hello".into(),
+                }],
+                timestamp: 1,
+            }),
+            AgentMessage::Assistant(AssistantMessage::default()),
+            AgentMessage::ToolResult(ToolResultMessage::default()),
+        ];
+        let roles = ["user", "assistant", "toolResult"];
+        for (message, role) in messages.into_iter().zip(roles) {
+            let json = serde_json::to_value(&message).expect("message wire value");
+            assert_eq!(json["role"], role);
+            let round_trip: AgentMessage = serde_json::from_value(json).expect("message decode");
+            assert_eq!(round_trip, message);
+        }
     }
 
     #[test]
@@ -671,13 +962,13 @@ mod tests {
         };
         let json = serde_json::to_value(&m).unwrap();
         for key in [
-            "tool_call_id",
-            "tool_name",
+            "toolCallId",
+            "toolName",
             "content",
             "details",
             "usage",
-            "added_tool_names",
-            "is_error",
+            "addedToolNames",
+            "isError",
             "timestamp",
         ] {
             assert!(json.get(key).is_some(), "missing {key}");
@@ -688,13 +979,21 @@ mod tests {
     }
 
     #[test]
+    #[allow(
+        clippy::cognitive_complexity,
+        reason = "the serde contract test compares the complete model/usage wire shape"
+    )]
     fn model_and_usage_round_trip_new_parity_fields() {
-        let mut cost = CostBreakdown::default();
-        cost.input = 3;
-        cost.output = 15;
-        let mut usage = Usage::default();
-        usage.cache_write_1h = 9;
-        usage.reasoning = 4;
+        let cost = CostBreakdown {
+            input: 3.25,
+            output: 15.75,
+            ..Default::default()
+        };
+        let usage = Usage {
+            cache_write_1h: 9,
+            reasoning: 4,
+            ..Default::default()
+        };
         let m = Model {
             id: "m".into(),
             name: "m".into(),
@@ -703,30 +1002,47 @@ mod tests {
             base_url: "b".into(),
             reasoning: true,
             thinking_level_map: Some(ThinkingLevelMap {
-                high: Some(1_000),
+                high: Some("extended".into()),
+                max: Some("maximum".into()),
                 ..Default::default()
             }),
             input: vec![InputKind::Text, InputKind::Image],
-            cost: cost.clone(),
+            cost: ModelCost {
+                input: cost.input,
+                output: cost.output,
+                cache_read: cost.cache_read,
+                cache_write: cost.cache_write,
+                tiers: vec![ModelCostTier {
+                    input_tokens_above: 10_000,
+                    ..Default::default()
+                }],
+            },
             context_window: 128,
             max_tokens: 64,
             headers: [("X-Test".to_string(), "1".to_string())]
                 .into_iter()
                 .collect(),
+            compat: Some(serde_json::json!({"supports_reasoning": true})),
         };
         let json = serde_json::to_value(&m).unwrap();
+        assert_eq!(json["cost"]["input"], serde_json::json!(3.25));
+        assert_eq!(json["cost"]["output"], serde_json::json!(15.75));
+        assert_eq!(json["cost"]["tiers"][0]["inputTokensAbove"], 10_000);
+        assert_eq!(json["compat"]["supports_reasoning"], true);
+        assert_eq!(json["thinkingLevelMap"]["high"], "extended");
+        assert_eq!(json["thinkingLevelMap"]["max"], "maximum");
         for key in [
             "id",
             "name",
             "api",
             "provider",
-            "base_url",
+            "baseUrl",
             "reasoning",
-            "thinking_level_map",
+            "thinkingLevelMap",
             "input",
             "cost",
-            "context_window",
-            "max_tokens",
+            "contextWindow",
+            "maxTokens",
             "headers",
         ] {
             assert!(json.get(key).is_some(), "Model missing {key}");
@@ -735,7 +1051,8 @@ mod tests {
         assert_eq!(back, m);
 
         let ujson = serde_json::to_value(&usage).unwrap();
-        assert!(ujson.get("cache_write_1h").is_some());
+        assert!(ujson.get("cacheWrite1h").is_some());
+        assert!(ujson.get("totalTokens").is_some());
         assert!(ujson.get("reasoning").is_some());
         let uback: Usage = serde_json::from_value(ujson).unwrap();
         assert_eq!(uback, usage);
@@ -759,6 +1076,7 @@ mod tests {
                     id: "c".into(),
                     name: "x".into(),
                     arguments: serde_json::json!({}),
+                    thought_signature: None,
                 },
             },
             AssistantMessageEvent::ToolCallDelta {
@@ -767,6 +1085,7 @@ mod tests {
                     id: "c".into(),
                     name: "x".into(),
                     arguments: serde_json::json!({}),
+                    thought_signature: None,
                 },
             },
             AssistantMessageEvent::ToolCallEnd {
@@ -775,14 +1094,17 @@ mod tests {
                     id: "c".into(),
                     name: "x".into(),
                     arguments: serde_json::json!({}),
+                    thought_signature: None,
                 },
             },
             AssistantMessageEvent::Done {
                 stop_reason: StopReason::Stop,
                 usage: Usage::default(),
+                message: None,
             },
             AssistantMessageEvent::Error {
                 error: "boom".into(),
+                message: None,
             },
         ];
         for e in events {
@@ -799,5 +1121,104 @@ mod tests {
             timestamp: 42,
         });
         assert_eq!(user.timestamp(), 42);
+    }
+
+    #[test]
+    fn image_content_uses_pi_base64_wire_strings() {
+        let message = AgentMessage::User(UserMessage {
+            content: vec![UserContent::Image {
+                data: "aGVsbG8=".into(),
+                mime_type: "image/png".into(),
+            }],
+            timestamp: 42,
+        });
+        let json = serde_json::to_value(&message).expect("image message serializes");
+        assert_eq!(json["role"], "user");
+        assert_eq!(json["content"][0]["type"], "image");
+        assert_eq!(json["content"][0]["data"], "aGVsbG8=");
+        assert_eq!(json["content"][0]["mimeType"], "image/png");
+        let decoded: AgentMessage = serde_json::from_value(json).expect("image message decodes");
+        assert_eq!(decoded, message);
+
+        let thinking = serde_json::to_value(AssistantContent::Thinking {
+            text: "considering".into(),
+        })
+        .expect("thinking content serializes");
+        assert_eq!(thinking["thinking"], "considering");
+        assert!(thinking.get("text").is_none());
+    }
+
+    #[test]
+    fn user_message_accepts_pi_string_content_sugar() {
+        let message: UserMessage = serde_json::from_value(serde_json::json!({
+            "content": "hello",
+            "timestamp": 42
+        }))
+        .expect("pi string content decodes");
+        assert_eq!(
+            message.content,
+            vec![UserContent::Text {
+                text: "hello".into()
+            }]
+        );
+        assert_eq!(message.timestamp, 42);
+    }
+
+    #[test]
+    fn event_wire_shapes_use_pi_tags_and_camel_case_fields() {
+        let event = AgentEvent::ToolExecutionStart {
+            tool_call_id: "call-1".into(),
+            tool_name: "read".into(),
+            args: serde_json::json!({"path": "README.md"}),
+        };
+        let json = serde_json::to_value(&event).expect("agent event serializes");
+        assert_eq!(json["type"], "tool_execution_start");
+        assert_eq!(json["toolCallId"], "call-1");
+        assert!(json.get("tool_call_id").is_none());
+
+        let stream = AssistantMessageEvent::ToolCallEnd {
+            index: 0,
+            tool_call: ToolCall {
+                id: "call-1".into(),
+                name: "read".into(),
+                arguments: serde_json::json!({}),
+                thought_signature: Some("sig".into()),
+            },
+        };
+        let stream_json = serde_json::to_value(&stream).expect("stream event serializes");
+        assert_eq!(stream_json["type"], "toolcall_end");
+        assert!(stream_json.get("tool_call").is_none());
+        assert!(stream_json.get("toolCall").is_some());
+        assert_eq!(stream_json["toolCall"]["thoughtSignature"], "sig");
+    }
+
+    #[test]
+    fn tool_hook_payloads_use_pi_camel_case_keys() {
+        let result = AgentToolResult {
+            content: vec![],
+            details: serde_json::json!({"ok": true}),
+            usage: None,
+            added_tool_names: vec!["search".into()],
+            terminate: true,
+        };
+        let json = serde_json::to_value(result).expect("tool result serializes");
+        assert_eq!(json["addedToolNames"], serde_json::json!(["search"]));
+        assert_eq!(json["terminate"], true);
+        assert!(json.get("added_tool_names").is_none());
+        let empty_json =
+            serde_json::to_value(AgentToolResult::default()).expect("empty tool result serializes");
+        assert!(empty_json.get("addedToolNames").is_none());
+        assert!(empty_json.get("terminate").is_none());
+
+        let override_result = AfterToolCallResult {
+            content: None,
+            details: None,
+            is_error: Some(true),
+            usage: None,
+            terminate: Some(false),
+        };
+        let override_json = serde_json::to_value(override_result).expect("override serializes");
+        assert_eq!(override_json["isError"], true);
+        assert_eq!(override_json["terminate"], false);
     }
 }

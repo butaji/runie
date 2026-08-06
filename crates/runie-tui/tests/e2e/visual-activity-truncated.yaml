@@ -1,0 +1,24 @@
+name: visual-activity-truncated
+description: |
+  A Grok truncated tool block keeps its semantic header and only the first
+  output row while hiding the remainder.
+initial_prompt: "read the file"
+tools:
+  - name: read
+    kind: read
+events:
+  - start
+  - tool_call:
+      name: read
+      args: { path: "README.md" }
+  - done: { stop_reason: tool_use }
+  - tool_mode:
+      tool_call_id: call-1
+      mode: truncated
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    screen_text:
+      - "Read README.md"
+      - "# runie"

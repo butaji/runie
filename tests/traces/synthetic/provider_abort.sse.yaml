@@ -1,0 +1,26 @@
+trace_id: provider_abort
+conversation: synthetic_provider_abort
+turn: 1
+outcome: abort
+transport:
+  status: 200
+  sse: true
+request:
+  model: synthetic-abort-fixture
+provider:
+  expected_events: []
+payload:
+  non_empty_text: false
+core:
+  required_events: [AgentStart, TurnStart, MessageStart, MessageEnd, AgentEnd]
+  exact_events: [AgentStart, TurnStart, MessageStart, MessageEnd, MessageStart, MessageUpdate, MessageEnd, TurnEnd, AgentEnd]
+state:
+  assistant_messages: 1
+  is_streaming: false
+  pending_tool_calls: 0
+  error_message: aborted
+tools: []
+description: |
+  Synthetic reactive abort. The provider blocks on an actor-owned watch
+  channel until the loop receives abort, then the fixture checks the retained
+  partial assistant and aborted terminal state.

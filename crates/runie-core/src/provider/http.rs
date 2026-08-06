@@ -3,16 +3,60 @@
 use std::{fs, path::Path};
 
 use super::stream_fn::StreamError;
+use crate::types::{Model, ProviderResponse, SimpleStreamOptions};
 
 #[derive(Debug, Clone)]
 pub struct HttpResponse {
     pub status: u16,
+    pub headers: std::collections::HashMap<String, String>,
     pub body: String,
 }
 
 #[async_trait::async_trait]
 pub trait HttpActor: Send + Sync + 'static {
     async fn post(&self, body: String) -> Result<HttpResponse, StreamError>;
+
+    /// Apply pi-compatible request/response hooks at the transport boundary.
+    /// Concrete adapters only implement `post`; the actor owns the side
+    /// effect while hooks remain caller-provided observations/transformations.
+    async fn post_with_options(
+        &self,
+        body: String,
+        model: Model,
+        options: Option<SimpleStreamOptions>,
+    ) -> Result<HttpResponse, StreamError> {
+        let mut payload = serde_json::from_str::<serde_json::Value>(&body)
+            .unwrap_or_else(|_| serde_json::Value::String(body.clone()));
+        if let Some(hook) = options
+            .as_ref()
+            .and_then(|options| options.on_payload.clone())
+        {
+            if let Some(transformed) = hook(payload.clone(), model.clone()).await {
+                payload = transformed;
+            }
+        }
+        let request_body = match payload {
+            serde_json::Value::String(raw) => raw,
+            value => serde_json::to_string(&value).map_err(|error| {
+                StreamError::Invalid(format!("payload hook serialization failed: {error}"))
+            })?,
+        };
+        let response = self.post(request_body).await?;
+        if let Some(hook) = options
+            .as_ref()
+            .and_then(|options| options.on_response.clone())
+        {
+            hook(
+                ProviderResponse {
+                    status: response.status,
+                    headers: response.headers.clone(),
+                },
+                model,
+            )
+            .await;
+        }
+        Ok(response)
+    }
 }
 
 /// Serves one recorded HTTP response body without opening a socket.
@@ -24,7 +68,11 @@ impl ReplayHttpActor {
     pub fn from_sse(path: impl AsRef<Path>) -> Result<Self, StreamError> {
         let body = fs::read_to_string(path).map_err(|e| StreamError::Network(e.to_string()))?;
         Ok(Self {
-            response: HttpResponse { status: 200, body },
+            response: HttpResponse {
+                status: 200,
+                headers: std::collections::HashMap::new(),
+                body,
+            },
         })
     }
 }
@@ -36,5 +84,85 @@ impl HttpActor for ReplayHttpActor {
             return Err(StreamError::Api(format!("HTTP {}", self.response.status)));
         }
         Ok(self.response.clone())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use futures::FutureExt;
+    use std::sync::{Arc, Mutex};
+
+    struct CapturingHttp {
+        body: Arc<Mutex<Option<String>>>,
+    }
+
+    #[async_trait::async_trait]
+    impl HttpActor for CapturingHttp {
+        async fn post(&self, body: String) -> Result<HttpResponse, StreamError> {
+            *self.body.lock().expect("body lock") = Some(body);
+            Ok(HttpResponse {
+                status: 201,
+                headers: [("x-request-id".into(), "replay-1".into())]
+                    .into_iter()
+                    .collect(),
+                body: String::new(),
+            })
+        }
+    }
+
+    #[tokio::test]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the hook contract test keeps request and response assertions together"
+    )]
+    async fn post_with_options_runs_payload_and_response_hooks() {
+        let body = Arc::new(Mutex::new(None));
+        let seen_payload = Arc::new(Mutex::new(None));
+        let seen_response = Arc::new(Mutex::new(None));
+        let payload_capture = seen_payload.clone();
+        let response_capture = seen_response.clone();
+        let options = SimpleStreamOptions {
+            on_payload: Some(Arc::new(move |payload, _model| {
+                *payload_capture.lock().expect("payload lock") = Some(payload);
+                async { Some(serde_json::json!({"rewritten": true})) }.boxed()
+            })),
+            on_response: Some(Arc::new(move |response, _model| {
+                *response_capture.lock().expect("response lock") = Some(response);
+                async {}.boxed()
+            })),
+            ..Default::default()
+        };
+        let http = CapturingHttp { body: body.clone() };
+        let response = http
+            .post_with_options(
+                serde_json::json!({"original": true}).to_string(),
+                Model::default(),
+                Some(options),
+            )
+            .await
+            .expect("hooked request");
+
+        assert_eq!(
+            body.lock().expect("body lock").as_deref(),
+            Some(r#"{"rewritten":true}"#)
+        );
+        assert_eq!(
+            seen_payload
+                .lock()
+                .expect("payload lock")
+                .as_ref()
+                .and_then(|value| value.get("original"))
+                .and_then(serde_json::Value::as_bool),
+            Some(true)
+        );
+        let seen = seen_response.lock().expect("response lock");
+        assert_eq!(seen.as_ref().map(|response| response.status), Some(201));
+        assert_eq!(
+            seen.as_ref()
+                .and_then(|response| response.headers.get("x-request-id")),
+            Some(&"replay-1".to_string())
+        );
+        assert_eq!(response.status, 201);
     }
 }

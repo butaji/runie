@@ -19,7 +19,7 @@
     {
       "id": "p02",
       "file": "p02-core-stopreason-pending.md",
-      "status": "pending",
+      "status": "done",
       "title": "Core types: add StopReason::Pending and reconcile stop-reason variants"
     },
     {
@@ -91,13 +91,13 @@
     {
       "id": "p14",
       "file": "p14-tui-keybindings.md",
-      "status": "pending",
+      "status": "done",
       "title": "TUI: keybinding parity (Shift+Tab, Ctrl+x, Ctrl+L, history, Tab, file-search, multiline)"
     },
     {
       "id": "p15",
       "file": "p15-tui-prompt-chrome.md",
-      "status": "pending",
+      "status": "done",
       "title": "TUI: prompt widget chrome (model caption, multiline indicator, hints, history, placeholder)"
     },
     {
@@ -109,13 +109,13 @@
     {
       "id": "p17",
       "file": "p17-tui-welcome-layout.md",
-      "status": "pending",
+      "status": "done",
       "title": "TUI: welcome screen + layout/resize parity"
     },
     {
       "id": "p18",
       "file": "p18-architecture-audit.md",
-      "status": "pending",
+      "status": "done",
       "title": "Architecture: actors-ssot audit, event ownership, no orphan spawns, linter rules"
     },
     {
@@ -123,6 +123,36 @@
       "file": "p19-parity-verification.md",
       "status": "pending",
       "title": "Verification: parity harness (pi event-sequence replay + grok cast snapshot diffs)"
+    },
+    {
+      "id": "p20",
+      "file": "p20-dsl-yaml-tests.md",
+      "status": "done",
+      "title": "Architecture: thin actor DSLs and YAML-first behavior tests"
+    },
+    {
+      "id": "p21",
+      "file": "p21-grok-tui-inventory.md",
+      "status": "in_progress",
+      "title": "TUI: Grok feature/state/theme/animation inventory and parity gap map"
+    },
+    {
+      "id": "p23",
+      "file": "p23-tui-projection-actors.md",
+      "status": "in_progress",
+      "title": "Architecture: migrate TUI status and scrollback projections to actor-owned watch snapshots"
+    },
+    {
+      "id": "p24",
+      "file": "p24-tui-component-parity-docs.md",
+      "status": "in_progress",
+      "title": "TUI: source-backed component parity documentation and manifest"
+    },
+    {
+      "id": "p25",
+      "file": "p25-parity-instrument-audit.md",
+      "status": "in_progress",
+      "title": "Verification: independent parity instrument and frame-selection audit"
     }
   ]
 }

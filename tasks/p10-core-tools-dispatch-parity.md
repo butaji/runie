@@ -1,5 +1,12 @@
 # p10 — Core tools: beforeToolCall block, terminate AND semantics, parallel completion-order events
 
+**Latest parity note (2026-08-05):** `afterToolCall` overrides now propagate
+`content`, `details`, `usage`, `terminate`, and `isError` into both
+`tool_execution_end` and the resulting `toolResult` message.
+
+The callback also receives the actor-owned current `AgentContext`, matching
+pi's `AfterToolCallContext` contract.
+
 **Parity target:** pi tool dispatch (`executeToolCalls` family).
 
 ## Pi reference
@@ -43,3 +50,37 @@ Result order: parallel completion order for events; source order for messages.
 
 - New tests: block via `before_tool_call` yields the exact pi error text; `terminate` AND semantics (one non-terminated result → batch not terminated); parallel completion-order != source-order when tools finish out of order; sequential-vs-parallel dispatch selection incl. per-tool override; abort mid-batch stops remaining calls.
 - `cargo test -p runie-core` green.
+
+## Progress
+
+- **Hook context parity (2026-08-05):** `before_tool_call` and
+  `after_tool_call` both receive the actor-owned `AgentContext`; the dispatch
+  regression verifies the two callbacks observe the current two-message
+  transcript for both parallel tool calls.
+- **Async hook parity (2026-08-05):** Both tool-hook callbacks now return
+  boxed futures and are awaited inside the async executor, matching pi's
+  asynchronous hook contract without blocking the actor worker.
+- **Tool update parity (2026-08-05):** The executor now supplies each tool
+  with an `on_update` callback and projects partial results as
+  `ToolExecutionUpdate` events through the existing event sequence.
+- **Tool cancellation parity (2026-08-05):** The loop abort receiver now
+  crosses the tool actor boundary; each tool receives a
+  `CancellationToken`, and execution races the tool future against abort so
+  cancellation uses the same synthetic error lifecycle as other tool errors.
+  A focused executor regression now holds a tool in flight, aborts it, and
+  asserts the typed error result.
+- **Hook signal parity (2026-08-05):** Before/after tool-hook payloads now
+  expose the per-call `CancellationToken`; the hook regression confirms the
+  signal is live while both callbacks execute.
+- **Live update parity (2026-08-05):** Tool `on_update` callbacks now publish
+  `ToolExecutionUpdate` directly through the shared event bus from the owning
+  tool actor; the loop skips replaying those already-published updates while
+  retaining them in the batch oracle.
+- **Failure finalization parity (2026-08-05):** Execution errors and aborts
+  now pass through `after_tool_call` with `is_error=true`; hook overrides are
+  applied before the final tool event/result is emitted.
+
+- **Tool hook wire parity (2026-08-05):** Tool execution results and
+  before/after hook payloads now serialize pi-compatible camelCase keys,
+  including `addedToolNames` and `isError`, with focused serialization
+  coverage.

@@ -4,12 +4,12 @@ expression: screen
 ---
                                         
    main ~/Code/GitHub/runie-tests/run  
-     ◆ session_start                    
      ❯ resize                           
-     ┃ A response that wraps at the na  
-  rrow viewport.                        
+  ┃  A response that wraps at the narr  
+  ow viewport.                          
+       Worked for 0.0s                  
   ╭──────────────────────────────────╮  
-  │ ❯                                │  
+  │ ❯ Type your message...           │  
   ╰──────────────── Grok 4.5 (high) ─╯  
                                         
   Enter:send  │  Shift+Tab:mode  │  Ct

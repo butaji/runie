@@ -1,17 +1,18 @@
 ---
 source: crates/runie-tui/tests/visual_snapshots.rs
+assertion_line: 1064
 expression: screen
 ---
                                                                                 
    main ~/Code/GitHub/runie-tests/runie                                        
                                                                                 
-     ◆ session_start                                                            
+     ◆ session_start  [hooks: 1]                                                
+                                                                                
+                                                                                
      ❯ explain                                                                  
-     ┃ The answer is ready.                                                     
-     ┃ Thought                                                                  
-                                                                                
-                                                                                
-                                                                                
+       ◆ Thought for 0.9s                                                       
+  ┃  The answer is ready.                                                       
+       Worked for 0.0s                                                          
                                                                                 
                                                                                 
                                                                                 
@@ -27,7 +28,7 @@ expression: screen
                                                                                 
                                                                                 
   ╭──────────────────────────────────────────────────────────────────────────╮  
-  │ ❯                                                                        │  
+  │ ❯ Type your message...                                                   │  
   ╰──────────────────────────────────────────────────────── Grok 4.5 (high) ─╯  
                                                                                 
   Enter:send  │  Shift+Tab:mode  │  Ctrl+x:shortcuts

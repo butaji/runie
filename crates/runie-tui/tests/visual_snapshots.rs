@@ -1,3 +1,10 @@
+#![allow(
+    clippy::manual_repeat_n,
+    clippy::needless_range_loop,
+    clippy::too_many_lines,
+    reason = "fixture comparisons intentionally keep each recorded frame assertion together"
+)]
+
 use std::path::PathBuf;
 
 use ratatui::buffer::Buffer;
@@ -5,13 +12,149 @@ use ratatui::layout::Rect;
 use ratatui::style::Modifier;
 use serde_json::Value;
 
-use runie_tui::widgets::{Status, StatusBar, TurnStatus, TurnStatusPhase};
+use runie_tui::widgets::{
+    braille_spinner_frames, Line, LineKind, Scrollback, Status, StatusBar, TurnStatus,
+    TurnStatusPhase,
+};
 use runie_tui::yaml_runner::{load_scenario, render_visual, render_visual_buffer};
 
 fn fixture(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("tests/e2e")
         .join(name)
+}
+
+struct CastDump {
+    name: &'static str,
+    cols: u16,
+    rows: u16,
+    frames: usize,
+    final_screen: String,
+}
+
+fn replay_cast(path: &str, name: &'static str) -> CastDump {
+    let cast = std::fs::read_to_string(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../artifacts")
+            .join(path),
+    )
+    .unwrap_or_else(|error| panic!("read asciinema dump {path}: {error}"));
+    let mut lines = cast.lines();
+    let header: Value = serde_json::from_str(lines.next().expect("cast header"))
+        .unwrap_or_else(|error| panic!("parse asciinema header {path}: {error}"));
+    let term = header.get("term").expect("cast terminal metadata");
+    let cols = term["cols"].as_u64().expect("cast cols") as u16;
+    let rows = term["rows"].as_u64().expect("cast rows") as u16;
+    let mut parser = vt100::Parser::new(rows, cols, 0);
+    let mut frames = 0;
+    for (line_number, line) in lines.enumerate() {
+        let event: Value = serde_json::from_str(line)
+            .unwrap_or_else(|error| panic!("parse asciinema event {path}:{line_number}: {error}"));
+        if event[1].as_str() != Some("o") {
+            continue;
+        }
+        let output = event[2].as_str().expect("output event payload");
+        parser.process(output.as_bytes());
+        frames += 1;
+    }
+    assert!(frames > 0, "{path} contains no asciinema frames");
+    CastDump {
+        name,
+        cols,
+        rows,
+        frames,
+        final_screen: parser.screen().contents(),
+    }
+}
+
+#[test]
+fn asciinema_dumps_replay_to_snapshotable_terminal_frames() {
+    let dumps = [
+        replay_cast("grok-full.cast", "grok-full"),
+        replay_cast("grok-rich.cast", "grok-rich"),
+        replay_cast("runie-full.cast", "runie-full"),
+    ];
+    let summary = dumps
+        .iter()
+        .map(|dump| {
+            format!(
+                "{}: {}x{}, {} events, final-screen-bytes={}, final-screen-lines={}",
+                dump.name,
+                dump.cols,
+                dump.rows,
+                dump.frames,
+                dump.final_screen.len(),
+                dump.final_screen.lines().count()
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    insta::assert_snapshot!("asciinema-dump-replay-summary", summary);
+}
+
+#[test]
+#[allow(clippy::cognitive_complexity)]
+fn grok_casts_have_a_classified_state_for_every_frame() {
+    let casts = ["grok-full.cast", "grok-rich.cast"];
+    let mut summary = Vec::new();
+    for cast_name in casts {
+        let cast = std::fs::read_to_string(
+            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../../artifacts")
+                .join(cast_name),
+        )
+        .expect("saved Grok asciinema recording");
+        let mut lines = cast.lines();
+        let header: Value =
+            serde_json::from_str(lines.next().expect("cast header")).expect("cast header json");
+        let rows = header["term"]["rows"].as_u64().expect("cast rows") as u16;
+        let cols = header["term"]["cols"].as_u64().expect("cast cols") as u16;
+        let mut parser = vt100::Parser::new(rows, cols, 0);
+        let mut counts = std::collections::BTreeMap::<&str, usize>::new();
+        for line in lines {
+            let event: Value = serde_json::from_str(line).expect("cast event json");
+            if event[1].as_str() != Some("o") {
+                continue;
+            }
+            parser.process(event[2].as_str().expect("output event").as_bytes());
+            let screen = parser.screen().contents();
+            let state = if screen.contains("Workflows are here!") {
+                "welcome"
+            } else if screen.contains("Enter:send") && screen.contains("❯") {
+                "prompt"
+            } else if screen.contains("Waiting for response") {
+                "waiting"
+            } else if screen.contains("Responding…") {
+                "responding"
+            } else if screen.contains("Thinking…") {
+                "thinking"
+            } else if screen.contains("Worked for") {
+                "completed"
+            } else if screen.contains("Echo Command Query Title") {
+                "command_palette"
+            } else if screen.trim().is_empty() {
+                "blank"
+            } else if screen.contains(" main") {
+                "header_only"
+            } else {
+                "other"
+            };
+            *counts.entry(state).or_default() += 1;
+        }
+        assert!(
+            !counts.contains_key("other"),
+            "unclassified {cast_name} frame(s): {counts:?}"
+        );
+        summary.push(format!(
+            "{cast_name}: {}",
+            counts
+                .into_iter()
+                .map(|(state, count)| format!("{state}={count}"))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ));
+    }
+    insta::assert_snapshot!("grok-cast-state-inventory", summary.join("\n"));
 }
 
 #[test]
@@ -198,6 +341,7 @@ fn grok_rich_active_footer_is_a_full_width_reference_row() {
 }
 
 #[test]
+#[allow(clippy::cognitive_complexity)]
 fn runie_active_footer_matches_grok_cast_cells_and_bold_keys() {
     let cast = std::fs::read_to_string(
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../artifacts/grok-rich.cast"),
@@ -209,7 +353,7 @@ fn runie_active_footer_matches_grok_cast_cells_and_bold_keys() {
     let cols = header["term"]["cols"].as_u64().expect("cast cols") as u16;
     let rows = header["term"]["rows"].as_u64().expect("cast rows") as u16;
     let mut parser = vt100::Parser::new(rows, cols, 0);
-    let mut expected = None;
+    let mut expected_rows = Vec::new();
     for line in lines {
         let event: Value = serde_json::from_str(line).expect("cast event json");
         parser.process(event[2].as_str().expect("cast output").as_bytes());
@@ -221,10 +365,10 @@ fn runie_active_footer_matches_grok_cast_cells_and_bold_keys() {
         {
             let mut row = row.to_owned();
             row.extend(std::iter::repeat(' ').take(cols as usize - row.chars().count()));
-            expected = Some(row);
+            expected_rows.push(row);
         }
     }
-    let expected = expected.expect("Grok active footer");
+    let expected = expected_rows.last().cloned().expect("Grok active footer");
     let mut status = StatusBar::new();
     status.set(Status::Thinking);
     let mut buffer = Buffer::empty(Rect::new(0, 0, cols, 1));
@@ -236,6 +380,21 @@ fn runie_active_footer_matches_grok_cast_cells_and_bold_keys() {
             expected_symbol,
             "footer cell {x}"
         );
+    }
+    for (frame, row) in expected_rows.iter().enumerate() {
+        for (x, expected_symbol) in row.chars().enumerate() {
+            assert_eq!(
+                buffer
+                    .cell((x as u16, 0))
+                    .expect("Runie footer cell")
+                    .symbol()
+                    .chars()
+                    .next()
+                    .unwrap_or(' '),
+                expected_symbol,
+                "footer frame {frame} cell {x}"
+            );
+        }
     }
     for key in ["Shift+Tab", "Esc", "Ctrl+."] {
         let start = expected
@@ -258,6 +417,7 @@ fn runie_active_footer_matches_grok_cast_cells_and_bold_keys() {
 }
 
 #[test]
+#[allow(clippy::cognitive_complexity)]
 fn runie_turn_status_matches_recorded_grok_starting_session_row() {
     let cast = std::fs::read_to_string(
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../artifacts/grok-rich.cast"),
@@ -269,7 +429,7 @@ fn runie_turn_status_matches_recorded_grok_starting_session_row() {
     let cols = header["term"]["cols"].as_u64().expect("cast cols") as u16;
     let rows = header["term"]["rows"].as_u64().expect("cast rows") as u16;
     let mut parser = vt100::Parser::new(rows, cols, 0);
-    let mut expected = None;
+    let mut expected_rows = Vec::new();
     for line in lines {
         let event: Value = serde_json::from_str(line).expect("cast event json");
         parser.process(event[2].as_str().expect("cast output").as_bytes());
@@ -279,11 +439,13 @@ fn runie_turn_status_matches_recorded_grok_starting_session_row() {
             .lines()
             .find(|row| row.contains("Starting session…"))
         {
-            expected = Some(row.to_owned());
-            break;
+            expected_rows.push(row.to_owned());
         }
     }
-    let mut expected = expected.expect("Grok starting-session row");
+    let mut expected = expected_rows
+        .first()
+        .cloned()
+        .expect("Grok starting-session row");
     expected.extend(std::iter::repeat(' ').take(cols as usize - expected.chars().count()));
     let mut buffer = Buffer::empty(Rect::new(0, 0, cols, 1));
     TurnStatus::new(0).render(Rect::new(2, 0, cols - 4, 1), &mut buffer);
@@ -299,17 +461,44 @@ fn runie_turn_status_matches_recorded_grok_starting_session_row() {
         );
     }
     let grok_status_cell = parser.screen().cell(16, 2).expect("Grok status cell");
-    let runie_status_cell = buffer.cell((2, 0)).expect("Runie status cell");
+    let runie_status_cell = buffer.cell((4, 0)).expect("Runie spinner cell");
     assert_eq!(format!("{:?}", grok_status_cell.fgcolor()), "Default");
     assert!(!grok_status_cell.bold(), "Grok status row must not be bold");
+    assert_eq!(format!("{:?}", runie_status_cell.fg), "Rgb(187, 154, 247)");
     assert!(
-        runie_status_cell.modifier.contains(Modifier::DIM),
-        "Runie status row must be dim"
+        !runie_status_cell.modifier.contains(Modifier::DIM),
+        "Runie status row must use role colors, not blanket DIM"
     );
     assert_eq!(expected.chars().count(), cols as usize);
+    for (frame, row) in expected_rows.iter().enumerate() {
+        let mut row = row.clone();
+        row.extend(std::iter::repeat(' ').take(cols as usize - row.chars().count()));
+        let spinner = row.chars().nth(4).expect("starting spinner cell");
+        let spinner_frame = braille_spinner_frames()
+            .iter()
+            .position(|candidate| candidate.starts_with(spinner))
+            .expect("known starting spinner frame");
+        let mut frame_buffer = Buffer::empty(Rect::new(0, 0, cols, 1));
+        TurnStatus::new(spinner_frame * 3).render(Rect::new(2, 0, cols - 4, 1), &mut frame_buffer);
+        let stable_width = format!("  {spinner} Starting session…").chars().count();
+        for (x, expected_symbol) in row.chars().take(stable_width).enumerate() {
+            assert_eq!(
+                frame_buffer
+                    .cell((x as u16, 0))
+                    .expect("Runie status cell")
+                    .symbol()
+                    .chars()
+                    .next()
+                    .unwrap_or(' '),
+                expected_symbol,
+                "starting status frame {frame} cell {x}"
+            );
+        }
+    }
 }
 
 #[test]
+#[allow(clippy::cognitive_complexity)]
 fn runie_waiting_status_matches_recorded_grok_waiting_row() {
     let cast = std::fs::read_to_string(
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../artifacts/grok-rich.cast"),
@@ -321,7 +510,7 @@ fn runie_waiting_status_matches_recorded_grok_waiting_row() {
     let cols = header["term"]["cols"].as_u64().expect("cast cols") as u16;
     let rows = header["term"]["rows"].as_u64().expect("cast rows") as u16;
     let mut parser = vt100::Parser::new(rows, cols, 0);
-    let mut expected = None;
+    let mut expected_rows = Vec::new();
     for line in lines {
         let event: Value = serde_json::from_str(line).expect("cast event json");
         parser.process(event[2].as_str().expect("cast output").as_bytes());
@@ -331,14 +520,13 @@ fn runie_waiting_status_matches_recorded_grok_waiting_row() {
             .lines()
             .find(|row| row.contains("Waiting for response…"))
         {
-            expected = Some(row.to_owned());
-            break;
+            expected_rows.push(row.to_owned());
         }
     }
-    let mut expected = expected.expect("Grok waiting row");
+    let mut expected = expected_rows.first().cloned().expect("Grok waiting row");
     expected.extend(std::iter::repeat(' ').take(cols as usize - expected.chars().count()));
     let mut buffer = Buffer::empty(Rect::new(0, 0, cols, 1));
-    TurnStatus::new(4)
+    TurnStatus::new(12)
         .phase(TurnStatusPhase::Waiting)
         .with_chrome(" 0.0s                            0.0s ⇣3.18k [stop]")
         .render(Rect::new(2, 0, cols - 4, 1), &mut buffer);
@@ -355,9 +543,38 @@ fn runie_waiting_status_matches_recorded_grok_waiting_row() {
             "waiting status cell {x}"
         );
     }
+    for (frame, row) in expected_rows.iter().enumerate() {
+        let mut row = row.clone();
+        row.extend(std::iter::repeat(' ').take(cols as usize - row.chars().count()));
+        let spinner = row.chars().nth(4).expect("waiting spinner cell");
+        let spinner_frame = braille_spinner_frames()
+            .iter()
+            .position(|candidate| candidate.starts_with(spinner))
+            .expect("known waiting spinner frame");
+        let mut frame_buffer = Buffer::empty(Rect::new(0, 0, cols, 1));
+        TurnStatus::new(spinner_frame * 3)
+            .phase(TurnStatusPhase::Waiting)
+            .with_chrome(" 0.0s                            0.0s ⇣3.18k [stop]")
+            .render(Rect::new(2, 0, cols - 4, 1), &mut frame_buffer);
+        let stable_width = format!("  {spinner} Waiting for response…").chars().count();
+        for (x, expected_symbol) in row.chars().take(stable_width).enumerate() {
+            assert_eq!(
+                frame_buffer
+                    .cell((x as u16, 0))
+                    .expect("Runie waiting cell")
+                    .symbol()
+                    .chars()
+                    .next()
+                    .unwrap_or(' '),
+                expected_symbol,
+                "waiting status frame {frame} cell {x}"
+            );
+        }
+    }
 }
 
 #[test]
+#[allow(clippy::cognitive_complexity)]
 fn runie_responding_status_matches_recorded_full_mode_row() {
     let cast = std::fs::read_to_string(
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../artifacts/grok-full.cast"),
@@ -369,7 +586,7 @@ fn runie_responding_status_matches_recorded_full_mode_row() {
     let cols = header["term"]["cols"].as_u64().expect("cast cols") as u16;
     let rows = header["term"]["rows"].as_u64().expect("cast rows") as u16;
     let mut parser = vt100::Parser::new(rows, cols, 0);
-    let mut expected = None;
+    let mut expected_rows = Vec::new();
     for line in lines {
         let event: Value = serde_json::from_str(line).expect("cast event json");
         parser.process(event[2].as_str().expect("cast output").as_bytes());
@@ -379,14 +596,13 @@ fn runie_responding_status_matches_recorded_full_mode_row() {
             .lines()
             .find(|row| row.contains("Responding…"))
         {
-            expected = Some(row.to_owned());
-            break;
+            expected_rows.push(row.to_owned());
         }
     }
-    let mut expected = expected.expect("Grok responding row");
+    let mut expected = expected_rows.first().cloned().expect("Grok responding row");
     expected.extend(std::iter::repeat(' ').take(cols as usize - expected.chars().count()));
     let mut buffer = Buffer::empty(Rect::new(0, 0, cols, 1));
-    TurnStatus::new(3)
+    TurnStatus::new(9)
         .phase(TurnStatusPhase::Responding)
         .with_chrome(" 0.0s                                                                              2.3s ⇣6.39k [stop]")
         .render(Rect::new(2, 0, cols - 4, 1), &mut buffer);
@@ -403,6 +619,35 @@ fn runie_responding_status_matches_recorded_full_mode_row() {
             "responding status cell {x}"
         );
     }
+    for (frame, row) in expected_rows.iter().enumerate() {
+        let mut row = row.clone();
+        row.extend(std::iter::repeat(' ').take(cols as usize - row.chars().count()));
+        let spinner = row.chars().nth(4).expect("responding spinner cell");
+        let spinner_frame = braille_spinner_frames()
+            .iter()
+            .position(|candidate| candidate.starts_with(spinner))
+            .expect("known responding spinner frame");
+        let mut frame_buffer = Buffer::empty(Rect::new(0, 0, cols, 1));
+        TurnStatus::new(spinner_frame * 3)
+            .phase(TurnStatusPhase::Responding)
+            .with_chrome(
+                " 0.0s                                                                              2.3s ⇣6.39k [stop]",
+            )
+            .render(Rect::new(2, 0, cols - 4, 1), &mut frame_buffer);
+        for (x, expected_symbol) in row.chars().enumerate() {
+            assert_eq!(
+                frame_buffer
+                    .cell((x as u16, 0))
+                    .expect("Runie responding cell")
+                    .symbol()
+                    .chars()
+                    .next()
+                    .unwrap_or(' '),
+                expected_symbol,
+                "responding status frame {frame} cell {x}"
+            );
+        }
+    }
 }
 
 #[test]
@@ -418,6 +663,53 @@ fn turn_status_phase_matrix_snapshot() {
         .map(|(name, status)| format!("{name}: {}", status.text()))
         .collect::<Vec<_>>()
         .join("\n"));
+}
+
+#[test]
+fn worked_for_row_matches_grok_cast_cells() {
+    let cast = std::fs::read_to_string(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../artifacts/grok-rich.cast"),
+    )
+    .expect("saved rich Grok recording");
+    let mut lines = cast.lines();
+    let header: Value =
+        serde_json::from_str(lines.next().expect("cast header")).expect("cast header json");
+    let cols = header["term"]["cols"].as_u64().expect("cast cols") as u16;
+    let rows = header["term"]["rows"].as_u64().expect("cast rows") as u16;
+    let mut parser = vt100::Parser::new(rows, cols, 0);
+    let mut expected = None;
+    for line in lines {
+        let event: Value = serde_json::from_str(line).expect("cast event json");
+        parser.process(event[2].as_str().expect("cast output").as_bytes());
+        if let Some(row) = parser
+            .screen()
+            .contents()
+            .lines()
+            .find(|row| row.contains("Worked for"))
+        {
+            expected = Some(row.trim_end().to_owned());
+        }
+    }
+    let expected = expected.expect("Grok completion row");
+    let duration = expected.trim().to_owned();
+    let mut scrollback = Scrollback::new();
+    scrollback.append(Line::new(LineKind::TurnSummary, duration));
+    let mut buffer = Buffer::empty(Rect::new(0, 0, cols, 1));
+    scrollback.render(Rect::new(0, 0, cols, 1), &mut buffer);
+    let actual = (0..cols)
+        .map(|x| {
+            buffer
+                .cell((x, 0))
+                .expect("Runie completion cell")
+                .symbol()
+                .chars()
+                .next()
+                .unwrap_or(' ')
+        })
+        .collect::<String>()
+        .trim_end()
+        .to_owned();
+    assert_eq!(actual, expected);
 }
 
 #[tokio::test]
@@ -485,6 +777,60 @@ async fn runie_idle_welcome_matches_grok_cast_cells() {
     assert_eq!(
         grok_body.bold(),
         runie_body.modifier.contains(Modifier::BOLD)
+    );
+}
+
+#[tokio::test]
+async fn every_grok_welcome_frame_matches_runie_stable_cells() {
+    let cast = std::fs::read_to_string(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../artifacts/grok-rich.cast"),
+    )
+    .expect("saved rich Grok recording");
+    let mut lines = cast.lines();
+    let header: Value =
+        serde_json::from_str(lines.next().expect("cast header")).expect("cast header json");
+    let cols = header["term"]["cols"].as_u64().expect("cast cols") as u16;
+    let rows = header["term"]["rows"].as_u64().expect("cast rows") as u16;
+    let scenario = load_scenario(&fixture("visual-prompts.yaml")).expect("idle fixture");
+    let mut visual = scenario.assertions.visual.clone().expect("idle visual");
+    visual.cols = cols;
+    visual.rows = rows;
+    let runie = render_visual_buffer(&scenario, &visual)
+        .await
+        .expect("Runie welcome frame");
+    let mut parser = vt100::Parser::new(rows, cols, 0);
+    let mut matched = 0usize;
+    for line in lines {
+        let event: Value = serde_json::from_str(line).expect("cast event json");
+        parser.process(event[2].as_str().expect("cast output").as_bytes());
+        let screen = parser.screen().contents();
+        if !screen.contains("Workflows are here!") {
+            continue;
+        }
+        matched += 1;
+        let grok_rows: Vec<Vec<char>> = screen.lines().map(|row| row.chars().collect()).collect();
+        // Rows 0-14 are the stable welcome surface. Grok replaces the
+        // lower tip/prompt chrome while retaining the welcome content.
+        for y in 0..15 {
+            for x in 0..cols as usize {
+                let expected = grok_rows[y].get(x).copied().unwrap_or(' ');
+                let actual = runie
+                    .cell((x as u16, y as u16))
+                    .expect("Runie welcome cell")
+                    .symbol()
+                    .chars()
+                    .next()
+                    .unwrap_or(' ');
+                assert_eq!(
+                    actual, expected,
+                    "welcome frame {matched} cell mismatch at ({x},{y})"
+                );
+            }
+        }
+    }
+    assert!(
+        matched > 1,
+        "Grok cast must contain multiple welcome frames"
     );
 }
 
@@ -600,12 +946,16 @@ async fn grok_typed_prompt_geometry_matches_runie_cells() {
     for x in left..cols as usize {
         for y in [top, bottom] {
             let cell = runie.cell((x as u16, y as u16)).expect("Runie border cell");
-            assert_eq!(
-                cell.fg,
-                ratatui::style::Color::Reset,
-                "border foreground at ({x},{y})"
-            );
-            assert!(cell.modifier.is_empty(), "border modifiers at ({x},{y})");
+            if ["─", "╭", "╮", "╰", "╯"].contains(&cell.symbol()) {
+                assert_eq!(
+                    cell.fg,
+                    runie_tui::appearance::muted_style()
+                        .fg
+                        .expect("muted token"),
+                    "border foreground at ({x},{y})"
+                );
+                assert!(cell.modifier.is_empty(), "border modifiers at ({x},{y})");
+            }
         }
     }
     for y in (top + 1)..bottom {
@@ -613,7 +963,7 @@ async fn grok_typed_prompt_geometry_matches_runie_cells() {
             let cell = runie.cell((x as u16, y as u16)).expect("Runie side cell");
             assert_eq!(
                 cell.fg,
-                ratatui::style::Color::Reset,
+                ratatui::style::Color::Rgb(108, 108, 108),
                 "side foreground at ({x},{y})"
             );
             assert!(cell.modifier.is_empty(), "side modifiers at ({x},{y})");
@@ -651,16 +1001,45 @@ async fn grok_feed_yaml_matches_recorded_transcript_gutter_cells() {
         width = visual.cols as usize - activity_prefix.chars().count()
     );
     assert_eq!(row(activity_row), expected_activity, "grouped activity row");
+
+    let cast = std::fs::read_to_string(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../artifacts/grok-rich.cast"),
+    )
+    .expect("saved rich Grok recording");
+    let mut cast_lines = cast.lines();
+    let header: Value =
+        serde_json::from_str(cast_lines.next().expect("cast header")).expect("cast header json");
+    let cast_cols = header["term"]["cols"].as_u64().expect("cast cols") as u16;
+    let cast_rows = header["term"]["rows"].as_u64().expect("cast rows") as u16;
+    let mut parser = vt100::Parser::new(cast_rows, cast_cols, 0);
+    let mut recorded_activity = None;
+    for line in cast_lines {
+        let event: Value = serde_json::from_str(line).expect("cast event json");
+        parser.process(event[2].as_str().expect("cast output").as_bytes());
+        if let Some(recorded) = parser
+            .screen()
+            .contents()
+            .lines()
+            .find(|line| line.contains("Listed 1 dir, Read 1 file"))
+        {
+            recorded_activity = Some(recorded.to_owned());
+        }
+    }
+    let recorded_activity = recorded_activity
+        .expect("Grok grouped activity row")
+        .trim_end_matches('█')
+        .to_owned();
+    assert_eq!(cast_cols, visual.cols, "feed and cast column geometry");
+    assert_eq!(
+        row(activity_row),
+        format!("{recorded_activity:<width$}", width = visual.cols as usize),
+        "YAML activity row must match the recorded Grok cast"
+    );
     for output in ["Cargo.toml", "src", "crates"] {
-        let output_row = (0..visual.rows)
-            .find(|y| row(*y).starts_with(&format!("    {output}")))
-            .expect("structured list output row");
-        let expected = format!(
-            "    {output}{:width$}",
-            "",
-            width = visual.cols as usize - 4 - output.chars().count()
+        assert!(
+            (0..visual.rows).all(|y| !row(y).starts_with(&format!("    {output}"))),
+            "collapsed Grok feed must hide member output row {output}"
         );
-        assert_eq!(row(output_row), expected, "list output row for {output}");
     }
     for y in 0..visual.rows {
         assert_eq!(
@@ -783,4 +1162,26 @@ async fn full_mode_resize_snapshot() {
 #[tokio::test]
 async fn full_mode_scroll_snapshot() {
     snapshot_fixture("visual-scroll.yaml").await;
+}
+
+#[tokio::test]
+async fn grok_waiting_capture_uses_event_boundary() {
+    let scenario =
+        load_scenario(&fixture("visual-grok-waiting.yaml")).expect("Grok waiting fixture");
+    let visual = scenario
+        .assertions
+        .visual
+        .as_ref()
+        .expect("Grok waiting visual assertions");
+    let screen = render_visual(&scenario, visual)
+        .await
+        .expect("Grok waiting frame");
+    assert!(
+        screen.contains("◈ Listed 1 dir"),
+        "missing grouped activity"
+    );
+    assert!(
+        !screen.contains("(run finished"),
+        "captured completed state"
+    );
 }

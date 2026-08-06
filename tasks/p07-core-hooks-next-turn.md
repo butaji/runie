@@ -1,5 +1,10 @@
 # p07 — Core hooks: `prepareNextTurn` + `shouldStopAfterTurn`
 
+**Latest parity note (2026-08-05):** Turn hooks now receive the completed
+post-turn context from the state actor, including the assistant and tool
+results, matching pi's hook context. Message projection acknowledgement
+prevents a hook from observing a stale transcript.
+
 **Parity target:** pi `AgentLoopConfig` turn hooks.
 
 ## Pi reference

@@ -47,6 +47,10 @@ fn discover_fixtures() -> Vec<PathBuf> {
 }
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 4)]
+#[allow(
+    clippy::too_many_lines,
+    reason = "the standalone E2E binary is a single deterministic scenario entrypoint"
+)]
 async fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let fixtures = if args.is_empty() {

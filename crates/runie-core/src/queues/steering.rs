@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use tokio::sync::{mpsc, Notify};
 
+use crate::task_owner::{mailbox_call, spawn_actor_worker, TaskOwner};
 use crate::types::AgentMessage;
 
 /// Snapshot of the steering queue for read-only consumers.
@@ -16,50 +17,59 @@ pub struct SteeringQueueSnapshot {
 /// Mailbox command for the steering queue actor.
 #[derive(Debug)]
 enum SteeringCommand {
-    Push(AgentMessage),
+    Push(Box<AgentMessage>),
     DrainOne(mpsc::Sender<Option<AgentMessage>>),
     DrainAll(mpsc::Sender<Vec<AgentMessage>>),
     Clear,
+    Len(mpsc::Sender<usize>),
 }
 
 #[derive(Clone)]
 pub struct SteeringQueueActor {
     tx: mpsc::Sender<SteeringCommand>,
     notify: Arc<Notify>,
+    _worker: Arc<TaskOwner>,
 }
 
 impl SteeringQueueActor {
     pub fn new() -> Self {
-        let (tx, rx) = mpsc::channel(64);
         let notify = Arc::new(Notify::new());
 
         // OWNER: SteeringQueueActor
-        tokio::spawn(async move {
+        let (tx, worker) = spawn_actor_worker!(64, move |rx| async move {
             run_steering_worker(rx).await;
         });
 
-        Self { tx, notify }
+        Self {
+            tx,
+            notify,
+            _worker: worker,
+        }
     }
 
     pub async fn push(&self, msg: AgentMessage) {
-        let _ = self.tx.send(SteeringCommand::Push(msg)).await;
+        let _ = self.tx.send(SteeringCommand::Push(Box::new(msg))).await;
         self.notify.notify_one();
     }
 
     pub async fn drain_one(&self) -> Option<AgentMessage> {
-        let (reply_tx, mut reply_rx) = mpsc::channel(1);
-        let _ = self.tx.send(SteeringCommand::DrainOne(reply_tx)).await;
-        reply_rx.recv().await.flatten()
+        mailbox_call!(self.tx, SteeringCommand::DrainOne, None)
     }
 
     pub async fn drain_all(&self) -> Vec<AgentMessage> {
-        let (reply_tx, mut reply_rx) = mpsc::channel(1);
-        let _ = self.tx.send(SteeringCommand::DrainAll(reply_tx)).await;
-        reply_rx.recv().await.unwrap_or_default()
+        mailbox_call!(self.tx, SteeringCommand::DrainAll, Vec::new())
     }
 
     pub async fn clear(&self) {
         let _ = self.tx.send(SteeringCommand::Clear).await;
+    }
+
+    pub async fn len(&self) -> usize {
+        mailbox_call!(self.tx, SteeringCommand::Len, 0)
+    }
+
+    pub async fn is_empty(&self) -> bool {
+        self.len().await == 0
     }
 
     pub fn notifier(&self) -> Arc<Notify> {
@@ -78,7 +88,7 @@ async fn run_steering_worker(mut rx: mpsc::Receiver<SteeringCommand>) {
 
     while let Some(cmd) = rx.recv().await {
         match cmd {
-            SteeringCommand::Push(msg) => queue.push(msg),
+            SteeringCommand::Push(msg) => queue.push(*msg),
             SteeringCommand::DrainOne(reply) => {
                 // `Vec::drain(..1)` panics when the queue is empty, so
                 // explicitly pop when there's at least one item.
@@ -94,6 +104,9 @@ async fn run_steering_worker(mut rx: mpsc::Receiver<SteeringCommand>) {
                 let _ = reply.send(drained).await;
             }
             SteeringCommand::Clear => queue.clear(),
+            SteeringCommand::Len(reply) => {
+                let _ = reply.send(queue.len()).await;
+            }
         }
     }
 }
@@ -131,5 +144,16 @@ mod tests {
         q.push(msg(1)).await;
         q.clear().await;
         assert!(q.drain_all().await.is_empty());
+    }
+
+    #[tokio::test]
+    async fn length_and_empty_projection_follow_queue_owner() {
+        let q = SteeringQueueActor::new();
+        assert!(q.is_empty().await);
+        q.push(msg(1)).await;
+        assert_eq!(q.len().await, 1);
+        assert!(!q.is_empty().await);
+        q.clear().await;
+        assert!(q.is_empty().await);
     }
 }

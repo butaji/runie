@@ -1,6 +1,50 @@
 # p16 — TUI: transcript rendering parity (verb-group activity folding, markdown, tool cards, reasoning fold)
 
+**Latest parity note (2026-08-05):** Grouped activity now retains Grok's
+failure suffix (`· N failed`) after failed directory/file/command tools
+complete. `visual-tool-error.yaml` exercises the contract through the YAML
+runner while individual tool rows continue to render `✗`.
+
+- **tmux/asciinema Grok audit (2026-08-05):** A local `grok` session inspected
+  `artifacts/grok-rich.cast` alongside the renderer. It identified the next
+  concrete parity boundary as runtime turn-status telemetry (elapsed time,
+  token usage, and stop reason), plus queue-key/footer variants. The existing
+  pure `TurnStatus` renderer is ready for those values, but the event-driven
+  runtime does not yet publish them; this remains an implementation task, not
+  a cosmetic prefix substitution.
+
+- **Reactive turn telemetry (2026-08-05):** `StatusBar` now owns the turn
+  usage/stop-reason projection, resets it on `TurnStart`, and consumes typed
+  `MessageUpdate::Done` data through `EventRenderer`. The production loop
+  renders `TurnStatus` from that pure projection; a focused test pins token
+  and stop-reason formatting without wall-clock sleeps.
+- **Deterministic elapsed chrome (2026-08-05):** The status projection now
+  advances elapsed tenths from its owned animation cadence and formats Grok's
+  `N.Ns ⇣tokens [stop]` contract with exact wire stop-reason labels. This is
+  deterministic and remains independent of wall-clock timing.
+- **Completed-turn duration (2026-08-05):** `AgentEnd` now emits the owned
+  projection's `Worked for N.Ns` transcript line. `visual-submitted.yaml`
+  asserts the completion-row contract through the YAML runner, and a unit
+  test pins the deterministic elapsed conversion.
+- **Table completion border (2026-08-05):** Pipe tables now emit Grok's
+  closing `└─┴─┘` row after the final data row, with widths derived purely from
+  the table cells. Unit and rich-markdown YAML coverage pin the box geometry.
+- **Completion-row gutter (2026-08-05):** `Worked for N.Ns` now uses a
+  dedicated `TurnSummary` transcript kind with five-space indentation, placing
+  the first glyph at Grok's column 6 instead of the generic system `*` gutter.
+  Updated visual snapshots and a focused cell-geometry test pin the contract.
+
 **Parity target:** grok scrollback rendering.
+
+- **Settled `Hey` geometry pass (2026-08-05):** Same-run 62×32
+  tmux/asciinema captures now align the user, thinking, assistant, and
+  `Worked for` rows; Grok's blank separator rows are projected from the
+  message lifecycle. Remaining oracle deltas are telemetry placement/values
+  and full-frame chrome, tracked by p19.
+- **Local timestamp and overlay pass (2026-08-05):** Prompt timestamps now
+  use the host-local clock like Grok, and completed assistant timestamps are
+  rendered as a first-content-line overlay with reserved wrapping width. The
+  event-owned assistant text is no longer mutated to append display chrome.
 
 ## Grok reference
 
@@ -36,3 +80,144 @@ Transcript block states:
 - Extend the visual snapshot suite (`visual_snapshots.rs`) with: verb-group folding header, tool error marker, code-block markdown, expanded reasoning cells.
 - Compare transcript rows against the recorded grok casts (`artifacts/grok-full.cast`, `grok-rich.cast`) with zero diffs (see p19).
 - `cargo test -p runie-tui` green.
+
+## Progress
+
+- **In progress (2026-08-05):** Extended the assistant markdown renderer with
+  inline code and link styling, retaining headings, bullets, and bold text.
+  Added focused render coverage and deterministic fenced-code marker styling;
+  multi-line code-block state is now tracked across assistant lines with dim
+  interior styling. Verb-group folding and full tool-card parity remain.
+- **Parallel tool rows (2026-08-05):** Tool transcript rows are now keyed by
+  `tool_call_id`, so out-of-order updates/completions from parallel core tool
+  execution cannot overwrite the most recently appended tool. Added a
+  regression test covering crossed update/end ordering.
+- **Grok activity labels (2026-08-05):** Added exact unit coverage for the
+  recorded rich-cast labels `Listing/Reading` while running and
+  `Listed/Read` after completion, including pluralization.
+- **Mixed verb grouping (2026-08-05):** Activity folding now tracks directory,
+  file, and command tools independently, producing Grok-style mixed headers
+  such as `◈ Listed 1 dir, Ran 1 command` while retaining each tool member row.
+  Added `visual-activity-mixed.yaml` and registered a deterministic replay
+  tool kind for the YAML runner. The full markdown/tool-card parity matrix and
+  cast-wide zero-diff oracle remain open under p19.
+- **YAML tool-error coverage (2026-08-05):** Added an `error` replay tool kind
+  and `visual-tool-error.yaml`, which exercises the real tool executor and
+  asserts the Grok-style `✗` card marker. The fixture records the observed
+  contract that failed tool text is not rendered as a structured output row.
+- **YAML rich-markdown coverage (2026-08-05):** Added
+  `visual-markdown-rich.yaml` for headings, bullets, bold text, links, and
+  fenced code. This exposed and fixed continuation-row parsing so multiline
+  assistant markdown is styled in the actual TestBackend path rather than
+  rendered as raw syntax.
+- **YAML reasoning-fold coverage (2026-08-05):** Added the declarative
+  `visual.reasoning_expanded` option and `visual-reasoning-expanded.yaml`.
+  The fixture exercises the real event renderer in expanded mode and asserts
+  the captured reasoning body alongside the assistant response. The existing
+  `visual-reasoning.yaml` fixture simultaneously pins the collapsed `┃ Thought`
+  summary, so both reasoning-fold presentation variants are YAML-covered.
+- **Activity typography (2026-08-05):** Grouped activity summaries now match
+  Grok's bold label styling while retaining the unbolded transcript gutter;
+  a focused widget test pins the split.
+- **Structured update rows (2026-08-05):** Tool updates carrying string
+  `output` or `content` now render as separate indented `ToolOutput` rows;
+  scalar/status updates remain attached to their tool card. Added focused
+  renderer coverage for multiline structured output.
+- **YAML structured-update coverage (2026-08-05):** Added the deterministic
+  `structured_update` tool kind and `visual-tool-structured.yaml`; the real
+  actor/event replay now exercises separate multiline output rows without
+  recompiling the scenario runner.
+- **Activity-group boundary (2026-08-05):** Completed activity folding's
+  reducer boundary: non-consecutive tool batches now receive separate Grok
+  activity headers instead of merging into the previous batch. A renderer
+  regression test pins the two-group sequence.
+- **Logical batch tracking (2026-08-05):** Activity grouping now retains an
+  explicit open-batch flag across sequential tool start/end pairs and closes
+  only at the next message boundary, preventing scheduler-dependent splits in
+  the YAML Grok-feed scenario.
+- **Extended inline markdown (2026-08-05):** The pure scrollback renderer now
+  converts ordered-list markers to Grok-style bullets and styles italic and
+  strikethrough spans. `visual-markdown-rich.yaml` exercises those forms
+  through the real YAML replay path, with focused cell/style coverage.
+- **Parallel result boundary (2026-08-05):** Tool-result message boundaries no
+  longer close an open activity group; only user/assistant message boundaries
+  do. This preserves mixed Grok headers when parallel tools finish and emit
+  result messages in scheduler-dependent order, while retaining explicit
+  separation between user-visible batches.
+- **Cast-backed activity row (2026-08-05):** `visual-grok-feed` now derives its
+  expected grouped activity row directly from `grok-rich.cast` and compares
+  every rendered cell, with only the recording's transient trailing cursor
+  ignored.
+- **Blockquote markdown parity (2026-08-05):** Assistant blockquotes now
+  render Grok's vertical quote gutter (`│`) while retaining nested inline
+  emphasis styling, with focused widget coverage.
+- **ATX heading parity (2026-08-05):** Assistant markdown now recognizes all
+  CommonMark ATX heading levels (`#` through `######`) through the same Grok
+  bold-heading path, with focused level-matrix coverage.
+- **Table markdown parity (2026-08-05):** Pipe-table rows now render Grok's
+  box-drawing separators and gutters (`│`, `├─┼─┤`) instead of raw pipes;
+  `visual-markdown-rich.yaml` exercises the rows through the real TUI path.
+- **YAML projection wiring (2026-08-05):** Visual YAML frames now consume
+  `StatusBar::turn_status()` when replay events produce an active turn; the
+  static typed-prompt fallback remains only for key-input fixtures with no
+  active event phase. This keeps telemetry actor-owned while preserving the
+  existing prompt geometry contract.
+- **Subagent activity vocabulary (2026-08-05):** The Grok renderer reference
+  includes grouped `Ran N subagent(s)` activity. Runie now tracks subagent
+  tools as a first-class activity counter, composes them with file/directory/
+  command groups, and exercises the mixed `Read 1 file, Ran 1 subagent`
+  projection through `visual-activity-subagent.yaml` and the real actor
+  replay path.
+- **Subagent parity verification (2026-08-05):** The full `just ci` gate passes
+  after this addition, including the discovered YAML fixture and the existing
+  visual/asciinema matrix. The remaining p16 work is interactive fold state
+  and cast-wide frame equivalence, tracked under p19.
+- **Declarative activity folding (2026-08-05):** Added the actor-replayed
+  `visual-activity-collapsed.yaml` scenario and an `activity_expanded` YAML
+  projection option. The scrollback model now preserves the grouped activity
+  summary while hiding member tool/output rows in collapsed mode; expanded
+  mode remains the default. Both modes are verified without sleeps or fixture
+  recompilation.
+- **Fold verification (2026-08-05):** `just ci` passes with collapsed and
+  expanded activity scenarios discovered automatically, alongside the full
+  replay and visual/asciinema suite.
+- **Selection boundary (2026-08-05):** Grok toggles fold state from its
+  scrollback selection/mouse interaction, while Runie currently has no
+  scrollback-selection actor or input contract. The model projection and YAML
+  states are implemented; wiring a user toggle remains an explicit follow-up
+  rather than inventing a non-reference key binding.
+- **Feed default parity (2026-08-05):** Cast inspection showed Grok's working
+  feed presenting the grouped activity summary with member cards/output rows
+  collapsed. Runie's production `Scrollback` now uses that collapsed default;
+  YAML render scenarios retain expanded compatibility unless they explicitly
+  set `activity_expanded: false`. `visual-grok-feed.yaml` and its cast-backed
+  test now assert the hidden member rows as well as the exact grouped gutter.
+- **Fold action parity (2026-08-05):** Added Grok's scrollback `e` toggle for
+  an empty prompt. YAML visual steps can issue `e`; the runner carries that
+  reducer result into the final event-driven replay, and
+  `visual-activity-collapsed.yaml` verifies the member cards disappear while
+  the grouped summary remains.
+- **Feed affordance (2026-08-05):** The Runie shortcut overlay now advertises
+  `e fold/unfold feed`, matching the newly implemented Grok-style feed action;
+  the full local CI gate remains green with 91 TUI unit tests.
+- **Thinking feed row (2026-08-05):** Cast frames show Grok's in-feed
+  `┃  ◆ Thinking…` row above the assistant/reasoning content; Runie previously
+  exposed that state only in the footer. Added a dedicated bold
+  `ThinkingStatus` transcript kind with the Grok gutter and emitted it from
+  the event renderer at `AgentStart`. Four affected visual snapshots were
+  regenerated from deterministic TestBackend output; `just ci` passes.
+- **Thinking row ordering (2026-08-05):** Corrected the projection boundary:
+  the thinking row is emitted at assistant `MessageStart`, after the user
+  message, matching Grok's feed order. Narrow-feed YAML expectations were
+  updated to assert the visible wrapped assistant content after the additional
+  reference row; all replay and visual tests remain green.
+- **Feed gutter parity (2026-08-05):** Cell-level comparison against the
+  recorded Grok frame showed Runie's assistant/reasoning/thinking/tool markers
+  were shifted three columns right by duplicating the layout inset. Their
+  prefixes now begin at Grok's feed column (`┃`/`◆` at the inset), while the
+  user `❯` remains at column five. Focused cell tests and affected snapshots
+  were updated from the deterministic renderer.
+- **Feed oracle strengthening (2026-08-05):** The cast-backed Grok feed YAML
+  now explicitly requires the in-feed `┃  ◆ Thinking…` row in addition to
+  the grouped activity header, so the thinking gutter cannot regress while
+  lifecycle rows remain source-backed.

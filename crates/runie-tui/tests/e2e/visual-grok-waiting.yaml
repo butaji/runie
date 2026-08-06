@@ -1,0 +1,42 @@
+name: visual-grok-waiting
+description: |
+  Capture the deterministic feed at the event boundary after tool execution
+  and while the next provider request is pending, matching Grok's waiting
+  capture semantics without sleeps.
+
+initial_prompt: "Please reply with a short markdown-formatted paragraph about this directory, using a heading, bold text, and a bullet list. Then list the files in this directory."
+capture_while_waiting: true
+tools:
+  - name: list_dir
+    kind: list_dir
+  - name: read
+    kind: read
+events:
+  - start
+  - tool_call:
+      name: list_dir
+      args: { path: "." }
+  - tool_call:
+      name: read
+      args: { path: "README.md" }
+  - done: { stop_reason: tool_use }
+  - waiting: model
+  - theme: grok_day
+
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    activity_expanded: false
+    header_meter: "20K / 500K"
+    waiting_chrome: " 0.0s                            6.0s ⇣20.7k [stop]"
+    reference:
+      cast: grok-rich.cast
+      frame_contains: ["Listed 1 dir", "Read 1 file"]
+      exact_screen: true
+      # The checked-in cast uses terminal-default SGR attributes.
+      exact_attributes: false
+    screen_text:
+      - "◈ Listed 1 dir"
+    screen_excludes:
+      - "(run finished"

@@ -4,12 +4,12 @@ expression: screen
 ---
                                         
    main ~/Code/GitHub/runie-tests/run  
-       line two                         
-       line three                       
-       line four                        
-       line five                        
+     line three                         
+     line four                          
+     line five                          
+     line six                           
   ╭──────────────────────────────────╮  
-  │ ❯                                │  
+  │ ❯ Type your message...           │  
   ╰──────────────── Grok 4.5 (high) ─╯  
                                         
   Enter:send  │  Shift+Tab:mode  │  Ct

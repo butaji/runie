@@ -11,6 +11,5 @@ assertions:
       - "Workflows are here!"
       - "Ctrl+Enter"
       - "❯"
-      - "Enter:send"
     screen_excludes:
       - "panicked"

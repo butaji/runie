@@ -1,0 +1,28 @@
+name: visual-markdown-rich
+description: Markdown transcript parity for headings, blockquotes, tables, lists, emphasis, links, and fenced code.
+initial_prompt: "show markdown"
+events:
+  - start
+  - text_delta: "# Results\n\n> **Quoted** guidance\n\n###### Deep heading\n\n| Name | Type |\n| ---- | ---- |\n| runie | tool |\n\n- Use **fast** mode and see [the docs](https://example.test).\n1. _quiet_ ~~old~~\n\n```rust\ncargo test\n```"
+  - done: { stop_reason: stop }
+assertions:
+  visual:
+    cols: 80
+    rows: 30
+    screen_text:
+      - "┃  # Results"
+      - "│"
+      - "Quoted"
+      - "Deep heading"
+      - "│ Name │ Type │"
+      - "├──────┼──────┤"
+      - "└───────┴──────┘"
+      - "•"
+      - "fast"
+      - "the docs"
+      - "quiet"
+      - "old"
+      - "cargo test"
+      - "Enter:send"
+    screen_excludes:
+      - "panicked"

@@ -39,7 +39,32 @@ idle → start → text_start→text_delta*→text_end | thinking_start→thinki
 ```
 Replay turn machine: `turn[0] → turn[1] → ... → Stop` (each `stream()` call advances the turn index).
 
+## Progress
+
+- **Cancellation ownership (2026-08-05):** `ProviderCommand::Cancel` now
+  aborts all active stream pumps through the provider actor's owned `JoinSet`;
+  a pending-stream regression test verifies cancellation closes the receiver
+  without leaving a detached task.
+- **Startup error encoding (2026-08-05):** provider startup failures now
+  deliver an `AssistantMessageEvent::Error` through the subscribed stream,
+  preserving pi's error-event lifecycle instead of presenting an empty stream.
+  A provider actor regression test pins the exact error payload.
+- **Abort signal propagation (2026-08-05):** the loop now passes its abort
+  watch through `SimpleStreamOptions.signal` to every provider stream call;
+  integration coverage confirms adapters receive the signal.
+
 ## Acceptance
 
 - Provider tests: SSE with `done{stop}`/`error{aborted}`/truncated tool JSON; `parse_streaming_json` salvage; abort mid-stream yields `Error{aborted}`; multi-turn replay advances per call.
 - `cargo test -p runie-core` green.
+## Progress
+
+- **Provider hook options (2026-08-05):** `SimpleStreamOptions` now carries
+  pi-compatible async `on_payload` and `on_response` hooks through the loop
+  boundary. Provider adapters receive them unchanged; a two-turn integration
+  test verifies both hook fields survive each request.
+- **Transport hook execution (2026-08-05):** `HttpActor::post_with_options`
+  now applies payload transformations before the actor-owned request and
+  delivers response status/headers to the response hook. Replay transport has
+  focused coverage for both callbacks and exposes the path through
+  `ReplayProvider::from_http_with_options`.

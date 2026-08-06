@@ -1,0 +1,27 @@
+name: visual-activity-collapsed
+description: |
+  A collapsed Grok activity group keeps its summary and hides member cards.
+initial_prompt: "inspect and delegate"
+tools:
+  - name: read
+    kind: read
+  - name: subagent
+    kind: subagent
+events:
+  - start
+  - tool_call:
+      name: read
+      args: { path: "README.md" }
+  - tool_call:
+      name: subagent
+      args: { task: "summarize" }
+  - done: { stop_reason: tool_use }
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    steps: [e]
+    screen_text:
+      - "◈ Read 1 file, Ran 1 subagent"
+    screen_excludes:
+      - "◆ Read README.md"

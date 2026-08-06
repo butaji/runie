@@ -40,7 +40,6 @@ impl Default for EventBus {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::AgentMessage;
 
     #[tokio::test]
     async fn subscriber_receives_published_events() {

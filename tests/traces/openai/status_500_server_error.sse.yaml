@@ -15,8 +15,11 @@ payload:
 core:
   required_events: []
 state:
+  is_streaming: false
+  pending_tool_calls: 0
   assistant_messages: 0
 tools:
   []
 error:
   kind: provider_decode
+  message_contains: "no terminal event"

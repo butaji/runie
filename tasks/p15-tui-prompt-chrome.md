@@ -39,3 +39,35 @@ Prompt chrome variants:
 
 - Snapshot tests: full-mode box matches grok chrome (all corners + caption + hints); multiline indicator; empty-vs-editing placeholder; resize reflow.
 - `cargo test -p runie-tui` + `--workspace` green.
+
+## Progress
+
+- **In progress (2026-08-05):** Added owned alternate-mode and multiline
+  caption indicators while preserving the normal Grok caption. Added a
+  deterministic multiline chrome render test and an empty-prompt
+  `Type your message...` placeholder. History browsing now renders a
+  deterministic `history` caption; search overlays and model-state wiring
+  remain. Typing `/history` now enters an owned search state, filters history
+  with Up, and renders a `history search` caption.
+- **Model projection (2026-08-05):** Prompt captions now read the model name
+  from the loop actor's immutable state snapshot, preserving the Grok caption
+  fallback when no model is configured. Added a deterministic caption test.
+- **Multiline rendering (2026-08-05):** Shift/Alt-Enter input now renders as
+  separate prompt rows with one Grok-style gutter prefix on the first row and
+  aligned continuation rows; added a focused renderer regression test.
+- **YAML scenario (2026-08-05):** The visual YAML runner now accepts
+  `Shift+Enter` and `Alt+Enter` steps; `visual-multiline.yaml` exercises the
+  multiline chrome and gutter without recompiling the runner.
+- **Dynamic layout (2026-08-05):** The prompt region expands with the number
+  of logical input lines, so multiline content remains visible instead of
+  being clipped by the fixed three-row idle layout.
+- **Plan mode (2026-08-05):** Shift+Tab now cycles normal → alternate → plan;
+  plan mode renders a gold prompt border and explicit `plan` caption, with
+  focused mode and color coverage.
+
+## Completion
+
+Prompt chrome now covers the declared model, placeholder, multiline, history,
+file-search/viewer, alternate, and plan variants. Layout height follows logical
+content, borders/captions reflow at narrow sizes, and the focused TUI suite is
+green.

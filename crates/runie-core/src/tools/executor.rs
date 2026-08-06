@@ -4,42 +4,57 @@
 //! the supplied sink. In parallel mode, completion-order and source-order
 //! are separated per the TS README §With Tool Calls.
 
-use std::sync::Arc;
+use std::{future::Future, pin::Pin, sync::Arc};
 
-use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 
 use super::registry::ToolRegistry;
 use crate::types::{
-    AgentMessage, AgentTool, AgentToolResult, AssistantContent, AssistantMessage,
-    BeforeToolCallContext, BeforeToolCallResult, ToolCall, ToolExecutionMode, ToolResultContent,
-    ToolResultMessage,
+    AgentContext, AgentToolResult, AssistantMessage, BeforeToolCallContext, BeforeToolCallResult,
+    ToolCall, ToolResultContent, ToolResultMessage,
 };
 
 /// Hooks applied during tool dispatch. `None` for any field means "use
 /// default (allow / no override)".
 #[derive(Default, Clone)]
 pub struct ToolExecHooks {
-    pub before_tool_call:
-        Option<Arc<dyn Fn(BeforeToolCallContext) -> BeforeToolCallResult + Send + Sync>>,
-    pub after_tool_call:
-        Option<Arc<dyn Fn(AfterToolCallInputs) -> crate::types::AfterToolCallResult + Send + Sync>>,
+    pub before_tool_call: Option<BeforeToolCallHook>,
+    pub after_tool_call: Option<AfterToolCallHook>,
 }
 
-#[derive(Debug, Clone)]
+pub type BeforeToolCallHook = Arc<
+    dyn Fn(BeforeToolCallContext) -> Pin<Box<dyn Future<Output = BeforeToolCallResult> + Send>>
+        + Send
+        + Sync,
+>;
+pub type AfterToolCallHook = Arc<
+    dyn Fn(
+            AfterToolCallInputs,
+        ) -> Pin<Box<dyn Future<Output = crate::types::AfterToolCallResult> + Send>>
+        + Send
+        + Sync,
+>;
+
+#[derive(Clone)]
 pub struct AfterToolCallInputs {
     pub assistant_message: AssistantMessage,
     pub tool_call: ToolCall,
     pub args: serde_json::Value,
     pub result: AgentToolResult,
     pub is_error: bool,
+    pub context: crate::types::AgentContext,
+    pub signal: tokio_util::sync::CancellationToken,
 }
 
 #[derive(Clone)]
 pub struct ToolExecContext {
     pub assistant_message: AssistantMessage,
+    pub context: AgentContext,
+    pub abort: Option<tokio::sync::watch::Receiver<bool>>,
     pub registry: Arc<ToolRegistry>,
     pub hooks: ToolExecHooks,
+    pub bus: Option<crate::events::EventBus>,
+    pub updates: Arc<std::sync::Mutex<Vec<crate::types::AgentEvent>>>,
 }
 
 /// Result of dispatching a batch.
@@ -54,37 +69,18 @@ pub async fn execute_sequential(calls: Vec<ToolCall>, ctx: ToolExecContext) -> D
     let mut outcome = DispatchOutcome::default();
 
     for call in calls {
-        let start = crate::types::AgentEvent::ToolExecutionStart {
-            tool_call_id: call.id.clone(),
-            tool_name: call.name.clone(),
-            args: call.arguments.clone(),
-        };
-        outcome.events.push(start);
-
+        // The lifecycle begins before the tool side effect, matching pi's
+        // tool_execution_start contract. Completion and result events follow.
+        outcome.events.push(tool_start(&call));
         let (result, is_error) = match dispatch_one(&call, &ctx).await {
-            Ok(r) => (r, false),
+            Ok(result) => result,
             Err(msg) => (synthetic_error_result(&msg), true),
         };
-
-        let end = crate::types::AgentEvent::ToolExecutionEnd {
-            tool_call_id: call.id.clone(),
-            tool_name: call.name.clone(),
-            result: serde_json::to_value(&result).unwrap_or_default(),
-            is_error,
-        };
-        outcome.events.push(end);
-
-        let tr = ToolResultMessage {
-            tool_call_id: call.id.clone(),
-            tool_name: call.name.clone(),
-            content: result.content.clone(),
-            details: result.details.clone(),
-            usage: result.usage.clone(),
-            added_tool_names: result.added_tool_names.clone(),
-            is_error,
-            timestamp: 0,
-        };
-        outcome.tool_results.push(tr);
+        outcome.events.extend(take_updates(&ctx));
+        outcome.events.push(tool_end(&call, &result, is_error));
+        outcome
+            .tool_results
+            .push(tool_result_message(&call, &result, is_error));
         if !result.terminate {
             outcome.all_terminated = false;
         }
@@ -103,129 +99,62 @@ pub async fn execute_sequential(calls: Vec<ToolCall>, ctx: ToolExecContext) -> D
     outcome
 }
 
+fn tool_start(call: &ToolCall) -> crate::types::AgentEvent {
+    crate::types::AgentEvent::ToolExecutionStart {
+        tool_call_id: call.id.clone(),
+        tool_name: call.name.clone(),
+        args: call.arguments.clone(),
+    }
+}
+
+fn tool_end(call: &ToolCall, result: &AgentToolResult, is_error: bool) -> crate::types::AgentEvent {
+    crate::types::AgentEvent::ToolExecutionEnd {
+        tool_call_id: call.id.clone(),
+        tool_name: call.name.clone(),
+        result: serde_json::to_value(result).unwrap_or_default(),
+        is_error,
+    }
+}
+
+fn tool_result_message(
+    call: &ToolCall,
+    result: &AgentToolResult,
+    is_error: bool,
+) -> ToolResultMessage {
+    ToolResultMessage {
+        tool_call_id: call.id.clone(),
+        tool_name: call.name.clone(),
+        content: result.content.clone(),
+        details: result.details.clone(),
+        usage: result.usage.clone(),
+        added_tool_names: result.added_tool_names.clone(),
+        is_error,
+        timestamp: 0,
+    }
+}
+
 pub async fn execute_parallel(calls: Vec<ToolCall>, ctx: ToolExecContext) -> DispatchOutcome {
     // Preflight: valid calls (after prepare_arguments + validation) proceed to
     // concurrent execution; invalid calls produce an immediate error result
     // (pi prepareToolCall -> createErrorToolResult).
-    let mut preflighted: Vec<ToolCall> = Vec::with_capacity(calls.len());
-    let mut outcome = DispatchOutcome::default();
-    let mut had_invalid = false;
-    for call in calls {
-        match prepare_and_validate(&call, &ctx) {
-            Ok(prepared) => preflighted.push(prepared),
-            Err(msg) => {
-                outcome
-                    .events
-                    .push(crate::types::AgentEvent::ToolExecutionStart {
-                        tool_call_id: call.id.clone(),
-                        tool_name: call.name.clone(),
-                        args: call.arguments.clone(),
-                    });
-                let r = synthetic_error_result(&msg);
-                outcome
-                    .events
-                    .push(crate::types::AgentEvent::ToolExecutionEnd {
-                        tool_call_id: call.id.clone(),
-                        tool_name: call.name.clone(),
-                        result: serde_json::to_value(&r).unwrap_or_default(),
-                        is_error: true,
-                    });
-                outcome.tool_results.push(ToolResultMessage {
-                    tool_call_id: call.id.clone(),
-                    tool_name: call.name.clone(),
-                    content: r.content.clone(),
-                    details: r.details.clone(),
-                    usage: r.usage.clone(),
-                    added_tool_names: r.added_tool_names.clone(),
-                    is_error: true,
-                    timestamp: 0,
-                });
-                had_invalid = true;
-            }
-        }
-    }
-
-    let total = preflighted.len();
+    let (preflighted, mut outcome, had_invalid) = preflight_calls(calls, &ctx);
 
     if preflighted.is_empty() {
         outcome.all_terminated = !had_invalid;
         return outcome;
     }
 
-    // Emit all start events up front (in source order).
-    for call in &preflighted {
-        outcome
-            .events
-            .push(crate::types::AgentEvent::ToolExecutionStart {
-                tool_call_id: call.id.clone(),
-                tool_name: call.name.clone(),
-                args: call.arguments.clone(),
-            });
-    }
-
-    // Execute concurrently. `tool_execution_end` events fire in COMPLETION
-    // order (pi agent-loop.ts:489), while toolResult messages are emitted in
-    // source order below.
-    let ctx_for_exec = ctx.clone();
-    let mut running = futures::stream::FuturesUnordered::new();
-    for call in preflighted.iter().cloned() {
-        let ctx = ctx_for_exec.clone();
-        running.push(async move {
-            let mut events = vec![crate::types::AgentEvent::ToolExecutionUpdate {
-                tool_call_id: call.id.clone(),
-                tool_name: call.name.clone(),
-                args: call.arguments.clone(),
-                partial_result: serde_json::json!({"status": "running"}),
-            }];
-            let (result, is_error) = match dispatch_prepared(&call, &ctx).await {
-                Ok(r) => {
-                    events.push(crate::types::AgentEvent::ToolExecutionEnd {
-                        tool_call_id: call.id.clone(),
-                        tool_name: call.name.clone(),
-                        result: serde_json::to_value(&r).unwrap_or_default(),
-                        is_error: false,
-                    });
-                    (r, false)
-                }
-                Err(msg) => {
-                    let r = synthetic_error_result(&msg);
-                    events.push(crate::types::AgentEvent::ToolExecutionEnd {
-                        tool_call_id: call.id.clone(),
-                        tool_name: call.name.clone(),
-                        result: serde_json::to_value(&r).unwrap_or_default(),
-                        is_error: true,
-                    });
-                    (r, true)
-                }
-            };
-            (call.id.clone(), call.name.clone(), result, is_error, events)
-        });
-    }
-    let mut by_id: std::collections::HashMap<String, (String, AgentToolResult, bool)> =
-        std::collections::HashMap::new();
-    while let Some((id, name, result, is_error, events)) = running.next().await {
-        // Completion-order events.
-        outcome.events.extend(events);
-        by_id.insert(id, (name, result, is_error));
-    }
-
-    let _ = total;
+    outcome.events.extend(preflighted.iter().map(tool_start));
+    let (completion_events, mut by_id) = run_parallel_calls(&preflighted, &ctx).await;
+    outcome.events.extend(completion_events);
 
     // Emit toolResult messages in source order.
     let mut all_terminated = !by_id.is_empty();
     for call in &preflighted {
         if let Some((name, r, is_error)) = by_id.remove(&call.id) {
-            let tr = ToolResultMessage {
-                tool_call_id: call.id.clone(),
-                tool_name: name,
-                content: r.content.clone(),
-                details: r.details.clone(),
-                usage: r.usage.clone(),
-                added_tool_names: r.added_tool_names.clone(),
-                is_error,
-                timestamp: 0,
-            };
-            outcome.tool_results.push(tr);
+            outcome
+                .tool_results
+                .push(tool_result_message_named(call, name, &r, is_error));
             if !r.terminate {
                 all_terminated = false;
             }
@@ -236,6 +165,84 @@ pub async fn execute_parallel(calls: Vec<ToolCall>, ctx: ToolExecContext) -> Dis
     // terminated.
     outcome.all_terminated = !had_invalid && all_terminated;
     outcome
+}
+
+async fn run_parallel_calls(
+    calls: &[ToolCall],
+    ctx: &ToolExecContext,
+) -> (
+    Vec<crate::types::AgentEvent>,
+    std::collections::HashMap<String, (String, AgentToolResult, bool)>,
+) {
+    let mut running = futures::stream::FuturesUnordered::new();
+    for call in calls.iter().cloned() {
+        let ctx = ctx.clone();
+        running.push(async move {
+            let mut events = vec![crate::types::AgentEvent::ToolExecutionUpdate {
+                tool_call_id: call.id.clone(),
+                tool_name: call.name.clone(),
+                args: call.arguments.clone(),
+                partial_result: serde_json::json!({"status": "running"}),
+            }];
+            let (result, is_error) = dispatch_result(&call, &ctx).await;
+            events.extend(take_updates(&ctx));
+            events.push(tool_end(&call, &result, is_error));
+            (call.id.clone(), call.name.clone(), result, is_error, events)
+        });
+    }
+    let mut events = Vec::new();
+    let mut by_id = std::collections::HashMap::new();
+    while let Some((id, name, result, is_error, completion)) = running.next().await {
+        events.extend(completion);
+        by_id.insert(id, (name, result, is_error));
+    }
+    (events, by_id)
+}
+
+fn preflight_calls(
+    calls: Vec<ToolCall>,
+    ctx: &ToolExecContext,
+) -> (Vec<ToolCall>, DispatchOutcome, bool) {
+    let mut valid = Vec::with_capacity(calls.len());
+    let mut outcome = DispatchOutcome::default();
+    let mut had_invalid = false;
+    for call in calls {
+        match prepare_and_validate(&call, ctx) {
+            Ok(prepared) => valid.push(prepared),
+            Err(message) => {
+                append_failed_call(&mut outcome, &call, &message);
+                had_invalid = true;
+            }
+        }
+    }
+    (valid, outcome, had_invalid)
+}
+
+fn append_failed_call(outcome: &mut DispatchOutcome, call: &ToolCall, message: &str) {
+    let result = synthetic_error_result(message);
+    outcome.events.push(tool_start(call));
+    outcome.events.push(tool_end(call, &result, true));
+    outcome
+        .tool_results
+        .push(tool_result_message(call, &result, true));
+}
+
+async fn dispatch_result(call: &ToolCall, ctx: &ToolExecContext) -> (AgentToolResult, bool) {
+    match dispatch_prepared(call, ctx).await {
+        Ok(result) => result,
+        Err(message) => (synthetic_error_result(&message), true),
+    }
+}
+
+fn tool_result_message_named(
+    call: &ToolCall,
+    name: String,
+    result: &AgentToolResult,
+    is_error: bool,
+) -> ToolResultMessage {
+    let mut message = tool_result_message(call, result, is_error);
+    message.tool_name = name;
+    message
 }
 
 /// Apply `prepareArguments` (pi agent-loop.ts:586) and validate. Returns the
@@ -269,7 +276,10 @@ fn prepared_call(call: &ToolCall, ctx: &ToolExecContext) -> ToolCall {
     call.clone()
 }
 
-async fn dispatch_one(call: &ToolCall, ctx: &ToolExecContext) -> Result<AgentToolResult, String> {
+async fn dispatch_one(
+    call: &ToolCall,
+    ctx: &ToolExecContext,
+) -> Result<(AgentToolResult, bool), String> {
     // Prepare + validate args (pi prepareToolCallArguments + validateToolArguments).
     let prepared = prepare_and_validate(call, ctx)?;
     dispatch_prepared(&prepared, ctx).await
@@ -280,48 +290,123 @@ async fn dispatch_one(call: &ToolCall, ctx: &ToolExecContext) -> Result<AgentToo
 async fn dispatch_prepared(
     call: &ToolCall,
     ctx: &ToolExecContext,
-) -> Result<AgentToolResult, String> {
+) -> Result<(AgentToolResult, bool), String> {
     let tool = ctx
         .registry
         .lookup(&call.name)
         .ok_or_else(|| format!("tool not found: {}", call.name))?;
+    let signal = tokio_util::sync::CancellationToken::new();
 
     if let Some(ref hook) = ctx.hooks.before_tool_call {
         let decision = hook(BeforeToolCallContext {
             assistant_message: ctx.assistant_message.clone(),
             tool_call: call.clone(),
             args: call.arguments.clone(),
-        });
+            context: ctx.context.clone(),
+            signal: signal.clone(),
+        })
+        .await;
         if decision.block {
             return Err(decision.reason.unwrap_or_else(|| "blocked".into()));
         }
     }
 
-    let mut result = tool
-        .execute(&call.id, call.arguments.clone(), None, None)
-        .await
-        .map_err(|e| e.to_string())?;
+    let (result, is_error) = match execute_tool(tool, call, ctx, signal.clone()).await {
+        Ok(result) => (result, false),
+        Err(reason) => (synthetic_error_result(&reason), true),
+    };
 
-    if let Some(ref hook) = ctx.hooks.after_tool_call {
-        let override_ = hook(AfterToolCallInputs {
-            assistant_message: ctx.assistant_message.clone(),
-            tool_call: call.clone(),
-            args: call.arguments.clone(),
-            result: result.clone(),
-            is_error: false,
-        });
-        if let Some(content) = override_.content {
-            result.content = content;
+    Ok(apply_after_tool_hook(call, ctx, result, signal, is_error).await)
+}
+
+async fn execute_tool(
+    tool: Arc<dyn crate::types::AgentTool>,
+    call: &ToolCall,
+    ctx: &ToolExecContext,
+    signal: tokio_util::sync::CancellationToken,
+) -> Result<AgentToolResult, String> {
+    let updates = ctx.updates.clone();
+    let bus = ctx.bus.clone();
+    let update_call = call.clone();
+    let on_update = Box::new(move |partial_result| {
+        let event = crate::types::AgentEvent::ToolExecutionUpdate {
+            tool_call_id: update_call.id.clone(),
+            tool_name: update_call.name.clone(),
+            args: update_call.arguments.clone(),
+            partial_result,
+        };
+        if let Some(bus) = &bus {
+            bus.publish(event);
+        } else {
+            updates.lock().expect("tool update event lock").push(event);
         }
-        if let Some(details) = override_.details {
-            result.details = details;
-        }
-        if let Some(t) = override_.terminate {
-            result.terminate = t;
+    });
+    let tool_future = tool.execute(
+        &call.id,
+        call.arguments.clone(),
+        Some(signal.clone()),
+        Some(on_update),
+    );
+    tokio::select! {
+        result = tool_future => result.map_err(|e| e.to_string()),
+        aborted = wait_for_tool_abort(ctx.abort.clone()) => {
+            signal.cancel();
+            if aborted { Err("aborted".into()) } else { Err("tool execution aborted".into()) }
         }
     }
+}
 
-    Ok(result)
+async fn wait_for_tool_abort(mut abort: Option<tokio::sync::watch::Receiver<bool>>) -> bool {
+    let Some(ref mut receiver) = abort else {
+        return std::future::pending::<bool>().await;
+    };
+    loop {
+        if *receiver.borrow() {
+            return true;
+        }
+        if receiver.changed().await.is_err() {
+            return false;
+        }
+    }
+}
+
+fn take_updates(ctx: &ToolExecContext) -> Vec<crate::types::AgentEvent> {
+    std::mem::take(&mut *ctx.updates.lock().expect("tool update event lock"))
+}
+
+async fn apply_after_tool_hook(
+    call: &ToolCall,
+    ctx: &ToolExecContext,
+    mut result: AgentToolResult,
+    signal: tokio_util::sync::CancellationToken,
+    is_error: bool,
+) -> (AgentToolResult, bool) {
+    let Some(hook) = &ctx.hooks.after_tool_call else {
+        return (result, is_error);
+    };
+    let override_ = hook(AfterToolCallInputs {
+        assistant_message: ctx.assistant_message.clone(),
+        tool_call: call.clone(),
+        args: call.arguments.clone(),
+        result: result.clone(),
+        is_error,
+        context: ctx.context.clone(),
+        signal,
+    })
+    .await;
+    if let Some(content) = override_.content {
+        result.content = content;
+    }
+    if let Some(details) = override_.details {
+        result.details = details;
+    }
+    if let Some(t) = override_.terminate {
+        result.terminate = t;
+    }
+    if let Some(usage) = override_.usage {
+        result.usage = Some(usage);
+    }
+    (result, override_.is_error.unwrap_or(is_error))
 }
 
 fn synthetic_error_result(reason: &str) -> AgentToolResult {
@@ -329,7 +414,7 @@ fn synthetic_error_result(reason: &str) -> AgentToolResult {
         content: vec![ToolResultContent::Text {
             text: reason.to_string(),
         }],
-        details: serde_json::Value::Null,
+        details: serde_json::json!({}),
         usage: None,
         added_tool_names: vec![],
         terminate: false,
@@ -339,13 +424,42 @@ fn synthetic_error_result(reason: &str) -> AgentToolResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{AfterToolCallContext, AfterToolCallResult};
+    use crate::types::{AfterToolCallContext, AfterToolCallResult, AgentTool};
 
-    fn dummy_call(id: &str, name: &str) -> ToolCall {
-        ToolCall {
-            id: id.into(),
-            name: name.into(),
-            arguments: serde_json::json!({}),
+    struct CancellationProbe {
+        started: tokio::sync::watch::Sender<bool>,
+    }
+
+    #[async_trait::async_trait]
+    impl AgentTool for CancellationProbe {
+        fn name(&self) -> &str {
+            "cancel_probe"
+        }
+
+        fn label(&self) -> &str {
+            "Cancellation probe"
+        }
+
+        fn description(&self) -> &str {
+            "Waits for cancellation."
+        }
+
+        async fn execute(
+            &self,
+            _tool_call_id: &str,
+            _args: serde_json::Value,
+            signal: Option<tokio_util::sync::CancellationToken>,
+            on_update: Option<Box<dyn Fn(serde_json::Value) + Send + Sync>>,
+        ) -> Result<AgentToolResult, String> {
+            if let Some(on_update) = on_update {
+                on_update(serde_json::json!({"phase": "started"}));
+            }
+            let _ = self.started.send(true);
+            signal
+                .expect("executor must provide a cancellation token")
+                .cancelled()
+                .await;
+            Err("cancelled by probe".into())
         }
     }
 
@@ -362,13 +476,76 @@ mod tests {
                     timestamp: 0,
                     ..Default::default()
                 },
+                context: crate::types::AgentContext::default(),
+                abort: None,
                 registry,
                 hooks: ToolExecHooks::default(),
+                bus: None,
+                updates: Arc::new(std::sync::Mutex::new(Vec::new())),
             };
             let outcome = execute_sequential(vec![], ctx).await;
             assert!(outcome.tool_results.is_empty());
             assert!(!outcome.all_terminated);
         });
+    }
+
+    #[tokio::test]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the cancellation regression covers live bus delivery and finalization"
+    )]
+    async fn abort_cancels_in_flight_tool_and_emits_error_result() {
+        let (started_tx, mut started_rx) = tokio::sync::watch::channel(false);
+        let mut registry = ToolRegistry::new();
+        registry.register(Arc::new(CancellationProbe {
+            started: started_tx,
+        }));
+        let (abort_tx, abort_rx) = tokio::sync::watch::channel(false);
+        let bus = crate::events::EventBus::new();
+        let mut bus_events = bus.subscribe();
+        let ctx = ToolExecContext {
+            assistant_message: AssistantMessage::default(),
+            context: crate::types::AgentContext::default(),
+            abort: Some(abort_rx),
+            bus: Some(bus),
+            registry: Arc::new(registry),
+            hooks: ToolExecHooks {
+                after_tool_call: Some(Arc::new(|input| {
+                    Box::pin(async move {
+                        assert!(input.is_error);
+                        crate::types::AfterToolCallResult::default()
+                    })
+                })),
+                ..ToolExecHooks::default()
+            },
+            updates: Arc::new(std::sync::Mutex::new(Vec::new())),
+        };
+        let call = ToolCall {
+            id: "cancel-1".into(),
+            name: "cancel_probe".into(),
+            arguments: serde_json::json!({}),
+            thought_signature: None,
+        };
+        let abort_when_started = async {
+            while !*started_rx.borrow() {
+                let _ = started_rx.changed().await;
+            }
+            let _ = abort_tx.send(true);
+        };
+        let (outcome, _) = tokio::join!(execute_sequential(vec![call], ctx), abort_when_started);
+        let live_update = bus_events
+            .try_recv()
+            .expect("tool update should publish before completion");
+        assert!(matches!(
+            live_update,
+            crate::types::AgentEvent::ToolExecutionUpdate { .. }
+        ));
+        assert!(outcome.tool_results[0].is_error);
+        assert_eq!(outcome.tool_results[0].details, serde_json::json!({}));
+        assert!(matches!(
+            outcome.tool_results[0].content.first(),
+            Some(ToolResultContent::Text { text }) if text == "aborted"
+        ));
     }
 
     #[allow(dead_code)]

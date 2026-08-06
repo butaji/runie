@@ -10,7 +10,7 @@ assertions:
     cols: 40
     rows: 12
     screen_text:
-      - "❯ resi"
+      - "A response that wraps"
       - "Enter:send"
     screen_excludes:
       - "panicked"

@@ -49,3 +49,9 @@ Variants: `is_streaming ∈ {true,false}`; `pending_tool_calls ⊆ {active tool 
 
 - Unit tests: projection getters reflect event application (stream open/close, tool start/end, error set); rebuild-from-events equivalence (replaying the same events produces the same snapshot).
 - `cargo test -p runie-core` green.
+## Progress
+
+- **Projection synchronization (2026-08-05):** in-flight streaming and
+  pending-tool projection tests now await the state actor's synchronization
+  contract before asserting terminal state, eliminating scheduler-dependent
+  reads while preserving actor-only mutation.

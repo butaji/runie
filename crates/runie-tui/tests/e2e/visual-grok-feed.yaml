@@ -5,6 +5,7 @@ description: |
   symbol at every cell in the transcript rows.
 
 initial_prompt: "Please reply with a short markdown-formatted paragraph about this directory, using a heading, bold text, and a bullet list. Then list the files in this directory."
+capture_while_waiting: true
 tools:
   - name: list_dir
     kind: list_dir
@@ -12,9 +13,6 @@ tools:
     kind: read
 events:
   - start
-  - text_delta: "# runie"
-  - text_delta: "\n\nThis is **Runie** in the repository."
-  - text_delta: "\n\n- crates"
   - tool_call:
       name: list_dir
       args: { path: "." }
@@ -22,11 +20,26 @@ events:
       name: read
       args: { path: "README.md" }
   - done: { stop_reason: tool_use }
+  - waiting: model
 
 assertions:
   visual:
     cols: 80
     rows: 24
+    activity_expanded: false
+    header_meter: "20K / 500K"
+    waiting_chrome: " 0.0s                            6.0s ⇣20.7k [stop]"
+    reference:
+      cast: grok-rich.cast
+      frame_index: 81
+      frame_contains: ["Listed 1 dir", "Read 1 file"]
+      exact_screen: true
+      # The checked-in cast uses terminal-default SGR attributes; live Grok's
+      # theme is validated by the palette/unit oracle instead.
+      exact_attributes: false
+      rows:
+        - contains: "Listed 1 dir"
+          exact: true
     screen_text:
       - "◈ Listed 1 dir, Read 1 file"
     screen_excludes:

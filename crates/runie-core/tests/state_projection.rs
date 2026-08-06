@@ -1,6 +1,11 @@
 //! State-machine projection parity (p12): `is_streaming`, `streaming_message`,
 //! `pending_tool_calls` are rebuilt from the run's events (pi AgentState).
 
+#![allow(
+    clippy::too_many_lines,
+    reason = "projection tests keep setup, checkpoint assertions, and release together"
+)]
+
 mod common;
 
 use std::sync::Arc;
@@ -44,6 +49,7 @@ impl StreamFn for PauseStream {
             AssistantMessageEvent::Done {
                 stop_reason: StopReason::Stop,
                 usage: Usage::default(),
+                message: None,
             }
         });
         Ok(Box::pin(head.chain(tail)))
@@ -94,6 +100,7 @@ async fn streaming_projection_tracks_live_assistant_message() {
 
     let _ = release_tx.send(true);
     run.await.expect("run task").expect("run completes");
+    test.state.sync().await;
     let after = test.state.snapshot();
     assert!(
         !after.is_streaming,
@@ -105,6 +112,7 @@ async fn streaming_projection_tracks_live_assistant_message() {
 /// Tool that blocks until released, so the projection can observe the
 /// pending tool call in flight.
 struct BlockingTool {
+    started: tokio::sync::watch::Sender<bool>,
     release: tokio::sync::watch::Receiver<bool>,
 }
 #[async_trait::async_trait]
@@ -125,6 +133,7 @@ impl AgentTool for BlockingTool {
         _signal: Option<tokio_util::sync::CancellationToken>,
         _on_update: Option<Box<dyn Fn(serde_json::Value) + Send + Sync>>,
     ) -> Result<AgentToolResult, String> {
+        let _ = self.started.send(true);
         let mut rx = self.release.clone();
         let _ = rx.wait_for(|v| *v).await;
         Ok(AgentToolResult {
@@ -159,17 +168,20 @@ impl StreamFn for OneToolStream {
                         id: "tool-1".into(),
                         name: "block_tool".into(),
                         arguments: serde_json::json!({}),
+                        thought_signature: None,
                     },
                 },
                 AssistantMessageEvent::Done {
                     stop_reason: StopReason::ToolUse,
                     usage: Usage::default(),
+                    message: None,
                 },
             ]
         } else {
             vec![AssistantMessageEvent::Done {
                 stop_reason: StopReason::Stop,
                 usage: Usage::default(),
+                message: None,
             }]
         };
         Ok(Box::pin(stream::iter(events)))
@@ -178,11 +190,13 @@ impl StreamFn for OneToolStream {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn pending_tool_calls_projection_tracks_in_flight_call() {
+    let (started_tx, mut started_rx) = tokio::sync::watch::channel(false);
     let (release_tx, release_rx) = tokio::sync::watch::channel(false);
     let mut builder = TestLoopBuilder::new(Arc::new(OneToolStream {
         calls: Mutex::new(0),
     }));
     builder = builder.tool(Arc::new(BlockingTool {
+        started: started_tx,
         release: release_rx,
     }));
     let test = builder.build();
@@ -201,27 +215,20 @@ async fn pending_tool_calls_projection_tracks_in_flight_call() {
                 .await
         })
     };
-    // Poll until the pending tool call appears (the tool is blocking).
-    let mut saw_pending = false;
-    for _ in 0..2000 {
-        tokio::task::yield_now().await;
-        if test
-            .state
-            .snapshot()
-            .pending_tool_calls
-            .contains(&"tool-1".to_string())
-        {
-            saw_pending = true;
-            break;
-        }
+    // Wait for the tool's owned execution boundary, then inspect the state
+    // projection. This avoids timing-dependent polling without sleeps.
+    while !*started_rx.borrow() {
+        let _ = started_rx.changed().await;
     }
-    assert!(
-        saw_pending,
-        "pending_tool_calls should include tool-1 in flight"
-    );
+    assert!(test
+        .state
+        .snapshot()
+        .pending_tool_calls
+        .contains(&"tool-1".to_string()));
 
     let _ = release_tx.send(true);
     run.await.expect("run task").expect("run completes");
+    test.state.sync().await;
     let after = test.state.snapshot();
     assert!(
         after.pending_tool_calls.is_empty(),

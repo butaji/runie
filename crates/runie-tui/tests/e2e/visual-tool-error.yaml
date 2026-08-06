@@ -1,0 +1,27 @@
+name: visual-tool-error
+description: Deterministic tool execution failure renders a Grok-style error card.
+initial_prompt: "run the failing tool"
+tools:
+  - name: read
+    kind: error
+events:
+  - start
+  - tool_call:
+      name: read
+      args: { path: "missing.txt" }
+  - done: { stop_reason: tool_use }
+assertions:
+  state:
+    is_streaming: false
+    pending_tool_calls: 0
+    messages: 4
+  visual:
+    cols: 80
+    rows: 30
+    screen_text:
+      - "◈ Read 1 file · 1 failed"
+      - "◆ Read missing.txt"
+      - "✗"
+      - "Enter:send"
+    screen_excludes:
+      - "panicked"

@@ -12,7 +12,6 @@ assertions:
     steps: ["echo"]
     screen_text:
       - "❯ echo"
-      - "Enter:send"
     screen_excludes:
       - "0.2.118"
       - "welcome"

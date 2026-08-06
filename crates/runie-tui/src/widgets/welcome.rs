@@ -10,43 +10,105 @@ use ratatui::widgets::{Block, Borders, Paragraph, Widget};
 #[derive(Debug, Clone, Copy, Default)]
 pub struct WelcomeWidget;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum VersionBadgeVariant {
+    Full,
+    HeroFooter,
+    HeroInline,
+}
+
+pub fn version_badge(variant: VersionBadgeVariant) -> String {
+    let version = env!("CARGO_PKG_VERSION");
+    match variant {
+        VersionBadgeVariant::Full => format!("runie v{version} · Beta"),
+        VersionBadgeVariant::HeroFooter => format!("runie Beta · v{version}"),
+        VersionBadgeVariant::HeroInline => format!("runie v{version}"),
+    }
+}
+
 impl Widget for WelcomeWidget {
     fn render(self, area: Rect, buf: &mut Buffer) {
         if area.width < 24 || area.height < 8 {
             return;
         }
         if area.height < 16 {
-            let surface = Rect {
-                x: area.x
-                    + area
-                        .width
-                        .saturating_sub(42.min(area.width.saturating_sub(4)))
-                        / 2,
-                y: area.y + area.height.saturating_sub(10) / 2,
-                width: 42.min(area.width.saturating_sub(4)),
-                height: 10,
-            };
-            let lines = vec![
-                Line::from(Span::styled(
-                    "Runie",
-                    Style::default()
-                        .fg(Color::Cyan)
-                        .add_modifier(Modifier::BOLD),
-                )),
-                Line::from("v0.1.0"),
-                Line::from("Model · runie-core"),
-                Line::from(""),
-                Line::from("New session"),
-                Line::from("/help for commands"),
-                Line::from("Ctrl+Q · quit"),
-                Line::from("◆ session_start"),
-            ];
-            Paragraph::new(lines)
-                .alignment(Alignment::Center)
-                .block(Block::default().borders(Borders::ALL).title(" welcome "))
-                .render(surface, buf);
+            self.render_compact(area, buf);
             return;
         }
+        if area.width >= 100 && area.height >= 22 {
+            self.render_wide_hero(area, buf);
+            return;
+        }
+        self.render_full(area, buf);
+    }
+}
+
+impl WelcomeWidget {
+    pub fn render_hero_footer_badge(area: Rect, buf: &mut Buffer) {
+        if area.height == 0 || area.width == 0 {
+            return;
+        }
+        Paragraph::new(version_badge(VersionBadgeVariant::HeroFooter))
+            .alignment(Alignment::Right)
+            .render(area, buf);
+    }
+
+    fn render_compact(self, area: Rect, buf: &mut Buffer) {
+        let surface = Rect {
+            x: area.x
+                + area
+                    .width
+                    .saturating_sub(42.min(area.width.saturating_sub(4)))
+                    / 2,
+            y: area.y + area.height.saturating_sub(10) / 2,
+            width: 42.min(area.width.saturating_sub(4)),
+            height: 10,
+        };
+        let lines = vec![
+            Line::from(Span::styled(
+                "Runie",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )),
+            Line::from(version_badge(VersionBadgeVariant::HeroInline)),
+            Line::from("Model · runie-core"),
+            Line::from(""),
+            Line::from("New session"),
+            Line::from("/help for commands"),
+            Line::from("Ctrl+D / Ctrl+Q · quit"),
+            Line::from("◆ session_start"),
+        ];
+        Paragraph::new(lines)
+            .alignment(Alignment::Center)
+            .block(Block::default().borders(Borders::ALL).title(" welcome "))
+            .render(surface, buf);
+    }
+
+    fn render_wide_hero(self, area: Rect, buf: &mut Buffer) {
+        let box_area = Rect::new(
+            area.x.saturating_add(2),
+            area.y.saturating_add(8),
+            area.width.saturating_sub(2),
+            13.min(area.height.saturating_sub(8)),
+        );
+        Block::default().borders(Borders::ALL).render(box_area, buf);
+        render_wide_hero_copy(box_area, buf);
+        render_wide_hero_actions(box_area, buf);
+        Paragraph::new(version_badge(VersionBadgeVariant::Full))
+            .alignment(Alignment::Right)
+            .render(
+                Rect::new(
+                    area.x,
+                    area.y + area.height.saturating_sub(1),
+                    area.width,
+                    1,
+                ),
+                buf,
+            );
+    }
+
+    fn render_full(self, area: Rect, buf: &mut Buffer) {
         let bold = Style::default().add_modifier(Modifier::BOLD);
         let x = area.x.saturating_add(13);
         let action = |label: &str, shortcut: &str| {
@@ -60,6 +122,8 @@ impl Widget for WelcomeWidget {
             action("New worktree", "ctrl+w"),
             action("Resume session", "ctrl+s"),
             Line::from(Span::styled("Changelog", bold)),
+            // Match Grok's full-mode welcome copy; Ctrl+D remains supported
+            // by the input handler but is intentionally not duplicated here.
             action("Quit", "ctrl+q"),
         ])
         .render(
@@ -79,6 +143,61 @@ impl Widget for WelcomeWidget {
             Span::raw("Use Ctrl+Enter to interject messages. Or just Enter to queue messages."),
         ]))
         .render(Rect::new(area.x, area.y + 14, area.width, 1), buf);
+        if area.width >= 100 {
+            Paragraph::new(version_badge(VersionBadgeVariant::Full))
+                .alignment(Alignment::Right)
+                .render(Rect::new(area.x, area.y + 1, area.width, 1), buf);
+        }
+    }
+}
+
+fn render_wide_hero_copy(area: Rect, buf: &mut Buffer) {
+    let logo = [
+        "⠀⠀⠀⠀⠀⠀⣀⣀⡀⠀⠀⠀⢀⠄",
+        "⠀⠀⠀⣠⣾⠿⠛⠛⠛⠛⢀⡴⠁⠀",
+        "⠀⠀⣼⡟⠁⠀⠀⠀⢀⡴⠻⣿⡀⠀",
+        "⠀⠀⣿⡇⠀⠀⠀⠔⠁⠀⠀⣿⡇⠀",
+        "⠀⠀⢹⣷⠀⠀⠀⠀⠀⢀⣴⡿⠀⠀",
+        "⠀⢀⠞⠁⠠⢶⣶⣶⣶⠿⠋⠀⠀⠀",
+        "⠐⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀",
+    ];
+    Paragraph::new(logo.into_iter().map(Line::from).collect::<Vec<_>>())
+        .render(Rect::new(area.x + 3, area.y + 2, 32, 7), buf);
+    Paragraph::new(vec![
+        Line::from(Span::styled(
+            "Grok Build Beta  0.2.118",
+            Style::default().add_modifier(Modifier::BOLD),
+        )),
+        Line::from(""),
+        Line::from(Span::styled(
+            "Grok 4.5 is here!",
+            Style::default().add_modifier(Modifier::BOLD),
+        )),
+        Line::from("Select 'Grok 4.5' under /model."),
+    ])
+    .render(Rect::new(area.x + 20, area.y + 2, 46, 4), buf);
+}
+
+fn render_wide_hero_actions(area: Rect, buf: &mut Buffer) {
+    for (offset, (label, shortcut)) in [
+        ("New worktree", "ctrl+w"),
+        ("Resume session", "ctrl+s"),
+        ("Changelog", ""),
+        ("Quit", "ctrl+q"),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let y = area.y + 7 + offset as u16;
+        let text = format!("{label:>85}{shortcut:>10}");
+        Paragraph::new(Line::from(Span::styled(
+            text,
+            Style::default().add_modifier(Modifier::BOLD),
+        )))
+        .render(
+            Rect::new(area.x + 3, y, area.width.saturating_sub(6), 1),
+            buf,
+        );
     }
 }
 
@@ -99,5 +218,88 @@ mod tests {
             .collect::<Vec<_>>()
             .join("\n");
         insta::assert_snapshot!("welcome-full-mode", text);
+    }
+
+    #[test]
+    fn compact_welcome_shows_both_quit_chords() {
+        let area = Rect::new(0, 0, 40, 12);
+        let mut buffer = Buffer::empty(area);
+        WelcomeWidget.render(area, &mut buffer);
+        let text = (0..area.height)
+            .flat_map(|y| (0..area.width).map(move |x| (x, y)))
+            .filter_map(|(x, y)| buffer.cell((x, y)))
+            .map(|cell| cell.symbol().to_string())
+            .collect::<String>();
+        assert!(text.contains("Ctrl+D / Ctrl+Q"));
+    }
+
+    #[test]
+    fn full_welcome_uses_grok_quit_chord() {
+        let area = Rect::new(0, 0, 80, 24);
+        let mut buffer = Buffer::empty(area);
+        WelcomeWidget.render(area, &mut buffer);
+        let text = (0..area.height)
+            .flat_map(|y| (0..area.width).map(move |x| (x, y)))
+            .filter_map(|(x, y)| buffer.cell((x, y)))
+            .map(|cell| cell.symbol().to_string())
+            .collect::<String>();
+        assert!(text.contains("ctrl+q"));
+    }
+
+    #[test]
+    fn wide_full_welcome_renders_full_version_badge() {
+        let area = Rect::new(0, 0, 120, 26);
+        let mut buffer = Buffer::empty(area);
+        WelcomeWidget.render(area, &mut buffer);
+        let text = (0..area.height)
+            .flat_map(|y| (0..area.width).map(move |x| (x, y)))
+            .filter_map(|(x, y)| buffer.cell((x, y)))
+            .map(|cell| cell.symbol().to_string())
+            .collect::<String>();
+        assert!(text.contains(&version_badge(VersionBadgeVariant::Full)));
+    }
+
+    #[test]
+    fn hero_footer_badge_renders_in_its_dedicated_row() {
+        let area = Rect::new(0, 0, 80, 1);
+        let mut buffer = Buffer::empty(area);
+        WelcomeWidget::render_hero_footer_badge(area, &mut buffer);
+        let text = (0..area.width)
+            .filter_map(|x| buffer.cell((x, 0)))
+            .map(|cell| cell.symbol().to_string())
+            .collect::<String>();
+        assert!(text.contains(&version_badge(VersionBadgeVariant::HeroFooter)));
+    }
+
+    #[test]
+    fn version_badge_variants_are_explicit_and_distinct() {
+        let full = version_badge(VersionBadgeVariant::Full);
+        let footer = version_badge(VersionBadgeVariant::HeroFooter);
+        let inline = version_badge(VersionBadgeVariant::HeroInline);
+        assert!(full.contains("Beta"));
+        assert!(footer.contains("Beta"));
+        assert!(inline.contains(env!("CARGO_PKG_VERSION")));
+        assert_ne!(full, footer);
+        assert_ne!(footer, inline);
+    }
+
+    #[test]
+    fn wide_welcome_matches_recorded_grok_hero_markers() {
+        let area = Rect::new(0, 0, 120, 36);
+        let mut buffer = Buffer::empty(area);
+        WelcomeWidget.render(area, &mut buffer);
+        let text = (0..area.height)
+            .flat_map(|y| (0..area.width).map(move |x| (x, y)))
+            .filter_map(|(x, y)| buffer.cell((x, y)))
+            .map(|cell| cell.symbol().to_string())
+            .collect::<String>();
+        for marker in [
+            "Grok Build Beta  0.2.118",
+            "Grok 4.5 is here!",
+            "New worktree",
+            "ctrl+q",
+        ] {
+            assert!(text.contains(marker), "wide hero lacks {marker:?}");
+        }
     }
 }

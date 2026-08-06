@@ -1,0 +1,21 @@
+{
+  "name": "runie-tui-parity",
+  "description": "Source-backed Grok TUI component contracts for Runie parity work.",
+  "reference_root": "/Users/admin/Code/agents/grok-build/crates/codegen/xai-grok-pager/src",
+  "components": [
+    {"id":"layout","doc":"layout.md","sources":["scrollback/layout.rs","app/agent_view/render.rs"],"fixtures":["visual-resize.yaml"]},
+    {"id":"header","doc":"header.md","sources":["app/agent_view/render.rs","git_info.rs"],"fixtures":["visual-hey.yaml"]},
+    {"id":"scrollback","doc":"scrollback.md","sources":["scrollback/entry.rs","scrollback/block.rs","scrollback/scrollback_pane.rs"],"fixtures":["visual-grok-feed.yaml"]},
+    {"id":"user-prompt","doc":"user-prompt.md","sources":["scrollback/blocks/user.rs","views/prompt_widget/mod.rs"],"fixtures":["visual-typed.yaml","visual-multiline.yaml"]},
+    {"id":"thinking","doc":"thinking.md","sources":["scrollback/blocks/thinking.rs"],"fixtures":["visual-reasoning.yaml","visual-reasoning-expanded.yaml"]},
+    {"id":"assistant-message","doc":"assistant-message.md","sources":["scrollback/blocks/markdown_content.rs","scrollback/render.rs"],"fixtures":["visual-markdown-rich.yaml"]},
+    {"id":"activity-group","doc":"activity-group.md","sources":["scrollback/render.rs","scrollback/scrollback_pane.rs"],"fixtures":["visual-activity-mixed.yaml","visual-activity-collapsed.yaml"]},
+    {"id":"tool-card","doc":"tool-card.md","sources":["scrollback/blocks/tool"],"fixtures":["visual-tool-structured.yaml","visual-tool-error.yaml"]},
+    {"id":"prompt-composer","doc":"prompt-composer.md","sources":["views/prompt_widget","app/agent_view/prompt.rs"],"fixtures":["visual-prompts.yaml","visual-file-search.yaml"]},
+    {"id":"status-footer","doc":"status-footer.md","sources":["views/agent_status.rs","views/turn_status.rs"],"fixtures":["visual-status-working.yaml","visual-grok-waiting.yaml"]},
+    {"id":"theme-tokens","doc":"theme-tokens.md","sources":["../xai-grok-pager-render/src/theme.rs","../xai-grok-pager-render/src/glyphs.rs"],"fixtures":["visual-theme-day.yaml"]},
+    {"id":"animation","doc":"animation.md","sources":["glyphs.rs","app/agent_view/render.rs"],"fixtures":["visual-status-working.yaml"]},
+    {"id":"command-palette","doc":"command-palette.md","sources":["app/agent_view/input.rs","slash/commands/mod.rs"],"fixtures":["visual-command-palette.yaml","visual-command-palette-activate.yaml"]},
+    {"id":"welcome","doc":"welcome.md","sources":["views/welcome"],"fixtures":["visual-welcome-badges.yaml"]}
+  ]
+}

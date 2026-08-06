@@ -1,11 +1,15 @@
 //! Widgets: scrollback transcript, prompt input, status bar.
 
+pub mod command_palette;
 pub mod prompt;
 pub mod scrollback;
 pub mod status;
 pub mod welcome;
 
-pub use prompt::{PromptOutcome, PromptWidget};
-pub use scrollback::{Line, LineKind, Scrollback};
-pub use status::{Status, StatusBar, TurnStatus, TurnStatusPhase};
-pub use welcome::WelcomeWidget;
+pub use command_palette::CommandPaletteWidget;
+pub use prompt::{InputMode, PromptOutcome, PromptWidget};
+pub use scrollback::{Line, LineKind, Scrollback, ScrollbackMsg};
+pub use status::{
+    braille_spinner_frames, Status, StatusBar, StatusMsg, TurnStatus, TurnStatusPhase,
+};
+pub use welcome::{version_badge, VersionBadgeVariant, WelcomeWidget};

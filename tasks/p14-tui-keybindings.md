@@ -44,3 +44,38 @@ Key event variants to handle: `Enter`, `Shift+Enter`, `Alt+Enter`, `Tab`, `Shift
 
 - Unit tests for each key path (multiline, history nav, clear-vs-cancel, quit keys, mode cycle).
 - Snapshot/key handling tests in `runie-tui` green; `cargo test --workspace` green.
+
+## Progress
+
+- **In progress (2026-08-05):** Shift/Alt-Enter multiline input, prompt history,
+  Shift+Tab, Ctrl+X, Ctrl+L, quit chords, and clear-vs-abort routing are
+  covered. The binary now routes clear, abort, and quit actions through the
+  shared key mapper. Remaining work is wiring the full app-level mode/file-
+  search state machine and rendering the shortcut surface from the owned app
+  state; the mode and shortcut transitions are now runtime-wired, the prompt
+  mode transition has a unit test, and the shortcut state renders a
+  deterministic panel in both initial and steady-state frames.
+- **Ctrl+L reservation (2026-08-05):** removed the incorrect clear-scrollback
+  binding. Ctrl+L is now reserved for the Grok file-search/line-viewer target
+  and is documented in the shortcut surface until that optional feature exists.
+- **File-search entry (2026-08-05):** Ctrl+L now enters an owned prompt
+  `FileSearch` mode and renders a `file search` caption; Esc returns to normal
+  input. Result selection and the line-viewer handoff remain to be implemented.
+- **YAML coverage (2026-08-05):** Added `visual-file-search.yaml`; the YAML
+  runner accepts a `Ctrl+L` step and checks the resulting prompt chrome.
+- **Candidate interaction (2026-08-05):** File-search mode now lists up to
+  five visible current-directory candidates, supports Up/Down selection, and
+  accepts the selected candidate with Tab/Enter.
+- **Line viewer (2026-08-05):** An accepted file can now be reopened through
+  Ctrl+L into a bounded 20-line in-prompt viewer; Esc returns to normal input.
+  Added a regression test for the handoff and viewer exit.
+- The YAML file-search fixture now covers the complete entry → accept → viewer
+  transition.
+
+## Completion
+
+All specified key paths are now runtime-wired and covered: multiline input,
+history navigation/search, clear-vs-abort, quit chords, mode cycling, shortcut
+panel, file-search candidate selection, bounded viewer handoff, and Esc exit.
+Focused TUI tests, the YAML fixture suite, strict clippy, and local formatting
+checks pass.

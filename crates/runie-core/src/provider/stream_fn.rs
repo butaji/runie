@@ -40,6 +40,10 @@ pub fn parse_streaming_json(input: &str) -> Option<serde_json::Value> {
     if let Ok(v) = serde_json::from_str(input) {
         return Some(v);
     }
+    serde_json::from_str(&close_streaming_fragment(input)).ok()
+}
+
+fn close_streaming_fragment(input: &str) -> String {
     let mut out = String::new();
     let mut in_string = false;
     let mut escaped = false;
@@ -76,13 +80,17 @@ pub fn parse_streaming_json(input: &str) -> Option<serde_json::Value> {
             _ => out.push(ch),
         }
     }
+    finish_streaming_fragment(out, in_string, stack)
+}
+
+fn finish_streaming_fragment(mut out: String, in_string: bool, mut stack: Vec<char>) -> String {
     if in_string {
         out.push('"');
     }
     while let Some(open) = stack.pop() {
         out.push(if open == '{' { '}' } else { ']' });
     }
-    serde_json::from_str(&out).ok()
+    out
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -134,13 +142,12 @@ mod tests {
     fn default_stream_fn_unset_returns_pi_error() {
         // The test binary may have set it elsewhere in the same process; only
         // assert when it is unset.
-        match get_default_stream_fn() {
-            Err(e) => assert!(
+        if let Err(e) = get_default_stream_fn() {
+            assert!(
                 e.to_string()
                     .contains("No default stream function configured"),
                 "error should match pi"
-            ),
-            Ok(_) => {}
+            );
         }
     }
 

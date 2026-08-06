@@ -3,10 +3,12 @@
 use std::sync::Arc;
 
 use tokio::sync::{broadcast, mpsc, oneshot};
+use tokio::task::JoinSet;
 
 use crate::types::{AgentContext, Model, SimpleStreamOptions};
 
 use super::stream_fn::{AssistantMessageEventStream, StreamFn};
+use crate::task_owner::{spawn_actor_worker, TaskOwner};
 
 /// Broadcast capacity for stream events. Sized to absorb a burst of
 /// `message_update` events without dropping.
@@ -14,9 +16,9 @@ const STREAM_CAPACITY: usize = 1024;
 
 pub enum ProviderCommand {
     Start {
-        model: Model,
-        context: AgentContext,
-        options: Option<SimpleStreamOptions>,
+        model: Box<Model>,
+        context: Box<AgentContext>,
+        options: Box<Option<SimpleStreamOptions>>,
         reply: oneshot::Sender<broadcast::Receiver<crate::types::AssistantMessageEvent>>,
     },
     Cancel,
@@ -25,20 +27,22 @@ pub enum ProviderCommand {
 #[derive(Clone)]
 pub struct ProviderActor {
     tx: mpsc::Sender<ProviderCommand>,
-    stream_fn: Arc<dyn StreamFn>,
+    _worker: Arc<TaskOwner>,
 }
 
 impl ProviderActor {
     pub fn new(stream_fn: Arc<dyn StreamFn>) -> Self {
-        let (tx, rx) = mpsc::channel(8);
         let sf = stream_fn.clone();
 
         // OWNER: ProviderActor
-        tokio::spawn(async move {
+        let (tx, worker) = spawn_actor_worker!(8, move |rx| async move {
             run_provider_worker(rx, sf).await;
         });
 
-        Self { tx, stream_fn }
+        Self {
+            tx,
+            _worker: worker,
+        }
     }
 
     pub async fn start(
@@ -51,9 +55,9 @@ impl ProviderActor {
         let _ = self
             .tx
             .send(ProviderCommand::Start {
-                model,
-                context,
-                options,
+                model: Box::new(model),
+                context: Box::new(context),
+                options: Box::new(options),
                 reply: reply_tx,
             })
             .await;
@@ -69,7 +73,9 @@ async fn run_provider_worker(
     mut rx: mpsc::Receiver<ProviderCommand>,
     stream_fn: Arc<dyn StreamFn>,
 ) {
+    let mut pumps = JoinSet::new();
     while let Some(cmd) = rx.recv().await {
+        while pumps.try_join_next().is_some() {}
         match cmd {
             ProviderCommand::Start {
                 model,
@@ -78,25 +84,33 @@ async fn run_provider_worker(
                 reply,
             } => {
                 let (event_tx, _) = broadcast::channel(STREAM_CAPACITY);
-                match stream_fn.stream(&model, &context, options).await {
+                match stream_fn.stream(&model, &context, *options).await {
                     Ok(stream) => {
                         // Subscribe before starting the pump. Otherwise a
                         // fast replay stream can publish Start/tool events
                         // before the caller receives its broadcast receiver.
                         let receiver = event_tx.subscribe();
                         let tx = event_tx.clone();
-                        // OWNER: ProviderActor — wraps the stream in an owned task.
-                        tokio::spawn(pump_stream(stream, tx));
+                        // ProviderActor owns every active pump through this
+                        // JoinSet; dropping the worker aborts its children.
+                        pumps.spawn(pump_stream(stream, tx));
                         let _ = reply.send(receiver);
                     }
-                    Err(_) => {
-                        let _ = reply.send(event_tx.subscribe());
+                    Err(error) => {
+                        let receiver = event_tx.subscribe();
+                        let _ = event_tx.send(crate::types::AssistantMessageEvent::Error {
+                            error: error.to_string(),
+                            message: None,
+                        });
+                        let _ = reply.send(receiver);
                     }
                 }
             }
             ProviderCommand::Cancel => {
-                // Cancellation is currently best-effort; the next Start will
-                // simply run after the in-flight stream finishes (or errors).
+                // pi aborts the active provider request. The actor owns every
+                // pump in this JoinSet, so aborting the set cancels the
+                // in-flight stream without detaching a task.
+                pumps.abort_all();
             }
         }
     }
@@ -121,7 +135,6 @@ mod tests {
         AgentContext, AssistantMessageEvent, Model, SimpleStreamOptions, StopReason, Usage,
     };
     use futures::stream;
-    use std::sync::Arc;
 
     struct ThreeEventFn;
     #[async_trait::async_trait]
@@ -132,17 +145,43 @@ mod tests {
             _context: &crate::types::AgentContext,
             _options: Option<SimpleStreamOptions>,
         ) -> Result<AssistantMessageEventStream, StreamError> {
-            use futures::stream::Stream;
             let events = vec![
                 AssistantMessageEvent::Start,
                 AssistantMessageEvent::TextDelta { delta: "hi".into() },
                 AssistantMessageEvent::Done {
                     stop_reason: StopReason::Stop,
                     usage: Usage::default(),
+                    message: None,
                 },
             ];
             let s = stream::iter(events);
             Ok(Box::pin(s))
+        }
+    }
+
+    struct PendingFn;
+    #[async_trait::async_trait]
+    impl StreamFn for PendingFn {
+        async fn stream(
+            &self,
+            _model: &Model,
+            _context: &crate::types::AgentContext,
+            _options: Option<SimpleStreamOptions>,
+        ) -> Result<AssistantMessageEventStream, StreamError> {
+            Ok(Box::pin(futures::stream::pending()))
+        }
+    }
+
+    struct ErrorFn;
+    #[async_trait::async_trait]
+    impl StreamFn for ErrorFn {
+        async fn stream(
+            &self,
+            _model: &Model,
+            _context: &crate::types::AgentContext,
+            _options: Option<SimpleStreamOptions>,
+        ) -> Result<AssistantMessageEventStream, StreamError> {
+            Err(StreamError::Api("bad request".into()))
         }
     }
 
@@ -175,5 +214,33 @@ mod tests {
             }
         }
         assert_eq!(count, 3);
+    }
+
+    #[tokio::test]
+    async fn cancel_aborts_owned_stream_pump() {
+        let actor = ProviderActor::new(std::sync::Arc::new(PendingFn));
+        let mut rx = actor
+            .start(Model::default(), AgentContext::default(), None)
+            .await
+            .unwrap();
+        actor.cancel().await;
+        let result = tokio::time::timeout(std::time::Duration::from_millis(100), rx.recv())
+            .await
+            .expect("cancel should close the stream");
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn startup_error_is_encoded_as_assistant_error_event() {
+        let actor = ProviderActor::new(std::sync::Arc::new(ErrorFn));
+        let mut rx = actor
+            .start(Model::default(), AgentContext::default(), None)
+            .await
+            .unwrap();
+        assert!(matches!(
+            rx.recv().await.unwrap(),
+            crate::types::AssistantMessageEvent::Error { error, .. }
+                if error == "api: bad request"
+        ));
     }
 }

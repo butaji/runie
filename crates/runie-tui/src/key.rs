@@ -7,9 +7,17 @@ pub enum Action {
     Submit(String),
     Abort,
     Quit,
-    ClearScrollback,
     ClearPrompt,
     FocusPrompt,
+    /// Cycle the input mode (grok Shift+Tab).
+    ModeCycle,
+    /// Open the shortcut help (grok Ctrl+x).
+    OpenShortcuts,
+    OpenCommandPalette,
+    /// Enter the file-search prompt (grok Ctrl+l).
+    OpenFileSearch,
+    /// Toggle the selected scrollback fold (Grok's scrollback `e` action).
+    ToggleFold,
     Noop,
 }
 
@@ -26,29 +34,31 @@ pub fn is_quit_command(text: &str) -> bool {
 /// `prompt_non_empty` reflects whether the user has typed anything. `streaming`
 /// tells us whether the loop is currently processing.
 pub fn map_key(key: KeyEvent, prompt_non_empty: bool, streaming: bool) -> Action {
-    match (key.code, key.modifiers) {
-        (KeyCode::Enter, m) if m == KeyModifiers::NONE => {
+    if key.modifiers.contains(KeyModifiers::CONTROL) {
+        return match key.code {
+            KeyCode::Char('c') => ctrl_c_action(prompt_non_empty, streaming),
+            KeyCode::Char('d' | 'q') => Action::Quit,
+            // Reserved for Grok's file-search line viewer. The minimal TUI
+            // has no file-search target yet, so do not repurpose it as a
+            // destructive scrollback action.
+            KeyCode::Char('l') => Action::OpenFileSearch,
+            KeyCode::Char('x') => Action::OpenShortcuts,
+            KeyCode::Char('p') => Action::OpenCommandPalette,
+            _ => Action::Noop,
+        };
+    }
+    match key.code {
+        KeyCode::Char('e') if !prompt_non_empty => Action::ToggleFold,
+        KeyCode::Char('?') if !prompt_non_empty => Action::OpenCommandPalette,
+        KeyCode::Enter if key.modifiers == KeyModifiers::NONE => {
             if prompt_non_empty {
-                // Submit is handled in App via PromptOutcome; this branch is
-                // reserved for key-only submit (we don't carry the text here).
                 Action::FocusPrompt
             } else {
                 Action::Noop
             }
         }
-        (KeyCode::Char('c'), m) if m.contains(KeyModifiers::CONTROL) => {
-            if streaming {
-                Action::Abort
-            } else {
-                Action::Quit
-            }
-        }
-        (KeyCode::Char('d'), m) if m.contains(KeyModifiers::CONTROL) => Action::Quit,
-        // Ctrl+Q is the unconditional quit chord in full mode. It must not
-        // depend on prompt contents or whether a turn is streaming.
-        (KeyCode::Char('q'), m) if m.contains(KeyModifiers::CONTROL) => Action::Quit,
-        (KeyCode::Char('l'), m) if m.contains(KeyModifiers::CONTROL) => Action::ClearScrollback,
-        (KeyCode::Esc, _) => {
+        KeyCode::Tab if key.modifiers.contains(KeyModifiers::SHIFT) => Action::ModeCycle,
+        KeyCode::Esc => {
             if prompt_non_empty {
                 Action::ClearPrompt
             } else {
@@ -56,6 +66,14 @@ pub fn map_key(key: KeyEvent, prompt_non_empty: bool, streaming: bool) -> Action
             }
         }
         _ => Action::Noop,
+    }
+}
+
+fn ctrl_c_action(prompt_non_empty: bool, streaming: bool) -> Action {
+    match (prompt_non_empty, streaming) {
+        (true, _) => Action::ClearPrompt,
+        (false, true) => Action::Abort,
+        (false, false) => Action::Quit,
     }
 }
 
@@ -80,9 +98,17 @@ mod tests {
     }
 
     #[test]
-    fn ctrl_c_quits_when_idle() {
+    fn ctrl_c_quits_when_idle_and_prompt_empty() {
         let a = map_key(k(KeyCode::Char('c'), KeyModifiers::CONTROL), false, false);
         assert_eq!(a, Action::Quit);
+    }
+
+    #[test]
+    fn ctrl_c_clears_prompt_before_abort_or_quit() {
+        assert_eq!(
+            map_key(k(KeyCode::Char('c'), KeyModifiers::CONTROL), true, true),
+            Action::ClearPrompt
+        );
     }
 
     #[test]
@@ -127,10 +153,10 @@ mod tests {
     }
 
     #[test]
-    fn ctrl_l_clears_scrollback() {
+    fn ctrl_l_is_reserved_for_file_search() {
         assert_eq!(
             map_key(k(KeyCode::Char('l'), KeyModifiers::CONTROL), false, false),
-            Action::ClearScrollback
+            Action::OpenFileSearch
         );
     }
 
@@ -139,6 +165,46 @@ mod tests {
         assert_eq!(
             map_key(k(KeyCode::Esc, KeyModifiers::NONE), true, false),
             Action::ClearPrompt
+        );
+    }
+
+    #[test]
+    fn shift_tab_cycles_input_mode() {
+        assert_eq!(
+            map_key(k(KeyCode::Tab, KeyModifiers::SHIFT), false, false),
+            Action::ModeCycle
+        );
+    }
+
+    #[test]
+    fn ctrl_x_opens_shortcuts() {
+        assert_eq!(
+            map_key(k(KeyCode::Char('x'), KeyModifiers::CONTROL), false, false),
+            Action::OpenShortcuts
+        );
+    }
+
+    #[test]
+    fn ctrl_p_and_question_open_command_palette() {
+        assert_eq!(
+            map_key(k(KeyCode::Char('p'), KeyModifiers::CONTROL), false, false),
+            Action::OpenCommandPalette
+        );
+        assert_eq!(
+            map_key(k(KeyCode::Char('?'), KeyModifiers::NONE), false, false),
+            Action::OpenCommandPalette
+        );
+    }
+
+    #[test]
+    fn e_toggles_scrollback_fold_when_prompt_is_empty() {
+        assert_eq!(
+            map_key(k(KeyCode::Char('e'), KeyModifiers::NONE), false, false),
+            Action::ToggleFold
+        );
+        assert_eq!(
+            map_key(k(KeyCode::Char('e'), KeyModifiers::NONE), true, false),
+            Action::Noop
         );
     }
 

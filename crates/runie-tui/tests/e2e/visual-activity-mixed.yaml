@@ -1,0 +1,32 @@
+name: visual-activity-mixed
+description: |
+  Mixed directory and command tools fold into one Grok-style activity header
+  while retaining one structured tool row for each member.
+initial_prompt: "inspect the repository"
+tools:
+  - name: list_dir
+    kind: list_dir
+  - name: bash
+    kind: bash
+events:
+  - start
+  - tool_call:
+      name: list_dir
+      args: { path: "." }
+  - tool_call:
+      name: bash
+      args: { cmd: "cargo test" }
+  - done: { stop_reason: tool_use }
+  - tool_mode:
+      tool_call_id: call-1
+      mode: expanded
+  - tool_mode:
+      tool_call_id: call-2
+      mode: collapsed
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    screen_text:
+      - "◈ Listed 1 dir, Ran 1 command"
+      - "◆ List ."

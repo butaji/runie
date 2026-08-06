@@ -6,6 +6,11 @@
 //! The loop must synthesize error results instead of running the tools, then
 //! auto-continue to a follow-up turn (pi agent-loop.ts:216 + 405).
 
+#![allow(
+    clippy::too_many_lines,
+    reason = "the truncation parity scenario keeps stream, tool, and event assertions together"
+)]
+
 mod common;
 
 use std::sync::Arc;
@@ -46,11 +51,13 @@ impl StreamFn for TruncatingStream {
                         id: "call-1".into(),
                         name: "echo".into(),
                         arguments: serde_json::json!({ "text": "hello" }),
+                        thought_signature: None,
                     },
                 },
                 AssistantMessageEvent::Done {
                     stop_reason: StopReason::MaxTokens,
                     usage: Usage::default(),
+                    message: None,
                 },
             ]
         } else {
@@ -62,6 +69,7 @@ impl StreamFn for TruncatingStream {
                 AssistantMessageEvent::Done {
                     stop_reason: StopReason::Stop,
                     usage: Usage::default(),
+                    message: None,
                 },
             ]
         };

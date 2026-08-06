@@ -1,0 +1,12 @@
+name: visual-welcome-badges
+description: Wide welcome frames render the full and hero-footer version badge variants.
+events: []
+assertions:
+  visual:
+    cols: 120
+    rows: 30
+    screen_text:
+      - "runie v0.1.0 · Beta"
+      - "runie Beta · v0.1.0"
+    screen_excludes:
+      - "panicked"

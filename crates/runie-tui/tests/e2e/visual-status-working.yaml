@@ -1,0 +1,23 @@
+name: visual-status-working
+description: |
+  Replays the Grok working-state status row from an asciinema dump. The
+  terminal frame and Runie status are selected entirely from YAML.
+events:
+  - start
+  - text_delta: "working"
+assertions:
+  state:
+    is_streaming: false
+    pending_tool_calls: 0
+    messages: 1
+  visual:
+    cols: 80
+    rows: 24
+    reference:
+      cast: grok-rich.cast
+      frame_contains: ["Thinking…"]
+      rows:
+        - contains: "Thinking…"
+          exact: false
+    screen_text:
+      - "Thinking…"

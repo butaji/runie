@@ -6,6 +6,15 @@ pub const STATUS_HEIGHT: u16 = 1;
 pub const PROMPT_HEIGHT: u16 = 3;
 pub const HEADER_HEIGHT: u16 = 1;
 pub const BOTTOM_MARGIN: u16 = 1;
+// Grok's full-mode LayoutConfig defaults (xai-grok-pager/appearance):
+// two terminal columns outside the agent view on each side.
+pub const OUTER_HPAD_LEFT: u16 = 2;
+pub const OUTER_HPAD_RIGHT: u16 = 2;
+// Scrollback HorizontalLayout defaults: one accent rail, two columns before
+// content, and one trailing column after content.
+pub const SCROLLBACK_ACCENT_WIDTH: u16 = 1;
+pub const SCROLLBACK_BLOCK_PAD_LEFT: u16 = 2;
+pub const SCROLLBACK_BLOCK_PAD_RIGHT: u16 = 1;
 
 #[derive(Debug, Clone, Copy)]
 pub struct ChatLayout {
@@ -13,15 +22,27 @@ pub struct ChatLayout {
     pub scrollback: Rect,
     pub prompt: Rect,
     pub status: Rect,
+    pub footer_badge: Rect,
 }
 
 pub fn chat_layout(area: Rect) -> ChatLayout {
+    chat_layout_with_prompt_height(area, PROMPT_HEIGHT)
+}
+
+#[allow(
+    clippy::too_many_lines,
+    reason = "the layout reducer keeps all dependent regions visible together"
+)]
+pub fn chat_layout_with_prompt_height(area: Rect, prompt_height: u16) -> ChatLayout {
     // Grok reserves one terminal row above the chat and two columns on each
-    // side for its full-mode chrome.
+    // side for its full-mode chrome. The transcript rail itself is inside the
+    // scrollback content projection.
     let inner = Rect {
-        x: area.x.saturating_add(2),
+        x: area.x.saturating_add(OUTER_HPAD_LEFT),
         y: area.y.saturating_add(1),
-        width: area.width.saturating_sub(4),
+        width: area
+            .width
+            .saturating_sub(OUTER_HPAD_LEFT + OUTER_HPAD_RIGHT),
         height: area.height.saturating_sub(1),
     };
     let status = Rect {
@@ -30,11 +51,21 @@ pub fn chat_layout(area: Rect) -> ChatLayout {
         width: inner.width,
         height: STATUS_HEIGHT,
     };
+    let footer_badge = Rect {
+        x: inner.x,
+        y: status.y + STATUS_HEIGHT,
+        width: inner.width,
+        height: BOTTOM_MARGIN.min(area.height),
+    };
+    let available_prompt = status.y.saturating_sub(inner.y + HEADER_HEIGHT);
+    let prompt_height = prompt_height
+        .max(PROMPT_HEIGHT)
+        .min(available_prompt.max(PROMPT_HEIGHT));
     let prompt = Rect {
         x: inner.x,
-        y: status.y.saturating_sub(PROMPT_HEIGHT + BOTTOM_MARGIN),
+        y: status.y.saturating_sub(prompt_height + BOTTOM_MARGIN),
         width: inner.width,
-        height: PROMPT_HEIGHT,
+        height: prompt_height,
     };
     let header = Rect {
         x: inner.x,
@@ -53,6 +84,7 @@ pub fn chat_layout(area: Rect) -> ChatLayout {
         scrollback,
         prompt,
         status,
+        footer_badge,
     }
 }
 
@@ -97,5 +129,14 @@ mod tests {
             layout.prompt.y + layout.prompt.height + BOTTOM_MARGIN,
             layout.status.y
         );
+    }
+
+    #[test]
+    fn grok_full_mode_uses_source_layout_chrome() {
+        assert_eq!(OUTER_HPAD_LEFT, 2);
+        assert_eq!(OUTER_HPAD_RIGHT, 2);
+        assert_eq!(SCROLLBACK_ACCENT_WIDTH, 1);
+        assert_eq!(SCROLLBACK_BLOCK_PAD_LEFT, 2);
+        assert_eq!(SCROLLBACK_BLOCK_PAD_RIGHT, 1);
     }
 }

@@ -42,6 +42,31 @@ e2e:
 e2e-one FILE:
     cargo run -q -p runie-tui --bin runie-tui-e2e -- {{FILE}}
 
+# Capture one Herdr pane with full visible-grid ANSI attributes and metadata.
+# Example: just herdr-dump w73:p38 /tmp/runie-hey
+herdr-dump PANE PREFIX:
+    scripts/herdr-dump.sh {{PANE}} {{PREFIX}}
+
+# Compare two full-fidelity Herdr ANSI frames cell-by-cell.
+herdr-compare LEFT RIGHT COLS="" ROWS="":
+    scripts/compare-ansi-frames.py {{LEFT}} {{RIGHT}} {{ if COLS != "" { "--cols " + COLS } else { "" } }} {{ if ROWS != "" { "--rows " + ROWS } else { "" } }}
+
+# Record a fixed-geometry application as a timed asciinema PTY cast.
+# The private tmux session is isolated and removed when the command exits.
+tmux-cast COLS ROWS CAST COMMAND PROMPT QUIT_KEY:
+    scripts/tmux-asciinema-capture.sh {{COLS}} {{ROWS}} {{CAST}} {{COMMAND}} {{PROMPT}} {{QUIT_KEY}}
+
+# Replay and compare two asciinema casts through vt100 cell-by-cell.
+cast-compare LEFT RIGHT:
+    cargo run -q -p runie-tui --bin cast_compare -- {{LEFT}} {{RIGHT}}
+
+cast-dump LEFT RIGHT:
+    cargo run -q -p runie-tui --bin cast_compare -- --dump {{LEFT}} {{RIGHT}}
+
+# Capture one application over the four parity reference geometries.
+capture-matrix DIR COMMAND QUIT_KEY:
+    scripts/capture-matrix.sh {{DIR}} {{COMMAND}} {{QUIT_KEY}}
+
 # Format the code.
 fmt:
     cargo fmt --all

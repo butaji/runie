@@ -1,5 +1,9 @@
 # p03 — Core types: Model + Usage field parity
 
+**Latest parity note (2026-08-05):** `Model.thinking_level_map` now matches
+pi's provider-effort mapping (`off` through `max` to string values), while
+numeric per-level token budgets remain in the separate `ThinkingBudgets` type.
+
 **Parity target:** pi-ai `Model` and `Usage` shapes.
 
 ## Pi reference
@@ -63,3 +67,18 @@ pub struct Usage {
 - Serde round-trip tests assert exact JSON key names match pi (`cacheWrite1h`, `thinkingLevelMap`, camelCase).
 - `default_convert_to_llm` and provider paths carry `usage` through `Done{usage}` into `AssistantMessage.usage` (ties into p01).
 - `cargo test -p runie-core` green.
+
+## Progress
+
+- **Fractional cost parity (2026-08-05):** `CostBreakdown` now uses floating
+  point USD values like pi-ai instead of integer token-cost fields, with a
+  serde regression asserting fractional input/output costs survive the wire
+  round trip.
+- **Model pricing/compat parity (2026-08-05):** Split model pricing into
+  `ModelCost` with optional `ModelCostTier` entries and added the optional
+  provider `compat` projection. Serde coverage pins fractional rates, the
+  `inputTokensAbove` tier key, and compatibility data.
+- **Wire-key parity (2026-08-05):** Model and usage/cost serializers now use
+  pi-compatible camelCase keys (`baseUrl`, `thinkingLevelMap`, `cacheRead`,
+  `cacheWrite1h`, `totalTokens`, and related fields), with round-trip tests
+  asserting the wire names.

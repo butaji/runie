@@ -6,15 +6,20 @@
 
 use std::sync::Arc;
 
-use tokio::sync::{mpsc, watch};
+use tokio::sync::{mpsc, oneshot, watch};
 
-use crate::types::{AgentMessage, AgentTool, Model, ThinkingLevel};
+use crate::types::{AgentEvent, AgentMessage, AgentTool, Model, ThinkingLevel};
 
 use super::snapshot::AgentStateSnapshot;
+use crate::task_owner::{spawn_actor_worker, TaskOwner};
 
 /// Maximum number of in-flight commands the actor accepts before backpressure
 /// kicks in. Sized to absorb a full assistant turn's worth of mutations.
 const MAILBOX_CAPACITY: usize = 1024;
+
+fn is_assistant(message: &AgentMessage) -> bool {
+    matches!(message, AgentMessage::Assistant(_))
+}
 
 /// State-mutating commands. The actor owns the only `Sender`; the rest of
 /// the codebase sends through handles.
@@ -22,14 +27,18 @@ pub enum StateCommand {
     SetSystemPrompt(String),
     SetModel(Model),
     SetThinkingLevel(ThinkingLevel),
-    PushMessage(AgentMessage),
+    PushMessage(AgentMessage, Option<oneshot::Sender<()>>),
     ReplaceMessages(Vec<AgentMessage>),
     SetTools(Vec<Arc<dyn AgentTool>>),
     MarkStreaming(bool),
     SetStreamingMessage(Option<AgentMessage>),
-    AddPendingToolCall(String),
-    RemovePendingToolCall(String),
-    SetError(Option<String>),
+    SetStreamingState {
+        streaming: bool,
+        message: Option<AgentMessage>,
+    },
+    AddPendingToolCall(String, Option<oneshot::Sender<()>>),
+    RemovePendingToolCall(String, Option<oneshot::Sender<()>>),
+    SetError(Option<String>, Option<oneshot::Sender<()>>),
     Reset,
 }
 
@@ -38,23 +47,24 @@ pub enum StateCommand {
 pub struct AgentStateActor {
     tx: mpsc::Sender<StateCommand>,
     snapshot_rx: watch::Receiver<AgentStateSnapshot>,
+    _worker: Arc<TaskOwner>,
 }
 
 impl AgentStateActor {
     /// Spawn the actor worker on the current Tokio runtime.
     pub fn new() -> Self {
-        let (tx, rx) = mpsc::channel(MAILBOX_CAPACITY);
         let (snap_tx, snap_rx) = watch::channel(AgentStateSnapshot::default());
 
-        // OWNER: AgentStateActor — the worker task is the only consumer of
-        // this `tokio::spawn`. Its lifetime is tied to `rx` (held here).
-        tokio::spawn(async move {
+        // OWNER: AgentStateActor — the worker handle is retained by TaskOwner
+        // and is aborted when the final actor handle is dropped.
+        let (tx, worker) = spawn_actor_worker!(MAILBOX_CAPACITY, move |rx| async move {
             run_worker(rx, snap_tx).await;
         });
 
         Self {
             tx,
             snapshot_rx: snap_rx,
+            _worker: worker,
         }
     }
 
@@ -71,7 +81,19 @@ impl AgentStateActor {
     }
 
     pub async fn push_message(&self, m: AgentMessage) {
-        let _ = self.tx.send(StateCommand::PushMessage(m)).await;
+        let _ = self.tx.send(StateCommand::PushMessage(m, None)).await;
+    }
+
+    async fn push_message_wait(&self, m: AgentMessage) {
+        let (ack_tx, ack_rx) = oneshot::channel();
+        if self
+            .tx
+            .send(StateCommand::PushMessage(m, Some(ack_tx)))
+            .await
+            .is_ok()
+        {
+            let _ = ack_rx.await;
+        }
     }
 
     pub async fn replace_messages(&self, msgs: Vec<AgentMessage>) {
@@ -90,20 +112,111 @@ impl AgentStateActor {
         let _ = self.tx.send(StateCommand::SetStreamingMessage(m)).await;
     }
 
+    pub async fn set_streaming_state(&self, streaming: bool, message: Option<AgentMessage>) {
+        let _ = self
+            .tx
+            .send(StateCommand::SetStreamingState { streaming, message })
+            .await;
+    }
+
     pub async fn add_pending_tool_call(&self, id: String) {
-        let _ = self.tx.send(StateCommand::AddPendingToolCall(id)).await;
+        let (ack_tx, ack_rx) = oneshot::channel();
+        if self
+            .tx
+            .send(StateCommand::AddPendingToolCall(id, Some(ack_tx)))
+            .await
+            .is_ok()
+        {
+            let _ = ack_rx.await;
+        }
     }
 
     pub async fn remove_pending_tool_call(&self, id: String) {
-        let _ = self.tx.send(StateCommand::RemovePendingToolCall(id)).await;
+        let (ack_tx, ack_rx) = oneshot::channel();
+        if self
+            .tx
+            .send(StateCommand::RemovePendingToolCall(id, Some(ack_tx)))
+            .await
+            .is_ok()
+        {
+            let _ = ack_rx.await;
+        }
     }
 
     pub async fn set_error(&self, e: Option<String>) {
-        let _ = self.tx.send(StateCommand::SetError(e)).await;
+        let (ack_tx, ack_rx) = oneshot::channel();
+        if self
+            .tx
+            .send(StateCommand::SetError(e, Some(ack_tx)))
+            .await
+            .is_ok()
+        {
+            let _ = ack_rx.await;
+        }
     }
 
     pub async fn reset(&self) {
         let _ = self.tx.send(StateCommand::Reset).await;
+    }
+
+    /// Apply a published agent event to the actor-owned projection.
+    ///
+    /// This is the single event-to-state boundary used by the loop driver;
+    /// callers do not mutate projection fields directly.
+    pub async fn apply_event(&self, event: &AgentEvent) {
+        match event {
+            AgentEvent::MessageStart { .. }
+            | AgentEvent::MessageUpdate { .. }
+            | AgentEvent::MessageEnd { .. } => self.apply_message_event(event).await,
+            AgentEvent::ToolExecutionStart { .. } | AgentEvent::ToolExecutionEnd { .. } => {
+                self.apply_tool_event(event).await
+            }
+            AgentEvent::Error { message } => {
+                self.set_streaming_state(false, None).await;
+                self.set_error(Some(message.clone())).await;
+            }
+            AgentEvent::ThinkingLevelChanged { level } => self.set_thinking_level(*level).await,
+            AgentEvent::Reset => self.reset().await,
+            AgentEvent::AgentStart
+            | AgentEvent::AgentEnd { .. }
+            | AgentEvent::TurnStart
+            | AgentEvent::Waiting { .. }
+            | AgentEvent::ThemeChanged { .. }
+            | AgentEvent::ToolDisplayModeChanged { .. }
+            | AgentEvent::TurnEnd { .. }
+            | AgentEvent::ToolExecutionUpdate { .. } => {}
+        }
+    }
+
+    async fn apply_message_event(&self, event: &AgentEvent) {
+        match event {
+            AgentEvent::MessageStart { message } if is_assistant(message) => {
+                self.set_streaming_state(true, Some(message.clone())).await;
+            }
+            AgentEvent::MessageUpdate { message, .. } => {
+                self.set_streaming_message(Some(message.clone())).await;
+            }
+            AgentEvent::MessageEnd { message } => {
+                self.push_message_wait(message.clone()).await;
+                if let AgentMessage::Assistant(assistant) = message {
+                    self.set_streaming_state(false, None).await;
+                    self.set_error(assistant.error_message.clone()).await;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    async fn apply_tool_event(&self, event: &AgentEvent) {
+        match event {
+            AgentEvent::ToolExecutionStart { tool_call_id, .. } => {
+                self.add_pending_tool_call(tool_call_id.clone()).await;
+            }
+            AgentEvent::ToolExecutionEnd { tool_call_id, .. } => {
+                self.remove_pending_tool_call(tool_call_id.clone()).await;
+            }
+            _ => {}
+        }
     }
 
     /// Borrow the current snapshot. Use this for read-only views.
@@ -143,30 +256,56 @@ fn apply(state: &mut AgentStateSnapshot, cmd: StateCommand) {
         StateCommand::SetSystemPrompt(s) => state.system_prompt = s,
         StateCommand::SetModel(m) => state.model = m,
         StateCommand::SetThinkingLevel(t) => state.thinking_level = t,
-        StateCommand::PushMessage(m) => state.messages.push(m),
+        StateCommand::PushMessage(m, ack) => apply_push_message(state, m, ack),
         StateCommand::ReplaceMessages(msgs) => state.messages = msgs,
         StateCommand::SetTools(tools) => state.tools = tools,
         StateCommand::MarkStreaming(on) => state.is_streaming = on,
         StateCommand::SetStreamingMessage(m) => state.streaming_message = m,
-        StateCommand::AddPendingToolCall(id) => {
+        StateCommand::SetStreamingState { streaming, message } => {
+            state.is_streaming = streaming;
+            state.streaming_message = message;
+        }
+        StateCommand::AddPendingToolCall(id, ack) => {
             if !state.pending_tool_calls.contains(&id) {
                 state.pending_tool_calls.push(id);
             }
+            if let Some(ack) = ack {
+                let _ = ack.send(());
+            }
         }
-        StateCommand::RemovePendingToolCall(id) => {
+        StateCommand::RemovePendingToolCall(id, ack) => {
             state.pending_tool_calls.retain(|x| x != &id);
+            if let Some(ack) = ack {
+                let _ = ack.send(());
+            }
         }
-        StateCommand::SetError(e) => state.error_message = e,
+        StateCommand::SetError(e, ack) => {
+            state.error_message = e;
+            if let Some(ack) = ack {
+                let _ = ack.send(());
+            }
+        }
         StateCommand::Reset => {
             *state = AgentStateSnapshot::default();
         }
     }
 }
 
+fn apply_push_message(
+    state: &mut AgentStateSnapshot,
+    message: AgentMessage,
+    ack: Option<oneshot::Sender<()>>,
+) {
+    state.messages.push(message);
+    if let Some(ack) = ack {
+        let _ = ack.send(());
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{TextContent, UserContent, UserMessage};
+    use crate::types::{AssistantMessage, StopReason, UserContent, UserMessage};
 
     #[tokio::test]
     async fn push_message_visible_in_snapshot() {
@@ -201,5 +340,45 @@ mod tests {
         actor.add_pending_tool_call("a".into()).await;
         actor.sync().await;
         assert_eq!(actor.snapshot().pending_tool_calls.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn event_projection_owns_stream_and_terminal_error_transitions() {
+        let actor = AgentStateActor::new();
+        let assistant = AgentMessage::Assistant(AssistantMessage {
+            stop_reason: Some(StopReason::Aborted),
+            error_message: Some("aborted".into()),
+            ..Default::default()
+        });
+        actor
+            .apply_event(&AgentEvent::MessageStart {
+                message: assistant.clone(),
+            })
+            .await;
+        actor.sync().await;
+        assert!(actor.snapshot().is_streaming);
+        actor
+            .apply_event(&AgentEvent::MessageEnd { message: assistant })
+            .await;
+        actor.sync().await;
+        let snapshot = actor.snapshot();
+        assert!(!snapshot.is_streaming);
+        assert_eq!(snapshot.error_message.as_deref(), Some("aborted"));
+        assert_eq!(snapshot.messages.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn error_event_owns_non_message_error_projection() {
+        let actor = AgentStateActor::new();
+        actor
+            .apply_event(&AgentEvent::Error {
+                message: "provider: no stream".into(),
+            })
+            .await;
+        actor.sync().await;
+        assert_eq!(
+            actor.snapshot().error_message.as_deref(),
+            Some("provider: no stream")
+        );
     }
 }

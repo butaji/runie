@@ -1,5 +1,10 @@
 //! Reproduces the README's `prompt("X")` event sequence.
 
+#![allow(
+    clippy::too_many_lines,
+    reason = "event sequence tests keep the pi ordering scenario and assertions together"
+)]
+
 mod common;
 
 use std::sync::Arc;
@@ -16,6 +21,7 @@ use runie_core::types::{
 /// continuation (auto-continue after a tool batch).
 struct SequentialToolStream {
     calls: parking_lot::Mutex<usize>,
+    options: Arc<parking_lot::Mutex<Vec<SimpleStreamOptions>>>,
 }
 #[async_trait::async_trait]
 impl StreamFn for SequentialToolStream {
@@ -23,8 +29,9 @@ impl StreamFn for SequentialToolStream {
         &self,
         _model: &Model,
         _context: &AgentContext,
-        _options: Option<SimpleStreamOptions>,
+        options: Option<SimpleStreamOptions>,
     ) -> Result<AssistantMessageEventStream, StreamError> {
+        self.options.lock().push(options.unwrap_or_default());
         let mut n = self.calls.lock();
         *n += 1;
         let events = if *n == 1 {
@@ -35,11 +42,13 @@ impl StreamFn for SequentialToolStream {
                         id: "c1".into(),
                         name: "echo".into(),
                         arguments: serde_json::json!({}),
+                        thought_signature: None,
                     },
                 },
                 AssistantMessageEvent::Done {
                     stop_reason: StopReason::ToolUse,
                     usage: Usage::default(),
+                    message: None,
                 },
             ]
         } else {
@@ -50,6 +59,7 @@ impl StreamFn for SequentialToolStream {
                 AssistantMessageEvent::Done {
                     stop_reason: StopReason::Stop,
                     usage: Usage::default(),
+                    message: None,
                 },
             ]
         };
@@ -68,17 +78,33 @@ impl StreamFn for UsageStream {
         _context: &AgentContext,
         _options: Option<SimpleStreamOptions>,
     ) -> Result<AssistantMessageEventStream, StreamError> {
-        let mut usage = Usage::default();
-        usage.input = 5;
-        usage.output = 7;
+        let usage = Usage {
+            input: 5,
+            output: 7,
+            ..Usage::default()
+        };
         let events = vec![
             AssistantMessageEvent::TextDelta { delta: "hi".into() },
             AssistantMessageEvent::Done {
                 stop_reason: StopReason::Stop,
                 usage,
+                message: None,
             },
         ];
         Ok(Box::pin(futures::stream::iter(events)))
+    }
+}
+
+struct StartupErrorStream;
+#[async_trait::async_trait]
+impl StreamFn for StartupErrorStream {
+    async fn stream(
+        &self,
+        _model: &Model,
+        _context: &AgentContext,
+        _options: Option<SimpleStreamOptions>,
+    ) -> Result<AssistantMessageEventStream, StreamError> {
+        Err(StreamError::Api("upstream unavailable".into()))
     }
 }
 
@@ -119,6 +145,22 @@ async fn prompt_hello_event_order() {
     // MessageEnd(user), MessageStart(assistant), MessageUpdate x N,
     // MessageEnd(assistant), TurnEnd, AgentEnd.
     assert!(kinds.starts_with(&["AgentStart", "TurnStart", "MessageStart", "MessageEnd"]));
+    assert_eq!(
+        kinds,
+        vec![
+            "AgentStart",
+            "TurnStart",
+            "MessageStart",
+            "MessageEnd",
+            "MessageStart",
+            "MessageUpdate",
+            "MessageUpdate",
+            "MessageEnd",
+            "TurnEnd",
+            "AgentEnd",
+        ],
+        "pi simple-prompt event ordering"
+    );
     assert_eq!(kinds[0], "AgentStart");
     assert_eq!(kinds.last(), Some(&"AgentEnd"));
 
@@ -242,9 +284,79 @@ async fn done_usage_flows_into_final_assistant_message() {
 }
 
 #[tokio::test]
+async fn provider_startup_error_preserves_pi_terminal_event_order() {
+    let test = TestLoopBuilder::new(Arc::new(StartupErrorStream)).build();
+    let output = test
+        .actor
+        .prompt(
+            vec![AgentMessage::User(UserMessage {
+                content: vec![UserContent::Text {
+                    text: "fail".into(),
+                }],
+                timestamp: 1,
+            })],
+            AgentContext::default(),
+        )
+        .await
+        .unwrap();
+
+    let assistant = output
+        .iter()
+        .find_map(|message| match message {
+            AgentMessage::Assistant(message) => Some(message),
+            _ => None,
+        })
+        .expect("error assistant message");
+    assert_eq!(assistant.stop_reason, Some(StopReason::Error));
+    assert_eq!(
+        assistant.error_message.as_deref(),
+        Some("api: upstream unavailable")
+    );
+    assert!(
+        assistant.content.is_empty(),
+        "pi encodes provider failure in assistant metadata, not assistant text"
+    );
+    assert_eq!(
+        event_kinds(&test.events.lock()),
+        vec![
+            "AgentStart",
+            "TurnStart",
+            "MessageStart",
+            "MessageEnd",
+            "MessageStart",
+            "MessageEnd",
+            "TurnEnd",
+            "AgentEnd",
+        ]
+    );
+}
+
+#[tokio::test]
 async fn tool_use_auto_continues_to_next_turn() {
+    let options = Arc::new(parking_lot::Mutex::new(Vec::new()));
     let mut builder = TestLoopBuilder::new(Arc::new(SequentialToolStream {
         calls: parking_lot::Mutex::new(0),
+        options: options.clone(),
+    }))
+    .stream_options(SimpleStreamOptions {
+        session_id: Some("session-1".into()),
+        thinking_budgets: Some(Default::default()),
+        on_payload: Some(Arc::new(|payload, _model| {
+            Box::pin(async move { Some(payload) })
+        })),
+        on_response: Some(Arc::new(|_response, _model| Box::pin(async {}))),
+        ..Default::default()
+    })
+    .api_key_resolver(Arc::new({
+        let calls = Arc::new(parking_lot::Mutex::new(0usize));
+        move |_provider| {
+            let calls = calls.clone();
+            Box::pin(async move {
+                let mut calls = calls.lock();
+                *calls += 1;
+                Some(format!("key-{}", *calls))
+            })
+        }
     }));
     builder = builder.tool(echo_tool());
     let test = builder.build();
@@ -271,6 +383,23 @@ async fn tool_use_auto_continues_to_next_turn() {
             .any(|m| matches!(m, AgentMessage::ToolResult(_))),
         "expected a tool result"
     );
+    let options = options.lock();
+    assert_eq!(
+        options
+            .iter()
+            .map(|value| value.api_key.as_deref())
+            .collect::<Vec<_>>(),
+        [Some("key-1"), Some("key-2")]
+    );
+    assert_eq!(
+        options
+            .iter()
+            .map(|value| value.session_id.as_deref())
+            .collect::<Vec<_>>(),
+        [Some("session-1"), Some("session-1")]
+    );
+    assert!(options.iter().all(|value| value.on_payload.is_some()));
+    assert!(options.iter().all(|value| value.on_response.is_some()));
 
     // Two turns => two TurnStart events (pi emits turn_start per inner
     // iteration after the first).

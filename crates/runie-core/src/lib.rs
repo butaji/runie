@@ -23,6 +23,7 @@
 //! behavioural contract.
 
 pub mod convert;
+mod event_dsl;
 pub mod types;
 
 pub mod events;
@@ -33,6 +34,8 @@ pub mod state;
 pub mod tools;
 
 pub mod hooks;
+
+pub(crate) mod task_owner;
 
 pub use types::{
     AfterToolCallContext, AfterToolCallResult, AgentContext, AgentEvent, AgentMessage,
