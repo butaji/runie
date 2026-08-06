@@ -17,6 +17,11 @@
 - Status rendering consumes the spinner by `tick` — `~/Code/agents/grok-build/crates/codegen/xai-grok-pager/src/app/agent_view/render.rs:485,4042` (`frame_idx = (tick/4) % len`), and `"{spinner} Loading..."` label (line 4045).
 - Footer hint vocabulary (idle vs active): `Enter`, `Shift+Tab`, `Ctrl+x`, `ctrl+q`/`ctrl+d` quit hints (`views/welcome/mod.rs:48-53`).
 
+Typed waiting labels (2026-08-06): `WaitingReason::label()` now mirrors
+Grok's model, subagent, task-output, tasks-complete, and sleep subjects. The
+actor-owned `TurnStatus` carries that label into the pure view, and
+`visual-waiting-reasons.yaml` replays all typed waiting events without sleeps.
+
 ## Current runie state
 
 `~/Code/GitHub/runie-tests/runie/crates/runie-tui/src/widgets/status.rs`

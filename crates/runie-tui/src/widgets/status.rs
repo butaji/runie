@@ -27,7 +27,7 @@ impl Status {
             Self::Loading => "loading".into(),
             Self::Thinking => "thinking...".into(),
             Self::Streaming => "streaming".into(),
-            Self::Waiting(reason) => format!("waiting: {}", waiting_label(reason)),
+            Self::Waiting(reason) => format!("waiting: {}", reason.label()),
             Self::Aborted => "aborted".into(),
             Self::Error(e) => format!("error: {e}"),
         }
@@ -47,16 +47,6 @@ impl Status {
             Self::Aborted => appearance::muted_style_for(theme),
             Self::Error(_) => appearance::error_style_for(theme),
         }
-    }
-}
-
-fn waiting_label(reason: &WaitingReason) -> &'static str {
-    match reason {
-        WaitingReason::Model => "model",
-        WaitingReason::Subagent => "subagent",
-        WaitingReason::TaskOutput { .. } => "task output",
-        WaitingReason::TasksComplete => "tasks complete",
-        WaitingReason::Sleep => "sleep",
     }
 }
 
@@ -109,6 +99,7 @@ pub struct TurnStatus {
     phase: TurnStatusPhase,
     chrome: String,
     theme: ThemeKind,
+    waiting_label: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -132,6 +123,7 @@ impl TurnStatus {
             phase: TurnStatusPhase::Starting,
             chrome: String::new(),
             theme: ThemeKind::GrokNight,
+            waiting_label: "Waiting for response…".to_owned(),
         }
     }
 
@@ -150,12 +142,17 @@ impl TurnStatus {
         self
     }
 
+    pub fn with_waiting_label(mut self, label: impl Into<String>) -> Self {
+        self.waiting_label = label.into();
+        self
+    }
+
     pub fn text(&self) -> String {
         let label = match self.phase {
             TurnStatusPhase::Starting => "Starting session… 0.0s",
             // The recorded full-mode waiting row includes the right-aligned
             // elapsed/usage/stop chrome on the same terminal row.
-            TurnStatusPhase::Waiting => "Waiting for response…",
+            TurnStatusPhase::Waiting => self.waiting_label.as_str(),
             TurnStatusPhase::Thinking => "Thinking…",
             TurnStatusPhase::Responding => "Responding…",
         };
@@ -169,7 +166,7 @@ impl TurnStatus {
     pub fn render(self, area: Rect, buf: &mut Buffer) {
         let label = match self.phase {
             TurnStatusPhase::Starting => "Starting session… 0.0s",
-            TurnStatusPhase::Waiting => "Waiting for response…",
+            TurnStatusPhase::Waiting => self.waiting_label.as_str(),
             TurnStatusPhase::Thinking => "Thinking…",
             TurnStatusPhase::Responding => "Responding…",
         };
@@ -300,11 +297,16 @@ impl StatusBar {
                 (self.elapsed_ticks / 2) % 10
             ),
         };
+        let waiting_label = match &self.state {
+            Status::Waiting(reason) => reason.label(),
+            _ => "Waiting for response…".to_owned(),
+        };
         Some(
             TurnStatus::new(self.animation_frame)
                 .phase(phase)
                 .with_chrome(chrome)
-                .with_theme(self.theme()),
+                .with_theme(self.theme())
+                .with_waiting_label(waiting_label),
         )
     }
 

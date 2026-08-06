@@ -660,6 +660,32 @@ pub enum WaitingReason {
     Sleep,
 }
 
+impl WaitingReason {
+    /// Grok's user-facing turn-status subject for each typed wait state.
+    pub fn label(&self) -> String {
+        match self {
+            Self::Model => "Waiting for response…".to_owned(),
+            Self::Subagent => "Waiting on subagent…".to_owned(),
+            Self::TaskOutput { subject, .. } if !subject.trim().is_empty() => {
+                format!("{}…", clamp_wait_subject(subject))
+            }
+            Self::TaskOutput { .. } => "Waiting on task output…".to_owned(),
+            Self::TasksComplete => "Waiting on tasks…".to_owned(),
+            Self::Sleep => "Sleeping…".to_owned(),
+        }
+    }
+}
+
+fn clamp_wait_subject(subject: &str) -> String {
+    const MAX_WAIT_SUBJECT_CHARS: usize = 40;
+    let subject = subject.trim();
+    if subject.chars().count() <= MAX_WAIT_SUBJECT_CHARS {
+        subject.to_owned()
+    } else {
+        subject.chars().take(MAX_WAIT_SUBJECT_CHARS).collect()
+    }
+}
+
 /// Named appearance variants shared by the event bus and TUI projections.
 /// Rendering layers may quantize their palette to terminal capabilities.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -1190,6 +1216,22 @@ mod tests {
         assert!(stream_json.get("tool_call").is_none());
         assert!(stream_json.get("toolCall").is_some());
         assert_eq!(stream_json["toolCall"]["thoughtSignature"], "sig");
+    }
+
+    #[test]
+    fn waiting_reason_labels_match_grok_subjects() {
+        assert_eq!(WaitingReason::Model.label(), "Waiting for response…");
+        assert_eq!(WaitingReason::Subagent.label(), "Waiting on subagent…");
+        assert_eq!(WaitingReason::TasksComplete.label(), "Waiting on tasks…");
+        assert_eq!(WaitingReason::Sleep.label(), "Sleeping…");
+        assert_eq!(
+            WaitingReason::TaskOutput {
+                task_ids: vec!["t1".into()],
+                subject: "compile project".into(),
+            }
+            .label(),
+            "compile project…"
+        );
     }
 
     #[test]

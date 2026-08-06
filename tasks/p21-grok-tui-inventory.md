@@ -270,3 +270,9 @@ and environment detection matching Grok's `COLORTERM`/`TERM` boundary. The
 live binary quantizes its completed frame before writing to the PTY; test/YAML
 buffers remain truecolor so reference casts stay deterministic. Unit tests
 cover all levels and preservation of indexed/default colors.
+
+Typed waiting parity (2026-08-06): Grok's distinct waiting subjects are now
+preserved from `AgentEvent::Waiting` through the status actor into
+`TurnStatus`; model, subagent, task-output, tasks-complete, and sleep labels
+are no longer rendered as one generic response wait. YAML replays all typed
+events in `visual-waiting-reasons.yaml`.

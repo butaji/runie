@@ -1,0 +1,21 @@
+name: visual-waiting-reasons
+description: |
+  Typed Grok waiting reasons remain distinct through the event-driven status
+  projection instead of collapsing into a generic response wait.
+initial_prompt: "Wait for background work"
+events:
+  - start
+  - waiting: subagent
+  - waiting: tasks_complete
+  - waiting: sleep
+assertions:
+  events:
+    - agent_start
+    - waiting
+    - waiting
+    - waiting
+  visual:
+    cols: 80
+    rows: 24
+    screen_text:
+      - "❯ Wait for background work"
