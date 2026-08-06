@@ -157,6 +157,15 @@ frame then shifted by one row. The change was reverted. The result identifies
 the next fix as a scenario-aware projection difference, not permission to
 weaken the shared event mapping or its Grok tool fixture.
 
+**No-tool-only separator projection experiment (2026-08-06):** Moving the
+deduplication into `physical_rows` made the isolated 62×32 `Hey` cast report
+75 differing cells (60 glyph, 15 attribute-only), with the entire assistant
+response block matching Grok symbol-for-symbol. However, the generic rule
+failed three strict full-mode Insta snapshots even though the YAML tool-feed
+fixtures passed. It was reverted; no snapshot was regenerated. The next fix
+must use an explicit scenario/state discriminator rather than infer behavior
+from the absence of tool rows.
+
 ## Review findings
 
 ### Phase-marker validation — 2026-08-06
