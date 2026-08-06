@@ -85,6 +85,10 @@ fn cells(parser: &vt100::Parser, rows: u16, cols: u16) -> Vec<Cell> {
         .collect()
 }
 
+#[allow(
+    clippy::too_many_lines,
+    reason = "frame replay keeps marker phase selection and VT state together"
+)]
 fn replay_frames(path: &Path, marker: Option<&str>) -> Result<FrameReplay> {
     let content = std::fs::read_to_string(path).with_context(|| path.display().to_string())?;
     let mut lines = content.lines();
@@ -93,6 +97,15 @@ fn replay_frames(path: &Path, marker: Option<&str>) -> Result<FrameReplay> {
     let mut parser = vt100::Parser::new(rows, cols, 0);
     let mut frames = Vec::new();
     let mut previous = None;
+    let (marker_text, marker_occurrence) = marker
+        .and_then(|value| {
+            value
+                .rsplit_once('#')
+                .and_then(|(text, occurrence)| occurrence.parse::<usize>().ok().map(|n| (text, n)))
+        })
+        .unwrap_or((marker.unwrap_or_default(), 1));
+    let mut seen_markers = 0;
+    let mut marker_visible = false;
     let mut started = marker.is_none();
     for line in lines {
         let event: Value = serde_json::from_str(line)?;
@@ -105,7 +118,12 @@ fn replay_frames(path: &Path, marker: Option<&str>) -> Result<FrameReplay> {
         }
         parser.process(strip_private_modes(&output.replace("\u{1b}[?1049h", "")).as_bytes());
         if !started {
-            started = parser.screen().contents().contains(marker.expect("marker"));
+            let contains_marker = parser.screen().contents().contains(marker_text);
+            if contains_marker && !marker_visible {
+                seen_markers += 1;
+                started = seen_markers >= marker_occurrence;
+            }
+            marker_visible = contains_marker;
             if !started {
                 continue;
             }
@@ -119,7 +137,7 @@ fn replay_frames(path: &Path, marker: Option<&str>) -> Result<FrameReplay> {
     if let Some(marker) = marker {
         if !started {
             bail!(
-                "phase marker {marker:?} was not found in {}",
+                "phase marker {marker:?} occurrence {marker_occurrence} was not found in {}",
                 path.display()
             );
         }
@@ -333,6 +351,14 @@ mod tests {
     fn phase_marker_selects_visible_frames() {
         let path = cast("grok-rich.cast");
         let (_, frames) = replay_frames(&path, Some("❯")).expect("recorded prompt marker");
+        assert!(!frames.is_empty());
+    }
+
+    #[test]
+    fn phase_marker_can_select_a_numbered_occurrence() {
+        let path = cast("runie-full.cast");
+        let (_, frames) =
+            replay_frames(&path, Some("session_start#2")).expect("recorded second session marker");
         assert!(!frames.is_empty());
     }
 

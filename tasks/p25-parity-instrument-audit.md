@@ -120,6 +120,10 @@ frames, and the first differing cell is `(2,0)` (blank versus `m`). This is
 evidence that the marker must identify a semantic scenario boundary before
 indexed frames can be compared one-to-one; it is not a parity pass.
 
+Phase markers may now be occurrence-qualified as `MARKER#N`; the comparator
+counts visible marker transitions, not repeated transport frames. Binary tests
+cover first-marker selection, numbered selection, and missing-marker failure.
+
 ### Fresh 62×32 paired capture — 2026-08-05
 
 The installed Grok binary and `just tui` were captured independently with the
