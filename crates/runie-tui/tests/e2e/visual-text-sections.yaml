@@ -1,0 +1,17 @@
+name: visual-text-sections
+description: |
+  Pi sectional text markers are replayable from YAML alongside text deltas.
+initial_prompt: "answer briefly"
+events:
+  - start
+  - text_start: { index: 0 }
+  - text_delta: "hello"
+  - text_end: { index: 0, content: "hello" }
+  - done: { stop_reason: stop }
+assertions:
+  required_events: [message_update, message_end]
+  visual:
+    cols: 80
+    rows: 24
+    screen_text:
+      - "hello"

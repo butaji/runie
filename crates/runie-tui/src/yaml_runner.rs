@@ -69,6 +69,12 @@ pub enum EventSpec {
     TextDelta {
         text_delta: String,
     },
+    TextStart {
+        text_start: TextStartSpec,
+    },
+    TextEnd {
+        text_end: TextEndSpec,
+    },
     ThinkingDelta {
         thinking_delta: String,
     },
@@ -188,6 +194,19 @@ pub struct ThinkingEndSpec {
     pub elapsed_ms: Option<u64>,
 }
 
+#[derive(Debug, Deserialize, Clone)]
+pub struct TextStartSpec {
+    #[serde(default)]
+    pub index: usize,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct TextEndSpec {
+    #[serde(default)]
+    pub index: usize,
+    pub content: String,
+}
+
 fn waiting_name(name: &str) -> WaitingReason {
     match name {
         "subagent" => WaitingReason::Subagent,
@@ -248,6 +267,15 @@ impl EventSpec {
             Self::TextDelta { text_delta } => Some(AssistantMessageEvent::TextDelta {
                 index: 0,
                 delta: text_delta.clone(),
+                partial: AssistantMessage::default(),
+            }),
+            Self::TextStart { text_start } => Some(AssistantMessageEvent::TextStart {
+                index: text_start.index,
+                partial: AssistantMessage::default(),
+            }),
+            Self::TextEnd { text_end } => Some(AssistantMessageEvent::TextEnd {
+                index: text_end.index,
+                content: text_end.content.clone(),
                 partial: AssistantMessage::default(),
             }),
             Self::ThinkingDelta { thinking_delta } => Some(AssistantMessageEvent::ThinkingDelta {

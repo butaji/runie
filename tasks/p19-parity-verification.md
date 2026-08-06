@@ -328,6 +328,10 @@ The oracle is a table: `scenario → pi_reference(file:line) → expected_events
   server-provided elapsed milliseconds. `visual-thinking-sections.yaml`
   replays the marker/delta/end sequence through the provider and renderer,
   keeping thinking lifecycle coverage declarative.
+- **Sectional text YAML parity (2026-08-06):** Added pi-compatible
+  `text_start`/`text_end` YAML events with content indices and a discovered
+  `visual-text-sections.yaml` fixture. Assistant text section boundaries are
+  now replayable without recompilation, alongside existing text deltas.
 - **Serialization oracle audit (2026-08-05):** Re-audited the p01–p04/p09
   wire contracts. Existing core tests round-trip assistant, tool-result, user,
   model, usage/cost, event, tool-hook, image, stop-reason, and thinking-level
