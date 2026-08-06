@@ -209,6 +209,11 @@ theme as actor-owned view state and consumes `ThemeChanged` through
 the same Opaline tokens as the rest of the screen; a day-theme render test
 guards against regression.
 
+Prompt actor event regression (2026-08-06): an async actor test now publishes
+`ThemeChanged(GrokDay)`, renders the actor snapshot, and asserts the day token
+at the cursor cell. This verifies the event-to-view path, not only the pure
+widget reducer.
+
 Architecture audit note: `PromptActor` and `UiActor` own mailbox/watch state,
 but `Scrollback` and `StatusBar` are still shared behind `parking_lot::Mutex`
 and are mutated by `EventRenderer` and the render loop. This is a remaining
