@@ -26,3 +26,5 @@ assertions:
     scrollback_lines:
       - kind: tool_result
         contains: "https://docs.rs/runie"
+      - kind: tool_result
+        contains: "Sources: docs.rs, rust-lang.org"

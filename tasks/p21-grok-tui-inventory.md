@@ -551,3 +551,11 @@ state from the actor-owned `ToolBlock::is_running` projection and applies the
 special cycle only to running generic cards. The reducer test
 `running_generic_tool_uses_grok_truncated_fold_cycle_then_settled_cycle`
 replays both phases without timers or renderer state.
+
+### Web-search sources projection (2026-08-06)
+
+Grok's `WebSearchToolCallBlock` renders a separate `Sources:` row after the
+content, preserving first-seen unique domains and adding `(+N more)` after
+the first three. Runie's event projection now emits the same semantic row for
+web-search results; the YAML visual replay asserts it alongside the raw URL
+content, while styling remains owned by the TUI theme layer.

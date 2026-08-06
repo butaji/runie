@@ -1011,6 +1011,16 @@ impl EventRenderer {
                 }
                 output.push((kind, line.to_owned()));
             }
+            if matches!(tool_name.as_str(), "web_search" | "web-search") {
+                if let Some(sources) = web_search_sources_line(&tool_result_text(&result)) {
+                    if self.scrollback_actor.is_none() {
+                        self.scrollback.lock().append(
+                            Line::new(LineKind::ToolResult, &sources).for_tool(&tool_call_id),
+                        );
+                    }
+                    output.push((LineKind::ToolResult, sources));
+                }
+            }
         }
         ScrollbackMsg::ToolEnd {
             tool_call_id,
@@ -1579,6 +1589,43 @@ fn web_search_site_count(output: &str) -> usize {
     }
 }
 
+fn web_search_sources_line(output: &str) -> Option<String> {
+    let mut domains = Vec::new();
+    for token in output.split_whitespace() {
+        let Some(url) = token
+            .strip_prefix("https://")
+            .or_else(|| token.strip_prefix("http://"))
+        else {
+            continue;
+        };
+        let Some(domain) = url
+            .split(['/', '?', '#', ')', ']', ','])
+            .next()
+            .filter(|domain| !domain.is_empty())
+        else {
+            continue;
+        };
+        if !domains.iter().any(|seen| seen == domain) {
+            domains.push(domain.to_owned());
+        }
+    }
+    if domains.is_empty() {
+        return None;
+    }
+    let shown = domains
+        .iter()
+        .take(3)
+        .cloned()
+        .collect::<Vec<_>>()
+        .join(", ");
+    let remaining = domains.len().saturating_sub(3);
+    Some(if remaining == 0 {
+        format!("  Sources: {shown}")
+    } else {
+        format!("  Sources: {shown} (+{remaining} more)")
+    })
+}
+
 fn structured_update_text(result: &serde_json::Value) -> Option<String> {
     result
         .get("output")
@@ -1706,6 +1753,17 @@ impl ScrollbackExt for Scrollback {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn web_search_sources_projection_matches_grok_summary() {
+        assert_eq!(
+            web_search_sources_line(
+                "https://docs.rs/runie https://docs.rs/ratatui https://rust-lang.org/learn https://github.com/runie https://docs.rs/extra"
+            ),
+            Some("  Sources: docs.rs, rust-lang.org, github.com".to_owned())
+        );
+        assert_eq!(web_search_sources_line("no citations"), None);
+    }
     use runie_core::types::{AgentMessage, StopReason, ThemeKind, Usage, UserContent, UserMessage};
 
     fn new_renderer() -> (EventRenderer, Arc<Mutex<Scrollback>>, Arc<Mutex<StatusBar>>) {
