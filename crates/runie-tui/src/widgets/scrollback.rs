@@ -51,7 +51,10 @@ fn workflow_text(
         .map(|(title, phase_state)| format!("{title} {}", workflow_phase_mark(phase_state)))
         .collect::<Vec<_>>()
         .join(" · ");
-    let mut result = format!("Workflow {verb}{}", objective.trim());
+    // Grok's WorkflowBlock renders objectives as one transcript row, even
+    // when the source objective contains line breaks.
+    let objective = objective.split_whitespace().collect::<Vec<_>>().join(" ");
+    let mut result = format!("Workflow {verb}{objective}");
     if !trail.is_empty() {
         result.push_str(&format!("  [{trail}]"));
     }
@@ -2786,6 +2789,20 @@ mod tests {
                 2,
             ),
             "Workflow release: ship the release  [tests ●]  (2 agents)"
+        );
+    }
+
+    #[test]
+    fn workflow_objective_flattens_multiline_source_text() {
+        assert_eq!(
+            workflow_text(
+                "Workflow research: compare A\nthen compare B\r\nfinish",
+                &[],
+                "active",
+                None,
+                0,
+            ),
+            "Workflow research: compare A then compare B finish"
         );
     }
 }

@@ -505,3 +505,8 @@ full lifecycle. The TUI now projects those events through actor-owned
 `run_id`; the YAML fixture asserts both the final card text and one-card
 cardinality. Exact Grok phase-trail formatting and richer structured workflow
 rows remain open.
+
+Workflow objective wrapping (2026-08-06): The pure workflow formatter now
+flattens newline-containing objectives to one transcript row, matching Grok's
+`WorkflowBlock` output contract. A focused renderer regression covers CR/LF
+input; richer structured workflow styling remains open.
