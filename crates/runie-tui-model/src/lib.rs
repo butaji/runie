@@ -139,6 +139,19 @@ mod tests {
     }
 
     #[test]
+    fn status_snapshot_projects_header_meter_without_renderer_types() {
+        let snapshot = StatusSnapshot {
+            state: Status::Ready,
+            theme: ThemeKind::GrokNight,
+            animation_frame: 0,
+            elapsed_ticks: 0,
+            turn_usage: None,
+            turn_stop_reason: None,
+        };
+        assert_eq!(snapshot.header_meter(), "0 / 500K");
+    }
+
+    #[test]
     fn command_palette_escape_clears_query_before_closing() {
         let state = UiState::new()
             .update(UiMsg::ToggleCommandPalette)

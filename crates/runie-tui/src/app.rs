@@ -12,7 +12,9 @@ use crate::event_renderer::EventRenderer;
 use crate::layout::chat_layout_with_prompt_height;
 use crate::scrollback_actor::ScrollbackActor;
 use crate::status_actor::StatusActor;
-use crate::view::{chat_document, ChatViewProps, Element, HeaderViewProps, ViewDocument};
+use crate::view::{
+    chat_document_with_props, ChatViewProps, Element, HeaderViewProps, ViewDocument, ViewProps,
+};
 pub use crate::widgets::PaletteAction;
 use crate::widgets::{
     FeedSnapshot, PromptOutcome, PromptSnapshot, PromptWidget, Scrollback, Status, StatusBar,
@@ -516,12 +518,18 @@ impl App {
     }
 
     pub fn view_document_from_model(model: &TuiSnapshot) -> ViewDocument {
-        chat_document(ChatViewProps {
-            welcome_visible: model.ui.show_welcome,
-            shortcuts_visible: model.ui.shortcuts_open,
-            command_palette_visible: model.ui.command_palette_open,
-            doctor_hint_visible: matches!(model.status.state, Status::Ready)
-                && model.feed.is_empty(),
+        chat_document_with_props(ViewProps {
+            chat: ChatViewProps {
+                welcome_visible: model.ui.show_welcome,
+                shortcuts_visible: model.ui.shortcuts_open,
+                command_palette_visible: model.ui.command_palette_open,
+                doctor_hint_visible: matches!(model.status.state, Status::Ready)
+                    && model.feed.is_empty(),
+            },
+            header: HeaderViewProps {
+                meter: model.status.header_meter(),
+                theme: model.status.theme,
+            },
         })
     }
 

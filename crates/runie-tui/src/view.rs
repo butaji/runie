@@ -297,6 +297,15 @@ pub struct HeaderViewProps {
     pub theme: ThemeKind,
 }
 
+/// Immutable props for one declarative chat document. These are view facts,
+/// not widget instances: terminal renderers may consume them but never write
+/// back into them.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ViewProps {
+    pub chat: ChatViewProps,
+    pub header: HeaderViewProps,
+}
+
 /// Complete renderer-neutral declarative document for one chat frame.
 /// `root` answers what is present; `components` answers ownership. Geometry,
 /// terminal capabilities, styles, and painting are intentionally absent.
@@ -304,6 +313,7 @@ pub struct HeaderViewProps {
 pub struct ViewDocument {
     pub root: Element,
     pub components: &'static [ComponentSpec],
+    pub props: ViewProps,
 }
 
 pub const CHAT_COMPONENTS: [ComponentSpec; 9] = [
@@ -425,9 +435,20 @@ pub fn chat_view() -> Element {
 }
 
 pub fn chat_document(props: ChatViewProps) -> ViewDocument {
+    chat_document_with_props(ViewProps {
+        chat: props,
+        header: HeaderViewProps {
+            meter: String::new(),
+            theme: ThemeKind::default(),
+        },
+    })
+}
+
+pub fn chat_document_with_props(props: ViewProps) -> ViewDocument {
     ViewDocument {
-        root: chat_view_with_props(props),
+        root: chat_view_with_props(props.chat),
         components: &CHAT_COMPONENTS,
+        props,
     }
 }
 
@@ -517,6 +538,8 @@ mod tests {
             ..ChatViewProps::default()
         });
         assert_eq!(document.components.len(), super::CHAT_COMPONENTS.len());
+        assert!(document.props.chat.command_palette_visible);
+        assert_eq!(document.props.header.meter, "");
         assert!(document
             .root
             .slots()

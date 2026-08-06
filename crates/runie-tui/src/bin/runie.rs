@@ -331,7 +331,8 @@ async fn run_app(
         let frame_area = frame.area();
         let layout = runie_tui::layout::chat_layout(frame_area);
         let model = app.model_snapshot();
-        let view = App::view_document_from_model(&model).root;
+        let document = App::view_document_from_model(&model);
+        let view = &document.root;
         let status = StatusBar::from_model_snapshot(model.status.clone());
         frame.buffer_mut().set_style(
             frame_area,
@@ -382,10 +383,7 @@ async fn run_app(
                 status.theme(),
             );
         }
-        let header = runie_tui::view::HeaderViewProps {
-            meter: status.header_meter(),
-            theme: status.theme(),
-        };
+        let header = &document.props.header;
         render_header(
             layout.header,
             frame.buffer_mut(),
@@ -591,7 +589,8 @@ async fn run_app(
                         let frame_area = f.area();
                         let buf = f.buffer_mut();
                         let model = app.model_snapshot();
-                        let view = App::view_document_from_model(&model).root;
+                        let document = App::view_document_from_model(&model);
+                        let view = &document.root;
                         let status = StatusBar::from_model_snapshot(model.status.clone());
                         buf.set_style(
                             frame_area,
@@ -648,10 +647,7 @@ async fn run_app(
                                 status.theme(),
                             );
                         }
-                        let header = runie_tui::view::HeaderViewProps {
-                            meter: status.header_meter(),
-                            theme: status.theme(),
-                        };
+                        let header = &document.props.header;
                         render_header(layout.header, buf, &header.meter, header.theme);
                         runie_tui::terminal_color::quantize_buffer(buf, color_level);
                         f.set_cursor_position(

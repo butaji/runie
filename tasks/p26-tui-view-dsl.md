@@ -88,11 +88,17 @@ boundary rather than through renderer-only state or direct actor reads.
   also takes one aggregate `TuiSnapshot` before deriving layout and feed
   rendering inputs, preventing an inconsistent frame from mixed actor reads.
 
+- `ViewDocument` now carries immutable `ViewProps` for the chat overlays and
+  header. The live binary consumes the header props from that same document;
+  it no longer reconstructs header meter/theme facts from a compatibility
+  widget during painting. `StatusSnapshot::header_meter()` keeps that
+  projection renderer-independent.
+
 ## Next boundaries
 
-1. Represent component props from actor snapshots as immutable view models;
-   the aggregate document boundary is in place, but widget-specific props are
-   still being migrated.
+1. Migrate the remaining widget-specific props (feed, prompt, status, and
+   overlays) from compatibility widget reconstruction to immutable view-model
+   fields in `ViewProps`.
 2. Add stack measurement/reflow from `LayoutEntry` basis/grow/shrink values.
 3. Add a terminal-independent cell/style intent layer.
 4. Adapt scrollback, prompt, status, and overlays one component at a time;

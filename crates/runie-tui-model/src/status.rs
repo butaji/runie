@@ -2,6 +2,8 @@
 
 use runie_core::types::{StopReason, ThemeKind, Usage, WaitingReason};
 
+const HEADER_TOKEN_BUDGET: u64 = 500_000;
+
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum Status {
     #[default]
@@ -45,4 +47,30 @@ pub struct StatusSnapshot {
     pub elapsed_ticks: u64,
     pub turn_usage: Option<Usage>,
     pub turn_stop_reason: Option<StopReason>,
+}
+
+impl StatusSnapshot {
+    /// Pure event-derived context meter for the declarative header props.
+    pub fn header_meter(&self) -> String {
+        let used = self
+            .turn_usage
+            .as_ref()
+            .map(|usage| usage.total_tokens)
+            .unwrap_or_default();
+        format!(
+            "{} / {}K",
+            format_token_count(used),
+            HEADER_TOKEN_BUDGET / 1_000
+        )
+    }
+}
+
+fn format_token_count(tokens: u64) -> String {
+    if tokens >= 100_000 {
+        format!("{}K", tokens / 1_000)
+    } else if tokens >= 1_000 {
+        format!("{:.1}K", tokens as f64 / 1_000.0)
+    } else {
+        tokens.to_string()
+    }
 }
