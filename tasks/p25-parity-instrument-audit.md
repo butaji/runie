@@ -434,3 +434,10 @@ through `just tmux-cast` emitted only default/bold/dim SGR sequences (`0`,
 attribute mismatch is reproducible in the current capture environment, so
 strict cell-attribute comparison remains disabled until Runie and Grok are
 captured under the same terminal color mode.
+
+ANSI comparator hardening (2026-08-06): `scripts/compare-ansi-frames.py` now
+retains inverse state and compares ANSI-16, indexed-256, and RGB foreground
+and background colors, including their reset forms. The comparator's previous
+parser silently discarded those SGR variants; a full-dump comparison can now
+report style-only differences instead of treating them as equal. The parser
+was syntax-checked and self-compared against the fresh 80x24 capture.

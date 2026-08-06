@@ -8,7 +8,8 @@ import re
 import sys
 
 SGR = re.compile(r"\x1b\[([0-9;]*)m")
-DEFAULT = (False, False, False, False, None, None)
+# (bold, dim, italic, underline, inverse, foreground, background)
+DEFAULT = (False, False, False, False, False, "default", "default")
 
 
 def parse(path):
@@ -26,26 +27,38 @@ def parse(path):
                 if code == 0:
                     style = DEFAULT
                 elif code == 1:
-                    style = (True, style[1], style[2], style[3], style[4], style[5])
+                    style = (True, *style[1:])
                 elif code == 2:
-                    style = (style[0], True, style[2], style[3], style[4], style[5])
+                    style = (style[0], True, *style[2:])
                 elif code == 3:
-                    style = (style[0], style[1], True, style[3], style[4], style[5])
+                    style = (*style[:2], True, *style[3:])
                 elif code == 4:
-                    style = (style[0], style[1], style[2], True, style[4], style[5])
+                    style = (*style[:3], True, *style[4:])
+                elif code == 7:
+                    style = (*style[:4], True, *style[5:])
                 elif code == 22:
-                    style = (False, False, style[2], style[3], style[4], style[5])
+                    style = (False, False, *style[2:])
                 elif code == 23:
-                    style = (style[0], style[1], False, style[3], style[4], style[5])
+                    style = (*style[:2], False, *style[3:])
                 elif code == 24:
-                    style = (style[0], style[1], style[2], False, style[4], style[5])
+                    style = (*style[:3], False, *style[4:])
+                elif code == 27:
+                    style = (*style[:4], False, *style[5:])
                 elif code == 39:
-                    style = (*style[:4], None, style[5])
+                    style = (*style[:5], "default", style[6])
                 elif code == 49:
-                    style = (*style[:5], None)
+                    style = (*style[:6], "default")
+                elif 30 <= code <= 37 or 90 <= code <= 97:
+                    style = (*style[:5], code, style[6])
+                elif 40 <= code <= 47 or 100 <= code <= 107:
+                    style = (*style[:6], code)
+                elif code in (38, 48) and i + 2 < len(nums) and nums[i + 1] == 5:
+                    color = ("idx", nums[i + 2])
+                    style = (*style[:5], color, style[6]) if code == 38 else (*style[:6], color)
+                    i += 2
                 elif code in (38, 48) and i + 4 < len(nums) and nums[i + 1] == 2:
-                    color = tuple(nums[i + 2 : i + 5])
-                    style = (*style[:4], color, style[5]) if code == 38 else (*style[:5], color)
+                    color = ("rgb", *nums[i + 2 : i + 5])
+                    style = (*style[:5], color, style[6]) if code == 38 else (*style[:6], color)
                     i += 4
                 i += 1
             cursor = match.end()
