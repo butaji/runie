@@ -45,6 +45,10 @@ parity-check:
 source-inventory-check:
     python3 scripts/validate-source-inventory.py
 
+# Validate the closed Pi event boundary against Pi's authoritative union.
+pi-event-contract-check:
+    python3 scripts/validate-pi-event-contract.py
+
 # Run YAML e2e scenarios from crates/runie-tui/tests/e2e/*.yaml.
 # Add or edit YAML files freely — no rebuild required.
 e2e:
@@ -100,5 +104,5 @@ lint:
     cargo run -p lint-check
 
 # Full sweep: fmt-check + clippy + lint + test + parity manifest.
-ci: fmt-check clippy lint test parity-check source-inventory-check
+ci: fmt-check clippy lint test parity-check source-inventory-check pi-event-contract-check
     @echo "all green"

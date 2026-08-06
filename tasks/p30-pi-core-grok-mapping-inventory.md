@@ -72,6 +72,11 @@ The expected current counts are machine-readable in
 the contract locally and is part of `just ci`. A deliberate upstream change
 must refresh the scan, classify the delta in `tasks/pi-core-file-inventory.md`,
 and update that contract in the same change.
+The closed Pi event union is independently checked by
+`scripts/validate-pi-event-contract.py`, which compares Pi's authoritative
+`packages/agent/src/types.ts` union with the generated Rust boundary. The
+check is local-only and skips cleanly when the upstream checkout is absent;
+with the authoritative checkout present it is part of `just ci`.
 
 ## Pi capability matrix
 
