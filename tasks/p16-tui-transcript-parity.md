@@ -468,3 +468,10 @@ Generalized group truncation remains open: Grok defaults to ten visible
 members and emits an `N more` header for larger contiguous groups; Runie
 currently switches between all activity rows and no activity rows. A 12-member
 YAML trace with a group break is required before changing this projection.
+
+Dense-group projection (2026-08-06): Runie now groups unique consecutive tool
+members in the actor-owned scrollback projection, preserves non-tool breaks,
+renders the first ten members, and emits a semantic `╶╶ N more` row for hidden
+members. The 12-member YAML oracle covers the threshold path; small groups and
+the existing full visual suite remain green. Explicit reveal/navigation of the
+hidden members is still open.

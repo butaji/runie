@@ -29,8 +29,9 @@ assertions:
     tool_kinds: [execute, execute, execute, execute, execute, execute, execute, execute, execute, execute, execute, execute]
   visual:
     cols: 80
-    rows: 24
+    rows: 30
     activity_expanded: true
     screen_text:
       - "Run three"
-      - "Run twelve"
+      - "Run ten"
+      - "╶╶ 2 more"

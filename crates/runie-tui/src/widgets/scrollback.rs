@@ -1076,6 +1076,8 @@ impl Scrollback {
         let mut rows = Vec::new();
         let mut code_block = false;
         let mut truncated_output = HashSet::new();
+        let dense_groups = self.dense_tool_groups();
+        let mut emitted_dense_headers = HashSet::new();
         let mut user_vpad_emitted = false;
         let mut skip_full_user_separator = false;
         for (line_index, line) in self.lines.iter().enumerate() {
@@ -1126,6 +1128,24 @@ impl Scrollback {
                 .tool_call_id
                 .as_ref()
                 .and_then(|id| self.tool_modes.get(id));
+            if self.activity_expanded {
+                if let Some(tool_id) = line.tool_call_id.as_deref() {
+                    if let Some((member_index, group_size)) = dense_groups.get(tool_id) {
+                        if *group_size > GROK_GROUP_MAX_VISIBLE
+                            && *member_index >= GROK_GROUP_MAX_VISIBLE
+                        {
+                            if emitted_dense_headers.insert(tool_id.to_owned()) {
+                                rows.push((
+                                    LineKind::Activity,
+                                    format!("╶╶ {} more", group_size - GROK_GROUP_MAX_VISIBLE),
+                                    false,
+                                ));
+                            }
+                            continue;
+                        }
+                    }
+                }
+            }
             if matches!(
                 tool_mode,
                 Some(runie_core::types::ToolDisplayMode::Collapsed)
@@ -1285,6 +1305,40 @@ impl Scrollback {
             }
         }
         rows
+    }
+
+    /// Build the ordered, consecutive tool-member groups used by Grok's
+    /// `N more` projection. Outputs remain attached to their member id and
+    /// therefore disappear with that member instead of consuming budget.
+    fn dense_tool_groups(&self) -> HashMap<String, (usize, usize)> {
+        let mut groups = HashMap::new();
+        let mut members = Vec::new();
+        let mut flush = |members: &mut Vec<String>| {
+            let size = members.len();
+            for (index, id) in members.drain(..).enumerate() {
+                groups.insert(id, (index, size));
+            }
+        };
+        for line in &self.lines {
+            let is_member = matches!(
+                line.kind,
+                LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
+            ) && line.tool_call_id.is_some();
+            if is_member {
+                if let Some(id) = &line.tool_call_id {
+                    if !members.iter().any(|member| member == id) {
+                        members.push(id.clone());
+                    }
+                }
+            } else if !matches!(
+                line.kind,
+                LineKind::Activity | LineKind::ToolOutput | LineKind::ToolResult
+            ) {
+                flush(&mut members);
+            }
+        }
+        flush(&mut members);
+        groups
     }
 }
 
