@@ -635,3 +635,11 @@ foreground/background/modifier mismatches while ignoring response prose; this
 is diagnostic only and does not alter strict symbol parity. On the latest
 independent live captures it reports 339 style-only differences, with the
 largest hotspots at the header, prompt, and dynamic feed rows.
+
+## PTY assertion contract (2026-08-06)
+
+`VisualAssertions.pty` previously emitted a warning and returned success even
+though no PTY process was spawned. It now fails the YAML assertion explicitly
+until the standalone `portable-pty` harness is integrated. This prevents a
+green replay result from being mistaken for terminal-process parity; tmux /
+asciinema captures remain the authoritative PTY instrument in the interim.

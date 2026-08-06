@@ -713,7 +713,8 @@ pub struct VisualAssertions {
     pub post_steps: Vec<String>,
     /// If true, also spawn the real `runie` binary in a pty and assert
     /// the same `screen_text` / `screen_excludes` substrings there.
-    /// Requires `portable-pty` (currently a no-op stub).
+    /// Requires the standalone PTY harness. Until that harness is wired into
+    /// the YAML runner, requesting this mode is a hard assertion failure.
     #[serde(default)]
     pub pty: bool,
     /// Render captured reasoning bodies instead of Grok's collapsed `Thought`
@@ -2004,7 +2005,11 @@ async fn assert_visual_expectations(
         assert_dump_reference(&buffer, reference)?;
     }
     if visual.pty {
-        eprintln!("[visual] pty assertion requested but not yet implemented");
+        return Err(
+            "PTY assertion requested, but the YAML runner has no PTY harness; use an external "
+                .to_owned()
+                + "tmux/asciinema capture or disable `pty` rather than accepting a false pass",
+        );
     }
     Ok(())
 }
