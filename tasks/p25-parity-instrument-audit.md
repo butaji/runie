@@ -507,3 +507,12 @@ unmatched-frame counts in addition to its unchanged strict ordinal result.
 This identifies whether two captures share the same visible states at a
 different cadence or contain genuinely missing states. It is diagnostic only:
 frame-count equality and exact cell equality are still required for success.
+## Alternate-screen phase normalization (2026-08-06)
+
+Cast replay now discards output recorded before an explicit alternate-screen
+entry, preventing shell startup rows from becoming the first application
+frame. This is phase normalization only; output emitted after entry remains
+fully compared. The checked-in `runie-full.cast` additionally contains stale
+`[renderer]` diagnostic lines absent from the current source, so it remains a
+diagnostic artifact and must be replaced by a fresh capture before any cast
+zero-diff claim.

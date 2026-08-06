@@ -114,10 +114,12 @@ fn cells(parser: &vt100::Parser, rows: u16, cols: u16) -> Vec<Cell> {
 
 #[allow(
     clippy::too_many_lines,
+    clippy::cognitive_complexity,
     reason = "frame replay keeps marker phase selection and VT state together"
 )]
 fn replay_frames(path: &Path, marker: Option<&str>) -> Result<FrameReplay> {
     let content = std::fs::read_to_string(path).with_context(|| path.display().to_string())?;
+    let has_alternate_screen = content.contains("\u{1b}[?1049h");
     let mut lines = content.lines();
     let header: Value = serde_json::from_str(lines.next().context("cast header")?)?;
     let (cols, rows) = dimensions(&header)?;
@@ -135,6 +137,7 @@ fn replay_frames(path: &Path, marker: Option<&str>) -> Result<FrameReplay> {
     let mut seen_markers = 0;
     let mut marker_visible = false;
     let mut started = marker.is_none();
+    let mut entered_alternate_screen = false;
     for line in lines {
         let event: Value = serde_json::from_str(line)?;
         if event[1].as_str() != Some("o") {
@@ -143,6 +146,11 @@ fn replay_frames(path: &Path, marker: Option<&str>) -> Result<FrameReplay> {
         let output = event[2].as_str().context("output payload")?;
         if output.contains("\u{1b}[?1049l") {
             break;
+        }
+        if output.contains("\u{1b}[?1049h") {
+            entered_alternate_screen = true;
+        } else if has_alternate_screen && !entered_alternate_screen {
+            continue;
         }
         parser.process(strip_private_modes(&output.replace("\u{1b}[?1049h", "")).as_bytes());
         if !started {
@@ -181,10 +189,12 @@ fn replay_frames(path: &Path, marker: Option<&str>) -> Result<FrameReplay> {
 )]
 fn replay(path: &Path) -> Result<Replay> {
     let content = std::fs::read_to_string(path).with_context(|| path.display().to_string())?;
+    let has_alternate_screen = content.contains("\u{1b}[?1049h");
     let mut lines = content.lines();
     let header: Value = serde_json::from_str(lines.next().context("cast header")?)?;
     let (cols, rows) = dimensions(&header)?;
     let mut parser = vt100::Parser::new(rows, cols, 0);
+    let mut entered_alternate_screen = false;
     for line in lines {
         let event: Value = serde_json::from_str(line)?;
         if event[1].as_str() != Some("o") {
@@ -200,6 +210,11 @@ fn replay(path: &Path) -> Result<Replay> {
         // TUI scenario. Keep the last application frame for parity checks.
         if output.contains("\u{1b}[?1049l") {
             break;
+        }
+        if output.contains("\u{1b}[?1049h") {
+            entered_alternate_screen = true;
+        } else if has_alternate_screen && !entered_alternate_screen {
+            continue;
         }
         parser.process(strip_private_modes(&output).as_bytes());
     }
