@@ -360,7 +360,8 @@ selection boxes and non-tool block entries remain open.
 
 YAML selection oracle (2026-08-06): `tool_select: next|previous` replays
 through the same scrollback actor and `selected_tool_id` asserts the resulting
-projection. The mixed activity fixture now pins transcript-order selection.
+projection. The mixed activity fixture now pins both forward and reverse
+transcript-order selection.
 
 Typed card-family projection (2026-08-06): `ToolBlock` now exposes a
 theme-independent `ToolCardKind` (`execute`, `read`, `edit`, `list_dir`,
