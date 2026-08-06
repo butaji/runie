@@ -844,16 +844,21 @@ impl Scrollback {
             physical_rows
                 .iter()
                 .rposition(|(kind, _, _)| *kind == LineKind::User)
-                .map(|position| {
-                    let anchored = if position > 0 && physical_rows[position - 1].1.is_empty() {
-                        position - 1
+                .map(|last_user_row| {
+                    let mut user_row = last_user_row;
+                    while user_row > 0 && physical_rows[user_row - 1].0 == LineKind::User {
+                        user_row -= 1;
+                    }
+                    let anchored = if user_row > 0 && physical_rows[user_row - 1].1.is_empty() {
+                        user_row - 1
                     } else {
-                        position
+                        user_row
                     };
                     // Keep a newly submitted prompt at the top while the
                     // response fits. Once incoming content outgrows the
                     // viewport, follow the tail so new output remains visible.
-                    if total.saturating_sub(anchored) > visible {
+                    let incoming_rows = total.saturating_sub(anchored.saturating_add(1));
+                    if incoming_rows > visible {
                         total.saturating_sub(visible)
                     } else {
                         anchored
@@ -1878,6 +1883,50 @@ mod tests {
         assert!(
             !visible.contains("Hey"),
             "prompt anchor blocked tail: {visible:?}"
+        );
+    }
+
+    #[test]
+    fn live_submission_sequence_keeps_timestamped_user_row_visible() {
+        let mut scrollback = Scrollback::new();
+        scrollback.append(Line::new(LineKind::Separator, ""));
+        scrollback.append(Line::new(LineKind::SessionStart, "◆ session_start"));
+        scrollback.append(Line::new(LineKind::Separator, ""));
+        scrollback.append(Line::new(LineKind::User, "Hey").with_vpad(true));
+        scrollback.set_prompt_timestamp(Some("6:20 AM".into()));
+        scrollback.append(Line::new(LineKind::Separator, ""));
+        scrollback.append(Line::new(LineKind::ThinkingStatus, "◆ Thinking…"));
+        scrollback.append(Line::new(LineKind::Separator, ""));
+        scrollback.append(Line::new(
+            LineKind::Assistant,
+            "Hey — what are you working on? I can help with code.",
+        ));
+        scrollback.apply(ScrollbackMsg::FinalizeAssistant {
+            has_reasoning: false,
+            reasoning_expanded: false,
+            summary: "Thought for 0.2s".into(),
+            settled_no_tool_phase: true,
+        });
+        scrollback.remove_kind(LineKind::SessionStart);
+        scrollback.normalize_live_completed_assistants();
+
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 76, 15));
+        scrollback.render_with_terminal_height(Rect::new(0, 0, 76, 15), 24, &mut buffer);
+        let mut visible = String::new();
+        for row in 0..15 {
+            for column in 0..76 {
+                if let Some(cell) = buffer.cell((column, row)) {
+                    visible.push_str(cell.symbol());
+                }
+            }
+        }
+        assert!(
+            visible.contains("❯ Hey"),
+            "live user row missing: {visible:?}"
+        );
+        assert!(
+            visible.contains("6:20 AM"),
+            "user timestamp missing: {visible:?}"
         );
     }
 

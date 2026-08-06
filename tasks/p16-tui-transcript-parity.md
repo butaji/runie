@@ -420,6 +420,13 @@ fits, the prompt remains at the top; once incoming content exceeds the viewport,
 the reducer hands follow back to the newest tail rows. Reducer tests cover
 multi-turn anchor selection and continued streaming output.
 
+Timestamped-anchor correction (2026-08-06): timestamp wrapping can produce
+multiple physical rows with `LineKind::User`. The live follow projection now
+walks backward from the newest user continuation to the first row of that
+prompt block, preserving the full-width background and top anchor in the real
+timestamped PTY path. A full lifecycle reducer test and an 80x24 tmux/asciinema
+capture verify the previously missing `❯ Hey` row.
+
 Edit-card diff parity (2026-08-06): added Opaline-backed GrokNight/GrokDay
 insert/delete background tokens (`#063806`/`#420e14` and
 `#daf2dc`/`#f5dade`). Diff rows now paint semantic foreground and full-row
