@@ -256,12 +256,18 @@ pub enum ToolCardKind {
     Search,
     WebSearch,
     WebFetch,
+    MemorySearch,
+    Workflow,
+    Todo,
+    Use,
+    SearchTools,
     Background,
     Generic,
 }
 
 #[allow(
     clippy::cognitive_complexity,
+    clippy::too_many_lines,
     reason = "the pure tool-name vocabulary maps Grok aliases to one card family"
 )]
 fn tool_card_kind(header: &str) -> ToolCardKind {
@@ -292,6 +298,25 @@ fn tool_card_kind(header: &str) -> ToolCardKind {
         || lower.starts_with("fetch ")
     {
         ToolCardKind::WebFetch
+    } else if matches!(lower.as_str(), "memory_search" | "memory-search")
+        || lower.starts_with("memory search ")
+    {
+        ToolCardKind::MemorySearch
+    } else if matches!(lower.as_str(), "workflow" | "run_workflow" | "run-workflow")
+        || lower.starts_with("workflow ")
+    {
+        ToolCardKind::Workflow
+    } else if matches!(lower.as_str(), "todo" | "todo_write" | "todo-write")
+        || lower.starts_with("todo ")
+    {
+        ToolCardKind::Todo
+    } else if matches!(lower.as_str(), "use" | "use_tool" | "use-tool") || lower.starts_with("use ")
+    {
+        ToolCardKind::Use
+    } else if matches!(lower.as_str(), "search_tools" | "search-tools")
+        || lower.starts_with("search tools ")
+    {
+        ToolCardKind::SearchTools
     } else if matches!(lower.as_str(), "subagent" | "agent" | "task")
         || lower.starts_with("subagent ")
     {

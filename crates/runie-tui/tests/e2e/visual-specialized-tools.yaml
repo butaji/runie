@@ -24,6 +24,8 @@ events:
       mode: expanded
   - done: { stop_reason: stop }
 assertions:
+  state:
+    tool_kinds: [memory_search, workflow]
   visual:
     cols: 80
     rows: 24

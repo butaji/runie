@@ -398,6 +398,11 @@ The YAML runner now asserts the projection's block/member counts for structured,
 error, and execute tool scenarios, making this intermediate block model part of
 the event-sequence-to-state verification surface.
 
+Specialized card projection (2026-08-06): `ToolCardKind` now distinguishes
+Memory Search, Workflow, Todo, Use, and Search Tools in addition to the existing
+file/search/web/background families. The specialized-tools YAML fixture asserts
+the semantic kinds, not only the rendered headers.
+
 Entry navigation foundation (2026-08-06): the scrollback reducer now exposes
 semantic selectable rows (user, assistant/reasoning, and one anchor per tool
 block), with actor-owned `j/k` intents and a selected-entry index projecting
