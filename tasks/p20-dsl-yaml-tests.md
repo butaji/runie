@@ -33,7 +33,10 @@ behavior fixtures editable without recompiling Rust.
   Grouped activity fixtures also assert the preserved two-member block count
   while their visual assertions verify collapsed/selected visibility.
   `tool_modes` additionally pins ordered expanded/collapsed mode events.
-  `visual-activity-truncated.yaml` now pins the third `truncated` variant.
+`visual-activity-truncated.yaml` now pins the third `truncated` variant.
+  Tool-card fixtures also pin ordered semantic headers and per-block output
+  rows (`tool_headers`/`tool_outputs`), keeping the typed Grok block payload
+  contract declarative.
 
 - **TUI actor ownership reuse (2026-08-06):** `UiActor` and `PromptActor`
   now use the shared `runie-core` owned-worker DSL. Their worker lifetimes

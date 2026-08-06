@@ -184,6 +184,12 @@ Grok's block/member model for parallel IDs and display modes. This is the
 foundation for the remaining foldable navigation and specialized card layout;
 it does not claim those behaviors are complete.
 
+Declarative block payload assertions (2026-08-06): YAML scenarios now pin the
+ordered semantic headers and per-block output rows in addition to block count
+and display mode. This verifies the actor projection's payload, while keeping
+rendered truncation separate from retained state; specialized renderers and
+selection/navigation remain open.
+
 Command-palette projection progress (2026-08-06): aligned the modal heading
 with Grok's `Commands` vocabulary and bounded keyboard selection to the
 currently filtered entry set. The state remains UI-actor-owned and the visual

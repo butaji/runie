@@ -324,6 +324,10 @@ pub struct StateAssertions {
     pub tool_blocks: Option<usize>,
     pub tool_output_lines: Option<usize>,
     pub tool_modes: Option<Vec<runie_core::types::ToolDisplayMode>>,
+    /// Ordered semantic headers for the projected Grok tool blocks.
+    pub tool_headers: Option<Vec<String>>,
+    /// Ordered output rows for each projected tool block.
+    pub tool_outputs: Option<Vec<Vec<String>>>,
 }
 
 #[derive(Debug, Deserialize, Default, Clone)]
@@ -962,6 +966,30 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         if &actual != expected {
             return Err(format!(
                 "state tool_modes mismatch: expected {expected:?}, got {actual:?}"
+            ));
+        }
+    }
+    if let Some(expected) = &expected.tool_headers {
+        let actual = outcome
+            .tool_blocks
+            .iter()
+            .map(|block| block.header.clone())
+            .collect::<Vec<_>>();
+        if &actual != expected {
+            return Err(format!(
+                "state tool_headers mismatch: expected {expected:?}, got {actual:?}"
+            ));
+        }
+    }
+    if let Some(expected) = &expected.tool_outputs {
+        let actual = outcome
+            .tool_blocks
+            .iter()
+            .map(|block| block.output.clone())
+            .collect::<Vec<_>>();
+        if &actual != expected {
+            return Err(format!(
+                "state tool_outputs mismatch: expected {expected:?}, got {actual:?}"
             ));
         }
     }

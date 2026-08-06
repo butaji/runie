@@ -19,6 +19,8 @@ assertions:
   state:
     tool_blocks: 1
     tool_modes: [truncated]
+    tool_headers: ["Read README.md"]
+    tool_outputs: [["# runie", "Read README.md (3 lines)", "# runie", "This is **Runie**."]]
   visual:
     cols: 80
     rows: 24
