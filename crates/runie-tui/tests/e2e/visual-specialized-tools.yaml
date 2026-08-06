@@ -16,6 +16,12 @@ events:
   - tool_call:
       name: workflow
       args: { name: "release" }
+  - tool_mode:
+      tool_call_id: call-1
+      mode: expanded
+  - tool_mode:
+      tool_call_id: call-2
+      mode: expanded
   - done: { stop_reason: stop }
 assertions:
   visual:

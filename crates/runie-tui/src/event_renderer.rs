@@ -18,6 +18,14 @@ use crate::{ScrollbackActor, StatusActor};
 const LIVE_TIMESTAMP_SECONDS_MIN: i64 = 1_000_000_000;
 const DEFAULT_THINKING_ELAPSED_MS: u64 = 900;
 
+fn default_tool_display_mode(tool_name: &str) -> runie_core::types::ToolDisplayMode {
+    if matches!(tool_name, "bash" | "shell" | "exec" | "run") {
+        runie_core::types::ToolDisplayMode::Truncated
+    } else {
+        runie_core::types::ToolDisplayMode::Collapsed
+    }
+}
+
 /// Pure mapping for status-owned portions of the core event stream.
 #[allow(
     clippy::too_many_lines,
@@ -596,6 +604,19 @@ impl EventRenderer {
         }
         if let Some(message) = tool_message {
             scrollback_actor.apply(message).await;
+            if let AgentEvent::ToolExecutionStart {
+                tool_call_id,
+                tool_name,
+                ..
+            } = &event
+            {
+                scrollback_actor
+                    .apply(ScrollbackMsg::SetToolMode(
+                        tool_call_id.clone(),
+                        default_tool_display_mode(tool_name),
+                    ))
+                    .await;
+            }
         } else {
             self.apply_event(event);
         }
@@ -657,7 +678,12 @@ impl EventRenderer {
                 tool_name,
                 args,
             } => {
-                let _ = self.handle_tool_start(tool_call_id, tool_name, args);
+                let _ = self.handle_tool_start(tool_call_id.clone(), tool_name.clone(), args);
+                if self.scrollback_actor.is_none() {
+                    self.scrollback
+                        .lock()
+                        .set_tool_mode(tool_call_id, default_tool_display_mode(&tool_name));
+                }
             }
             AgentEvent::ToolExecutionUpdate {
                 tool_call_id,

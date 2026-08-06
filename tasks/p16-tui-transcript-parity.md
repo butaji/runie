@@ -354,3 +354,10 @@ headers and explicit mode events, so its compatibility fallback remains
 activity viewport contract; closing this gap requires carrying the typed tool
 variant/default mode through the event DSL and validating the full activity
 lifecycle in YAML.
+
+Typed default projection (2026-08-06): regular `ToolExecutionStart` events now
+project the source-backed default through the actor reducer (`Collapsed` for
+ordinary tools, `Truncated` for Bash-like execution). Background lifecycle rows
+remain on their existing compatibility path until their event payload carries
+the concrete Grok block variant. Fixtures needing member rows declare
+`tool_mode: expanded`, preserving fast YAML-only iteration.

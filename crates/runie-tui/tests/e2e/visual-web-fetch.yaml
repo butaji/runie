@@ -9,6 +9,9 @@ events:
   - tool_call:
       name: web_fetch
       args: { url: "https://example.com/release" }
+  - tool_mode:
+      tool_call_id: call-1
+      mode: expanded
   - done: { stop_reason: stop }
 assertions:
   state:

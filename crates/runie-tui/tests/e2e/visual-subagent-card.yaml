@@ -10,6 +10,9 @@ events:
   - tool_call:
       name: subagent
       args: { description: "inspect the repository" }
+  - tool_mode:
+      tool_call_id: call-1
+      mode: expanded
   - done: { stop_reason: stop }
 assertions:
   visual:

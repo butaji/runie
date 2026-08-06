@@ -9,6 +9,9 @@ events:
   - tool_call:
       name: structured_tool
       args: { value: "rows" }
+  - tool_mode:
+      tool_call_id: call-1
+      mode: expanded
   - done: { stop_reason: tool_use }
 assertions:
   state:

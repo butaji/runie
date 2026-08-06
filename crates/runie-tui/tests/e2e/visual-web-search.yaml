@@ -9,6 +9,9 @@ events:
   - tool_call:
       name: web_search
       args: { query: "Rust terminal UI" }
+  - tool_mode:
+      tool_call_id: call-1
+      mode: expanded
   - done: { stop_reason: stop }
 assertions:
   state:
