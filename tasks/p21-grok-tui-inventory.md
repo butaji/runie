@@ -316,6 +316,13 @@ updates are treated as card state rather than transcript text, preventing
 `visual-specialized-tools.yaml` fixture and the full-mode tool snapshot cover
 the corrected event sequence and rendered output.
 
+Edit-card alias closure (2026-08-06): Grok's tool registry treats
+`apply_patch` and `strreplace` as edit-card variants, not generic tools. The
+model classifier now preserves that family for exact names and argument
+headers, with a renderer-independent regression test. Diff hunk rendering,
+syntax highlighting, and foldable member navigation remain separate parity
+work; this slice only closes the Pi-core tool identity boundary.
+
 Status chrome theme propagation (2026-08-06): `TurnStatus` and the status
 footer now resolve spinner, label, shortcut, and loading styles from the
 actor-selected theme. A GrokDay regression renders both the footer and active

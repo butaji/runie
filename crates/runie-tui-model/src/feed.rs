@@ -325,9 +325,11 @@ impl ToolCardKind {
             Self::Read
         } else if matches!(
             lower.as_str(),
-            "edit" | "write" | "write_file" | "search_replace"
+            "edit" | "write" | "write_file" | "search_replace" | "apply_patch" | "strreplace"
         ) || lower.starts_with("edit ")
             || lower.starts_with("write ")
+            || lower.starts_with("apply_patch ")
+            || lower.starts_with("strreplace ")
         {
             Self::Edit
         } else if matches!(lower.as_str(), "list_dir" | "list_files") || lower.starts_with("list ")
@@ -398,6 +400,18 @@ mod tests {
             default_tool_display_mode("memory_search"),
             ToolDisplayMode::Collapsed
         );
+    }
+
+    #[test]
+    fn edit_aliases_match_groks_edit_card_family() {
+        for header in [
+            "apply_patch",
+            "apply_patch src/lib.rs",
+            "strreplace",
+            "edit",
+        ] {
+            assert_eq!(ToolCardKind::from_header(header), ToolCardKind::Edit);
+        }
     }
 
     #[test]
