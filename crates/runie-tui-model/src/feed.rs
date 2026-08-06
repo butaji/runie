@@ -75,6 +75,7 @@ pub struct FeedNavigation {
     pub animation_frame: usize,
     pub reasoning_expanded: bool,
     pub activity_expanded: bool,
+    pub tool_modes: HashMap<String, ToolDisplayMode>,
 }
 
 impl Default for FeedNavigation {
@@ -88,6 +89,7 @@ impl Default for FeedNavigation {
             animation_frame: 0,
             reasoning_expanded: false,
             activity_expanded: false,
+            tool_modes: HashMap::new(),
         }
     }
 }

@@ -183,7 +183,6 @@ pub struct Scrollback {
     prompt_timestamp: Option<String>,
     settled_no_tool_phase: bool,
     live_grok_layout: bool,
-    tool_modes: HashMap<String, runie_core::types::ToolDisplayMode>,
     revealed_dense_groups: HashSet<String>,
     center_revealed_entry: bool,
     tool_names: HashMap<String, String>,
@@ -214,7 +213,7 @@ impl Scrollback {
         scrollback.navigation.animation_frame = snapshot.animation_frame;
         scrollback.navigation.selected_tool_id = snapshot.selected_tool_id;
         scrollback.navigation.selected_entry = snapshot.selected_entry;
-        scrollback.tool_modes = snapshot.tool_modes;
+        scrollback.navigation.tool_modes = snapshot.tool_modes;
         scrollback.revealed_dense_groups = snapshot.revealed_dense_groups;
         scrollback.center_revealed_entry = snapshot.center_revealed_entry;
         scrollback.next_tool_row_id = scrollback
@@ -232,7 +231,6 @@ impl Scrollback {
             prompt_timestamp: None,
             settled_no_tool_phase: false,
             live_grok_layout: false,
-            tool_modes: HashMap::new(),
             revealed_dense_groups: HashSet::new(),
             center_revealed_entry: false,
             tool_names: HashMap::new(),
@@ -363,7 +361,7 @@ impl Scrollback {
                     .tool_names
                     .get(&tool_call_id)
                     .is_some_and(|name| matches!(name.as_str(), "bash" | "shell" | "exec" | "run"))
-                    && self.tool_modes.get(&tool_call_id)
+                    && self.navigation.tool_modes.get(&tool_call_id)
                         == Some(&runie_core::types::ToolDisplayMode::Truncated)
                 {
                     // Grok's interactive execute cards stream in a truncated
@@ -482,7 +480,11 @@ impl Scrollback {
 
     /// Compatibility adapter for the model-owned typed tool projection.
     pub fn tool_blocks(&self) -> Vec<ToolBlock> {
-        runie_tui_model::project_tool_blocks(&self.lines, &self.tool_names, &self.tool_modes)
+        runie_tui_model::project_tool_blocks(
+            &self.lines,
+            &self.tool_names,
+            &self.navigation.tool_modes,
+        )
     }
 
     fn replace_tool_by_id(&mut self, tool_call_id: &str, text: String) {
@@ -593,7 +595,7 @@ impl Scrollback {
     pub fn clear(&mut self) {
         self.lines.clear();
         self.tool_names.clear();
-        self.tool_modes.clear();
+        self.navigation.tool_modes.clear();
         self.next_tool_row_id = 0;
         self.workflow_headers.clear();
         self.workflow_phases.clear();
@@ -635,7 +637,7 @@ impl Scrollback {
             selected_entry: self.navigation.selected_entry,
             theme: self.theme,
             animation_frame: self.navigation.animation_frame,
-            tool_modes: self.tool_modes.clone(),
+            tool_modes: self.navigation.tool_modes.clone(),
             revealed_dense_groups: self.revealed_dense_groups.clone(),
             center_revealed_entry: self.center_revealed_entry,
         }
@@ -737,7 +739,7 @@ impl Scrollback {
         tool_call_id: impl Into<String>,
         mode: runie_core::types::ToolDisplayMode,
     ) {
-        self.tool_modes.insert(tool_call_id.into(), mode);
+        self.navigation.tool_modes.insert(tool_call_id.into(), mode);
     }
 
     /// Apply Grok's fold action to one selected tool block. The actor owns the
@@ -753,6 +755,7 @@ impl Scrollback {
                 && block.kind == ToolCardKind::Generic
         });
         let next = match self
+            .navigation
             .tool_modes
             .get(tool_call_id)
             .copied()
@@ -1374,7 +1377,7 @@ impl Scrollback {
             let tool_mode = line
                 .tool_call_id
                 .as_ref()
-                .and_then(|id| self.tool_modes.get(id));
+                .and_then(|id| self.navigation.tool_modes.get(id));
             if self.navigation.activity_expanded {
                 if let Some(tool_id) = line.tool_call_id.as_deref() {
                     if let Some((member_index, group_size)) = dense_groups.get(tool_id) {
@@ -1462,7 +1465,7 @@ impl Scrollback {
                 && !line
                     .tool_call_id
                     .as_ref()
-                    .and_then(|id| self.tool_modes.get(id))
+                    .and_then(|id| self.navigation.tool_modes.get(id))
                     .is_some_and(|mode| *mode != runie_core::types::ToolDisplayMode::Collapsed)
             {
                 continue;

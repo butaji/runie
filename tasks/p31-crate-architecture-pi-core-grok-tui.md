@@ -393,3 +393,7 @@ reveal, selected rendering, and snapshot rehydration.
 The fifth p35 slice is complete: `reasoning_expanded` and
 `activity_expanded` now use model-owned navigation state across fold reducers,
 snapshot rehydration, and terminal rendering.
+
+The sixth p35 slice is complete: the reducer-owned tool display-mode map now
+uses model-owned `FeedNavigation` across defaults, explicit changes, fold
+cycling, typed-card projection, snapshot rehydration, and rendering.

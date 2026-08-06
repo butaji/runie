@@ -67,3 +67,10 @@ existing selection and dense-group visual/replay tests pass unchanged.
 `reasoning_expanded` and `activity_expanded` now live in `FeedNavigation`.
 Reasoning/activity reducers, fold rendering, snapshot rehydration, and the
 existing expanded/collapsed YAML and visual cases use the model-owned flags.
+
+### Slice 6 complete: tool display-mode ownership
+
+The reducer-owned tool mode map now lives in `FeedNavigation`. Default mode
+selection, explicit mode changes, fold cycling, typed-card projection,
+snapshot rehydration, and specialized tool rendering all consume that one
+model fact; the complete specialized-tool YAML and visual suite passes.
