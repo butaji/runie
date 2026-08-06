@@ -33,6 +33,13 @@ usage/timestamps, and completion timing. The matrix now proves that these
 differences persist across width and height rather than being a single-
 viewport artifact.
 
+The apparent full-mode user-vpad offset was experimentally moved from before
+to after the user row. A fresh 80×24 run improved the live diff from 226 to
+218 cells, but it failed the locked `grok-rich.cast` frame-81 exact oracle by
+moving the deterministic user prompt one row too early. The change was
+reverted; the cast-backed oracle remains authoritative until frame selection
+and live capture phase are reconciled.
+
 ## Review findings
 
 ### Fresh 62×32 paired capture — 2026-08-05
