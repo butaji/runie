@@ -96,3 +96,7 @@ runtime-discovered and editable without recompiling the runner.
   `typed_action_registry!` macro in `runie-core` and used it for TUI
   command-palette actions. The expansion generates the enum and label match;
   macro and palette registry tests cover known and unknown labels.
+
+- **Registry SSOT (2026-08-06):** The macro-generated palette labels are now
+  consumed directly by the pure command-palette widget; display filtering and
+  actor activation no longer maintain separate label lists.
