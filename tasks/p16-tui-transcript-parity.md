@@ -358,6 +358,11 @@ settled. It supports the scroll chords without sleeps or polling; a follow-up
 fixture still needs a stable expected viewport frame before promotion to the
 visual matrix.
 
+Declarative scroll event oracle (2026-08-06): YAML `scroll: -1|1` events now
+reduce through the scrollback actor, and `state.scroll_offset` asserts the
+resulting logical viewport offset. `visual-scroll.yaml` pins the overflow
+scenario at offset 8 while retaining its screen assertions.
+
 Background lifecycle default audit (2026-08-06): Grok's lifecycle block has a
 collapsed default, but applying that token alone exposes a deeper missing
 piece in Runie's grouped lifecycle height/viewport projection: later completed

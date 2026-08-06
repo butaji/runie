@@ -96,6 +96,9 @@ pub enum EventSpec {
     ToolSelect {
         tool_select: String,
     },
+    Scroll {
+        scroll: i32,
+    },
     BackgroundStart {
         background_start: BackgroundStartSpec,
     },
@@ -241,6 +244,7 @@ impl EventSpec {
             Self::ToolMode { .. } => None,
             Self::ToolFold { .. } => None,
             Self::ToolSelect { .. } => None,
+            Self::Scroll { .. } => None,
             Self::BackgroundStart { .. }
             | Self::BackgroundProgress { .. }
             | Self::BackgroundEnd { .. }
@@ -352,6 +356,7 @@ pub struct StateAssertions {
     pub tool_kinds: Option<Vec<crate::widgets::ToolCardKind>>,
     pub selected_tool_id: Option<String>,
     pub selected_entry: Option<usize>,
+    pub scroll_offset: Option<usize>,
 }
 
 #[derive(Debug, Deserialize, Default, Clone)]
@@ -725,6 +730,7 @@ pub struct ScenarioOutcome {
     pub tool_blocks: Vec<ToolBlock>,
     pub selected_tool_id: Option<String>,
     pub selected_entry: Option<usize>,
+    pub scroll_offset: usize,
     pub state: runie_core::state::AgentStateSnapshot,
 }
 
@@ -755,6 +761,7 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
         tool_blocks: scrollback.tool_blocks(),
         selected_tool_id: scrollback.selected_tool_id().map(str::to_owned),
         selected_entry: scrollback.selected_entry(),
+        scroll_offset: scrollback.scroll_offset(),
         state: actor_snapshot.state_snapshot(),
     })
 }
@@ -781,6 +788,9 @@ async fn replay_scenario_events(
             .await;
     }
     for message in declared_tool_selections(scenario) {
+        scrollback_actor.apply(message).await;
+    }
+    for message in declared_scrolls(scenario) {
         scrollback_actor.apply(message).await;
     }
     scrollback_actor.snapshot()
@@ -814,6 +824,17 @@ fn declared_tool_selections(scenario: &Scenario) -> Vec<ScrollbackMsg> {
             EventSpec::ToolSelect { tool_select } if tool_select == "entry_previous" => {
                 Some(ScrollbackMsg::SelectPreviousEntry)
             }
+            _ => None,
+        })
+        .collect()
+}
+
+fn declared_scrolls(scenario: &Scenario) -> Vec<ScrollbackMsg> {
+    scenario
+        .events
+        .iter()
+        .filter_map(|event| match event {
+            EventSpec::Scroll { scroll } => Some(ScrollbackMsg::ScrollBy(*scroll)),
             _ => None,
         })
         .collect()
@@ -1070,6 +1091,14 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
             return Err(format!(
                 "state selected_entry mismatch: expected {expected:?}, got {:?}",
                 outcome.selected_entry
+            ));
+        }
+    }
+    if let Some(expected) = expected.scroll_offset {
+        if outcome.scroll_offset != expected {
+            return Err(format!(
+                "state scroll_offset mismatch: expected {expected}, got {}",
+                outcome.scroll_offset
             ));
         }
     }

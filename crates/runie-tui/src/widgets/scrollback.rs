@@ -678,6 +678,10 @@ impl Scrollback {
         self.selected_entry
     }
 
+    pub fn scroll_offset(&self) -> usize {
+        self.scroll_offset
+    }
+
     fn selectable_entries(&self) -> Vec<usize> {
         let mut entries = Vec::new();
         let mut seen_tools = HashSet::new();
