@@ -716,6 +716,10 @@ fn register_scenario_tool(
             "memory hit one\nmemory hit two",
         ))),
         "workflow" => registry.register(Arc::new(ReplayTool::new(&tool.name, "workflow done"))),
+        "web_fetch" => registry.register(Arc::new(ReplayTool::new(
+            &tool.name,
+            "status: 200\ncontent_type: text/html\nsize: 14.2 KB\nbody",
+        ))),
         "error" => registry.register(Arc::new(ReplayTool::failing(&tool.name, "tool failed"))),
         "structured_update" => registry.register(Arc::new(ReplayTool::structured(
             &tool.name,
@@ -1212,6 +1216,10 @@ pub async fn render_visual_buffer(
                 "memory hit one\nmemory hit two",
             ))),
             "workflow" => reg.register(Arc::new(ReplayTool::new(&t.name, "workflow done"))),
+            "web_fetch" => reg.register(Arc::new(ReplayTool::new(
+                &t.name,
+                "status: 200\ncontent_type: text/html\nsize: 14.2 KB\nbody",
+            ))),
             "error" => reg.register(Arc::new(ReplayTool::failing(&t.name, "tool failed"))),
             "structured_update" => {
                 reg.register(Arc::new(ReplayTool::structured(&t.name, "first\nsecond")))

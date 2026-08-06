@@ -1,0 +1,25 @@
+name: visual-web-fetch
+description: Grok Fetch cards keep their semantic header and render response metadata as output.
+initial_prompt: "Fetch the release notes"
+tools:
+  - name: web_fetch
+    kind: web_fetch
+events:
+  - start
+  - tool_call:
+      name: web_fetch
+      args: { url: "https://example.com/release" }
+  - done: { stop_reason: stop }
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    screen_text:
+      - "Fetch https://example.com/release"
+      - "status: 200"
+      - "content_type: text/html"
+    scrollback_lines:
+      - kind: tool_output
+        contains: "status: 200"
+      - kind: tool_output
+        contains: "content_type: text/html"

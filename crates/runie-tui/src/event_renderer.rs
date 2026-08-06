@@ -765,7 +765,13 @@ impl EventRenderer {
         if !is_error {
             let kind = if matches!(
                 tool_name.as_str(),
-                "list_dir" | "list_files" | "read" | "read_file"
+                "list_dir"
+                    | "list_files"
+                    | "read"
+                    | "read_file"
+                    | "web_fetch"
+                    | "web-fetch"
+                    | "fetch"
             ) {
                 LineKind::ToolOutput
             } else {
@@ -1778,6 +1784,17 @@ mod tests {
             tool_result_text(&serde_json::json!({"output":"one\ntwo"})),
             "one\ntwo"
         );
+        let (mut renderer, _, _) = new_renderer();
+        let end = renderer.handle_tool_end(
+            "fetch-1".into(),
+            "web_fetch".into(),
+            serde_json::json!("status: 200\nbody"),
+            false,
+        );
+        let ScrollbackMsg::ToolEnd { output, .. } = end else {
+            panic!("expected tool end projection");
+        };
+        assert!(output.iter().all(|(kind, _)| *kind == LineKind::ToolOutput));
     }
 
     #[test]

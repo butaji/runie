@@ -184,6 +184,11 @@ Command activation events (2026-08-06): palette activation now emits a typed
 runner consumes that event to publish `Reset` for `New Session`; command
 execution is no longer inferred from a mutable UI snapshot.
 
+Web-fetch card progress (2026-08-06): Fetch completion output now uses the
+Grok tool-output projection (indented neutral metadata) instead of the generic
+green result-arrow row. A YAML scenario pins the URL header, HTTP metadata,
+and output line kinds through the real actor replay.
+
 Source audit: Grok's `UserMessageBlock` is the only standard conversation block
 that enables prompt vpad; system, session-event, thinking, background, and all
 specialized tool blocks explicitly disable it. The renderer also suppresses
