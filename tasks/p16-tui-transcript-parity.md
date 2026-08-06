@@ -345,6 +345,13 @@ and minimally adjusts the actor-owned scroll offset so the selected semantic
 row is inside the viewport. A small-viewport renderer regression pins the
 selected-row reveal behavior.
 
+Grok scroll-intent parity (2026-08-06): source action definitions distinguish
+bare `j/k` entry selection from `Ctrl+j`/`Ctrl+k` one-line viewport scrolling.
+Runie now maps the control chords to actor-owned `ScrollBy` intents, handing
+off autoscroll without mutating state in the renderer. Key mapping and reducer
+tests pass; YAML step support is available for post-submit interaction
+scenarios.
+
 Background lifecycle default audit (2026-08-06): Grok's lifecycle block has a
 collapsed default, but applying that token alone exposes a deeper missing
 piece in Runie's grouped lifecycle height/viewport projection: later completed

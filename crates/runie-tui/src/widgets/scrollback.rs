@@ -148,6 +148,7 @@ pub enum ScrollbackMsg {
     SelectPreviousTool,
     SelectNextEntry,
     SelectPreviousEntry,
+    ScrollBy(i32),
     MarkToolError(String),
     ReplaceLine(usize, String),
     ReplaceLastByKind(LineKind, String),
@@ -332,6 +333,7 @@ impl Scrollback {
             ScrollbackMsg::SelectPreviousTool => self.select_tool(-1),
             ScrollbackMsg::SelectNextEntry => self.select_entry(1),
             ScrollbackMsg::SelectPreviousEntry => self.select_entry(-1),
+            ScrollbackMsg::ScrollBy(lines) => self.scroll_by(lines),
             ScrollbackMsg::MarkToolError(id) => self.mark_tool_error(&id),
             ScrollbackMsg::ReplaceLine(index, text) => {
                 if let Some(line) = self.line_mut(index) {
@@ -716,6 +718,24 @@ impl Scrollback {
         self.selected_tool_id = self.lines[entries[next]].tool_call_id.clone();
         self.autoscroll = false;
         self.follow_latest_user = false;
+    }
+
+    /// Apply Grok's explicit Ctrl+j/Ctrl+k viewport scroll intent. The actor
+    /// owns the offset and hands follow mode off to the user once scrolling
+    /// begins; rendering only clamps it against measured physical rows.
+    pub fn scroll_by(&mut self, lines: i32) {
+        if lines == 0 {
+            return;
+        }
+        self.autoscroll = false;
+        self.follow_latest_user = false;
+        if lines.is_negative() {
+            self.scroll_offset = self
+                .scroll_offset
+                .saturating_sub(lines.unsigned_abs() as usize);
+        } else {
+            self.scroll_offset = self.scroll_offset.saturating_add(lines as usize);
+        }
     }
 
     fn select_tool(&mut self, direction: i8) {
@@ -2390,6 +2410,20 @@ mod tests {
             visible.contains("five"),
             "selected row not revealed: {visible:?}"
         );
+    }
+
+    #[test]
+    fn explicit_scroll_intent_hands_off_from_autoscroll() {
+        let mut scrollback = Scrollback::new();
+        for index in 0..8 {
+            scrollback.append(Line::new(LineKind::Assistant, format!("row {index}")));
+        }
+        scrollback.apply(ScrollbackMsg::ScrollBy(2));
+        assert!(!scrollback.autoscroll);
+        assert!(!scrollback.follow_latest_user);
+        assert_eq!(scrollback.scroll_offset, 10);
+        scrollback.apply(ScrollbackMsg::ScrollBy(-1));
+        assert_eq!(scrollback.scroll_offset, 9);
     }
 
     #[test]

@@ -502,6 +502,14 @@ async fn run_app(
                                     app.select_previous_entry().await;
                                     continue;
                                 }
+                                Action::ScrollUp => {
+                                    app.scroll_scrollback_by(-1).await;
+                                    continue;
+                                }
+                                Action::ScrollDown => {
+                                    app.scroll_scrollback_by(1).await;
+                                    continue;
+                                }
                                 Action::Quit => {
                                     let _ = renderer_shutdown.send(true);
                                     let _ = renderer_handle.await;

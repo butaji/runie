@@ -22,6 +22,8 @@ pub enum Action {
     SelectPreviousTool,
     SelectNextEntry,
     SelectPreviousEntry,
+    ScrollUp,
+    ScrollDown,
     Noop,
 }
 
@@ -52,6 +54,8 @@ pub fn map_key(key: KeyEvent, prompt_non_empty: bool, streaming: bool) -> Action
             KeyCode::Char('l') => Action::OpenFileSearch,
             KeyCode::Char('x') => Action::OpenShortcuts,
             KeyCode::Char('p') => Action::OpenCommandPalette,
+            KeyCode::Char('k') => Action::ScrollUp,
+            KeyCode::Char('j') => Action::ScrollDown,
             _ => Action::Noop,
         };
     }
@@ -193,6 +197,18 @@ mod tests {
         assert_eq!(
             map_key(k(KeyCode::Char('x'), KeyModifiers::CONTROL), false, false),
             Action::OpenShortcuts
+        );
+    }
+
+    #[test]
+    fn ctrl_jk_scroll_the_scrollback_viewport() {
+        assert_eq!(
+            map_key(k(KeyCode::Char('j'), KeyModifiers::CONTROL), false, false),
+            Action::ScrollDown
+        );
+        assert_eq!(
+            map_key(k(KeyCode::Char('k'), KeyModifiers::CONTROL), false, false),
+            Action::ScrollUp
         );
     }
 

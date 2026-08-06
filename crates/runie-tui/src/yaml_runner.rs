@@ -1741,6 +1741,14 @@ pub async fn render_visual_buffer(
 
     // Apply keystrokes.
     for step in &vis.steps {
+        if step == "Ctrl+J" {
+            app.scroll_scrollback_by(1).await;
+            continue;
+        }
+        if step == "Ctrl+K" {
+            app.scroll_scrollback_by(-1).await;
+            continue;
+        }
         if step == "Up" {
             app.select_previous_tool().await;
             continue;

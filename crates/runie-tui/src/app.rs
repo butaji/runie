@@ -488,6 +488,12 @@ impl App {
             .await;
     }
 
+    pub async fn scroll_scrollback_by(&self, lines: i32) {
+        self.scrollback_actor
+            .apply(crate::widgets::ScrollbackMsg::ScrollBy(lines))
+            .await;
+    }
+
     /// Apply a feed update through the actor that owns the rendered snapshot.
     /// The mutex is a compatibility fallback for apps whose renderer is not
     /// running yet.
