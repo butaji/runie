@@ -383,6 +383,14 @@ through the same scrollback actor and `selected_tool_id` asserts the resulting
 projection. The mixed activity fixture now pins both forward and reverse
 transcript-order selection.
 
+Workflow phase-trail parity (2026-08-06): source inspection of Grok's
+`WorkflowBlock` ingestion showed that each update retains the name/objective,
+ordered phase title/state pairs, current status, elapsed duration, and active
+agent count. Runie's actor-owned scrollback projection now retains and updates
+that same phase trail by `run_id`; the YAML lifecycle oracle asserts the final
+single-card projection. Richer per-phase glyphs and exact Grok spacing remain
+an attribute-level follow-up.
+
 Selected-header affordance (2026-08-06): the selected tool header now swaps
 Grok's collapsed bullet for the `›` fold indicator in the pure scrollback
 render path; the transformation is derived from actor-owned selection and

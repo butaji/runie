@@ -251,6 +251,8 @@ pub struct Scrollback {
     selected_tool_id: Option<String>,
     selected_entry: Option<usize>,
     follow_latest_user: bool,
+    workflow_headers: HashMap<String, String>,
+    workflow_phases: HashMap<String, Vec<(String, String)>>,
 }
 
 /// Read-only typed projection of one Grok tool block. It is rebuilt from the
@@ -367,6 +369,8 @@ impl Scrollback {
             selected_tool_id: None,
             selected_entry: None,
             follow_latest_user: false,
+            workflow_headers: HashMap::new(),
+            workflow_phases: HashMap::new(),
         }
     }
 
@@ -378,6 +382,7 @@ impl Scrollback {
     /// compatibility callers share this reducer boundary.
     #[allow(
         clippy::too_many_lines,
+        clippy::cognitive_complexity,
         reason = "the reducer keeps all explicit transcript messages in one readable match"
     )]
     pub fn apply(&mut self, message: ScrollbackMsg) -> Option<usize> {
@@ -479,6 +484,9 @@ impl Scrollback {
                 name,
                 objective,
             } => {
+                self.workflow_headers
+                    .insert(run_id.clone(), format!("Workflow {name}: {objective}"));
+                self.workflow_phases.insert(run_id.clone(), Vec::new());
                 self.append(
                     Line::new(
                         LineKind::ToolRunning,
@@ -493,9 +501,34 @@ impl Scrollback {
                 state,
                 active_agents,
             } => {
+                let phases = self.workflow_phases.entry(run_id.clone()).or_default();
+                if let Some(existing) = phases.iter_mut().find(|(title, _)| title == &phase) {
+                    existing.1 = state.clone();
+                } else {
+                    phases.push((phase, state));
+                }
+                let trail = self
+                    .workflow_phases
+                    .get(&run_id)
+                    .map(|items| {
+                        items
+                            .iter()
+                            .map(|(title, state)| format!("{title}: {state}"))
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    })
+                    .unwrap_or_default();
                 self.replace_tool_by_id(
                     &run_id,
-                    format!("Workflow {phase}: {state} ({} agents)", active_agents),
+                    format!(
+                        "{} [{}] ({} agents)",
+                        self.workflow_headers
+                            .get(&run_id)
+                            .map(String::as_str)
+                            .unwrap_or("Workflow"),
+                        trail,
+                        active_agents
+                    ),
                 );
             }
             ScrollbackMsg::WorkflowEnd {
@@ -503,9 +536,29 @@ impl Scrollback {
                 status,
                 elapsed_ms,
             } => {
+                let trail = self
+                    .workflow_phases
+                    .get(&run_id)
+                    .map(|items| {
+                        items
+                            .iter()
+                            .map(|(title, state)| format!("{title}: {state}"))
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    })
+                    .unwrap_or_default();
                 self.replace_tool_by_id(
                     &run_id,
-                    format!("Workflow {status}{}", format_elapsed(elapsed_ms)),
+                    format!(
+                        "{} [{}] {}{}",
+                        self.workflow_headers
+                            .get(&run_id)
+                            .map(String::as_str)
+                            .unwrap_or("Workflow"),
+                        trail,
+                        status,
+                        format_elapsed(elapsed_ms)
+                    ),
                 );
             }
             ScrollbackMsg::FinalizeAssistant {
@@ -657,6 +710,8 @@ impl Scrollback {
         self.lines.clear();
         self.tool_names.clear();
         self.tool_modes.clear();
+        self.workflow_headers.clear();
+        self.workflow_phases.clear();
         self.revealed_dense_groups.clear();
         self.center_revealed_entry = false;
         self.scroll_offset = 0;
