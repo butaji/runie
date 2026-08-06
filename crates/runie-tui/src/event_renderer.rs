@@ -1297,7 +1297,7 @@ pub(crate) fn tool_header(tool_name: &str, args: &serde_json::Value) -> String {
                 .unwrap_or("");
             format!("Read {}", make_relative_path(path))
         }
-        "edit" | "write" | "write_file" | "search_replace" => {
+        "edit" | "write" | "write_file" | "search_replace" | "apply_patch" | "strreplace" => {
             let path = args
                 .get("path")
                 .or_else(|| args.get("file_path"))

@@ -318,8 +318,9 @@ the corrected event sequence and rendered output.
 
 Edit-card alias closure (2026-08-06): Grok's tool registry treats
 `apply_patch` and `strreplace` as edit-card variants, not generic tools. The
-model classifier now preserves that family for exact names and argument
-headers, with a renderer-independent regression test. Diff hunk rendering,
+model classifier and event-to-feed header projection now preserve that family
+for exact names and argument headers, with a YAML replay and
+renderer-independent regression test. Diff hunk rendering,
 syntax highlighting, and foldable member navigation remain separate parity
 work; this slice only closes the Pi-core tool identity boundary.
 

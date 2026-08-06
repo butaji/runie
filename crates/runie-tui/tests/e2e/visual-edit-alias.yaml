@@ -1,0 +1,26 @@
+name: visual-edit-alias
+description: >-
+  Pi-compatible apply_patch calls retain Grok's Edit card family and header
+  identity through YAML replay.
+initial_prompt: "Patch the file"
+tools:
+  - name: apply_patch
+    kind: edit
+events:
+  - start
+  - tool_call:
+      name: apply_patch
+      args: { path: "src/main.rs" }
+  - tool_mode:
+      tool_call_id: call-1
+      mode: expanded
+  - done: { stop_reason: stop }
+assertions:
+  state:
+    tool_blocks: 1
+    tool_kinds: [edit]
+  visual:
+    cols: 80
+    rows: 24
+    screen_text:
+      - "Edit src/main.rs"
