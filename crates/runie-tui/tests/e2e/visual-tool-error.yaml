@@ -17,7 +17,7 @@ assertions:
     messages: 4
     tool_blocks: 1
     tool_output_lines: 0
-    tool_row_kinds: [status, status]
+    tool_row_kinds: [header, status]
   transcript_contains:
     - "tool failed"
   visual:
@@ -26,7 +26,7 @@ assertions:
     screen_text:
       - "◈ Read 1 file · 1 failed"
       - "◆ Read missing.txt"
-      - "✗"
       - "Enter:send"
     screen_excludes:
       - "panicked"
+      - "missing.txt ✗"

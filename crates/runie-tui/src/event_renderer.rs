@@ -929,7 +929,7 @@ impl EventRenderer {
         let tool_buffer = self.tool_buffers.remove(&tool_call_id).unwrap_or_default();
         let tool_args = self.tool_args.remove(&tool_call_id).unwrap_or_default();
         let tool_buffer = if is_error {
-            format!("{tool_buffer} ✗")
+            tool_buffer
         } else {
             completed_tool_header_with_args(&tool_buffer, &tool_name, &tool_args, &result)
         };

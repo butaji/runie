@@ -663,3 +663,10 @@ The feed renderer now emits and theme-styles the rail only for thought
 summaries; ordinary `Worked for` rows retain their neutral gutter. The
 event-driven `visual-reasoning.yaml` fixture and live submission renderer test
 assert the marker.
+
+Read-error header closure (2026-08-06): Grok's `ReadToolCallBlock` keeps the
+normal `Read path` header on failure and places the tool error text in a
+separate red body row. Runie previously appended `✗` to the header in both
+the live and bus-owned reducers. Both event paths now preserve header identity
+and retain the semantic `ToolError` output row; `visual-tool-error.yaml`
+asserts the source-backed shape without compiled fixture code.

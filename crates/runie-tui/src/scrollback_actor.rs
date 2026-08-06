@@ -311,7 +311,7 @@ fn ordinary_tool_end_messages(
         .unwrap_or_else(|| tool_name.clone());
     let header = if *is_error {
         *activity_failures += 1;
-        format!("{pending} ✗")
+        pending
     } else {
         crate::event_renderer::completed_tool_header_with_args(&pending, &name, &args, result)
     };
