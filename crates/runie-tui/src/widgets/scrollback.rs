@@ -394,10 +394,23 @@ impl Scrollback {
         reason = "render keeps viewport selection and cell projection together"
     )]
     pub fn render(&mut self, area: Rect, buf: &mut Buffer) {
+        self.render_with_terminal_height(area, 0, buf);
+    }
+
+    /// Render using the full terminal height for Grok's responsive mode.
+    /// `0` preserves the unmeasured compatibility behavior used by isolated
+    /// widget tests; application callers should pass the outer frame height.
+    pub fn render_with_terminal_height(
+        &mut self,
+        area: Rect,
+        terminal_rows: u16,
+        buf: &mut Buffer,
+    ) {
         // Wrap-aware: each Line is one logical row that may wrap to multiple
         // physical rows. We approximate by giving each line 1 "slot" plus
         // overflow based on text length and area width.
-        let physical_rows = self.physical_rows(area.width as usize);
+        let compact = crate::layout::grok_effective_compact(false, terminal_rows);
+        let physical_rows = self.physical_rows(area.width as usize, compact);
         let total = physical_rows.len();
         let visible = area.height as usize;
         let compact_scroll_lead =
@@ -454,7 +467,7 @@ impl Scrollback {
         clippy::too_many_lines,
         reason = "physical row projection keeps fold, markdown, and wrapping rules together"
     )]
-    fn physical_rows(&self, width: usize) -> Vec<(LineKind, String, bool)> {
+    fn physical_rows(&self, width: usize, compact: bool) -> Vec<(LineKind, String, bool)> {
         let mut rows = Vec::new();
         let mut code_block = false;
         let mut truncated_output = HashSet::new();
@@ -479,7 +492,7 @@ impl Scrollback {
                 skip_full_user_separator = false;
                 continue;
             }
-            if line.has_vpad() && width >= 70 && !user_vpad_emitted {
+            if line.has_vpad() && width >= 70 && !compact && !user_vpad_emitted {
                 // Grok's prompt block enables vertical padding in full mode;
                 // the narrow pager variant suppresses it.
                 rows.push((LineKind::System, String::new(), false));
@@ -1006,6 +1019,32 @@ mod tests {
         let system = Line::new(LineKind::System, "system");
         assert!(user.has_vpad());
         assert!(!system.has_vpad());
+    }
+
+    #[test]
+    fn terminal_height_controls_user_vpad_projection() {
+        let mut scrollback = Scrollback::new();
+        scrollback.append(Line::new(LineKind::User, "hi").with_vpad(true));
+        scrollback.append(Line::new(LineKind::Assistant, "answer"));
+
+        let mut full = Buffer::empty(Rect::new(0, 0, 80, 4));
+        scrollback.render_with_terminal_height(Rect::new(0, 0, 80, 4), 24, &mut full);
+        assert_eq!(full.cell((0, 0)).expect("full vpad row").symbol(), " ");
+        assert_eq!(full.cell((0, 1)).expect("full user row").symbol(), " ");
+
+        let mut compact = Buffer::empty(Rect::new(0, 0, 80, 4));
+        scrollback.render_with_terminal_height(Rect::new(0, 0, 80, 4), 16, &mut compact);
+        assert_eq!(
+            compact.cell((0, 0)).expect("compact user row").symbol(),
+            " "
+        );
+        assert_eq!(
+            compact
+                .cell((0, 1))
+                .expect("compact assistant row")
+                .symbol(),
+            "┃"
+        );
     }
     use ratatui::style::Color;
 

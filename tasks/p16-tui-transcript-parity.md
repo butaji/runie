@@ -271,3 +271,9 @@ Transcript block states:
   `grok_effective_compact` rule with Grok's 16-row short-terminal and 20-row
   auto-compact tokens. Boundary tests cover unmeasured, threshold, overflow,
   and user-forced compact states before renderer wiring.
+
+- **Terminal geometry wiring (2026-08-05):** `Scrollback::render` now has an
+  explicit `render_with_terminal_height` path. `App`, the live binary, and
+  YAML visual replay pass the outer frame height, so per-entry user vpad uses
+  Grok's full-terminal compact rule rather than the scrollback sub-rectangle.
+  A renderer regression covers full and compact terminal heights.

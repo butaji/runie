@@ -1557,7 +1557,7 @@ fn draw_visual_frame(
                 }
             } else {
                 let mut scrollback = app.scrollback_snapshot();
-                scrollback.render(layout.scrollback, f.buffer_mut());
+                scrollback.render_with_terminal_height(layout.scrollback, vis.rows, f.buffer_mut());
             }
             if show_turn_status {
                 let projected =

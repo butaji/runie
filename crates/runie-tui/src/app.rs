@@ -477,7 +477,7 @@ impl App {
         let layout = chat_layout_with_prompt_height(area, self.prompt.snapshot().render_height());
         let mut sb = self.scrollback_snapshot();
         let mut buf = Buffer::empty(area);
-        sb.render(layout.scrollback, &mut buf);
+        sb.render_with_terminal_height(layout.scrollback, area.height, &mut buf);
         f(layout.prompt, &mut buf);
         f(layout.status, &mut buf);
     }

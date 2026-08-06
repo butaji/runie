@@ -298,7 +298,11 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
         scrollback.remove_kind(runie_tui::widgets::LineKind::SessionStart);
         scrollback.normalize_live_completed_assistants();
         scrollback.add_live_assistant_timestamp(layout.scrollback.width as usize);
-        scrollback.render(layout.scrollback, frame.buffer_mut());
+        scrollback.render_with_terminal_height(
+            layout.scrollback,
+            frame_area.height,
+            frame.buffer_mut(),
+        );
         if matches!(status.current(), Status::Ready) && app.scrollback_snapshot().is_empty() {
             render_doctor_hint(layout.prompt, frame.buffer_mut());
         }
@@ -499,7 +503,11 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
                         scrollback.remove_kind(runie_tui::widgets::LineKind::SessionStart);
                         scrollback.normalize_live_completed_assistants();
                         scrollback.add_live_assistant_timestamp(layout.scrollback.width as usize);
-                        scrollback.render(layout.scrollback, buf);
+                        scrollback.render_with_terminal_height(
+                            layout.scrollback,
+                            frame_area.height,
+                            buf,
+                        );
                 if matches!(status.current(), Status::Ready) && app.scrollback_snapshot().is_empty() {
                     render_doctor_hint(layout.prompt, buf);
                 }
