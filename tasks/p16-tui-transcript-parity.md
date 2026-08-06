@@ -500,5 +500,8 @@ violate the SSOT/event contract.
 Workflow event foundation (2026-08-06): Runie core now defines
 `WorkflowStarted`/`WorkflowProgress`/`WorkflowFinished` events carrying that
 metadata, and the YAML DSL plus `visual-workflow-lifecycle.yaml` replays the
-full lifecycle. TUI projection remains the next step; core ownership is now
-explicit and no renderer-local workflow state is required.
+full lifecycle. The TUI now projects those events through actor-owned
+`ScrollbackMsg` reducer inputs into one in-place workflow card keyed by
+`run_id`; the YAML fixture asserts both the final card text and one-card
+cardinality. Exact Grok phase-trail formatting and richer structured workflow
+rows remain open.

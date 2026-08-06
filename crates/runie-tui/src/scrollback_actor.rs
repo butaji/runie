@@ -427,6 +427,38 @@ fn background_messages_for_event(event: AgentEvent) -> Vec<ScrollbackMsg> {
             },
             ScrollbackMsg::MarkToolError(work_id),
         ],
+        AgentEvent::WorkflowStarted {
+            run_id,
+            name,
+            objective,
+        } => vec![
+            ScrollbackMsg::SetToolName(run_id.clone(), "workflow".into()),
+            ScrollbackMsg::WorkflowStart {
+                run_id,
+                name,
+                objective,
+            },
+        ],
+        AgentEvent::WorkflowProgress {
+            run_id,
+            phase,
+            state,
+            active_agents,
+        } => vec![ScrollbackMsg::WorkflowProgress {
+            run_id,
+            phase,
+            state,
+            active_agents,
+        }],
+        AgentEvent::WorkflowFinished {
+            run_id,
+            status,
+            elapsed_ms,
+        } => vec![ScrollbackMsg::WorkflowEnd {
+            run_id,
+            status,
+            elapsed_ms,
+        }],
         _ => Vec::new(),
     }
 }

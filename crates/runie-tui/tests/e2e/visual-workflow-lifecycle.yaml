@@ -21,3 +21,11 @@ events:
   - done: { stop_reason: stop }
 assertions:
   required_events: [workflow_started, workflow_progress, workflow_finished]
+  state:
+    tool_blocks: 1
+    tool_headers: ["Workflow done in 1.2s"]
+  visual:
+    cols: 80
+    rows: 24
+    screen_text:
+      - "Workflow done in 1.2s"

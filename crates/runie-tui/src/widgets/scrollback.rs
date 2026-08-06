@@ -15,6 +15,12 @@ use runie_core::types::ThemeKind;
 // right-aligned clock before wrapping the remaining response text.
 const TIMESTAMP_GUTTER_SPACES: usize = 3;
 
+fn format_elapsed(elapsed_ms: Option<u64>) -> String {
+    elapsed_ms
+        .map(|millis| format!(" in {:.1}s", millis as f64 / 1_000.0))
+        .unwrap_or_default()
+}
+
 /// Grok's default dense activity-group budget. A zero budget is reserved for
 /// the source-compatible "no truncation" configuration.
 pub const GROK_GROUP_MAX_VISIBLE: usize = 10;
@@ -202,6 +208,22 @@ pub enum ScrollbackMsg {
         header: String,
         activity: Option<String>,
         output: Vec<(LineKind, String)>,
+    },
+    WorkflowStart {
+        run_id: String,
+        name: String,
+        objective: String,
+    },
+    WorkflowProgress {
+        run_id: String,
+        phase: String,
+        state: String,
+        active_agents: u32,
+    },
+    WorkflowEnd {
+        run_id: String,
+        status: String,
+        elapsed_ms: Option<u64>,
     },
     FinalizeAssistant {
         has_reasoning: bool,
@@ -451,6 +473,40 @@ impl Scrollback {
                     self.append(Line::new(kind, text).for_tool(&tool_call_id));
                 }
                 self.replace_or_append_activity(activity);
+            }
+            ScrollbackMsg::WorkflowStart {
+                run_id,
+                name,
+                objective,
+            } => {
+                self.append(
+                    Line::new(
+                        LineKind::ToolRunning,
+                        format!("Workflow {name}: {objective} [running] (0 agents)"),
+                    )
+                    .for_tool(run_id),
+                );
+            }
+            ScrollbackMsg::WorkflowProgress {
+                run_id,
+                phase,
+                state,
+                active_agents,
+            } => {
+                self.replace_tool_by_id(
+                    &run_id,
+                    format!("Workflow {phase}: {state} ({} agents)", active_agents),
+                );
+            }
+            ScrollbackMsg::WorkflowEnd {
+                run_id,
+                status,
+                elapsed_ms,
+            } => {
+                self.replace_tool_by_id(
+                    &run_id,
+                    format!("Workflow {status}{}", format_elapsed(elapsed_ms)),
+                );
             }
             ScrollbackMsg::FinalizeAssistant {
                 has_reasoning,
