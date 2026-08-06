@@ -14,6 +14,15 @@ pub use prompt::{InputMode, PromptOutcome, PromptSnapshot};
 pub use status::{Status, StatusMsg, StatusSnapshot};
 pub use ui::{PaletteAction, UiCommand, UiMsg, UiState};
 
+/// Immutable aggregate of actor-owned TUI projections for a single view pass.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TuiSnapshot {
+    pub ui: UiState,
+    pub feed: FeedSnapshot,
+    pub prompt: PromptSnapshot,
+    pub status: StatusSnapshot,
+}
+
 /// Pure viewport projection for a feed that may follow its newest content.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ScrollState {
@@ -70,7 +79,10 @@ impl ScrollState {
 
 #[cfg(test)]
 mod tests {
-    use super::ScrollState;
+    use super::{
+        FeedSnapshot, PromptSnapshot, ScrollState, Status, StatusSnapshot, TuiSnapshot, UiState,
+    };
+    use runie_core::types::ThemeKind;
 
     #[test]
     fn following_feed_tracks_appended_content() {
@@ -89,5 +101,56 @@ mod tests {
             .append_content(27);
         assert_eq!(state.scroll_top, 3);
         assert!(!state.following_end);
+    }
+
+    #[test]
+    fn aggregate_snapshot_contains_only_actor_projections() {
+        let snapshot = TuiSnapshot {
+            ui: UiState::new(),
+            feed: empty_feed(),
+            prompt: PromptSnapshot {
+                text: String::new(),
+                focused: true,
+                history: Vec::new(),
+                history_index: None,
+                history_search: false,
+                mode: super::InputMode::Normal,
+                model_caption: "model".into(),
+                show_placeholder: true,
+                file_candidates: Vec::new(),
+                file_candidate_index: 0,
+                selected_file: None,
+                viewer_lines: Vec::new(),
+                theme: ThemeKind::GrokNight,
+            },
+            status: StatusSnapshot {
+                state: Status::Ready,
+                theme: ThemeKind::GrokNight,
+                animation_frame: 0,
+                elapsed_ticks: 0,
+                turn_usage: None,
+                turn_stop_reason: None,
+            },
+        };
+        assert!(!snapshot.ui.show_welcome);
+        assert!(snapshot.feed.is_empty());
+        assert_eq!(snapshot.status.state, Status::Ready);
+    }
+
+    fn empty_feed() -> FeedSnapshot {
+        FeedSnapshot {
+            lines: Vec::new(),
+            tool_blocks: Vec::new(),
+            scroll_offset: 0,
+            reasoning_expanded: false,
+            activity_expanded: false,
+            prompt_timestamp: None,
+            follow_latest_user: true,
+            selected_tool_id: None,
+            selected_entry: None,
+            theme: ThemeKind::GrokNight,
+            animation_frame: 0,
+            tool_modes: std::collections::HashMap::new(),
+        }
     }
 }

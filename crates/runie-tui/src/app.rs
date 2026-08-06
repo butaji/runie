@@ -16,7 +16,7 @@ use crate::view::{chat_view_with_props, ChatViewProps, Element, HeaderViewProps}
 pub use crate::widgets::PaletteAction;
 use crate::widgets::{
     FeedSnapshot, PromptOutcome, PromptSnapshot, PromptWidget, Scrollback, Status, StatusBar,
-    StatusSnapshot,
+    StatusSnapshot, TuiSnapshot,
 };
 pub use runie_tui_model::{UiCommand, UiMsg, UiState};
 
@@ -470,6 +470,15 @@ impl App {
         self.status_actor.model_snapshot()
     }
 
+    pub fn model_snapshot(&self) -> TuiSnapshot {
+        TuiSnapshot {
+            ui: self.ui.snapshot(),
+            feed: self.feed_model_snapshot(),
+            prompt: self.prompt.model_snapshot(),
+            status: self.status_model_snapshot(),
+        }
+    }
+
     pub fn scrollback_snapshot(&self) -> Scrollback {
         self.scrollback_actor.snapshot()
     }
@@ -485,14 +494,13 @@ impl App {
     /// Renderers consume this projection; they do not inspect ownership state
     /// through ad-hoc mutable fields.
     pub fn view_tree(&self) -> Element {
-        let ui = self.ui.snapshot();
-        let status = self.status_snapshot();
-        let scrollback = self.scrollback_snapshot();
+        let model = self.model_snapshot();
         chat_view_with_props(ChatViewProps {
-            welcome_visible: ui.show_welcome,
-            shortcuts_visible: ui.shortcuts_open,
-            command_palette_visible: ui.command_palette_open,
-            doctor_hint_visible: matches!(status.current(), Status::Ready) && scrollback.is_empty(),
+            welcome_visible: model.ui.show_welcome,
+            shortcuts_visible: model.ui.shortcuts_open,
+            command_palette_visible: model.ui.command_palette_open,
+            doctor_hint_visible: matches!(model.status.state, Status::Ready)
+                && model.feed.is_empty(),
         })
     }
 

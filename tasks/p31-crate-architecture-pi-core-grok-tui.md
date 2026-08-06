@@ -77,6 +77,11 @@ the actor-owned state, theme, animation frame, elapsed ticks, usage, and stop
 reason. `StatusActor::model_snapshot` and `App::status_model_snapshot` expose
 this projection while `StatusBar` remains a compatibility renderer facade.
 
+The model crate now also defines immutable `TuiSnapshot`, aggregating the UI,
+feed, prompt, and status projections for one MVU view pass. `App::model_snapshot`
+builds it from actor snapshots, and `App::view_tree` consumes that aggregate
+instead of independently reading compatibility widget state.
+
 Theme identity remains in the core event wire for now because
 `AgentEvent::ThemeChanged` is part of the compatibility contract. Extracting
 it requires a serialized compatibility mapping first; no TUI-only type is

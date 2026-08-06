@@ -47,6 +47,9 @@ renderer paints terminal cells.
 - Added `visual.layout_matrix` and declared the `Hey` feed geometry contract
   at 62×32, 80×24, 100×30, and 120×36. The YAML runner re-renders each
   matrix case and validates all five regions without recompiling fixtures.
+- Added renderer-independent `TuiSnapshot` in `runie-tui-model`, aggregating
+  UI, feed, prompt, and status actor projections for one immutable view pass;
+  `App::view_tree()` now consumes this aggregate.
 
 ## Next boundaries
 
