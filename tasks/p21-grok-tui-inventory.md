@@ -208,6 +208,13 @@ line/tool-block projection. No second argument store was introduced. The next
 valid parity slice is Grok's fold/member navigation and card-specific layout,
 not duplicate tool metadata.
 
+Default-mode audit (2026-08-06): Grok source defaults were checked for the
+Pi-core tool families. Execute/Bash uses `Truncated` while running; Read,
+Edit, ListDir, Search, Web, and Use use `Collapsed`, matching Runie's
+`default_tool_display_mode`. Grok finish-mode behavior does not justify a
+different Runie default; remaining work is fold/member interaction and
+specialized rendering details.
+
 Command-palette projection progress (2026-08-06): aligned the modal heading
 with Grok's `Commands` vocabulary and bounded keyboard selection to the
 currently filtered entry set. The state remains UI-actor-owned and the visual
