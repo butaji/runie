@@ -148,6 +148,11 @@ publish immutable `watch` snapshots to the pure view.
   the compatibility handler still accumulates stream buffers and retains its
   row reducer only for synchronous renderer tests.
 
+- **Message-end duplicate-write removal (2026-08-05):** Assistant finalization
+  now occurs only through `ScrollbackMsg::FinalizeAssistant` after actor
+  startup. The compatibility path retains the collapsed/expanded fold reducer
+  for synchronous tests, while production no longer mutates those rows twice.
+
 ## Migration sequence
 
 1. Make event application async at the renderer boundary and await status

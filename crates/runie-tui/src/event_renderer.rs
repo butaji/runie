@@ -611,30 +611,32 @@ impl EventRenderer {
         if let runie_core::types::AgentMessage::Assistant(assistant) = message {
             self.in_assistant_stream = false;
             self.in_reasoning = false;
-            let mut scrollback = self.scrollback.lock();
-            if !scrollback.reasoning_expanded() {
-                if let Some(reasoning) = scrollback.last_mut_by_kind(LineKind::Reasoning) {
-                    reasoning.text = "Thought".into();
+            if self.scrollback_actor.is_none() {
+                let mut scrollback = self.scrollback.lock();
+                if !scrollback.reasoning_expanded() {
+                    if let Some(reasoning) = scrollback.last_mut_by_kind(LineKind::Reasoning) {
+                        reasoning.text = "Thought".into();
+                    }
                 }
-            }
-            // Grok commits the provisional thinking indicator as a compact
-            // session event in collapsed mode. Expanded mode keeps the
-            // reasoning event as the authoritative body projection.
-            if !self.reasoning_buffer.is_empty() && scrollback.reasoning_expanded() {
-                scrollback.remove_kind(LineKind::ThinkingStatus);
-            } else if !self.reasoning_buffer.is_empty() {
-                if let Some(thinking) = scrollback.last_mut_by_kind(LineKind::ThinkingStatus) {
-                    thinking.kind = LineKind::TurnSummary;
-                    thinking.text = "◆ Thought for 0.9s".into();
+                // Grok commits the provisional thinking indicator as a compact
+                // session event in collapsed mode. Expanded mode keeps the
+                // reasoning event as the authoritative body projection.
+                if !self.reasoning_buffer.is_empty() && scrollback.reasoning_expanded() {
+                    scrollback.remove_kind(LineKind::ThinkingStatus);
+                } else if !self.reasoning_buffer.is_empty() {
+                    if let Some(thinking) = scrollback.last_mut_by_kind(LineKind::ThinkingStatus) {
+                        thinking.kind = LineKind::TurnSummary;
+                        thinking.text = "◆ Thought for 0.9s".into();
+                    }
+                    scrollback.remove_kind(LineKind::Reasoning);
+                } else {
+                    // Plain responses do not create a Grok Thinking block; the
+                    // provisional working indicator is transient only.
+                    scrollback.remove_kind(LineKind::ThinkingStatus);
                 }
-                scrollback.remove_kind(LineKind::Reasoning);
-            } else {
-                // Plain responses do not create a Grok Thinking block; the
-                // provisional working indicator is transient only.
-                scrollback.remove_kind(LineKind::ThinkingStatus);
+                drop(scrollback);
+                self.replace_last_assistant_line(&self.streaming_buffer.clone());
             }
-            drop(scrollback);
-            self.replace_last_assistant_line(&self.streaming_buffer.clone());
             if let Some(error) = assistant.error_message {
                 if self.status_actor.is_none() {
                     self.status.lock().set(Status::Error(error.clone()));
