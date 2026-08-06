@@ -672,3 +672,11 @@ localized to dynamic/header/footer and prompt styling; the authoritative
 artifacts are `/tmp/runie-parity-live/grok-80x24.settled.ansi` and
 `/tmp/runie-parity-live/runie-80x24-after.settled.ansi`. This is evidence for
 the next token-mapping pass, not a zero-diff claim.
+
+Header token pass (2026-08-06): Grok's source-aligned header dims the branch
+identity and uses primary text for the context meter. Runie now projects both
+through semantic theme styles. A fresh 80x24 settled capture reduced the
+comparison from 324 to 261 differing cells (254 style-only, 7 glyph), with
+the header row reduced to 11 differing cells. Remaining hotspots are the
+prompt/response dynamic rows, footer/status chrome, and timing-dependent
+content; the capture remains non-zero evidence rather than a parity claim.

@@ -146,7 +146,10 @@ fn render_header(area: Rect, buf: &mut Buffer, meter: &str, theme: runie_core::t
     let left = ratatui::widgets::Paragraph::new(ratatui::text::Line::from(vec![
         ratatui::text::Span::styled(
             format!(" {}", current_branch()),
-            runie_tui::appearance::base_style_for(theme),
+            // Grok dims the branch identity while keeping the repository
+            // path on its dedicated semantic token.
+            runie_tui::appearance::base_style_for(theme)
+                .add_modifier(ratatui::style::Modifier::DIM),
         ),
         ratatui::text::Span::styled(
             format!(" {}", repository_label()),
@@ -159,7 +162,9 @@ fn render_header(area: Rect, buf: &mut Buffer, meter: &str, theme: runie_core::t
         x,
         area.y,
         meter,
-        runie_tui::appearance::muted_style_for(theme),
+        // The context meter is primary header chrome in Grok, not muted
+        // transcript text; the value itself remains actor-owned.
+        runie_tui::appearance::base_style_for(theme),
     );
 }
 
