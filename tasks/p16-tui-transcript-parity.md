@@ -249,3 +249,8 @@ Transcript block states:
   vertical padding rows only for non-compact prompts; system, session-event,
   tool, and activity blocks disable vpad. The next renderer change must model
   this per-entry metadata instead of filtering generic empty system rows.
+
+- **Separator metadata foundation (2026-08-05):** Empty compatibility rows
+  now use an explicit `LineKind::Separator`, distinct from Grok system/session
+  blocks. Existing compact/full replay behavior remains green while the
+  renderer gains the metadata needed for per-entry vpad decisions.

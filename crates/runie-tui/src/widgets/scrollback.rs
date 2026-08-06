@@ -22,6 +22,7 @@ pub enum LineKind {
     ToolOutput,
     SessionStart,
     System,
+    Separator,
     TurnSummary,
     CompletedAssistant,
     Activity,
@@ -49,6 +50,7 @@ impl LineKind {
             LineKind::ToolOutput => appearance::base_style_for(theme),
             LineKind::SessionStart => appearance::muted_style_for(theme),
             LineKind::System => appearance::muted_style_for(theme).add_modifier(Modifier::DIM),
+            LineKind::Separator => appearance::muted_style_for(theme).add_modifier(Modifier::DIM),
             LineKind::TurnSummary => appearance::muted_style_for(theme).add_modifier(Modifier::DIM),
             LineKind::CompletedAssistant => appearance::base_style_for(theme),
             LineKind::Activity => appearance::accent_style_for(theme),
@@ -70,6 +72,7 @@ impl LineKind {
             LineKind::ToolOutput => "  ",
             LineKind::SessionStart => "   ",
             LineKind::System => "   * ",
+            LineKind::Separator => "",
             LineKind::TurnSummary => "   ",
             LineKind::CompletedAssistant => "   ",
             LineKind::Activity => "❙  ",
@@ -448,7 +451,7 @@ impl Scrollback {
         let mut skip_full_user_separator = false;
         for (line_index, line) in self.lines.iter().enumerate() {
             if width < 50
-                && line.kind == LineKind::System
+                && matches!(line.kind, LineKind::System | LineKind::Separator)
                 && line.text.is_empty()
                 && self
                     .lines
@@ -459,7 +462,7 @@ impl Scrollback {
             }
             if width >= 70
                 && skip_full_user_separator
-                && line.kind == LineKind::System
+                && matches!(line.kind, LineKind::System | LineKind::Separator)
                 && line.text.is_empty()
             {
                 skip_full_user_separator = false;
