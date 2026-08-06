@@ -464,6 +464,14 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
                                     app.toggle_selected_tool_fold().await;
                                     continue;
                                 }
+                                Action::SelectNextTool => {
+                                    app.select_next_tool().await;
+                                    continue;
+                                }
+                                Action::SelectPreviousTool => {
+                                    app.select_previous_tool().await;
+                                    continue;
+                                }
                                 Action::Quit => {
                                     let _ = renderer_shutdown.send(true);
                                     let _ = renderer_handle.await;

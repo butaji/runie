@@ -352,6 +352,12 @@ actor-owned fold intent for the last projected tool block, falling back to the
 activity-group fold only when no tool block exists. This is a deterministic
 bridge until Grok-equivalent cursor navigation selects arbitrary entries.
 
+Tool selection navigation (2026-08-06): empty-prompt Up/Down actions now
+publish actor-owned previous/next selection messages over projected tool IDs;
+selection wraps in transcript order and `e` folds the selected ID. Prompt
+history remains unchanged when the prompt contains text. Full viewport-aware
+selection boxes and non-tool block entries remain open.
+
 Typed card-family projection (2026-08-06): `ToolBlock` now exposes a
 theme-independent `ToolCardKind` (`execute`, `read`, `edit`, `list_dir`,
 `search`, web, background, or generic), and mixed/truncated YAML replays pin

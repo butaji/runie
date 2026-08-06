@@ -18,6 +18,8 @@ pub enum Action {
     OpenFileSearch,
     /// Toggle the selected scrollback fold (Grok's scrollback `e` action).
     ToggleFold,
+    SelectNextTool,
+    SelectPreviousTool,
     Noop,
 }
 
@@ -33,6 +35,10 @@ pub fn is_quit_command(text: &str) -> bool {
 ///
 /// `prompt_non_empty` reflects whether the user has typed anything. `streaming`
 /// tells us whether the loop is currently processing.
+#[allow(
+    clippy::cognitive_complexity,
+    reason = "the key map keeps the declarative normal-mode bindings together"
+)]
 pub fn map_key(key: KeyEvent, prompt_non_empty: bool, streaming: bool) -> Action {
     if key.modifiers.contains(KeyModifiers::CONTROL) {
         return match key.code {
@@ -48,6 +54,8 @@ pub fn map_key(key: KeyEvent, prompt_non_empty: bool, streaming: bool) -> Action
         };
     }
     match key.code {
+        KeyCode::Up if !prompt_non_empty => Action::SelectPreviousTool,
+        KeyCode::Down if !prompt_non_empty => Action::SelectNextTool,
         KeyCode::Char('e') if !prompt_non_empty => Action::ToggleFold,
         KeyCode::Char('?') if !prompt_non_empty => Action::OpenCommandPalette,
         KeyCode::Enter if key.modifiers == KeyModifiers::NONE => {
@@ -204,6 +212,22 @@ mod tests {
         );
         assert_eq!(
             map_key(k(KeyCode::Char('e'), KeyModifiers::NONE), true, false),
+            Action::Noop
+        );
+    }
+
+    #[test]
+    fn arrows_select_tools_only_when_prompt_is_empty() {
+        assert_eq!(
+            map_key(k(KeyCode::Up, KeyModifiers::NONE), false, false),
+            Action::SelectPreviousTool
+        );
+        assert_eq!(
+            map_key(k(KeyCode::Down, KeyModifiers::NONE), false, false),
+            Action::SelectNextTool
+        );
+        assert_eq!(
+            map_key(k(KeyCode::Up, KeyModifiers::NONE), true, false),
             Action::Noop
         );
     }

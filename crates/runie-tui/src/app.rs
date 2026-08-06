@@ -416,15 +416,31 @@ impl App {
     /// activity-group fold behavior.
     pub async fn toggle_selected_tool_fold(&self) {
         let snapshot = self.scrollback_actor.snapshot();
-        if let Some(block) = snapshot.tool_blocks().last() {
+        let tool_call_id = snapshot.selected_tool_id().map(str::to_owned).or_else(|| {
+            snapshot
+                .tool_blocks()
+                .last()
+                .map(|block| block.tool_call_id.clone())
+        });
+        if let Some(tool_call_id) = tool_call_id {
             self.scrollback_actor
-                .apply(crate::widgets::ScrollbackMsg::ToggleToolMode(
-                    block.tool_call_id.clone(),
-                ))
+                .apply(crate::widgets::ScrollbackMsg::ToggleToolMode(tool_call_id))
                 .await;
         } else {
             self.toggle_activity_fold().await;
         }
+    }
+
+    pub async fn select_next_tool(&self) {
+        self.scrollback_actor
+            .apply(crate::widgets::ScrollbackMsg::SelectNextTool)
+            .await;
+    }
+
+    pub async fn select_previous_tool(&self) {
+        self.scrollback_actor
+            .apply(crate::widgets::ScrollbackMsg::SelectPreviousTool)
+            .await;
     }
 
     /// Apply a feed update through the actor that owns the rendered snapshot.

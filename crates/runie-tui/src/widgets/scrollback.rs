@@ -142,6 +142,8 @@ pub enum ScrollbackMsg {
     SetPromptTimestamp(Option<String>),
     SetToolMode(String, runie_core::types::ToolDisplayMode),
     ToggleToolMode(String),
+    SelectNextTool,
+    SelectPreviousTool,
     MarkToolError(String),
     ReplaceLine(usize, String),
     ReplaceLastByKind(LineKind, String),
@@ -182,6 +184,7 @@ pub struct Scrollback {
     tool_modes: HashMap<String, runie_core::types::ToolDisplayMode>,
     theme: ThemeKind,
     animation_frame: usize,
+    selected_tool_id: Option<String>,
 }
 
 /// Read-only typed projection of one Grok tool block. It is rebuilt from the
@@ -249,6 +252,7 @@ impl Scrollback {
             tool_modes: HashMap::new(),
             theme: ThemeKind::GrokNight,
             animation_frame: 0,
+            selected_tool_id: None,
         }
     }
 
@@ -292,6 +296,8 @@ impl Scrollback {
             ScrollbackMsg::SetPromptTimestamp(timestamp) => self.set_prompt_timestamp(timestamp),
             ScrollbackMsg::SetToolMode(id, mode) => self.set_tool_mode(id, mode),
             ScrollbackMsg::ToggleToolMode(id) => self.toggle_tool_mode(&id),
+            ScrollbackMsg::SelectNextTool => self.select_tool(1),
+            ScrollbackMsg::SelectPreviousTool => self.select_tool(-1),
             ScrollbackMsg::MarkToolError(id) => self.mark_tool_error(&id),
             ScrollbackMsg::ReplaceLine(index, text) => {
                 if let Some(line) = self.line_mut(index) {
@@ -612,6 +618,35 @@ impl Scrollback {
             }
         };
         self.set_tool_mode(tool_call_id, next);
+    }
+
+    pub fn selected_tool_id(&self) -> Option<&str> {
+        self.selected_tool_id.as_deref()
+    }
+
+    fn select_tool(&mut self, direction: i8) {
+        let ids = self
+            .tool_blocks()
+            .into_iter()
+            .map(|block| block.tool_call_id)
+            .collect::<Vec<_>>();
+        if ids.is_empty() {
+            self.selected_tool_id = None;
+            return;
+        }
+        let current = self
+            .selected_tool_id
+            .as_ref()
+            .and_then(|id| ids.iter().position(|candidate| candidate == id));
+        let next = match (current, direction) {
+            (None, 1) => 0,
+            (None, -1) => ids.len() - 1,
+            (Some(index), 1) => (index + 1) % ids.len(),
+            (Some(0), -1) => ids.len() - 1,
+            (Some(index), -1) => index - 1,
+            _ => 0,
+        };
+        self.selected_tool_id = Some(ids[next].clone());
     }
 
     /// Find the index of the first line whose `text` contains the needle.
@@ -1836,6 +1871,26 @@ mod tests {
             scrollback.tool_blocks()[0].mode,
             runie_core::types::ToolDisplayMode::Expanded
         );
+    }
+
+    #[test]
+    fn tool_selection_wraps_in_transcript_order() {
+        let mut scrollback = Scrollback::new();
+        for id in ["first", "second"] {
+            scrollback.apply(ScrollbackMsg::ToolStart {
+                tool_call_id: id.into(),
+                header: format!("Read {id}"),
+                activity: None,
+            });
+        }
+        scrollback.apply(ScrollbackMsg::SelectNextTool);
+        assert_eq!(scrollback.selected_tool_id(), Some("first"));
+        scrollback.apply(ScrollbackMsg::SelectNextTool);
+        assert_eq!(scrollback.selected_tool_id(), Some("second"));
+        scrollback.apply(ScrollbackMsg::SelectNextTool);
+        assert_eq!(scrollback.selected_tool_id(), Some("first"));
+        scrollback.apply(ScrollbackMsg::SelectPreviousTool);
+        assert_eq!(scrollback.selected_tool_id(), Some("second"));
     }
 
     #[test]
