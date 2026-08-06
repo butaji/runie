@@ -4,11 +4,13 @@
 //! dependency. Actors reduce events into these immutable values; renderers
 //! only consume them.
 
+mod events;
 mod feed;
 mod prompt;
 mod status;
 mod ui;
 
+pub use events::status_messages_for_event;
 pub use feed::{FeedSnapshot, Line, LineKind, ScrollbackMsg, ToolBlock, ToolCardKind};
 pub use prompt::{InputMode, PromptOutcome, PromptSnapshot};
 pub use status::{Status, StatusMsg, StatusSnapshot};
