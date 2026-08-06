@@ -140,6 +140,11 @@ actor; `visual-activity-mixed.yaml` asserts the resulting visible `⌄` marker f
   real event sequence, closing a previously visual-only workflow check without
   adding fixture-specific Rust code.
 
+- **Thinking-level event/state oracle (2026-08-06):** YAML now supports the
+  Pi `thinking_level_changed` control event and `state.thinking_level`, with
+  one parser for all serialized levels. `visual-status-working.yaml` exercises
+  the event-to-actor-state path without recompilation.
+
 The recurring actor ownership, event-kind classification, and TUI view-tree
 patterns are already covered by thin local macros (`spawn_actor_worker!`,
 `mailbox_*`, `agent_event_kind!`, `assistant_event_kind!`, and `view!`). A

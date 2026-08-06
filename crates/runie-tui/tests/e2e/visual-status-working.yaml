@@ -4,9 +4,11 @@ description: |
   terminal frame and Runie status are selected entirely from YAML.
 events:
   - start
+  - thinking_level: high
   - text_delta: "working"
 assertions:
   state:
+    thinking_level: high
     is_streaming: false
     pending_tool_calls: 0
     messages: 1

@@ -23,8 +23,8 @@ use runie_core::tools::executor::ToolExecHooks;
 use runie_core::tools::{ToolExecutorActor, ToolRegistry};
 use runie_core::types::{
     AgentContext, AgentEvent, AgentMessage, AgentTool, AgentToolResult, AssistantMessage,
-    AssistantMessageEvent, Model, SimpleStreamOptions, StopReason, ToolExecutionMode,
-    ToolResultContent, Usage, UserContent, UserMessage, WaitingReason,
+    AssistantMessageEvent, Model, SimpleStreamOptions, StopReason, ThinkingLevel,
+    ToolExecutionMode, ToolResultContent, Usage, UserContent, UserMessage, WaitingReason,
 };
 use serde::Deserialize;
 use tokio::sync::broadcast;
@@ -111,6 +111,9 @@ pub enum EventSpec {
     },
     Theme {
         theme: String,
+    },
+    ThinkingLevel {
+        thinking_level: String,
     },
     ToolMode {
         tool_mode: ToolModeSpec,
@@ -397,6 +400,7 @@ impl EventSpec {
             }),
             Self::Waiting { .. } => None,
             Self::Theme { .. } => None,
+            Self::ThinkingLevel { .. } => None,
             Self::ToolMode { .. } => None,
             Self::ToolFold { .. } => None,
             Self::ToolSelect { .. } => None,
@@ -423,6 +427,9 @@ impl EventSpec {
             }),
             Self::Theme { theme } => Some(AgentEvent::ThemeChanged {
                 theme: parse_theme(theme),
+            }),
+            Self::ThinkingLevel { thinking_level } => Some(AgentEvent::ThinkingLevelChanged {
+                level: parse_thinking_level(thinking_level),
             }),
             Self::ToolMode { tool_mode } => Some(AgentEvent::ToolDisplayModeChanged {
                 tool_call_id: tool_mode.tool_call_id.clone(),
@@ -498,6 +505,18 @@ fn parse_theme(theme: &str) -> runie_core::types::ThemeKind {
     }
 }
 
+fn parse_thinking_level(level: &str) -> ThinkingLevel {
+    match level.to_ascii_lowercase().as_str() {
+        "minimal" => ThinkingLevel::Minimal,
+        "low" => ThinkingLevel::Low,
+        "medium" => ThinkingLevel::Medium,
+        "high" => ThinkingLevel::High,
+        "xhigh" | "x-high" => ThinkingLevel::XHigh,
+        "max" => ThinkingLevel::Max,
+        _ => ThinkingLevel::Off,
+    }
+}
+
 #[derive(Debug, Deserialize, Default)]
 pub struct Assertions {
     #[serde(default)]
@@ -541,6 +560,7 @@ pub struct StateAssertions {
     pub selected_tool_id: Option<String>,
     pub selected_entry: Option<usize>,
     pub scroll_offset: Option<usize>,
+    pub thinking_level: Option<ThinkingLevel>,
     /// Exact actor-owned workflow projections keyed by their stable run id.
     /// YAML owns the expected state; the runner only performs generic field
     /// comparison so workflow fixtures stay recompilation-free.
@@ -1262,6 +1282,14 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
             return Err(format!(
                 "state is_streaming mismatch: expected {value}, got {}",
                 actual.is_streaming
+            ));
+        }
+    }
+    if let Some(value) = expected.thinking_level {
+        if actual.thinking_level != value {
+            return Err(format!(
+                "state thinking_level mismatch: expected {value:?}, got {:?}",
+                actual.thinking_level
             ));
         }
     }
