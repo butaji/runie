@@ -298,3 +298,8 @@ because it would conceal ownership and make YAML event assertions impossible.
   legacy access from an actor renderer fails loudly instead of silently
   creating a second source of truth. The compatibility adapter itself remains
   pending removal after synchronous replay is fully actorized.
+
+- **UI command consumer cutover (2026-08-06):** The live binary now consumes
+  `UiCommand` events emitted by `UiActor` for palette activation. It no longer
+  dispatches session actions by rereading `UiState.last_palette_command`;
+  command execution follows the actor event boundary.

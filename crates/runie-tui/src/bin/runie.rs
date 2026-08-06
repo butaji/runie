@@ -31,7 +31,7 @@ use runie_core::types::{
     AgentContext, AgentMessage, Model, QueueMode, SimpleStreamOptions, ToolExecutionMode,
 };
 
-use runie_tui::app::{App, AppExit};
+use runie_tui::app::{App, AppExit, UiCommand};
 use runie_tui::key::{is_quit_command, map_key, Action};
 use runie_tui::widgets::{PromptOutcome, Status};
 
@@ -294,6 +294,7 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
     };
     let actor = LoopActor::new(deps);
     let app = App::new(actor, bus.clone());
+    let mut ui_commands = app.subscribe_ui_commands();
     app.refresh_model_caption().await;
     app.prompt
         .set_model_caption("Grok 4.5 (high) · always-approve".into())
@@ -397,14 +398,18 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
                                         .await;
                                     }
                                     KeyCode::Enter => {
-                                        match app.activate_command_palette().await.as_deref() {
-                                            Some("New Session") => {
+                                        app.activate_command_palette().await;
+                                        match ui_commands.recv().await {
+                                            Ok(UiCommand::ActivatePaletteEntry(command))
+                                                if command == "New Session" => {
                                                 app.bus.publish(runie_core::types::AgentEvent::Reset);
                                             }
-                                            Some("Keyboard Shortcuts") => {
+                                            Ok(UiCommand::ActivatePaletteEntry(command))
+                                                if command == "Keyboard Shortcuts" => {
                                                 app.toggle_shortcuts().await;
                                             }
-                                            Some("Quit") => {
+                                            Ok(UiCommand::ActivatePaletteEntry(command))
+                                                if command == "Quit" => {
                                                 let _ = renderer_shutdown.send(true);
                                                 let _ = renderer_handle.await;
                                                 return Ok(AppExit::Quit);
