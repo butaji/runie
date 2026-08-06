@@ -192,7 +192,10 @@ pub fn project_tool_card_rows(
             .map(String::as_str)
             .unwrap_or(&line.text);
         let row_kind = match line.kind {
-            LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError => ToolCardRowKind::Header,
+            LineKind::Tool | LineKind::ToolRunning if !line.text.trim_end().ends_with('✗') => {
+                ToolCardRowKind::Header
+            }
+            LineKind::ToolError | LineKind::Tool => ToolCardRowKind::Status,
             LineKind::ToolOutput | LineKind::ToolResult => ToolCardRowKind::Content,
             _ => continue,
         };
@@ -433,6 +436,7 @@ mod tests {
         assert_eq!(rows[0].row_kind, ToolCardRowKind::Header);
         assert_eq!(rows[1].row_kind, ToolCardRowKind::Content);
         assert!(rows[2].is_error);
+        assert_eq!(rows[2].row_kind, ToolCardRowKind::Status);
     }
 
     #[test]

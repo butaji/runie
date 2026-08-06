@@ -422,10 +422,10 @@ The legacy `EventRenderer::new` / `with_welcome` constructors are now
 `with_actors`, making accidental reintroduction of mutable widget state a
 compile-time failure rather than a convention.
 
-Error-row transition audit (2026-08-06): a focused attempt to classify
-`ToolError` as a renderer-neutral `Status` row exposed an event-order gap in
-the YAML replay seam: the terminal error header is observed before the
-follow-up error-state transition, and adding an unacknowledged second replay
-step perturbs the search-tools scenario. The semantic row remains `Header`
-until completion and error state can be carried in one acknowledged actor
-batch; no fixture was weakened.
+Error-row transition closure (2026-08-06): the actor-owned terminal error
+header already carries Grok's explicit `✗` marker even when the compatibility
+`MarkToolError` follow-up is not observable in the replay snapshot. The pure
+card-row projection now classifies that terminal marker as `Status` without
+adding a second replay command or changing event timing. `visual-tool-error`
+asserts the status row through the YAML oracle, and the search-tools replay
+remains green.
