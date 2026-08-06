@@ -192,11 +192,14 @@ impl StreamFn for PlaceholderStream {
                 delta: "briefly considering the request".into(),
             },
             AssistantMessageEvent::TextDelta {
-                delta: "Hey — what would you like to work on in the runie repo?".into(),
+                delta: "Hey — what are you working on? I can help with the runie codebase, the parity audit work in progress, or anything else you need.".into(),
             },
             AssistantMessageEvent::Done {
                 stop_reason: StopReason::Stop,
-                usage: Usage::default(),
+                usage: Usage {
+                    total_tokens: 15_000,
+                    ..Usage::default()
+                },
                 message: None,
             },
         ];

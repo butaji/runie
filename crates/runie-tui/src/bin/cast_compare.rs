@@ -186,8 +186,8 @@ fn main() -> Result<()> {
         let (right_geometry, right_frames) =
             replay_frames(Path::new(&right), phase_marker.as_deref())?;
         let compared = left_frames.len().min(right_frames.len());
-        let first_difference = (0..compared)
-            .find_map(|frame| (left_frames[frame] != right_frames[frame]).then_some(frame));
+        let first_difference =
+            (0..compared).find(|&frame| left_frames[frame] != right_frames[frame]);
         let first_cell_difference = first_difference.and_then(|frame| {
             left_frames[frame]
                 .iter()

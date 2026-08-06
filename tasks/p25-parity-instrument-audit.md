@@ -92,6 +92,13 @@ The same indexed probe across the four saved matrix geometries reports:
 
 The mismatch is therefore capture-phase-wide, not a single viewport defect.
 
+The live binary's deterministic placeholder provider now uses the recorded
+Grok `Hey` answer text and a `15K` total-token `Done` usage payload. These
+values flow through the normal provider/core event path; the renderer does not
+special-case the text or mutate status state. This removes provider-content
+and usage nondeterminism from the controlled parity scenario, leaving timing,
+timestamps, wrapping, and footer style as independently measurable deltas.
+
 ## Review findings
 
 ### Fresh 62×32 paired capture — 2026-08-05
