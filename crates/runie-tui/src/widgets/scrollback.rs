@@ -173,9 +173,10 @@ pub struct Scrollback {
     revealed_dense_groups: HashSet<String>,
     center_revealed_entry: bool,
     tool_names: HashMap<String, String>,
-    /// Reducer-owned live header identity. This is deliberately separate from
-    /// the provider call ID because replay compatibility rows may reuse it.
-    live_tool_headers: HashMap<String, usize>,
+    /// Provider IDs are lookup keys only; mutations target the opaque row
+    /// token stored on the corresponding line.
+    live_tool_rows: HashMap<String, u64>,
+    next_tool_row_id: u64,
     theme: ThemeKind,
     animation_frame: usize,
     selected_tool_id: Option<String>,
@@ -199,7 +200,8 @@ impl Scrollback {
             revealed_dense_groups: HashSet::new(),
             center_revealed_entry: false,
             tool_names: HashMap::new(),
-            live_tool_headers: HashMap::new(),
+            live_tool_rows: HashMap::new(),
+            next_tool_row_id: 0,
             theme: ThemeKind::GrokNight,
             animation_frame: 0,
             selected_tool_id: None,
@@ -289,23 +291,14 @@ impl Scrollback {
                 } else {
                     LineKind::Tool
                 };
-                self.append(Line::new(kind, header).for_tool(tool_call_id.clone()));
-                if let Some(index) =
-                    self.lines
-                        .iter()
-                        .enumerate()
-                        .rev()
-                        .find_map(|(index, line)| {
-                            (line.tool_call_id.as_deref() == Some(tool_call_id.as_str())
-                                && matches!(
-                                    line.kind,
-                                    LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
-                                ))
-                            .then_some(index)
-                        })
-                {
-                    self.live_tool_headers.insert(tool_call_id, index);
-                }
+                let row_id = self.next_tool_row_id;
+                self.next_tool_row_id = self.next_tool_row_id.wrapping_add(1);
+                self.append(
+                    Line::new(kind, header)
+                        .for_tool(tool_call_id.clone())
+                        .for_tool_row(row_id),
+                );
+                self.live_tool_rows.insert(tool_call_id, row_id);
             }
             ScrollbackMsg::ToolUpdate {
                 tool_call_id,
@@ -326,7 +319,7 @@ impl Scrollback {
                 output,
             } => {
                 self.finish_tool_by_id(&tool_call_id, header);
-                self.live_tool_headers.remove(&tool_call_id);
+                self.live_tool_rows.remove(&tool_call_id);
                 if self
                     .tool_names
                     .get(&tool_call_id)
@@ -483,6 +476,7 @@ impl Scrollback {
                             .unwrap_or(runie_core::types::ToolDisplayMode::Expanded),
                         is_running: line.kind == LineKind::ToolRunning,
                         is_error: line.kind == LineKind::ToolError,
+                        tool_row_id: line.tool_row_id,
                     });
                 }
                 continue;
@@ -546,14 +540,15 @@ impl Scrollback {
     }
 
     fn live_header_mut(&mut self, tool_call_id: &str) -> Option<&mut Line> {
-        let index = *self.live_tool_headers.get(tool_call_id)?;
-        let line = self.lines.get_mut(index)?;
-        (line.tool_call_id.as_deref() == Some(tool_call_id)
-            && matches!(
-                line.kind,
-                LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
-            ))
-        .then_some(line)
+        let row_id = *self.live_tool_rows.get(tool_call_id)?;
+        self.lines.iter_mut().find(|line| {
+            line.tool_row_id == Some(row_id)
+                && line.tool_call_id.as_deref() == Some(tool_call_id)
+                && matches!(
+                    line.kind,
+                    LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
+                )
+        })
     }
 
     fn mark_tool_error(&mut self, tool_call_id: &str) {
@@ -597,7 +592,8 @@ impl Scrollback {
         self.lines.clear();
         self.tool_names.clear();
         self.tool_modes.clear();
-        self.live_tool_headers.clear();
+        self.live_tool_rows.clear();
+        self.next_tool_row_id = 0;
         self.workflow_headers.clear();
         self.workflow_phases.clear();
         self.revealed_dense_groups.clear();
@@ -2523,6 +2519,8 @@ mod tests {
             .map(|line| line.text.as_str())
             .collect::<Vec<_>>();
         assert_eq!(headers, vec!["seed header", "live done"]);
+        assert_eq!(scrollback.lines()[0].tool_row_id, None);
+        assert!(scrollback.lines()[1].tool_row_id.is_some());
         assert!(scrollback
             .lines()
             .iter()

@@ -64,9 +64,10 @@ with the same provider call ID from receiving a live completion. The
 `visual-tool-row-identity.yaml` fixture covers the duplicate-ID sequence and
 asserts both rows through the YAML state/transcript contract.
 
-This is an intermediate seam, not the final opaque row-token design: the
-identity is currently reducer-private and still keyed by provider call ID at
-the message boundary.
+The opaque token is now stored on the renderer-independent `Line` and
+projected through `ToolBlock`; compatibility rows have no token. Provider call
+IDs remain only the external event lookup key at the actor boundary, while
+the reducer mutation itself validates the token-bearing semantic header.
 
 ## Evidence
 

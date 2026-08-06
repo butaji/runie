@@ -28,6 +28,9 @@ pub struct Line {
     pub kind: LineKind,
     pub text: String,
     pub tool_call_id: Option<String>,
+    /// Opaque reducer identity for a live tool header. Compatibility-seeded
+    /// rows intentionally leave this unset.
+    pub tool_row_id: Option<u64>,
     has_vpad: bool,
 }
 
@@ -60,6 +63,8 @@ pub struct ToolBlock {
     pub mode: ToolDisplayMode,
     pub is_running: bool,
     pub is_error: bool,
+    /// Identity of the live header when this projection originates from one.
+    pub tool_row_id: Option<u64>,
 }
 
 /// Grok's specialized tool-card families supported by pi-core tool events.
@@ -161,6 +166,7 @@ impl Line {
             kind,
             text: text.into(),
             tool_call_id: None,
+            tool_row_id: None,
             has_vpad: false,
         }
     }
@@ -176,6 +182,11 @@ impl Line {
 
     pub fn for_tool(mut self, tool_call_id: impl Into<String>) -> Self {
         self.tool_call_id = Some(tool_call_id.into());
+        self
+    }
+
+    pub fn for_tool_row(mut self, row_id: u64) -> Self {
+        self.tool_row_id = Some(row_id);
         self
     }
 }
