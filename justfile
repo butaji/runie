@@ -41,6 +41,10 @@ test-tui:
 parity-check:
     python3 scripts/validate-parity-index.py
 
+# Validate the checked-in counts for the source-backed Pi/Grok inventory.
+source-inventory-check:
+    python3 scripts/validate-source-inventory.py
+
 # Run YAML e2e scenarios from crates/runie-tui/tests/e2e/*.yaml.
 # Add or edit YAML files freely — no rebuild required.
 e2e:
@@ -96,5 +100,5 @@ lint:
     cargo run -p lint-check
 
 # Full sweep: fmt-check + clippy + lint + test + parity manifest.
-ci: fmt-check clippy lint test parity-check
+ci: fmt-check clippy lint test parity-check source-inventory-check
     @echo "all green"
