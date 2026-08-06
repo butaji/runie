@@ -5,6 +5,7 @@ context:
   system_prompt: "You are a precise assistant."
   messages:
     - "prior context"
+  disable_tools: true
 events:
   - start
   - text_delta: "continued"
@@ -13,4 +14,5 @@ assertions:
   state:
     system_prompt_contains: "precise assistant"
     messages: 3
+    tool_count: 0
     is_streaming: false

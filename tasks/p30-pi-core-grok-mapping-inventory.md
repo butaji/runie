@@ -10,6 +10,10 @@ falls back to the registered executor tools when the context omits tools.
 This matches Pi's optional `AgentContext.tools` contract and prevents the
 registry from silently replacing a per-run tool set.
 
+The distinction is now explicit in Rust as `None` versus `Some(empty)`, with
+`context-state.yaml` exercising the explicit-empty path through the
+no-recompile YAML runner.
+
 Re-ran `scripts/source-inventory.sh` against the authoritative checkouts. The
 counts remain exact: Pi agent 37 files, Pi AI 169 files, Grok pager 496 files,
 and Grok pager-render 68 files. The inventory is therefore current; green

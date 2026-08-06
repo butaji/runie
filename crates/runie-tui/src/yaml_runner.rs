@@ -61,6 +61,9 @@ pub struct ContextSpec {
     pub system_prompt: String,
     #[serde(default)]
     pub messages: Vec<String>,
+    /// Explicit Pi-style empty tool set; omission keeps registered defaults.
+    #[serde(default)]
+    pub disable_tools: bool,
 }
 
 impl Scenario {
@@ -80,7 +83,7 @@ impl Scenario {
                 .collect(),
             // Omitted in YAML: let the scenario's registered executor tools
             // supply the Pi-compatible default.
-            tools: None,
+            tools: self.context.disable_tools.then_some(Vec::new()),
         }
     }
 }
