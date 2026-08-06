@@ -33,6 +33,11 @@ called parity.
    known full-mode spacing/resize differences. This keeps the two evidence
    classes separate instead of treating a narrow YAML pass as global parity.
 
+6. A full-mode spacing experiment was rejected by the instruments: it reduced
+   several legacy snapshot diffs but moved the locked `grok-rich.cast` activity
+   frame and broke the narrow turn-summary gutter unit test. The source remains
+   unchanged, and the 111-test unit gate plus YAML replay gate are green again.
+
 ## Status
 
 In progress. Full-cell dumps, row diagnostics, and phase-locked frame
