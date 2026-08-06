@@ -25,6 +25,8 @@ green = "#9ece6a"
 red = "#f7768e"
 selection = "#1c1c1c"
 panel = "#242424"
+diff_delete = "#420e14"
+diff_insert = "#063806"
 selection_border = "#3c3c41"
 
 [tokens]
@@ -38,6 +40,8 @@ error = "red"
 warning = "yellow"
 "bg.base" = "bg"
 "bg.panel" = "panel"
+"bg.diff_delete" = "diff_delete"
+"bg.diff_insert" = "diff_insert"
 "bg.selection" = "selection"
 "border.selection" = "selection_border"
 
@@ -63,6 +67,8 @@ green = "#378e23"
 red = "#cd3048"
 selection = "#e4e4e4"
 panel = "#dedede"
+diff_delete = "#f5dade"
+diff_insert = "#daf2dc"
 selection_border = "#b9b9be"
 
 [tokens]
@@ -76,6 +82,8 @@ error = "red"
 warning = "yellow"
 "bg.base" = "bg"
 "bg.panel" = "panel"
+"bg.diff_delete" = "diff_delete"
+"bg.diff_insert" = "diff_insert"
 "bg.selection" = "selection"
 "border.selection" = "selection_border"
 
@@ -110,6 +118,14 @@ pub fn user_style_for(theme: ThemeKind) -> Style {
     Style::default()
         .fg(token_color(theme, "text.primary"))
         .bg(token_color(theme, "bg.panel"))
+}
+
+pub fn diff_insert_style_for(theme: ThemeKind) -> Style {
+    success_style_for(theme).bg(token_color(theme, "bg.diff_insert"))
+}
+
+pub fn diff_delete_style_for(theme: ThemeKind) -> Style {
+    error_style_for(theme).bg(token_color(theme, "bg.diff_delete"))
 }
 
 pub fn muted_style_for(theme: ThemeKind) -> Style {

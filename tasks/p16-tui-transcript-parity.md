@@ -412,3 +412,8 @@ follow anchor on the first prompt after `session_start` as well as later turns,
 so a submitted input is pinned at the top while the response streams. The YAML
 snapshot harness explicitly disables that live viewport mode after replay to
 keep settled/cast phases deterministic.
+
+Edit-card diff parity (2026-08-06): added Opaline-backed GrokNight/GrokDay
+insert/delete background tokens (`#063806`/`#420e14` and
+`#daf2dc`/`#f5dade`). Diff rows now paint semantic foreground and full-row
+background, with renderer tests covering both light-theme colors.

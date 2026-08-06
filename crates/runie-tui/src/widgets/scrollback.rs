@@ -879,6 +879,20 @@ impl Scrollback {
                     }
                 }
             }
+            if matches!(*kind, LineKind::ToolOutput | LineKind::ToolResult)
+                && (text.starts_with('+') || text.starts_with('-'))
+            {
+                let diff_style = if text.starts_with('+') {
+                    appearance::diff_insert_style_for(self.theme)
+                } else {
+                    appearance::diff_delete_style_for(self.theme)
+                };
+                for column in area.x..area.x.saturating_add(area.width) {
+                    if let Some(cell) = buf.cell_mut((column, area.y + row as u16)) {
+                        cell.set_style(cell.style().patch(diff_style));
+                    }
+                }
+            }
             if selected_row {
                 let selected_style = appearance::selected_style_for(self.theme);
                 for column in area.x..area.x.saturating_add(area.width) {
@@ -1337,9 +1351,9 @@ fn styled_line_for(kind: LineKind, text: &str, theme: ThemeKind) -> RatLine<'sta
     }
     if matches!(kind, LineKind::ToolOutput | LineKind::ToolResult) {
         let diff_style = if text.starts_with('+') && !text.starts_with("+++") {
-            Some(appearance::success_style_for(theme))
+            Some(appearance::diff_insert_style_for(theme))
         } else if text.starts_with('-') && !text.starts_with("---") {
-            Some(appearance::error_style_for(theme))
+            Some(appearance::diff_delete_style_for(theme))
         } else if text.starts_with("@@") {
             Some(appearance::accent_style_for(theme))
         } else {
@@ -1781,10 +1795,12 @@ mod tests {
             inserted.style.fg,
             appearance::success_style_for(ThemeKind::GrokDay).fg
         );
+        assert_eq!(inserted.style.bg, Some(Color::Rgb(218, 242, 220)));
         assert_eq!(
             deleted.style.fg,
             appearance::error_style_for(ThemeKind::GrokDay).fg
         );
+        assert_eq!(deleted.style.bg, Some(Color::Rgb(245, 218, 222)));
         assert_eq!(
             hunk.style.fg,
             appearance::accent_style_for(ThemeKind::GrokDay).fg
