@@ -120,6 +120,11 @@ The TUI is organized as a browser-like pipeline:
 `ViewDocument` is the explicit composition boundary: tests can assert the
 “what” tree and ownership independently from “how” a backend paints it.
 
+The live `App::render` path now consumes `FeedSnapshot` and creates a
+renderer-local `Scrollback` adapter only at the terminal boundary. It no
+longer reads the actor's compatibility widget snapshot as a source of truth;
+the adapter round-trip is covered by a focused reducer test.
+
 ## Target workspace
 
 ```text

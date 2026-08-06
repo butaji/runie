@@ -187,6 +187,32 @@ pub struct Scrollback {
 }
 
 impl Scrollback {
+    /// Build the terminal compatibility adapter from the actor-owned,
+    /// renderer-independent projection. This is the only direction allowed
+    /// across the model-to-widget boundary.
+    pub fn from_model_snapshot(snapshot: FeedSnapshot) -> Self {
+        let mut scrollback = Self::new();
+        scrollback.lines = snapshot.lines;
+        scrollback.scroll_offset = snapshot.scroll_offset;
+        scrollback.reasoning_expanded = snapshot.reasoning_expanded;
+        scrollback.activity_expanded = snapshot.activity_expanded;
+        scrollback.prompt_timestamp = snapshot.prompt_timestamp;
+        scrollback.follow_latest_user = snapshot.follow_latest_user;
+        scrollback.theme = snapshot.theme;
+        scrollback.animation_frame = snapshot.animation_frame;
+        scrollback.selected_tool_id = snapshot.selected_tool_id;
+        scrollback.selected_entry = snapshot.selected_entry;
+        scrollback.tool_modes = snapshot.tool_modes;
+        for line in &scrollback.lines {
+            if let (Some(call_id), Some(row_id)) = (line.tool_call_id.as_ref(), line.tool_row_id) {
+                scrollback.live_tool_rows.insert(call_id.clone(), row_id);
+                scrollback.next_tool_row_id =
+                    scrollback.next_tool_row_id.max(row_id.saturating_add(1));
+            }
+        }
+        scrollback
+    }
+
     pub fn new() -> Self {
         Self {
             lines: Vec::new(),
@@ -1969,6 +1995,21 @@ mod tests {
         let mut s = Scrollback::new();
         s.append(Line::new(LineKind::User, "hi"));
         assert_eq!(s.len(), 1);
+    }
+
+    #[test]
+    fn renderer_adapter_rehydrates_only_from_feed_snapshot() {
+        let mut source = Scrollback::new();
+        source.apply(ScrollbackMsg::ToolStart {
+            tool_call_id: "call-1".into(),
+            header: "Run cargo test".into(),
+            activity: None,
+        });
+        let snapshot = source.model_snapshot();
+        let adapted = Scrollback::from_model_snapshot(snapshot.clone());
+        assert_eq!(adapted.model_snapshot().lines, snapshot.lines);
+        assert_eq!(adapted.model_snapshot().tool_modes, snapshot.tool_modes);
+        assert_eq!(adapted.lines()[0].tool_row_id, Some(0));
     }
 
     #[test]
