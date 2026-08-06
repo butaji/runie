@@ -1131,13 +1131,12 @@ impl Scrollback {
             if self.activity_expanded {
                 if let Some(tool_id) = line.tool_call_id.as_deref() {
                     if let Some((member_index, group_size)) = dense_groups.get(tool_id) {
-                        if *group_size > GROK_GROUP_MAX_VISIBLE
-                            && *member_index >= GROK_GROUP_MAX_VISIBLE
-                        {
+                        let hidden = group_size.saturating_sub(GROK_GROUP_MAX_VISIBLE);
+                        if hidden > 0 && *member_index < hidden {
                             if emitted_dense_headers.insert(tool_id.to_owned()) {
                                 rows.push((
                                     LineKind::Activity,
-                                    format!("╶╶ {} more", group_size - GROK_GROUP_MAX_VISIBLE),
+                                    format!("╶╶ {} more", hidden.saturating_sub(1)),
                                     false,
                                 ));
                             }

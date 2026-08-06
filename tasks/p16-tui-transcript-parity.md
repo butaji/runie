@@ -471,7 +471,7 @@ YAML trace with a group break is required before changing this projection.
 
 Dense-group projection (2026-08-06): Runie now groups unique consecutive tool
 members in the actor-owned scrollback projection, preserves non-tool breaks,
-renders the first ten members, and emits a semantic `╶╶ N more` row for hidden
-members. The 12-member YAML oracle covers the threshold path; small groups and
-the existing full visual suite remain green. Explicit reveal/navigation of the
-hidden members is still open.
+keeps the newest ten members, and emits a semantic `╶╶ N more` row for the
+hidden prefix. The 12-member YAML oracle covers the threshold path; small
+groups and the existing full visual suite remain green. Explicit
+reveal/navigation of the hidden members is still open.

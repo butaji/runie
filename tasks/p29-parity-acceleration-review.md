@@ -99,12 +99,12 @@ the discovery/replay harness and establishes the event data needed to add
 Grok's ten-member `N more` projection without conflating group boundaries.
 
 Projection progress (2026-08-06): the scrollback view now applies the named
-ten-member budget to consecutive unique tool ids, hides member output with its
-member, and emits `╶╶ N more`. The existing oracle was expanded to a 12-member
-single-group threshold case, while the assistant-break trace remains the
-boundary oracle. Full workspace tests pass. The next missing datum is Grok's
-exact reveal interaction and whether the hidden count is navigable as one
-header or individual members.
+ten-member budget to consecutive unique tool ids, hides the oldest member
+output with its member, keeps the newest ten, and emits `╶╶ N more`. The
+12-member single-group oracle now checks that source-backed shape; existing
+mixed-activity coverage remains the boundary oracle. Full workspace tests pass.
+The next missing datum is Grok's exact reveal interaction and whether the
+hidden count is navigable as one header or individual members.
 
 ## Success metric
 
