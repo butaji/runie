@@ -70,6 +70,12 @@ called parity.
   126 to 50 glyph differences. Remaining differences are dynamic timestamp,
   thought/worked elapsed values, and semantic color-role cells; no exact claim
   is made until those inputs are matched.
+- **Frozen thinking clock (2026-08-06):** Added `RUNIE_PARITY_THINKING_MS` to
+  the existing clock boundary. A fresh Grok frame's `0.8s` thought duration and
+  `2.8s` worked duration can now enter the placeholder provider event
+  deterministically. With timestamp, elapsed ticks, and thinking duration
+  frozen together, the paired 80×24 diagnostic reduced glyph differences to 12
+  before remaining semantic color-role differences.
 - **Verification boundary (2026-08-06):** A fresh 62×32 comparison after the
   live placement fix reduced the mismatch from 144 glyph cells to 22 cells
   with the plain captured response, and the row-placement/terminal-color

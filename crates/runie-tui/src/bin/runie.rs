@@ -146,7 +146,7 @@ fn render_header(area: Rect, buf: &mut Buffer, meter: &str, theme: runie_core::t
     let left = ratatui::widgets::Paragraph::new(ratatui::text::Line::from(vec![
         ratatui::text::Span::styled(
             format!(" {}", current_branch()),
-            runie_tui::appearance::muted_style_for(theme),
+            runie_tui::appearance::base_style_for(theme),
         ),
         ratatui::text::Span::styled(
             format!(" {}", repository_label()),
@@ -216,7 +216,7 @@ impl StreamFn for PlaceholderStream {
             AssistantMessageEvent::ThinkingEnd {
                 index: 1,
                 content: "briefly considering the request".into(),
-                elapsed_ms: Some(200),
+                elapsed_ms: Some(runie_tui::clock::parity_thinking_elapsed_ms().unwrap_or(200)),
                 partial: AssistantMessage::default(),
             },
             AssistantMessageEvent::TextDelta {
@@ -345,6 +345,7 @@ async fn run_app(
         }
         let theme = status.theme();
         let mut scrollback = Scrollback::from_model_snapshot(document.props.feed.clone());
+        scrollback.set_live_grok_layout(true);
         scrollback.set_theme(theme);
         scrollback.remove_kind(runie_tui::widgets::LineKind::SessionStart);
         scrollback.normalize_live_completed_assistants();
@@ -605,6 +606,7 @@ async fn run_app(
                         }
                         let theme = status.theme();
                         let mut scrollback = Scrollback::from_model_snapshot(document.props.feed.clone());
+                        scrollback.set_live_grok_layout(true);
                         scrollback.set_theme(theme);
                         scrollback.remove_kind(runie_tui::widgets::LineKind::SessionStart);
                         scrollback.normalize_live_completed_assistants();

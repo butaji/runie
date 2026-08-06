@@ -184,6 +184,7 @@ pub struct Scrollback {
     activity_expanded: bool,
     prompt_timestamp: Option<String>,
     settled_no_tool_phase: bool,
+    live_grok_layout: bool,
     tool_modes: HashMap<String, runie_core::types::ToolDisplayMode>,
     revealed_dense_groups: HashSet<String>,
     center_revealed_entry: bool,
@@ -239,6 +240,7 @@ impl Scrollback {
             activity_expanded: false,
             prompt_timestamp: None,
             settled_no_tool_phase: false,
+            live_grok_layout: false,
             tool_modes: HashMap::new(),
             revealed_dense_groups: HashSet::new(),
             center_revealed_entry: false,
@@ -774,6 +776,12 @@ impl Scrollback {
 
     pub fn set_prompt_timestamp(&mut self, timestamp: Option<String>) {
         self.prompt_timestamp = timestamp;
+    }
+
+    /// Select the production live adapter's Grok gutter geometry. Replay
+    /// fixtures retain the historical wider compatibility gutter.
+    pub fn set_live_grok_layout(&mut self, enabled: bool) {
+        self.live_grok_layout = enabled;
     }
 
     pub fn activity_expanded(&self) -> bool {
@@ -1437,7 +1445,7 @@ impl Scrollback {
             let parts: Vec<_> = source.split('\n').collect();
             for (index, part) in parts.iter().enumerate() {
                 let prefix = if line.kind == LineKind::TurnSummary && width >= 50 {
-                    if width < 70 {
+                    if width < 70 || self.live_grok_layout {
                         "   "
                     } else {
                         "     "

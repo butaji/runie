@@ -4,6 +4,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 const PARITY_TIMESTAMP_ENV: &str = "RUNIE_PARITY_TIMESTAMP";
 const PARITY_ELAPSED_TICKS_ENV: &str = "RUNIE_PARITY_ELAPSED_TICKS";
+const PARITY_THINKING_MS_ENV: &str = "RUNIE_PARITY_THINKING_MS";
 const PARITY_CLOCK_ENV: &str = "RUNIE_PARITY_CLOCK";
 const MILLIS_PER_SECOND: u128 = 1_000;
 
@@ -33,6 +34,13 @@ pub fn parity_elapsed_ticks() -> Option<u64> {
     configured_elapsed_ticks(std::env::var(PARITY_ELAPSED_TICKS_ENV).ok())
 }
 
+/// Optional deterministic thinking duration for provider replay/capture
+/// adapters. The value enters the assistant stream event at the boundary;
+/// reducers and views remain unaware of the environment variable.
+pub fn parity_thinking_elapsed_ms() -> Option<u64> {
+    configured_thinking_elapsed_ms(std::env::var(PARITY_THINKING_MS_ENV).ok())
+}
+
 fn parity_clock() -> Option<(i64, u64)> {
     let value = std::env::var(PARITY_CLOCK_ENV).ok()?;
     let (timestamp, elapsed_ticks) = value.split_once(',')?;
@@ -47,9 +55,13 @@ fn configured_elapsed_ticks(value: Option<String>) -> Option<u64> {
     value.and_then(|value| value.parse::<u64>().ok())
 }
 
+fn configured_thinking_elapsed_ms(value: Option<String>) -> Option<u64> {
+    value.and_then(|value| value.parse::<u64>().ok())
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{configured_elapsed_ticks, configured_timestamp};
+    use super::{configured_elapsed_ticks, configured_thinking_elapsed_ms, configured_timestamp};
 
     #[test]
     fn parity_timestamp_accepts_only_complete_unix_values() {
@@ -68,5 +80,17 @@ mod tests {
         assert_eq!(configured_elapsed_ticks(Some("38".into())), Some(38));
         assert_eq!(configured_elapsed_ticks(Some("-1".into())), None);
         assert_eq!(configured_elapsed_ticks(None), None);
+    }
+
+    #[test]
+    fn parity_thinking_duration_is_optional_and_numeric() {
+        assert_eq!(
+            configured_thinking_elapsed_ms(Some("800".into())),
+            Some(800)
+        );
+        assert_eq!(
+            configured_thinking_elapsed_ms(Some("not-a-duration".into())),
+            None
+        );
     }
 }
