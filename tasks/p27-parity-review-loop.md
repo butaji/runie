@@ -35,6 +35,11 @@ unverified full-screen frame or core event family remains open.
 - TUI attribute gate: open. `grok-rich.cast` has terminal-default SGR; a
   temporary `exact_attributes: true` promotion produced 518 differences.
   Fresh truecolor captures are required before claiming color parity.
+- Fresh local capture check (2026-08-06): both default and explicit
+  `--fullscreen --always-approve` Grok captures through the tmux harness still
+  emitted only default/SGR-1/SGR-2 styling, with no RGB SGR sequences. This
+  confirms the missing color oracle is a Grok capture/configuration issue, not
+  a comparator omission; the raw artifacts are in `/tmp/` for inspection.
 - Architecture gate: production status/scrollback projections are actor-owned
   watch snapshots; declarative view/render separation and legacy adapter
   removal remain open under p23/p26.
