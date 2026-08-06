@@ -344,6 +344,7 @@ pub struct StateAssertions {
     pub tool_outputs: Option<Vec<Vec<String>>>,
     pub tool_kinds: Option<Vec<crate::widgets::ToolCardKind>>,
     pub selected_tool_id: Option<String>,
+    pub selected_entry: Option<usize>,
 }
 
 #[derive(Debug, Deserialize, Default, Clone)]
@@ -674,6 +675,7 @@ pub struct ScenarioOutcome {
     pub scrollback: Vec<Line>,
     pub tool_blocks: Vec<ToolBlock>,
     pub selected_tool_id: Option<String>,
+    pub selected_entry: Option<usize>,
     pub state: runie_core::state::AgentStateSnapshot,
 }
 
@@ -703,6 +705,7 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
         scrollback: scrollback.lines().to_vec(),
         tool_blocks: scrollback.tool_blocks(),
         selected_tool_id: scrollback.selected_tool_id().map(str::to_owned),
+        selected_entry: scrollback.selected_entry(),
         state: actor_snapshot.state_snapshot(),
     })
 }
@@ -755,6 +758,12 @@ fn declared_tool_selections(scenario: &Scenario) -> Vec<ScrollbackMsg> {
             }
             EventSpec::ToolSelect { tool_select } if tool_select == "previous" => {
                 Some(ScrollbackMsg::SelectPreviousTool)
+            }
+            EventSpec::ToolSelect { tool_select } if tool_select == "entry_next" => {
+                Some(ScrollbackMsg::SelectNextEntry)
+            }
+            EventSpec::ToolSelect { tool_select } if tool_select == "entry_previous" => {
+                Some(ScrollbackMsg::SelectPreviousEntry)
             }
             _ => None,
         })
@@ -1004,6 +1013,14 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
             return Err(format!(
                 "state selected_tool_id mismatch: expected {expected:?}, got {:?}",
                 outcome.selected_tool_id
+            ));
+        }
+    }
+    if let Some(expected) = expected.selected_entry {
+        if outcome.selected_entry != Some(expected) {
+            return Err(format!(
+                "state selected_entry mismatch: expected {expected:?}, got {:?}",
+                outcome.selected_entry
             ));
         }
     }

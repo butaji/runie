@@ -144,6 +144,8 @@ pub enum ScrollbackMsg {
     ToggleToolMode(String),
     SelectNextTool,
     SelectPreviousTool,
+    SelectNextEntry,
+    SelectPreviousEntry,
     MarkToolError(String),
     ReplaceLine(usize, String),
     ReplaceLastByKind(LineKind, String),
@@ -185,6 +187,7 @@ pub struct Scrollback {
     theme: ThemeKind,
     animation_frame: usize,
     selected_tool_id: Option<String>,
+    selected_entry: Option<usize>,
 }
 
 /// Read-only typed projection of one Grok tool block. It is rebuilt from the
@@ -253,6 +256,7 @@ impl Scrollback {
             theme: ThemeKind::GrokNight,
             animation_frame: 0,
             selected_tool_id: None,
+            selected_entry: None,
         }
     }
 
@@ -298,6 +302,8 @@ impl Scrollback {
             ScrollbackMsg::ToggleToolMode(id) => self.toggle_tool_mode(&id),
             ScrollbackMsg::SelectNextTool => self.select_tool(1),
             ScrollbackMsg::SelectPreviousTool => self.select_tool(-1),
+            ScrollbackMsg::SelectNextEntry => self.select_entry(1),
+            ScrollbackMsg::SelectPreviousEntry => self.select_entry(-1),
             ScrollbackMsg::MarkToolError(id) => self.mark_tool_error(&id),
             ScrollbackMsg::ReplaceLine(index, text) => {
                 if let Some(line) = self.line_mut(index) {
@@ -493,6 +499,7 @@ impl Scrollback {
         self.lines.clear();
         self.scroll_offset = 0;
         self.selected_tool_id = None;
+        self.selected_entry = None;
     }
 
     pub fn len(&self) -> usize {
@@ -623,6 +630,50 @@ impl Scrollback {
 
     pub fn selected_tool_id(&self) -> Option<&str> {
         self.selected_tool_id.as_deref()
+    }
+
+    pub fn selected_entry(&self) -> Option<usize> {
+        self.selected_entry
+    }
+
+    fn selectable_entries(&self) -> Vec<usize> {
+        let mut entries = Vec::new();
+        let mut seen_tools = HashSet::new();
+        for (index, line) in self.lines.iter().enumerate() {
+            let selectable = match line.kind {
+                LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError => line
+                    .tool_call_id
+                    .as_ref()
+                    .is_none_or(|id| seen_tools.insert(id.clone())),
+                LineKind::User | LineKind::Assistant | LineKind::Reasoning => true,
+                _ => false,
+            };
+            if selectable {
+                entries.push(index);
+            }
+        }
+        entries
+    }
+
+    fn select_entry(&mut self, direction: i8) {
+        let entries = self.selectable_entries();
+        if entries.is_empty() {
+            self.selected_entry = None;
+            return;
+        }
+        let current = self
+            .selected_entry
+            .and_then(|entry| entries.iter().position(|candidate| *candidate == entry));
+        let next = match (current, direction) {
+            (None, 1) => 0,
+            (None, -1) => entries.len() - 1,
+            (Some(index), 1) => (index + 1) % entries.len(),
+            (Some(0), -1) => entries.len() - 1,
+            (Some(index), -1) => index - 1,
+            _ => 0,
+        };
+        self.selected_entry = Some(entries[next]);
+        self.selected_tool_id = self.lines[entries[next]].tool_call_id.clone();
     }
 
     fn select_tool(&mut self, direction: i8) {
@@ -1934,6 +1985,28 @@ mod tests {
         assert_eq!(scrollback.selected_tool_id(), Some("first"));
         scrollback.apply(ScrollbackMsg::SelectPreviousTool);
         assert_eq!(scrollback.selected_tool_id(), Some("second"));
+    }
+
+    #[test]
+    fn entry_selection_navigates_semantic_rows_and_projects_tool_id() {
+        let mut scrollback = Scrollback::new();
+        scrollback.apply(ScrollbackMsg::Append(Line::new(LineKind::User, "Hey")));
+        scrollback.apply(ScrollbackMsg::ToolStart {
+            tool_call_id: "call-1".into(),
+            header: "Read README.md".into(),
+            activity: None,
+        });
+        scrollback.apply(ScrollbackMsg::Append(Line::new(
+            LineKind::Assistant,
+            "Done",
+        )));
+        scrollback.apply(ScrollbackMsg::SelectNextEntry);
+        assert_eq!(scrollback.selected_entry(), Some(0));
+        assert_eq!(scrollback.selected_tool_id(), None);
+        scrollback.apply(ScrollbackMsg::SelectNextEntry);
+        assert_eq!(scrollback.selected_tool_id(), Some("call-1"));
+        scrollback.apply(ScrollbackMsg::SelectPreviousEntry);
+        assert_eq!(scrollback.selected_entry(), Some(0));
     }
 
     #[test]

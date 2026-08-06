@@ -346,6 +346,12 @@ The YAML runner now asserts the projection's block/member counts for structured,
 error, and execute tool scenarios, making this intermediate block model part of
 the event-sequence-to-state verification surface.
 
+Entry navigation foundation (2026-08-06): the scrollback reducer now exposes
+semantic selectable rows (user, assistant/reasoning, and one anchor per tool
+block), with actor-owned `j/k` intents and a selected-entry index projecting
+the selected tool ID when applicable. Full Grok selection-box painting and
+viewport reveal behavior remain open.
+
 Source audit (2026-08-06): Grok assigns default fold modes per concrete tool
 block (`Read`/`ListDir`/`Edit`/search/fetch → `Collapsed`, execute/bash →
 `Truncated` or `Collapsed`). Runie currently receives only generic tool-start

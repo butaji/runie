@@ -472,6 +472,14 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
                                     app.select_previous_tool().await;
                                     continue;
                                 }
+                                Action::SelectNextEntry => {
+                                    app.select_next_entry().await;
+                                    continue;
+                                }
+                                Action::SelectPreviousEntry => {
+                                    app.select_previous_entry().await;
+                                    continue;
+                                }
                                 Action::Quit => {
                                     let _ = renderer_shutdown.send(true);
                                     let _ = renderer_handle.await;

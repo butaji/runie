@@ -13,6 +13,7 @@ events:
         input: 7
         output: 8
         total_tokens: 15
+  - tool_select: entry_next
 assertions:
   exact_events:
     - agent_start

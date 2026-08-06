@@ -20,6 +20,8 @@ pub enum Action {
     ToggleFold,
     SelectNextTool,
     SelectPreviousTool,
+    SelectNextEntry,
+    SelectPreviousEntry,
     Noop,
 }
 
@@ -56,6 +58,8 @@ pub fn map_key(key: KeyEvent, prompt_non_empty: bool, streaming: bool) -> Action
     match key.code {
         KeyCode::Up if !prompt_non_empty => Action::SelectPreviousTool,
         KeyCode::Down if !prompt_non_empty => Action::SelectNextTool,
+        KeyCode::Char('j') if !prompt_non_empty => Action::SelectNextEntry,
+        KeyCode::Char('k') if !prompt_non_empty => Action::SelectPreviousEntry,
         KeyCode::Char('e') if !prompt_non_empty => Action::ToggleFold,
         KeyCode::Char('?') if !prompt_non_empty => Action::OpenCommandPalette,
         KeyCode::Enter if key.modifiers == KeyModifiers::NONE => {
@@ -228,6 +232,22 @@ mod tests {
         );
         assert_eq!(
             map_key(k(KeyCode::Up, KeyModifiers::NONE), true, false),
+            Action::Noop
+        );
+    }
+
+    #[test]
+    fn jk_select_scrollback_entries_only_when_prompt_is_empty() {
+        assert_eq!(
+            map_key(k(KeyCode::Char('j'), KeyModifiers::NONE), false, false),
+            Action::SelectNextEntry
+        );
+        assert_eq!(
+            map_key(k(KeyCode::Char('k'), KeyModifiers::NONE), false, false),
+            Action::SelectPreviousEntry
+        );
+        assert_eq!(
+            map_key(k(KeyCode::Char('j'), KeyModifiers::NONE), true, false),
             Action::Noop
         );
     }

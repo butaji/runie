@@ -443,6 +443,18 @@ impl App {
             .await;
     }
 
+    pub async fn select_next_entry(&self) {
+        self.scrollback_actor
+            .apply(crate::widgets::ScrollbackMsg::SelectNextEntry)
+            .await;
+    }
+
+    pub async fn select_previous_entry(&self) {
+        self.scrollback_actor
+            .apply(crate::widgets::ScrollbackMsg::SelectPreviousEntry)
+            .await;
+    }
+
     /// Apply a feed update through the actor that owns the rendered snapshot.
     /// The mutex is a compatibility fallback for apps whose renderer is not
     /// running yet.
