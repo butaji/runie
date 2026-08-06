@@ -463,3 +463,18 @@ row 1 while Runie's has the header (` main … 15K / 500K`). The reported fir
 cell `9`/`5` mismatch therefore reflects capture termination/frame selection,
 not a header value mismatch. The strict instrument correctly exposes this
 phase error; no renderer change or oracle weakening was made.
+# Latest full-frame comparator evidence (2026-08-06)
+
+The strict indexed cast comparator was run against the checked-in full casts
+after the `❯` prompt marker:
+
+```text
+Grok:  62 deduplicated frames
+Runie: 121 deduplicated frames
+first difference: frame 1, cell (2,0): ` ` vs `m`
+```
+
+The comparison includes glyph, foreground/background color, bold, italic,
+underline, and inverse attributes for every compared cell. The unequal frame
+counts and first-cell diagnostic are retained as a failing parity signal; no
+frame filtering or attribute downgrade is allowed to turn this into a pass.
