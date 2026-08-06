@@ -7,6 +7,24 @@
 
 use std::fmt;
 
+/// Small, explicit view DSL. It only expands to `Element` constructors; it
+/// owns no state and performs no rendering.
+#[macro_export]
+macro_rules! view {
+    (vertical [$($child:expr),* $(,)?]) => {
+        $crate::view::Element::vertical([$($child),*])
+    };
+    (vertical_iter $children:expr) => {
+        $crate::view::Element::vertical($children)
+    };
+    (horizontal [$($child:expr),* $(,)?]) => {
+        $crate::view::Element::horizontal([$($child),*])
+    };
+    (slot $slot:expr) => {
+        $crate::view::Element::slot($slot)
+    };
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Slot {
     Header,
@@ -196,25 +214,25 @@ pub fn chat_view() -> Element {
 
 pub fn chat_view_with_props(props: ChatViewProps) -> Element {
     let mut children = vec![
-        Element::slot(Slot::Header),
-        Element::slot(Slot::Scrollback),
-        Element::slot(Slot::Prompt),
-        Element::slot(Slot::Status),
-        Element::slot(Slot::FooterBadge),
+        view!(slot Slot::Header),
+        view!(slot Slot::Scrollback),
+        view!(slot Slot::Prompt),
+        view!(slot Slot::Status),
+        view!(slot Slot::FooterBadge),
     ];
     if props.welcome_visible {
-        children.push(Element::slot(Slot::WelcomeOverlay));
+        children.push(view!(slot Slot::WelcomeOverlay));
     }
     if props.shortcuts_visible {
-        children.push(Element::slot(Slot::ShortcutsOverlay));
+        children.push(view!(slot Slot::ShortcutsOverlay));
     }
     if props.command_palette_visible {
-        children.push(Element::slot(Slot::CommandPaletteOverlay));
+        children.push(view!(slot Slot::CommandPaletteOverlay));
     }
     if props.doctor_hint_visible {
-        children.push(Element::slot(Slot::DoctorHint));
+        children.push(view!(slot Slot::DoctorHint));
     }
-    Element::vertical(children)
+    view!(vertical_iter children)
 }
 
 pub fn component(slot: Slot) -> ComponentSpec {
@@ -268,6 +286,18 @@ mod tests {
                 Slot::Status,
                 Slot::FooterBadge,
             ]
+        );
+    }
+
+    #[test]
+    fn view_macro_expands_to_plain_elements() {
+        let tree = crate::view!(vertical [
+            crate::view!(slot Slot::Header),
+            crate::view!(horizontal [crate::view!(slot Slot::Prompt)]),
+        ]);
+        assert_eq!(
+            tree.slots().collect::<Vec<_>>(),
+            vec![Slot::Header, Slot::Prompt]
         );
     }
 }

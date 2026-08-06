@@ -22,6 +22,8 @@ renderer paints terminal cells.
 - Added immutable `ChatViewProps` and reactive overlay slots for welcome,
   shortcuts, command palette, and doctor hint states. The tree is now a pure
   function of view props rather than a fixed terminal layout list.
+- Added the thin `view!` macro for vertical/horizontal composition and slots;
+  it expands directly to `Element` constructors and has expansion-level tests.
 
 ## Next boundaries
 
