@@ -19,6 +19,9 @@ renderer paints terminal cells.
   sole actor that owns its state.
 - Added terminal-independent `PaintIntent` values. Opaline/Ratatui style
   resolution is now explicitly an adapter concern in `appearance.rs`.
+- Added immutable `ChatViewProps` and reactive overlay slots for welcome,
+  shortcuts, command palette, and doctor hint states. The tree is now a pure
+  function of view props rather than a fixed terminal layout list.
 
 ## Next boundaries
 

@@ -14,6 +14,10 @@ pub enum Slot {
     Prompt,
     Status,
     FooterBadge,
+    WelcomeOverlay,
+    ShortcutsOverlay,
+    CommandPaletteOverlay,
+    DoctorHint,
 }
 
 /// Semantic component identity. These names are stable across terminal
@@ -25,6 +29,10 @@ pub enum ComponentKind {
     Prompt,
     Status,
     FooterBadge,
+    WelcomeOverlay,
+    ShortcutsOverlay,
+    CommandPaletteOverlay,
+    DoctorHint,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -60,7 +68,15 @@ pub struct ComponentSpec {
     pub owner: StateOwner,
 }
 
-pub const CHAT_COMPONENTS: [ComponentSpec; 5] = [
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct ChatViewProps {
+    pub welcome_visible: bool,
+    pub shortcuts_visible: bool,
+    pub command_palette_visible: bool,
+    pub doctor_hint_visible: bool,
+}
+
+pub const CHAT_COMPONENTS: [ComponentSpec; 9] = [
     ComponentSpec {
         kind: ComponentKind::Header,
         slot: Slot::Header,
@@ -84,6 +100,26 @@ pub const CHAT_COMPONENTS: [ComponentSpec; 5] = [
     ComponentSpec {
         kind: ComponentKind::FooterBadge,
         slot: Slot::FooterBadge,
+        owner: StateOwner::StatusActor,
+    },
+    ComponentSpec {
+        kind: ComponentKind::WelcomeOverlay,
+        slot: Slot::WelcomeOverlay,
+        owner: StateOwner::UiActor,
+    },
+    ComponentSpec {
+        kind: ComponentKind::ShortcutsOverlay,
+        slot: Slot::ShortcutsOverlay,
+        owner: StateOwner::UiActor,
+    },
+    ComponentSpec {
+        kind: ComponentKind::CommandPaletteOverlay,
+        slot: Slot::CommandPaletteOverlay,
+        owner: StateOwner::UiActor,
+    },
+    ComponentSpec {
+        kind: ComponentKind::DoctorHint,
+        slot: Slot::DoctorHint,
         owner: StateOwner::StatusActor,
     },
 ];
@@ -144,6 +180,10 @@ impl fmt::Display for Slot {
             Self::Prompt => "prompt",
             Self::Status => "status",
             Self::FooterBadge => "footer-badge",
+            Self::WelcomeOverlay => "welcome-overlay",
+            Self::ShortcutsOverlay => "shortcuts-overlay",
+            Self::CommandPaletteOverlay => "command-palette-overlay",
+            Self::DoctorHint => "doctor-hint",
         })
     }
 }
@@ -151,13 +191,30 @@ impl fmt::Display for Slot {
 /// The stable element tree for the chat surface. Geometry belongs to the
 /// layout adapter; changing terminal dimensions must not change this tree.
 pub fn chat_view() -> Element {
-    Element::vertical([
+    chat_view_with_props(ChatViewProps::default())
+}
+
+pub fn chat_view_with_props(props: ChatViewProps) -> Element {
+    let mut children = vec![
         Element::slot(Slot::Header),
         Element::slot(Slot::Scrollback),
         Element::slot(Slot::Prompt),
         Element::slot(Slot::Status),
         Element::slot(Slot::FooterBadge),
-    ])
+    ];
+    if props.welcome_visible {
+        children.push(Element::slot(Slot::WelcomeOverlay));
+    }
+    if props.shortcuts_visible {
+        children.push(Element::slot(Slot::ShortcutsOverlay));
+    }
+    if props.command_palette_visible {
+        children.push(Element::slot(Slot::CommandPaletteOverlay));
+    }
+    if props.doctor_hint_visible {
+        children.push(Element::slot(Slot::DoctorHint));
+    }
+    Element::vertical(children)
 }
 
 pub fn component(slot: Slot) -> ComponentSpec {
@@ -169,7 +226,10 @@ pub fn component(slot: Slot) -> ComponentSpec {
 
 #[cfg(test)]
 mod tests {
-    use super::{chat_view, component, ComponentKind, Direction, Element, Slot, StateOwner};
+    use super::{
+        chat_view, chat_view_with_props, component, ChatViewProps, ComponentKind, Direction,
+        Element, Slot, StateOwner,
+    };
 
     #[test]
     fn chat_view_is_a_stable_declarative_region_tree() {
@@ -192,6 +252,13 @@ mod tests {
             StateOwner::ScrollbackActor
         );
         assert_eq!(component(Slot::Prompt).owner, StateOwner::PromptActor);
+        let overlays = chat_view_with_props(ChatViewProps {
+            command_palette_visible: true,
+            ..ChatViewProps::default()
+        })
+        .slots()
+        .collect::<Vec<_>>();
+        assert!(overlays.contains(&Slot::CommandPaletteOverlay));
         assert_eq!(
             chat_view().slots().collect::<Vec<_>>(),
             vec![
