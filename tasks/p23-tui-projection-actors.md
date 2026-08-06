@@ -331,3 +331,6 @@ because it would conceal ownership and make YAML event assertions impossible.
 - **Background lifecycle expansion (2026-08-06):** Cancellation and elapsed
   terminal states are carried as typed events and projected through the
   actor-owned feed, with YAML replay coverage.
+Selection reset invariant (2026-08-06): `Scrollback::Clear` now clears the
+actor-owned selected tool ID atomically with transcript rows, preventing a
+post-Reset fold intent from targeting a stale block.

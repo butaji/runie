@@ -492,6 +492,7 @@ impl Scrollback {
     pub fn clear(&mut self) {
         self.lines.clear();
         self.scroll_offset = 0;
+        self.selected_tool_id = None;
     }
 
     pub fn len(&self) -> usize {
@@ -1929,6 +1930,20 @@ mod tests {
         assert_eq!(scrollback.selected_tool_id(), Some("first"));
         scrollback.apply(ScrollbackMsg::SelectPreviousTool);
         assert_eq!(scrollback.selected_tool_id(), Some("second"));
+    }
+
+    #[test]
+    fn clear_resets_actor_owned_tool_selection() {
+        let mut scrollback = Scrollback::new();
+        scrollback.apply(ScrollbackMsg::ToolStart {
+            tool_call_id: "call-1".into(),
+            header: "Read README.md".into(),
+            activity: None,
+        });
+        scrollback.apply(ScrollbackMsg::SelectNextTool);
+        assert_eq!(scrollback.selected_tool_id(), Some("call-1"));
+        scrollback.apply(ScrollbackMsg::Clear);
+        assert_eq!(scrollback.selected_tool_id(), None);
     }
 
     #[test]
