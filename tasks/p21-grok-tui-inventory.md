@@ -193,6 +193,10 @@ Subagent-card progress: subagent/agent/task tools now render explicit
 `visual-subagent-card.yaml`. Duration text remains intentionally deferred to
 the actor-owned tool timing projection.
 
+Theme-token audit: the compact welcome title no longer uses terminal-default
+`Color::Cyan`; it now resolves through the GrokNight Opaline accent token, so
+welcome chrome follows the same theme projection as the feed and status bar.
+
 Architecture audit note: `PromptActor` and `UiActor` own mailbox/watch state,
 but `Scrollback` and `StatusBar` are still shared behind `parking_lot::Mutex`
 and are mutated by `EventRenderer` and the render loop. This is a remaining

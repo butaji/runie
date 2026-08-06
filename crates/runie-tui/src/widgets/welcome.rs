@@ -2,9 +2,12 @@
 
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Alignment, Rect};
-use ratatui::style::{Color, Modifier, Style};
+use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget};
+
+use crate::appearance;
+use runie_core::types::ThemeKind;
 
 /// The full-mode welcome surface shown before the first prompt is submitted.
 #[derive(Debug, Clone, Copy, Default)]
@@ -67,9 +70,7 @@ impl WelcomeWidget {
         let lines = vec![
             Line::from(Span::styled(
                 "Runie",
-                Style::default()
-                    .fg(Color::Cyan)
-                    .add_modifier(Modifier::BOLD),
+                appearance::accent_style_for(ThemeKind::GrokNight).add_modifier(Modifier::BOLD),
             )),
             Line::from(version_badge(VersionBadgeVariant::HeroInline)),
             Line::from("Model · runie-core"),
