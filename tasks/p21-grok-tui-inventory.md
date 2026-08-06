@@ -470,3 +470,9 @@ truncated preview while interactive bash runs, then promotes it to `Expanded`
 when the tool finishes so the complete result is visible. Runie now applies
 that transition in the scrollback actor when the typed tool name is a shell
 execute variant; the default-mode YAML replay asserts the settled mode.
+
+Read fold audit (2026-08-06): Grok's Read block uses a three-state cycle
+`Collapsed -> Truncated -> Collapsed`, unlike the two-state card families.
+Runie now selects that cycle from the actor-owned typed tool name, and the
+default-mode YAML scenario exercises the read fold after the completed event
+sequence.

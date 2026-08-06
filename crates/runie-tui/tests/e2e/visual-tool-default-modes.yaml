@@ -17,10 +17,11 @@ events:
       name: read
       args: { path: "README.md" }
   - done: { stop_reason: stop }
+  - tool_fold: call-2
 assertions:
   state:
     tool_blocks: 2
-    tool_modes: [expanded, collapsed]
+    tool_modes: [expanded, truncated]
     tool_kinds: [execute, read]
   visual:
     cols: 80

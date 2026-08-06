@@ -686,6 +686,10 @@ impl Scrollback {
     /// Apply Grok's fold action to one selected tool block. The actor owns the
     /// transition; callers only publish the tool id as an intent.
     pub fn toggle_tool_mode(&mut self, tool_call_id: &str) {
+        let read_card = self
+            .tool_names
+            .get(tool_call_id)
+            .is_some_and(|name| matches!(name.as_str(), "read" | "read_file"));
         let next = match self
             .tool_modes
             .get(tool_call_id)
@@ -693,7 +697,11 @@ impl Scrollback {
             .unwrap_or(runie_core::types::ToolDisplayMode::Expanded)
         {
             runie_core::types::ToolDisplayMode::Collapsed => {
-                runie_core::types::ToolDisplayMode::Expanded
+                if read_card {
+                    runie_core::types::ToolDisplayMode::Truncated
+                } else {
+                    runie_core::types::ToolDisplayMode::Expanded
+                }
             }
             // Grok treats Truncated as an intermediate preview, and folding
             // that preview returns to the title-only state. It must not jump
