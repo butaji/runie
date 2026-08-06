@@ -572,12 +572,12 @@ impl EventRenderer {
         self.record_thinking_elapsed(&event);
         let status_actor = self
             .status_actor
-            .get_or_insert_with(StatusActor::new)
-            .clone();
+            .clone()
+            .expect("actor replay requires a StatusActor");
         let scrollback_actor = self
             .scrollback_actor
-            .get_or_insert_with(ScrollbackActor::new)
-            .clone();
+            .clone()
+            .expect("actor replay requires a ScrollbackActor");
         status_actor.apply_event(&event).await;
         let tool_message = match &event {
             AgentEvent::ToolExecutionStart {

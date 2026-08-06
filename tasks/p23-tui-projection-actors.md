@@ -24,6 +24,10 @@ publish immutable `watch` snapshots to the pure view.
 - `StatusActor::subscribe` exposes only a `watch::Receiver<StatusBar>`;
   regression coverage verifies one coherent publication for a batched
   `TurnStart` event and no intermediate snapshot.
+
+- **Replay actor requirement (2026-08-06):** `apply_actor_event` now requires
+  the actor handles supplied by `EventRenderer::with_actors`; it cannot lazily
+  create a second status or scrollback projection during YAML replay.
 - `ScrollbackMsg` and `Scrollback::apply` now define the explicit feed reducer
   surface, including append, row replacement, normalization, display modes,
   and theme changes; a reducer regression covers append/replace/clear.
