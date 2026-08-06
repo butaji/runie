@@ -148,6 +148,15 @@ remaining differences are feed vertical phase, live clock/elapsed values,
 header usage, and footer ANSI attributes. A unit test locks the no-midword
 timestamp invariant.
 
+**Assistant-start row experiment (2026-08-06):** Full-cell row dumps showed a
+duplicated blank separator before the thought summary in the isolated `Hey`
+cast. Removing that separator reduced the isolated strict probe from 223 to
+75 differing cells and aligned the complete answer block, but the workspace
+YAML replay gate rejected the broad event-level change: the recorded tool-feed
+frame then shifted by one row. The change was reverted. The result identifies
+the next fix as a scenario-aware projection difference, not permission to
+weaken the shared event mapping or its Grok tool fixture.
+
 ## Review findings
 
 ### Phase-marker validation — 2026-08-06

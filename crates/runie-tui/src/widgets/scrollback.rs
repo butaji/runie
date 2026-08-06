@@ -731,12 +731,15 @@ impl Scrollback {
                                 ),
                                 false,
                             ));
-                            append_wrapped(
+                            append_wrapped_words(
                                 &mut rows,
                                 line.kind,
-                                rest.trim_start().to_owned(),
-                                code_block && !fence,
-                                width,
+                                format!(
+                                    "{}{}",
+                                    " ".repeat(line.kind.prefix().chars().count()),
+                                    rest.trim_start()
+                                ),
+                                width.saturating_sub(timestamp_width + TIMESTAMP_GUTTER_SPACES + 3),
                             );
                             continue;
                         }
