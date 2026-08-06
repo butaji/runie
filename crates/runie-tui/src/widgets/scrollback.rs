@@ -60,9 +60,9 @@ impl LineKind {
             // Grok reserves a three-column transcript gutter before user
             // content: the cursor is at column 5 in the 80-column frame.
             LineKind::User => "   ❯ ",
-            LineKind::Assistant => "┃",
-            LineKind::Reasoning => "┃",
-            LineKind::ThinkingStatus => "┃",
+            LineKind::Assistant => "┃  ",
+            LineKind::Reasoning => "┃  ",
+            LineKind::ThinkingStatus => "┃  ",
             LineKind::Tool => "◆ ",
             LineKind::ToolResult => "  ↳ ",
             // Structured Grok tools render terminal output directly below the
@@ -159,7 +159,6 @@ impl Scrollback {
         match message {
             ScrollbackMsg::Append(line) => return Some(self.append(line)),
             ScrollbackMsg::AppendTurnSummary(text) => {
-                self.append(Line::new(LineKind::System, ""));
                 return Some(self.append(Line::new(LineKind::TurnSummary, text)));
             }
             ScrollbackMsg::Clear => {
@@ -400,8 +399,37 @@ impl Scrollback {
         let mut rows = Vec::new();
         let mut code_block = false;
         let mut truncated_output = HashSet::new();
-        let mut collapsed_group_placeholder = false;
-        for line in &self.lines {
+        let mut user_vpad_emitted = false;
+        let mut skip_full_user_separator = false;
+        for (line_index, line) in self.lines.iter().enumerate() {
+            if width < 50
+                && line.kind == LineKind::System
+                && line.text.is_empty()
+                && self
+                    .lines
+                    .get(line_index + 1)
+                    .is_some_and(|next| next.kind == LineKind::TurnSummary)
+            {
+                continue;
+            }
+            if width >= 70
+                && skip_full_user_separator
+                && line.kind == LineKind::System
+                && line.text.is_empty()
+            {
+                skip_full_user_separator = false;
+                continue;
+            }
+            if line.kind == LineKind::User && width >= 70 && !user_vpad_emitted {
+                // Grok's prompt block enables vertical padding in full mode;
+                // the narrow pager variant suppresses it.
+                rows.push((LineKind::System, String::new(), false));
+                user_vpad_emitted = true;
+                skip_full_user_separator = true;
+            }
+            if width >= 50 && line.kind == LineKind::TurnSummary {
+                rows.push((LineKind::System, String::new(), false));
+            }
             let tool_mode = line
                 .tool_call_id
                 .as_ref()
@@ -431,12 +459,6 @@ impl Scrollback {
                 )
                 && line.text != "session_start"
             {
-                if !collapsed_group_placeholder && line.kind == LineKind::Tool {
-                    // Grok measures the folded activity group as one block:
-                    // hidden members do not each consume a separate row.
-                    rows.push((LineKind::System, String::new(), false));
-                    collapsed_group_placeholder = true;
-                }
                 continue;
             }
             let source = if line.kind == LineKind::Reasoning && !self.reasoning_expanded {
@@ -447,7 +469,15 @@ impl Scrollback {
             let fence = line.kind == LineKind::Assistant && is_fence(source);
             let parts: Vec<_> = source.split('\n').collect();
             for (index, part) in parts.iter().enumerate() {
-                let prefix = line.kind.prefix();
+                let prefix = if width < 70
+                    && matches!(
+                        line.kind,
+                        LineKind::Assistant | LineKind::Reasoning | LineKind::ThinkingStatus
+                    ) {
+                    "┃"
+                } else {
+                    line.kind.prefix()
+                };
                 let mut text = if part.is_empty() {
                     String::new()
                 } else if index == 0 {
@@ -1185,7 +1215,7 @@ mod tests {
         let style = LineKind::Reasoning.style();
         assert!(style.add_modifier.contains(Modifier::DIM));
         assert!(style.add_modifier.contains(Modifier::ITALIC));
-        assert_eq!(LineKind::Reasoning.prefix(), "┃");
+        assert_eq!(LineKind::Reasoning.prefix(), "┃  ");
     }
 
     #[test]

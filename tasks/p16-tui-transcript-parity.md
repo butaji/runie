@@ -45,6 +45,12 @@ runner while individual tool rows continue to render `✗`.
   use the host-local clock like Grok, and completed assistant timestamps are
   rendered as a first-content-line overlay with reserved wrapping width. The
   event-owned assistant text is no longer mutated to append display chrome.
+- **Per-width block construction (2026-08-05):** The scrollback projection
+  now models Grok's full-mode user-block vertical padding at widths `>= 70`,
+  uses the compact assistant rail below that breakpoint, and suppresses the
+  full-mode summary separator in narrow viewports. The strict suite confirms
+  the 80×24 feed advances past its prior prompt-row mismatch; compact-tail
+  height still needs reconciliation in `visual-scroll.yaml`.
 
 ## Grok reference
 

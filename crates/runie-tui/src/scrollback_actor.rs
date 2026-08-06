@@ -106,8 +106,8 @@ mod tests {
             .apply(ScrollbackMsg::AppendTurnSummary("Worked for 1.0s".into()))
             .await;
         let lines = actor.snapshot();
-        assert_eq!(lines.lines().len(), 2);
-        assert_eq!(lines.lines()[1].kind, LineKind::TurnSummary);
-        assert_eq!(lines.lines()[1].text, "Worked for 1.0s");
+        assert_eq!(lines.lines().len(), 1);
+        assert_eq!(lines.lines()[0].kind, LineKind::TurnSummary);
+        assert_eq!(lines.lines()[0].text, "Worked for 1.0s");
     }
 }

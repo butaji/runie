@@ -1090,14 +1090,40 @@ fn assert_dump_reference(buffer: &Buffer, reference: &DumpReference) -> Result<(
                     )
                 })
                 .collect::<String>();
+            let expected_context = (row.saturating_sub(2)..=(row + 2).min(rows as usize - 1))
+                .map(|context_row| {
+                    expected
+                        .iter()
+                        .skip(context_row * width)
+                        .take(width)
+                        .map(|cell| cell.symbol.as_str())
+                        .collect::<String>()
+                })
+                .collect::<Vec<_>>();
+            let actual_context = (row.saturating_sub(2)..=(row + 2).min(rows as usize - 1))
+                .map(|context_row| {
+                    (0..buffer.area.width)
+                        .map(|column| {
+                            cell_symbol_key(
+                                buffer
+                                    .cell((column, context_row as u16))
+                                    .expect("Runie cell")
+                                    .symbol(),
+                            )
+                        })
+                        .collect::<String>()
+                })
+                .collect::<Vec<_>>();
             return Err(format!(
-                "full dump symbol mismatch for {} frame {:?} at ({col},{row}): expected {:?}, actual {:?}; expected row {:?}, actual row {:?}",
+                "full dump symbol mismatch for {} frame {:?} at ({col},{row}): expected {:?}, actual {:?}; expected row {:?}, actual row {:?}; expected context {:?}, actual context {:?}",
                 reference.cast,
                 selected_frame_index,
                 expected[index].symbol,
                 actual[index],
                 expected_row,
-                actual_row
+                actual_row,
+                expected_context,
+                actual_context
             ));
         }
     }

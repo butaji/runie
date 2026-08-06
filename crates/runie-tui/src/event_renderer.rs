@@ -368,7 +368,6 @@ impl EventRenderer {
                     scrollback.append(Line::new(LineKind::Activity, activity));
                 }
             } else {
-                scrollback.append(Line::new(LineKind::System, ""));
                 scrollback.append(Line::new(LineKind::Activity, activity));
             }
         }
