@@ -9,6 +9,7 @@ use serde_json::Value;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 struct Cell {
     symbol: String,
+    width: u8,
     fg: String,
     bg: String,
     bold: bool,
@@ -72,6 +73,13 @@ fn cells(parser: &vt100::Parser, rows: u16, cols: u16) -> Vec<Cell> {
                         " ".into()
                     } else {
                         cell.contents()
+                    },
+                    width: if cell.is_wide_continuation() {
+                        0
+                    } else if cell.is_wide() {
+                        2
+                    } else {
+                        1
                     },
                     fg: color_key(cell.fgcolor()),
                     bg: color_key(cell.bgcolor()),

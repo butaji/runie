@@ -485,3 +485,10 @@ assignments passed to the captured command, including validated caller
 overrides, instead of inheriting the parent shell's values. This prevents
 capture metadata from overstating color capability and makes later
 `exact_attributes` decisions auditable.
+## Cell-width parity (2026-08-06)
+
+Cast and YAML full-screen cells now carry an explicit width classification:
+wide glyph lead cells are width 2, continuation cells width 0, and ordinary
+cells width 1. The VT parser uses its wide/continuation flags; Ratatui frames
+derive the same classification from Unicode display width and neighboring
+cells. Width is part of cell equality and dump diagnostics.

@@ -28,6 +28,7 @@ use runie_core::types::{
 };
 use serde::Deserialize;
 use tokio::sync::broadcast;
+use unicode_width::UnicodeWidthStr;
 
 #[derive(Debug, Deserialize)]
 pub struct Scenario {
@@ -735,6 +736,7 @@ pub struct DumpReference {
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct DumpCell {
     symbol: String,
+    width: u8,
     fg: String,
     bg: String,
     bold: bool,
@@ -776,6 +778,23 @@ fn ratatui_color_key(color: ratatui::style::Color) -> String {
     }
 }
 
+fn ratatui_cell_width(buffer: &Buffer, col: u16, row: u16) -> u8 {
+    let cell = buffer.cell((col, row)).expect("Runie cell");
+    let symbol = cell.symbol();
+    if !symbol.is_empty() {
+        return UnicodeWidthStr::width(symbol).min(2) as u8;
+    }
+    if col > 0
+        && buffer
+            .cell((col - 1, row))
+            .is_some_and(|previous| UnicodeWidthStr::width(previous.symbol()) == 2)
+    {
+        0
+    } else {
+        1
+    }
+}
+
 fn cell_symbol_key(symbol: &str) -> String {
     if symbol.is_empty() {
         " ".to_owned()
@@ -791,6 +810,13 @@ fn dump_cells(screen: &vt100::Screen, cols: u16, rows: u16) -> Vec<DumpCell> {
                 let cell = screen.cell(row, col).expect("terminal cell");
                 DumpCell {
                     symbol: cell_symbol_key(&cell.contents()),
+                    width: if cell.is_wide_continuation() {
+                        0
+                    } else if cell.is_wide() {
+                        2
+                    } else {
+                        1
+                    },
                     fg: vt_color_key(cell.fgcolor()),
                     bg: vt_color_key(cell.bgcolor()),
                     bold: cell.bold(),
@@ -1942,6 +1968,7 @@ fn assert_dump_reference(buffer: &Buffer, reference: &DumpReference) -> Result<(
                     let cell = buffer.cell((col, row)).expect("Runie cell");
                     DumpCell {
                         symbol: cell_symbol_key(cell.symbol()),
+                        width: ratatui_cell_width(buffer, col, row),
                         fg: ratatui_color_key(cell.fg),
                         bg: ratatui_color_key(cell.bg),
                         bold: cell.modifier.contains(ratatui::style::Modifier::BOLD),
