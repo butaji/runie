@@ -165,6 +165,12 @@
       "file": "p27-parity-review-loop.md",
       "status": "in_progress",
       "title": "Process: independent source-to-fixture parity review loop"
+    },
+    {
+      "id": "p28",
+      "file": "p28-parity-data-contract.md",
+      "status": "in_progress",
+      "title": "Verification: runtime data contract for reliable pi/Grok parity decisions"
     }
   ]
 }

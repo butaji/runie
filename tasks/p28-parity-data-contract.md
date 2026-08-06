@@ -1,0 +1,48 @@
+# p28 — Parity decision data contract
+
+## Purpose
+
+Parity decisions are currently slowed by missing runtime facts rather than
+compilation. This contract lists the minimum data required before a pi/core or
+Grok-rendering mismatch can be classified as a product defect.
+
+## Required capture record
+
+Every accepted paired run must retain, beside each cast or YAML replay:
+
+- reference commit/version and Runie commit;
+- Grok binary path plus version/hash and relevant config (`screen_mode`, theme,
+  native-color lock, model, approval mode);
+- exact prompt, provider response/tool outputs, and serialized pi-compatible
+  event sequence;
+- terminal `cols × rows`, `TERM`, `COLORTERM`, color level, alternate-screen
+  mode, and tmux/asciinema versions;
+- one frozen timestamp source, usage/token values, thinking/turn elapsed values,
+  and animation phase/tick inputs;
+- frame-selection markers, occurrence/index, selected frame number, and the
+  reason the frame represents the intended lifecycle boundary;
+- raw `.cast`, raw ANSI stream, parsed full cell grid, and comparator output.
+
+## Decision rules
+
+1. Missing any required field means “insufficient evidence,” not “Runie bug.”
+2. Different prompt/provider/tool/clock inputs cannot support pixel parity.
+3. Native-color Grok captures compare against `TerminalNative`; themed Grok
+   captures compare against the matching Opaline theme and color capability.
+4. Dynamic fields must be event-owned/frozen in YAML before exact comparison.
+5. A parity claim must include all four default geometries and both symbols and
+   attributes where the capture proves the relevant color capability.
+
+## Current missing evidence
+
+- The checked-in `grok-rich.cast` lacks a reliable version/config and emits
+  terminal-default SGR, so it cannot prove truecolor parity.
+- Fresh live pairs still lack one shared provider response and frozen elapsed
+  telemetry; their remaining mismatches are therefore not actionable layout
+  evidence.
+- The current YAML reference uses a fixed frame index from an older capture;
+  marker-locked selection is now available but not yet used for every fixture.
+
+This contract is the review checklist for p19, p21, p25, and p27. It is the
+data needed to make the next implementation decision faster and with fewer
+false regressions.
