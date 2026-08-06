@@ -95,6 +95,13 @@ the inverse wire shape. The event now carries Pi's typed reason and terminal
 assistant payload; UI consumers use a pure `error_text()` projection, while
 provider/YAML paths populate the same event contract.
 
+**Assistant done message wire parity (2026-08-06):** Pi's successful `done`
+event always serializes a terminal `AssistantMessage` under `message`. Runie's
+compatibility-facing constructors may still use `None` for synthetic events,
+but the event serializer now emits the required assistant object and the
+decoder reconstructs it as present. This keeps existing replay fixtures
+readable while matching the Pi wire shape.
+
 **Transcript parity note (2026-08-05):** Grok-style grouped activity now
 includes the reference failure suffix (`· N failed`) for failed file,
 directory, and command tools. The behavior is exercised by the discovered

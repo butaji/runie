@@ -5,6 +5,25 @@
 
 use serde::{Deserialize, Serialize};
 
+mod assistant_message_wire {
+    use super::AssistantMessage;
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    pub fn serialize<S>(value: &Option<AssistantMessage>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        value.clone().unwrap_or_default().serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<AssistantMessage>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        AssistantMessage::deserialize(deserializer).map(Some)
+    }
+}
+
 /// Reasoning level requested for the next turn. Some providers only support a
 /// subset; consult the model's metadata before using `XHigh` / `Max`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
@@ -933,7 +952,7 @@ pub enum AssistantMessageEvent {
         usage: Usage,
         /// Full terminal assistant payload when the provider supplies it.
         /// Internal synthetic streams may leave this absent.
-        #[serde(default)]
+        #[serde(default, with = "assistant_message_wire")]
         message: Option<AssistantMessage>,
     },
     Error {
@@ -1284,8 +1303,8 @@ mod tests {
                 assert_eq!(json["contentIndex"], 0);
                 assert_eq!(json["delta"], "{\"path\":\"a.rs\"}");
             }
-            let back: AssistantMessageEvent = serde_json::from_value(json).unwrap();
-            assert_eq!(back, e);
+            let back: AssistantMessageEvent = serde_json::from_value(json.clone()).unwrap();
+            assert_eq!(serde_json::to_value(back).unwrap(), json);
         }
     }
 
@@ -1431,6 +1450,7 @@ mod tests {
         .expect("done event serializes");
         assert_eq!(done["reason"], "toolUse");
         assert!(done.get("stopReason").is_none());
+        assert!(done.get("message").is_some());
 
         let error = serde_json::to_value(AssistantMessageEvent::Error {
             reason: StopReason::Aborted,
