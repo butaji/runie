@@ -22,6 +22,10 @@ behavior fixtures editable without recompiling Rust.
   `visual-hey.yaml` exercises the path and the full workspace gate remains
   green.
 
+- **Exact functional TUI vectors (2026-08-06):** `hello-streaming.yaml` and
+  `tool-echo.yaml` now assert complete ordered event vectors and terminal state,
+  extending the event-sequence→state contract beyond the visual `Hey` case.
+
 - **TUI actor ownership reuse (2026-08-06):** `UiActor` and `PromptActor`
   now use the shared `runie-core` owned-worker DSL. Their worker lifetimes
   remain attached to cloned actor handles, while the duplicate local

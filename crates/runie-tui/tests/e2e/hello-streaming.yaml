@@ -8,6 +8,21 @@ events:
   - text_delta: " world"
   - done: { stop_reason: stop }
 assertions:
+  exact_events:
+    - agent_start
+    - turn_start
+    - message_start
+    - message_end
+    - message_start
+    - message_update
+    - message_update
+    - message_end
+    - turn_end
+    - agent_end
+  state:
+    is_streaming: false
+    pending_tool_calls: 0
+    messages: 2
   transcript_contains:
     - "Hello world"
     - "say hi"
