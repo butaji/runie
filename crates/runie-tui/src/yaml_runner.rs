@@ -2555,6 +2555,11 @@ pub async fn render_visual_buffer(
                 .await;
             continue;
         }
+        if step == "Backspace" && app.ui.snapshot().command_palette_open {
+            app.command_palette_key(crate::app::UiMsg::CommandPaletteBackspace)
+                .await;
+            continue;
+        }
         if app.ui.snapshot().command_palette_open {
             for ch in step.chars() {
                 app.command_palette_key(crate::app::UiMsg::CommandPaletteChar(ch))

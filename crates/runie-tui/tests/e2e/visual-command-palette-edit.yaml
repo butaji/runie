@@ -1,0 +1,17 @@
+name: visual-command-palette-edit
+description: Palette query editing remains declarative and actor-owned.
+events: []
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    steps:
+      - Ctrl+P
+      - "newx"
+      - Backspace
+    palette_open: true
+    palette_query: "new"
+    palette_index: 0
+    screen_text:
+      - "Commands"
+      - "New Session"

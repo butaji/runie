@@ -246,3 +246,9 @@ and activation. `visual-command-palette.yaml` and
 YAML visual runner; `typed_action_registry!` owns the compact command list.
 Grok-only commands and nested modal routes remain excluded because they are
 outside the Pi-core feature boundary, not silently counted as parity gaps.
+
+Palette query-editing closure (2026-08-06): the YAML visual DSL now exposes a
+`Backspace` step that dispatches the existing actor-owned
+`CommandPaletteBackspace` message. `visual-command-palette-edit.yaml` proves
+that `newx` reduces to `new` while the palette remains open, removing the
+previous Rust-only coverage gap.
