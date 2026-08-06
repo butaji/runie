@@ -15,6 +15,7 @@ events:
 assertions:
   state:
     is_streaming: false
+    tool_blocks: 1
   visual:
     cols: 80
     rows: 24

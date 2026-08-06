@@ -322,3 +322,7 @@ parallel tool ordering, call IDs, headers, output members, error/running
 classification, and `Collapsed`/`Truncated`/`Expanded` mode without introducing
 a second mutable state store. A reducer test pins the projection; navigation
 and specialized block rendering remain open.
+
+The YAML runner now asserts the projection's block/member counts for structured,
+error, and execute tool scenarios, making this intermediate block model part of
+the event-sequence-to-state verification surface.

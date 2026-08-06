@@ -26,6 +26,11 @@ behavior fixtures editable without recompiling Rust.
   `tool-echo.yaml` now assert complete ordered event vectors and terminal state,
   extending the event-sequence→state contract beyond the visual `Hey` case.
 
+- **Typed tool-block state assertions (2026-08-06):** YAML `state` now accepts
+  `tool_blocks` and `tool_output_lines`, backed by the actor snapshot's pure
+  `Scrollback::tool_blocks()` projection. Structured, error, and execute tool
+  fixtures exercise block/member counts without compiled fixture-specific code.
+
 - **TUI actor ownership reuse (2026-08-06):** `UiActor` and `PromptActor`
   now use the shared `runie-core` owned-worker DSL. Their worker lifetimes
   remain attached to cloned actor handles, while the duplicate local

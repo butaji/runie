@@ -9,7 +9,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use crate::event_renderer::EventRenderer;
-use crate::widgets::{Line, LineKind, Scrollback, ScrollbackMsg};
+use crate::widgets::{Line, LineKind, Scrollback, ScrollbackMsg, ToolBlock};
 use parking_lot::Mutex;
 use ratatui::buffer::Buffer;
 use runie_core::events::EventBus;
@@ -321,6 +321,8 @@ pub struct StateAssertions {
     pub messages: Option<usize>,
     pub streaming_contains: Option<String>,
     pub error_contains: Option<String>,
+    pub tool_blocks: Option<usize>,
+    pub tool_output_lines: Option<usize>,
 }
 
 #[derive(Debug, Deserialize, Default, Clone)]
@@ -649,6 +651,7 @@ impl AgentTool for ReplayTool {
 pub struct ScenarioOutcome {
     pub events: Vec<AgentEvent>,
     pub scrollback: Vec<Line>,
+    pub tool_blocks: Vec<ToolBlock>,
     pub state: runie_core::state::AgentStateSnapshot,
 }
 
@@ -667,11 +670,12 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
     let mut events_from_task = record_and_run_scenario(actor, bus, scenario).await;
     append_declared_events(&mut events_from_task, scenario);
 
-    let scrollback_lines =
+    let scrollback =
         replay_scenario_events(&events_from_task, scenario.initial_prompt.is_none()).await;
     Ok(ScenarioOutcome {
         events: events_from_task,
-        scrollback: scrollback_lines,
+        scrollback: scrollback.lines().to_vec(),
+        tool_blocks: scrollback.tool_blocks(),
         state: actor_snapshot.state_snapshot(),
     })
 }
@@ -680,7 +684,7 @@ fn append_declared_events(events: &mut Vec<AgentEvent>, scenario: &Scenario) {
     events.extend(scenario.events.iter().filter_map(EventSpec::waiting_event));
 }
 
-async fn replay_scenario_events(events: &[AgentEvent], emit_welcome: bool) -> Vec<Line> {
+async fn replay_scenario_events(events: &[AgentEvent], emit_welcome: bool) -> Scrollback {
     let scrollback_actor = crate::ScrollbackActor::new();
     let status_actor = crate::StatusActor::new();
     let mut renderer =
@@ -688,7 +692,7 @@ async fn replay_scenario_events(events: &[AgentEvent], emit_welcome: bool) -> Ve
     for event in events {
         renderer.apply_actor_event(event.clone()).await;
     }
-    scrollback_actor.snapshot().snapshot_lines()
+    scrollback_actor.snapshot()
 }
 
 async fn record_and_run_scenario(
@@ -928,7 +932,31 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
             return Err(format!("state error missing {needle:?}: {error:?}"));
         }
     }
+    if let Some(expected) = expected.tool_blocks {
+        if actual_tool_blocks(outcome) != expected {
+            return Err(format!(
+                "state tool_blocks mismatch: expected {expected}, got {}",
+                actual_tool_blocks(outcome)
+            ));
+        }
+    }
+    if let Some(expected) = expected.tool_output_lines {
+        let actual = outcome
+            .tool_blocks
+            .iter()
+            .map(|block| block.output.len())
+            .sum::<usize>();
+        if actual != expected {
+            return Err(format!(
+                "state tool_output_lines mismatch: expected {expected}, got {actual}"
+            ));
+        }
+    }
     Ok(())
+}
+
+fn actual_tool_blocks(outcome: &ScenarioOutcome) -> usize {
+    outcome.tool_blocks.len()
 }
 
 fn message_text(message: &runie_core::types::AgentMessage) -> String {
@@ -1841,14 +1869,4 @@ fn buffer_to_screen(buf: &Buffer) -> String {
 pub fn load_scenario(path: &Path) -> Result<Scenario, String> {
     let text = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
     serde_yaml::from_str(&text).map_err(|e| e.to_string())
-}
-
-// Bridge: pull lines out of Scrollback for assertions.
-trait ScrollbackExt {
-    fn snapshot_lines(&self) -> Vec<Line>;
-}
-impl ScrollbackExt for Scrollback {
-    fn snapshot_lines(&self) -> Vec<Line> {
-        self.lines().to_vec()
-    }
 }
