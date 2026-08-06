@@ -1,0 +1,20 @@
+name: visual-tool-running-fold
+description: |
+  A declarative compatibility seed keeps an arbitrary Grok tool card live so
+  YAML can inspect its running-only fold cycle without timers or recompilation.
+events:
+  - start
+  - tool_seed:
+      tool_call_id: call-running
+      header: custom_tool running
+      running: true
+  - tool_fold: call-running
+assertions:
+  state:
+    tool_blocks: 1
+    tool_modes: [truncated]
+    tool_running: [true]
+    tool_kinds: [generic]
+  visual:
+    cols: 80
+    rows: 24

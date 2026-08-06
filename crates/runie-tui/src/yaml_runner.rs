@@ -271,6 +271,9 @@ pub struct ToolUpdateSpec {
 pub struct ToolSeedSpec {
     pub tool_call_id: String,
     pub header: String,
+    /// Test-only lifecycle fact for inspecting a live card before completion.
+    #[serde(default)]
+    pub running: bool,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -1168,8 +1171,15 @@ fn declared_tool_seeds(scenario: &Scenario) -> Vec<ScrollbackMsg> {
         .iter()
         .filter_map(|event| match event {
             EventSpec::ToolSeed { tool_seed } => Some(ScrollbackMsg::Append(
-                Line::new(LineKind::Tool, tool_seed.header.clone())
-                    .for_tool(tool_seed.tool_call_id.clone()),
+                Line::new(
+                    if tool_seed.running {
+                        LineKind::ToolRunning
+                    } else {
+                        LineKind::Tool
+                    },
+                    tool_seed.header.clone(),
+                )
+                .for_tool(tool_seed.tool_call_id.clone()),
             )),
             _ => None,
         })

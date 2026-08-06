@@ -176,6 +176,15 @@ declare their viewport phase without sleeps or scheduler yields. The
 `visual-tool-update` scenario uses it and asserts `follow_latest_user: true`.
 ## Assertion macro boundary (2026-08-06)
 
+## Running-card fold replay (2026-08-06)
+
+`tool_seed.running: true` is a test-only declarative lifecycle fact. It lets
+YAML hold an arbitrary Grok card in the running state and apply `tool_fold`
+before settlement, so the running-only `Collapsed -> Truncated` transition is
+covered without timers, sleeps, or fixture-specific Rust. The
+`visual-tool-running-fold.yaml` scenario asserts the resulting generic card
+mode and running projection.
+
 The YAML runner now uses a small `assert_yaml_eq!` macro for scalar
 projection checks. It only expands assertion/diagnostic boilerplate; fixtures
 remain runtime-loaded YAML and reducers, actors, and rendering stay ordinary
