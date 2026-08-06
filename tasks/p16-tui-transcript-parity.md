@@ -277,3 +277,8 @@ Transcript block states:
   YAML visual replay pass the outer frame height, so per-entry user vpad uses
   Grok's full-terminal compact rule rather than the scrollback sub-rectangle.
   A renderer regression covers full and compact terminal heights.
+
+- **Vpad clipping guard (2026-08-05):** Matched Grok's block renderer rule
+  that enables user vpad only when the available content area has at least
+  three rows. Tiny panes now prioritize content over the top/bottom padding,
+  with a focused renderer regression.

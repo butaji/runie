@@ -410,7 +410,7 @@ impl Scrollback {
         // physical rows. We approximate by giving each line 1 "slot" plus
         // overflow based on text length and area width.
         let compact = crate::layout::grok_effective_compact(false, terminal_rows);
-        let physical_rows = self.physical_rows(area.width as usize, compact);
+        let physical_rows = self.physical_rows(area.width as usize, compact, area.height);
         let total = physical_rows.len();
         let visible = area.height as usize;
         let compact_scroll_lead =
@@ -467,7 +467,12 @@ impl Scrollback {
         clippy::too_many_lines,
         reason = "physical row projection keeps fold, markdown, and wrapping rules together"
     )]
-    fn physical_rows(&self, width: usize, compact: bool) -> Vec<(LineKind, String, bool)> {
+    fn physical_rows(
+        &self,
+        width: usize,
+        compact: bool,
+        available_height: u16,
+    ) -> Vec<(LineKind, String, bool)> {
         let mut rows = Vec::new();
         let mut code_block = false;
         let mut truncated_output = HashSet::new();
@@ -492,7 +497,12 @@ impl Scrollback {
                 skip_full_user_separator = false;
                 continue;
             }
-            if line.has_vpad() && width >= 70 && !compact && !user_vpad_emitted {
+            if line.has_vpad()
+                && width >= 70
+                && available_height >= 3
+                && !compact
+                && !user_vpad_emitted
+            {
                 // Grok's prompt block enables vertical padding in full mode;
                 // the narrow pager variant suppresses it.
                 rows.push((LineKind::System, String::new(), false));
@@ -1042,6 +1052,20 @@ mod tests {
             compact
                 .cell((0, 1))
                 .expect("compact assistant row")
+                .symbol(),
+            "┃"
+        );
+
+        let mut clipped = Buffer::empty(Rect::new(0, 0, 80, 2));
+        scrollback.render_with_terminal_height(Rect::new(0, 0, 80, 2), 24, &mut clipped);
+        assert_eq!(
+            clipped.cell((0, 0)).expect("clipped user row").symbol(),
+            " "
+        );
+        assert_eq!(
+            clipped
+                .cell((0, 1))
+                .expect("clipped assistant row")
                 .symbol(),
             "┃"
         );
