@@ -1271,6 +1271,20 @@ impl Scrollback {
         let mut user_vpad_emitted = false;
         let mut skip_full_user_separator = false;
         for (line_index, line) in self.lines.iter().enumerate() {
+            // Grok keeps one blank row between the settled thought summary
+            // and the completed assistant body in the live no-tool turn. The
+            // separator is a pure physical-row rule: actor-owned logical
+            // lines remain unchanged and replay fixtures keep their source
+            // event sequence.
+            if matches!(
+                line.kind,
+                LineKind::CompletedAssistant | LineKind::Assistant
+            ) && rows
+                .last()
+                .is_some_and(|(kind, _, _)| *kind == LineKind::TurnSummary)
+            {
+                rows.push((LineKind::Separator, String::new(), false));
+            }
             if width >= 50
                 && self.settled_no_tool_phase
                 && line.kind == LineKind::Separator
@@ -1492,10 +1506,14 @@ impl Scrollback {
                             );
                             continue;
                         }
+                        // Grok leaves the timestamp two cells closer to the
+                        // right edge than the generic wrapped-message
+                        // padding; keeping the offset in the projection
+                        // avoids letting the final `M` wrap onto a new row.
                         const ASSISTANT_TIMESTAMP_EDGE_OFFSET: usize = 1;
                         let padding = width
                             .saturating_sub(text.chars().count() + timestamp_width)
-                            .saturating_add(ASSISTANT_TIMESTAMP_EDGE_OFFSET);
+                            .saturating_sub(ASSISTANT_TIMESTAMP_EDGE_OFFSET);
                         text.push_str(&" ".repeat(padding));
                         text.push_str(timestamp);
                     }

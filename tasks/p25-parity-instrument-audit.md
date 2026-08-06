@@ -61,6 +61,15 @@ called parity.
   too low. This is isolated to the production live actor renderer;
   deterministic YAML replay retains the four-message mapping and its existing
   selection indices.
+- **Fresh truecolor Hey projection (2026-08-06):** A paired 80×24 diagnostic
+  showed Runie's live placeholder had `15.0K`, a missing settled-thought
+  separator, and a wrapped assistant timestamp. The placeholder usage now
+  matches the captured Grok `14K` value; the pure physical-row projection
+  preserves Grok's blank row between thought and assistant; and the timestamp
+  edge offset keeps `PM` on the same row. The fresh comparison improved from
+  126 to 50 glyph differences. Remaining differences are dynamic timestamp,
+  thought/worked elapsed values, and semantic color-role cells; no exact claim
+  is made until those inputs are matched.
 - **Verification boundary (2026-08-06):** A fresh 62×32 comparison after the
   live placement fix reduced the mismatch from 144 glyph cells to 22 cells
   with the plain captured response, and the row-placement/terminal-color

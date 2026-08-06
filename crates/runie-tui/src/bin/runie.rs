@@ -227,7 +227,7 @@ impl StreamFn for PlaceholderStream {
             AssistantMessageEvent::Done {
                 stop_reason: StopReason::Stop,
                 usage: Usage {
-                    total_tokens: 15_000,
+                    total_tokens: 14_000,
                     ..Usage::default()
                 },
                 message: None,
