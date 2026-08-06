@@ -19,6 +19,7 @@ pub use runie_tui_model::{
 // right-aligned clock before wrapping the remaining response text.
 const TIMESTAMP_GUTTER_SPACES: usize = 3;
 
+#[cfg(test)]
 #[allow(dead_code, reason = "only retained by quarantined legacy reducer code")]
 fn format_elapsed(elapsed_ms: Option<u64>) -> String {
     elapsed_ms
@@ -27,11 +28,13 @@ fn format_elapsed(elapsed_ms: Option<u64>) -> String {
         .unwrap_or_default()
 }
 
+#[cfg(test)]
 #[allow(dead_code, reason = "only retained by quarantined legacy reducer code")]
 fn format_duration(elapsed_ms: u64) -> String {
     format!("{:.1}s", elapsed_ms as f64 / 1_000.0)
 }
 
+#[cfg(test)]
 #[allow(dead_code, reason = "only retained by quarantined legacy reducer code")]
 fn workflow_phase_mark(state: &str) -> char {
     match state {
@@ -41,6 +44,7 @@ fn workflow_phase_mark(state: &str) -> char {
     }
 }
 
+#[cfg(test)]
 #[allow(dead_code, reason = "only retained by quarantined legacy reducer code")]
 fn workflow_text(
     header: &str,
@@ -240,6 +244,7 @@ impl Scrollback {
     /// Delegate renderer-neutral navigation transitions to the canonical
     /// model reducer. Legacy widget callers still receive the same snapshot,
     /// but cannot create a second implementation of actor-owned navigation.
+    #[cfg(test)]
     fn reduce_model(&mut self, message: ScrollbackMsg) {
         let mut model = FeedState {
             lines: self.lines.clone(),
@@ -277,6 +282,7 @@ impl Scrollback {
         clippy::cognitive_complexity,
         reason = "the reducer keeps all explicit transcript messages in one readable match"
     )]
+    #[cfg(test)]
     fn apply_legacy(&mut self, message: ScrollbackMsg) -> Option<usize> {
         match message {
             ScrollbackMsg::Append(line) => return Some(self.append(line)),
@@ -535,6 +541,7 @@ impl Scrollback {
         )
     }
 
+    #[cfg(test)]
     fn replace_tool_by_id(&mut self, tool_call_id: &str, text: String) {
         if let Some(line) = self.live_header_mut(tool_call_id) {
             line.text = text;
@@ -551,6 +558,7 @@ impl Scrollback {
         }
     }
 
+    #[cfg(test)]
     fn finish_tool_by_id(&mut self, tool_call_id: &str, text: String) {
         if let Some(line) = self.live_header_mut(tool_call_id) {
             line.text = text;
@@ -574,6 +582,7 @@ impl Scrollback {
         }
     }
 
+    #[cfg(test)]
     fn live_header_mut(&mut self, tool_call_id: &str) -> Option<&mut Line> {
         self.lines.iter_mut().rev().find(|line| {
             line.tool_row_id.is_some()
@@ -586,6 +595,7 @@ impl Scrollback {
         })
     }
 
+    #[cfg(test)]
     fn mark_tool_error(&mut self, tool_call_id: &str) {
         if let Some(line) = self.live_header_mut(tool_call_id) {
             line.kind = LineKind::ToolError;
@@ -605,6 +615,7 @@ impl Scrollback {
         }
     }
 
+    #[cfg(test)]
     fn replace_or_append_activity(&mut self, activity: Option<String>) {
         let Some(activity) = activity else {
             return;
@@ -616,6 +627,7 @@ impl Scrollback {
         }
     }
 
+    #[cfg(test)]
     fn append_tool_start(&mut self, tool_call_id: String, header: String, kind: LineKind) {
         let row_id = self.navigation.next_tool_row_id;
         self.navigation.next_tool_row_id = self.navigation.next_tool_row_id.wrapping_add(1);
