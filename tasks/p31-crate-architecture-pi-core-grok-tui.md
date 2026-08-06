@@ -376,3 +376,8 @@ cannot depend on TUI or terminal crates, and the pure TUI model cannot depend
 on Ratatui, Crossterm, or VT adapters. The checker has parser unit tests and
 runs inside `just ci`; this makes the layer contract executable rather than a
 review-only convention.
+
+The second p35 slice is complete: `autoscroll` and `follow_latest_user` now
+use the model-owned `FeedNavigation` across append, follow, reveal, selection,
+scrolling, snapshot, and rendering. The YAML follow regression and four-size
+visual suite pass.

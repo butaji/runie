@@ -180,7 +180,6 @@ impl LinePresentationExt for LineKind {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Scrollback {
     lines: Vec<Line>,
-    autoscroll: bool,
     scroll_offset: usize,
     reasoning_expanded: bool,
     activity_expanded: bool,
@@ -199,7 +198,6 @@ pub struct Scrollback {
     navigation: FeedNavigation,
     selected_tool_id: Option<String>,
     selected_entry: Option<usize>,
-    follow_latest_user: bool,
     workflow_headers: HashMap<String, String>,
     workflow_phases: HashMap<String, Vec<(String, String)>>,
 }
@@ -211,12 +209,12 @@ impl Scrollback {
     pub fn from_model_snapshot(snapshot: FeedSnapshot) -> Self {
         let mut scrollback = Self::new();
         scrollback.lines = snapshot.lines;
-        scrollback.autoscroll = snapshot.autoscroll;
         scrollback.scroll_offset = snapshot.scroll_offset;
+        scrollback.navigation.autoscroll = snapshot.autoscroll;
         scrollback.reasoning_expanded = snapshot.reasoning_expanded;
         scrollback.activity_expanded = snapshot.activity_expanded;
         scrollback.prompt_timestamp = snapshot.prompt_timestamp;
-        scrollback.follow_latest_user = snapshot.follow_latest_user;
+        scrollback.navigation.follow_latest_user = snapshot.follow_latest_user;
         scrollback.theme = snapshot.theme;
         scrollback.navigation.animation_frame = snapshot.animation_frame;
         scrollback.selected_tool_id = snapshot.selected_tool_id;
@@ -236,7 +234,6 @@ impl Scrollback {
     pub fn new() -> Self {
         Self {
             lines: Vec::new(),
-            autoscroll: true,
             scroll_offset: 0,
             reasoning_expanded: false,
             activity_expanded: false,
@@ -252,7 +249,6 @@ impl Scrollback {
             navigation: FeedNavigation::default(),
             selected_tool_id: None,
             selected_entry: None,
-            follow_latest_user: false,
             workflow_headers: HashMap::new(),
             workflow_phases: HashMap::new(),
         }
@@ -297,7 +293,9 @@ impl Scrollback {
                 self.set_activity_expanded(!self.activity_expanded);
             }
             ScrollbackMsg::SetPromptTimestamp(timestamp) => self.set_prompt_timestamp(timestamp),
-            ScrollbackMsg::SetFollowLatestUser(follow) => self.follow_latest_user = follow,
+            ScrollbackMsg::SetFollowLatestUser(follow) => {
+                self.navigation.follow_latest_user = follow
+            }
             ScrollbackMsg::SetToolName(tool_call_id, tool_name) => {
                 self.tool_names.insert(tool_call_id, tool_name);
             }
@@ -309,8 +307,8 @@ impl Scrollback {
             ScrollbackMsg::SelectPreviousEntry => self.select_entry(-1),
             ScrollbackMsg::ScrollBy(lines) => self.scroll_by(lines),
             ScrollbackMsg::RevealLatest => {
-                self.autoscroll = true;
-                self.follow_latest_user = false;
+                self.navigation.autoscroll = true;
+                self.navigation.follow_latest_user = false;
                 self.scroll_offset = self.lines.len();
             }
             ScrollbackMsg::MarkToolError(id) => self.mark_tool_error(&id),
@@ -591,10 +589,10 @@ impl Scrollback {
     pub fn append(&mut self, line: Line) -> usize {
         let index = self.lines.len();
         if line.kind == LineKind::User {
-            self.follow_latest_user = true;
+            self.navigation.follow_latest_user = true;
         }
         self.lines.push(line);
-        if self.autoscroll {
+        if self.navigation.autoscroll {
             // Hold offset so the tail is in view after the next render
             // (the actual clamp happens in `render` once we know area height).
             self.scroll_offset = self.lines.len();
@@ -614,7 +612,7 @@ impl Scrollback {
         self.scroll_offset = 0;
         self.selected_tool_id = None;
         self.selected_entry = None;
-        self.follow_latest_user = false;
+        self.navigation.follow_latest_user = false;
     }
 
     pub fn len(&self) -> usize {
@@ -637,12 +635,12 @@ impl Scrollback {
             lines: self.lines.clone(),
             tool_blocks: self.tool_blocks(),
             tool_names: self.tool_names.clone(),
-            autoscroll: self.autoscroll,
+            autoscroll: self.navigation.autoscroll,
             scroll_offset: self.scroll_offset,
             reasoning_expanded: self.reasoning_expanded,
             activity_expanded: self.activity_expanded,
             prompt_timestamp: self.prompt_timestamp.clone(),
-            follow_latest_user: self.follow_latest_user,
+            follow_latest_user: self.navigation.follow_latest_user,
             selected_tool_id: self.selected_tool_id.clone(),
             selected_entry: self.selected_entry,
             theme: self.theme,
@@ -848,8 +846,7 @@ impl Scrollback {
         };
         self.selected_entry = Some(entries[next]);
         self.selected_tool_id = self.lines[entries[next]].tool_call_id.clone();
-        self.autoscroll = false;
-        self.follow_latest_user = false;
+        self.navigation.detach_from_tail();
     }
 
     /// Apply Grok's explicit Ctrl+j/Ctrl+k viewport scroll intent. The actor
@@ -859,8 +856,7 @@ impl Scrollback {
         if lines == 0 {
             return;
         }
-        self.autoscroll = false;
-        self.follow_latest_user = false;
+        self.navigation.detach_from_tail();
         if lines.is_negative() {
             self.scroll_offset = self
                 .scroll_offset
@@ -984,7 +980,7 @@ impl Scrollback {
         // Event sequences may already contain a separator, but Grok still
         // reserves a distinct lead row before the submitted prompt. Add it
         // only to the projection and never to actor-owned logical state.
-        if self.follow_latest_user {
+        if self.navigation.follow_latest_user {
             if let Some(user_row) = physical_rows
                 .iter()
                 .position(|(kind, _, _)| *kind == LineKind::User)
@@ -1005,7 +1001,7 @@ impl Scrollback {
         // Clamp scroll_offset so the tail is visible.
         if total > visible {
             let max_offset = total - visible;
-            if self.autoscroll {
+            if self.navigation.autoscroll {
                 self.scroll_offset = if area.width < 50 {
                     max_offset.saturating_sub(compact_scroll_lead)
                 } else {
@@ -1040,7 +1036,7 @@ impl Scrollback {
                 }
             }
         }
-        let start = if self.follow_latest_user {
+        let start = if self.navigation.follow_latest_user {
             physical_rows
                 .iter()
                 .rposition(|(kind, _, _)| *kind == LineKind::User)
@@ -3021,8 +3017,8 @@ mod tests {
             scrollback.append(Line::new(LineKind::Assistant, format!("row {index}")));
         }
         scrollback.apply(ScrollbackMsg::ScrollBy(2));
-        assert!(!scrollback.autoscroll);
-        assert!(!scrollback.follow_latest_user);
+        assert!(!scrollback.navigation.autoscroll);
+        assert!(!scrollback.navigation.follow_latest_user);
         assert_eq!(scrollback.scroll_offset, 10);
         scrollback.apply(ScrollbackMsg::ScrollBy(-1));
         assert_eq!(scrollback.scroll_offset, 9);
@@ -3038,7 +3034,7 @@ mod tests {
         source.apply(ScrollbackMsg::RevealLatest);
 
         let adapted = Scrollback::from_model_snapshot(source.model_snapshot());
-        assert!(adapted.autoscroll);
+        assert!(adapted.navigation.autoscroll);
         assert_eq!(adapted.scroll_offset, source.scroll_offset);
     }
 

@@ -40,3 +40,10 @@ terminal-level oracle.
 - Existing YAML/replay and visual suites remain green without fixture-specific
   Rust code.
 - `just ci` and the source-backed Pi/Grok validators pass.
+
+### Slice 2 complete: follow/autoscroll ownership
+
+`autoscroll` and `follow_latest_user` now live in `FeedNavigation`; append,
+explicit-follow, reveal, selection, scroll, snapshot, and render paths all
+use that model-owned value. The YAML `visual-tool-update` follow assertion
+and the full visual matrix verify the adapter round-trip.
