@@ -94,6 +94,10 @@ publishes only `FeedSnapshot`. This is an architecture gap, not a parity
 claim; completion requires model-owned `FeedState` transitions and YAML
 coverage for every command family.
 
+The first p35 slice is complete: animation-frame ownership is part of the
+model-owned `FeedNavigation` value object, with pure advance/reset tests; the
+widget only adapts that fact for terminal rendering.
+
 `App::feed_model_snapshot()` is now the application-level read seam for new
 model consumers and scenario assertions. `App::scrollback_snapshot()` remains
 explicitly compatibility-only until the renderer migration is complete.

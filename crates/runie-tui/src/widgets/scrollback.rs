@@ -10,7 +10,9 @@ use ratatui::widgets::{Paragraph, Widget, Wrap};
 
 use crate::appearance;
 use runie_core::types::ThemeKind;
-pub use runie_tui_model::{FeedSnapshot, Line, LineKind, ScrollbackMsg, ToolBlock, ToolCardKind};
+pub use runie_tui_model::{
+    FeedNavigation, FeedSnapshot, Line, LineKind, ScrollbackMsg, ToolBlock, ToolCardKind,
+};
 
 // Grok reserves a visible gutter between the first assistant row and its
 // right-aligned clock before wrapping the remaining response text.
@@ -194,7 +196,7 @@ pub struct Scrollback {
     /// kept in the renderer.
     next_tool_row_id: u64,
     theme: ThemeKind,
-    animation_frame: usize,
+    navigation: FeedNavigation,
     selected_tool_id: Option<String>,
     selected_entry: Option<usize>,
     follow_latest_user: bool,
@@ -216,7 +218,7 @@ impl Scrollback {
         scrollback.prompt_timestamp = snapshot.prompt_timestamp;
         scrollback.follow_latest_user = snapshot.follow_latest_user;
         scrollback.theme = snapshot.theme;
-        scrollback.animation_frame = snapshot.animation_frame;
+        scrollback.navigation.animation_frame = snapshot.animation_frame;
         scrollback.selected_tool_id = snapshot.selected_tool_id;
         scrollback.selected_entry = snapshot.selected_entry;
         scrollback.tool_modes = snapshot.tool_modes;
@@ -247,7 +249,7 @@ impl Scrollback {
             tool_names: HashMap::new(),
             next_tool_row_id: 0,
             theme: ThemeKind::GrokNight,
-            animation_frame: 0,
+            navigation: FeedNavigation::default(),
             selected_tool_id: None,
             selected_entry: None,
             follow_latest_user: false,
@@ -278,7 +280,7 @@ impl Scrollback {
             }
             ScrollbackMsg::SetTheme(theme) => self.set_theme(theme),
             ScrollbackMsg::AdvanceAnimation => {
-                self.animation_frame = self.animation_frame.wrapping_add(1);
+                self.navigation.advance_animation();
             }
             ScrollbackMsg::RemoveKind(kind) => self.remove_kind(kind),
             ScrollbackMsg::NormalizeLiveCompletedAssistants => {
@@ -644,7 +646,7 @@ impl Scrollback {
             selected_tool_id: self.selected_tool_id.clone(),
             selected_entry: self.selected_entry,
             theme: self.theme,
-            animation_frame: self.animation_frame,
+            animation_frame: self.navigation.animation_frame,
             tool_modes: self.tool_modes.clone(),
             revealed_dense_groups: self.revealed_dense_groups.clone(),
             center_revealed_entry: self.center_revealed_entry,
@@ -1510,7 +1512,7 @@ impl Scrollback {
                         _ => "⌄ ",
                     }
                 } else if line.kind == LineKind::ToolRunning {
-                    running_bullet(self.animation_frame)
+                    running_bullet(self.navigation.animation_frame)
                 } else {
                     line.kind.prefix()
                 };

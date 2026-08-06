@@ -1,6 +1,6 @@
 # p35 — Extract the Scrollback reducer into the pure TUI model
 
-Status: planned (2026-08-06)
+Status: in_progress (2026-08-06)
 
 ## Why this is still open
 
@@ -11,6 +11,14 @@ watch-channel boundary is safe for readers but not yet a complete declarative
 model/render separation.
 
 ## Extraction slices
+
+### Slice 1 complete: animation ownership
+
+`FeedNavigation` now owns the animation frame and pure advance/reset
+transitions in `runie-tui-model`; `Scrollback` no longer stores a separate
+renderer-local animation counter. Model tests cover frame advancement and
+reset semantics, while the existing visual animation suite remains the
+terminal-level oracle.
 
 1. Move reducer state and pure transitions into a model-owned `FeedState`.
    Preserve line identity, tool-row ownership, folds, activity groups,

@@ -64,6 +64,51 @@ pub struct FeedSnapshot {
     pub center_revealed_entry: bool,
 }
 
+/// Renderer-independent navigation and animation facts for a feed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FeedNavigation {
+    pub autoscroll: bool,
+    pub scroll_offset: usize,
+    pub follow_latest_user: bool,
+    pub selected_tool_id: Option<String>,
+    pub selected_entry: Option<usize>,
+    pub animation_frame: usize,
+}
+
+impl Default for FeedNavigation {
+    fn default() -> Self {
+        Self {
+            autoscroll: true,
+            scroll_offset: 0,
+            follow_latest_user: false,
+            selected_tool_id: None,
+            selected_entry: None,
+            animation_frame: 0,
+        }
+    }
+}
+
+impl FeedNavigation {
+    pub fn advance_animation(&mut self) {
+        self.animation_frame = self.animation_frame.wrapping_add(1);
+    }
+
+    pub fn reveal_latest(&mut self, content_len: usize) {
+        self.autoscroll = true;
+        self.follow_latest_user = false;
+        self.scroll_offset = content_len;
+    }
+
+    pub fn detach_from_tail(&mut self) {
+        self.autoscroll = false;
+        self.follow_latest_user = false;
+    }
+
+    pub fn reset(&mut self) {
+        *self = Self::default();
+    }
+}
+
 /// Read-only typed projection of one Grok tool block.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ToolBlock {
@@ -281,6 +326,20 @@ mod tests {
         );
         assert_eq!(blocks[0].output, ["line"]);
         assert_eq!(blocks[1].kind, ToolCardKind::Execute);
+    }
+
+    #[test]
+    fn navigation_transitions_are_pure_and_resettable() {
+        let mut navigation = super::FeedNavigation::default();
+        navigation.advance_animation();
+        navigation.detach_from_tail();
+        navigation.reveal_latest(12);
+        assert_eq!(navigation.animation_frame, 1);
+        assert_eq!(navigation.scroll_offset, 12);
+        assert!(navigation.autoscroll);
+        assert!(!navigation.follow_latest_user);
+        navigation.reset();
+        assert_eq!(navigation, super::FeedNavigation::default());
     }
 }
 
