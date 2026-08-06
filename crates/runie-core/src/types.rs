@@ -816,35 +816,42 @@ pub enum AgentEvent {
 pub enum AssistantMessageEvent {
     Start,
     TextStart {
+        #[serde(rename = "contentIndex")]
         index: usize,
     },
     TextDelta {
         delta: String,
     },
     TextEnd {
+        #[serde(rename = "contentIndex")]
         index: usize,
     },
     ThinkingStart {
+        #[serde(rename = "contentIndex")]
         index: usize,
     },
     ThinkingDelta {
         delta: String,
     },
     ThinkingEnd {
+        #[serde(rename = "contentIndex")]
         index: usize,
     },
     #[serde(rename = "toolcall_start")]
     ToolCallStart {
+        #[serde(rename = "contentIndex")]
         index: usize,
         partial: ToolCall,
     },
     #[serde(rename = "toolcall_delta")]
     ToolCallDelta {
+        #[serde(rename = "contentIndex")]
         index: usize,
         partial: ToolCall,
     },
     #[serde(rename = "toolcall_end")]
     ToolCallEnd {
+        #[serde(rename = "contentIndex")]
         index: usize,
         tool_call: ToolCall,
     },
@@ -1217,6 +1224,10 @@ mod tests {
     }
 
     #[test]
+    #[allow(
+        clippy::cognitive_complexity,
+        reason = "one wire-contract test keeps all pi event key assertions together"
+    )]
     fn event_wire_shapes_use_pi_tags_and_camel_case_fields() {
         let event = AgentEvent::ToolExecutionStart {
             tool_call_id: "call-1".into(),
@@ -1235,6 +1246,11 @@ mod tests {
         let update_json = serde_json::to_value(message_update).expect("message update serializes");
         assert!(update_json.get("event").is_none());
         assert_eq!(update_json["assistantMessageEvent"]["type"], "text_delta");
+
+        let stream_start = serde_json::to_value(AssistantMessageEvent::TextStart { index: 2 })
+            .expect("text start serializes");
+        assert_eq!(stream_start["contentIndex"], 2);
+        assert!(stream_start.get("index").is_none());
 
         let stream = AssistantMessageEvent::ToolCallEnd {
             index: 0,

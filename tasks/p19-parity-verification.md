@@ -1178,3 +1178,8 @@ The oracle is a table: `scenario → pi_reference(file:line) → expected_events
   pi-compatible `assistantMessageEvent` field instead of the internal Rust
   field name `event`. The wire-shape test asserts both the key and nested
   event tag; replay coverage remains green.
+
+- **Assistant stream content index (2026-08-06):** Pi's granular stream
+  events use `contentIndex`; Runie's text, thinking, and tool-call index
+  fields now serialize with that exact camelCase key while retaining the
+  internal `index` field name. The wire-shape test covers the family.
