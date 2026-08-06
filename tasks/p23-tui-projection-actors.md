@@ -346,3 +346,8 @@ also owns the shared bus subscription for `Reset` and atomically clears its
 transcript/selection projection. `App` uses this constructor; the renderer's
 complex feed reducer remains the explicit deterministic replay seam until all
 stateful tool grouping is moved into the actor.
+
+Scrollback configuration ownership (2026-08-06): the same bus-owned actor now
+projects `ThemeChanged` and `ToolDisplayModeChanged` into `ScrollbackMsg`
+commands. Live renderer dispatch no longer owns these transcript settings;
+focused actor tests pin reset and theme transitions.

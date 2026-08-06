@@ -55,14 +55,23 @@ impl ScrollbackActor {
         actor._bus_owner = Some(spawn_owned_worker!(async move {
             loop {
                 match events.recv().await {
-                    Ok(AgentEvent::Reset) => {
-                        if !mailbox_ack!(tx, |reply| {
-                            Command::ApplyBatch(vec![ScrollbackMsg::Clear], reply)
-                        }) {
+                    Ok(event) => {
+                        let messages = match event {
+                            AgentEvent::Reset => vec![ScrollbackMsg::Clear],
+                            AgentEvent::ThemeChanged { theme } => {
+                                vec![ScrollbackMsg::SetTheme(theme)]
+                            }
+                            AgentEvent::ToolDisplayModeChanged { tool_call_id, mode } => {
+                                vec![ScrollbackMsg::SetToolMode(tool_call_id, mode)]
+                            }
+                            _ => Vec::new(),
+                        };
+                        if !messages.is_empty()
+                            && !mailbox_ack!(tx, |reply| Command::ApplyBatch(messages, reply))
+                        {
                             break;
                         }
                     }
-                    Ok(_) => {}
                     Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
                     Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
                 }
@@ -131,6 +140,24 @@ mod tests {
             .await
             .expect("scrollback reset projection");
         assert!(actor.snapshot().lines().is_empty());
+    }
+
+    #[tokio::test]
+    async fn bus_owned_actor_projects_theme_changes() {
+        let bus = runie_core::events::EventBus::new();
+        let actor = ScrollbackActor::new_with_bus(&bus);
+        let mut snapshot = actor.subscribe();
+        bus.publish(AgentEvent::ThemeChanged {
+            theme: runie_core::types::ThemeKind::GrokDay,
+        });
+        snapshot
+            .changed()
+            .await
+            .expect("scrollback theme projection");
+        assert_eq!(
+            actor.snapshot().theme(),
+            runie_core::types::ThemeKind::GrokDay
+        );
     }
 
     #[tokio::test]
