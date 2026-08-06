@@ -34,7 +34,9 @@ assertions:
       cast: grok-rich.cast
       frame_contains: ["Listed 1 dir", "Read 1 file"]
       exact_screen: true
-      # The checked-in cast uses terminal-default SGR attributes.
+      # The checked-in cast was captured with terminal-default SGR attributes;
+      # source-correct theme tokens remain a separate oracle until a full-color
+      # Grok capture replaces this artifact.
       exact_attributes: false
     screen_text:
       - "◈ Listed 1 dir"

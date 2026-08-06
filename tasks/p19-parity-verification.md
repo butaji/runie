@@ -1237,3 +1237,11 @@ The oracle is a table: `scenario → pi_reference(file:line) → expected_events
 - **Assistant error reason (2026-08-06):** The internal assistant error text
   now serializes under pi's terminal `reason` key, while reducer code retains
   the descriptive `error` field name. Wire coverage pins the `aborted` value.
+ - **Attribute-oracle audit (2026-08-06):** Temporarily promoted both strict
+   Grok feed YAML references to `exact_attributes: true`. The oracle correctly
+   rejected them with 518 cell attribute differences: the checked-in
+   `grok-rich.cast` records terminal-default SGR while Runie paints explicit
+   Opaline RGB tokens (the first delta is the GrokNight base surface at row 3).
+   The fixtures remain symbol-exact but intentionally attribute-pending until
+   a fresh full-color Grok capture is recorded; this is an open parity gap, not
+   a passing color claim.

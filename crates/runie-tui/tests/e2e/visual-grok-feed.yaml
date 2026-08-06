@@ -34,8 +34,9 @@ assertions:
       frame_index: 81
       frame_contains: ["Listed 1 dir", "Read 1 file"]
       exact_screen: true
-      # This legacy cast was captured with terminal-default SGR attributes;
-      # source-correct GrokNight Opaline colors are asserted separately.
+      # The checked-in cast was captured with terminal-default SGR attributes;
+      # source-correct theme tokens remain a separate oracle until a full-color
+      # Grok capture replaces this artifact.
       exact_attributes: false
       rows:
         - contains: "Listed 1 dir"
