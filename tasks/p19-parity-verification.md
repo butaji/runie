@@ -323,6 +323,11 @@ The oracle is a table: `scenario → pi_reference(file:line) → expected_events
   partial result payloads. `visual-tool-update.yaml` replays the event through
   the shared actor/event renderer and requires the complete tool lifecycle
   family, eliminating a prior compiled-code-only gap for partial tool output.
+- **Sectional thinking YAML parity (2026-08-06):** The YAML DSL now accepts
+  pi's `thinking_start` and `thinking_end` markers, including optional
+  server-provided elapsed milliseconds. `visual-thinking-sections.yaml`
+  replays the marker/delta/end sequence through the provider and renderer,
+  keeping thinking lifecycle coverage declarative.
 - **Serialization oracle audit (2026-08-05):** Re-audited the p01–p04/p09
   wire contracts. Existing core tests round-trip assistant, tool-result, user,
   model, usage/cost, event, tool-hook, image, stop-reason, and thinking-level

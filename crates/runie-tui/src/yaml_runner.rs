@@ -72,6 +72,12 @@ pub enum EventSpec {
     ThinkingDelta {
         thinking_delta: String,
     },
+    ThinkingStart {
+        thinking_start: ThinkingStartSpec,
+    },
+    ThinkingEnd {
+        thinking_end: ThinkingEndSpec,
+    },
     ToolCall {
         tool_call: ToolCallSpec,
     },
@@ -167,6 +173,21 @@ pub struct ToolUpdateSpec {
     pub partial_result: serde_json::Value,
 }
 
+#[derive(Debug, Deserialize, Clone)]
+pub struct ThinkingStartSpec {
+    #[serde(default)]
+    pub index: usize,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct ThinkingEndSpec {
+    #[serde(default)]
+    pub index: usize,
+    pub content: String,
+    #[serde(default)]
+    pub elapsed_ms: Option<u64>,
+}
+
 fn waiting_name(name: &str) -> WaitingReason {
     match name {
         "subagent" => WaitingReason::Subagent,
@@ -234,6 +255,16 @@ impl EventSpec {
                 delta: thinking_delta.clone(),
                 partial: AssistantMessage::default(),
             }),
+            Self::ThinkingStart { thinking_start } => Some(AssistantMessageEvent::ThinkingStart {
+                index: thinking_start.index,
+                partial: AssistantMessage::default(),
+            }),
+            Self::ThinkingEnd { thinking_end } => Some(AssistantMessageEvent::ThinkingEnd {
+                index: thinking_end.index,
+                content: thinking_end.content.clone(),
+                elapsed_ms: thinking_end.elapsed_ms,
+                partial: AssistantMessage::default(),
+            }),
             Self::ToolCall { tool_call } => Some(AssistantMessageEvent::ToolCallDelta {
                 index,
                 partial: runie_core::types::ToolCall {
@@ -289,6 +320,7 @@ impl EventSpec {
                 args: tool_update.args.clone(),
                 partial_result: tool_update.partial_result.clone(),
             }),
+            Self::ThinkingStart { .. } | Self::ThinkingEnd { .. } => None,
             Self::ToolFold { .. } => None,
             Self::ToolSelect { .. } => None,
             Self::BackgroundStart { background_start } => Some(AgentEvent::BackgroundWorkStarted {

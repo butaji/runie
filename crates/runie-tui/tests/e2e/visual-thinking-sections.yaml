@@ -1,0 +1,18 @@
+name: visual-thinking-sections
+description: |
+  Pi sectional thinking markers and server elapsed metadata are replayable
+  directly from YAML.
+initial_prompt: "reason about the task"
+events:
+  - start
+  - thinking_start: { index: 1 }
+  - thinking_delta: "first thought"
+  - thinking_end: { index: 1, content: "first thought", elapsed_ms: 250 }
+  - done: { stop_reason: stop }
+assertions:
+  required_events: [message_update, message_end]
+  visual:
+    cols: 80
+    rows: 24
+    screen_text:
+      - "Thought"
