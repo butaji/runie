@@ -85,6 +85,7 @@ pub struct Line {
     pub kind: LineKind,
     pub text: String,
     pub tool_call_id: Option<String>,
+    has_vpad: bool,
 }
 
 impl Line {
@@ -93,7 +94,17 @@ impl Line {
             kind,
             text: text.into(),
             tool_call_id: None,
+            has_vpad: false,
         }
+    }
+
+    pub fn with_vpad(mut self, has_vpad: bool) -> Self {
+        self.has_vpad = has_vpad;
+        self
+    }
+
+    pub fn has_vpad(&self) -> bool {
+        self.has_vpad
     }
 
     pub fn for_tool(mut self, tool_call_id: impl Into<String>) -> Self {
@@ -468,7 +479,7 @@ impl Scrollback {
                 skip_full_user_separator = false;
                 continue;
             }
-            if line.kind == LineKind::User && width >= 70 && !user_vpad_emitted {
+            if line.has_vpad() && width >= 70 && !user_vpad_emitted {
                 // Grok's prompt block enables vertical padding in full mode;
                 // the narrow pager variant suppresses it.
                 rows.push((LineKind::System, String::new(), false));

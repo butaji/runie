@@ -70,7 +70,9 @@ pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
                 })
                 .collect::<Vec<_>>()
                 .join("");
-            vec![ScrollbackMsg::Append(Line::new(LineKind::User, text))]
+            vec![ScrollbackMsg::Append(
+                Line::new(LineKind::User, text).with_vpad(true),
+            )]
         }
         AgentEvent::MessageStart {
             message: runie_core::types::AgentMessage::Assistant(_),
@@ -574,7 +576,7 @@ impl EventRenderer {
                     .join("");
                 self.scrollback
                     .lock()
-                    .append(Line::new(LineKind::User, text));
+                    .append(Line::new(LineKind::User, text).with_vpad(true));
             }
             AgentMessage::Assistant(_) => {
                 self.activity_group_open = false;

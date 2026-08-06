@@ -257,3 +257,8 @@ Transcript block states:
 - **Separator normalization (2026-08-05):** Activity-spacing normalization
   now inserts `LineKind::Separator` rather than reintroducing a generic system
   line, keeping the metadata distinction intact through reducer operations.
+- **Entry vpad metadata (2026-08-05):** `Line` now carries explicit
+  `has_vpad` metadata and user blocks opt into it. Full-mode projection reads
+  that metadata instead of assuming every user-shaped row has vpad, preserving
+  current replay output while enabling the source-aligned per-entry layout
+  implementation.
