@@ -23,10 +23,18 @@ trap cleanup EXIT INT TERM
 tmux new-session -d -s "$session" -x "$cols" -y "$rows" \
   "bash -c 'read -r launch; eval \"\$launch\"'"
 tmux resize-window -t "$session" -x "$cols" -y "$rows"
+# Grok's terminal probe distinguishes emitted color from color surviving the
+# multiplexer.  A private tmux server must advertise RGB explicitly or tmux
+# can downgrade/strip 24-bit SGR even when TERM/COLORTERM request truecolor.
+# Keep this scoped to the capture session; never mutate the user's tmux config.
+tmux set-option -t "$session" -as terminal-features ",*:RGB"
 # Make color capability part of every captured artifact. Callers may override
 # either value through the validated assignment list, but a capture must not
 # silently inherit a terminal-default palette from the host shell.
-record_command="TERM=xterm-256color COLORTERM=truecolor"
+# The host environment may set NO_COLOR (this workspace does). Grok's own
+# doctor reports that as a hard color disable, so parity captures must make
+# the intended color contract explicit rather than inheriting it silently.
+record_command="env -u NO_COLOR TERM=xterm-256color COLORTERM=truecolor"
 capture_term="xterm-256color"
 capture_colorterm="truecolor"
 if [[ -n "$env_assignments" ]]; then

@@ -39,6 +39,21 @@ called parity.
   now uses Grok's current captured `Hey` response
   `Hey — what would you like to work on in runie?`; deterministic YAML
   fixtures retain their own event-owned responses.
+- **Private tmux RGB/NO_COLOR correction (2026-08-06):** The host environment
+  exports `NO_COLOR=1`, and the isolated tmux session did not advertise the
+  `RGB` terminal feature. Grok's `/doctor --json` therefore reported
+  `color.level: none` and emitted no SGR despite `COLORTERM=truecolor`. The
+  capture helper now unsets `NO_COLOR` only inside the recorded command and
+  sets `terminal-features ",*:RGB"` only on its private tmux session. It never
+  edits the user's tmux configuration. A fresh 80×24 Grok capture then emitted
+  277 foreground and 315 background truecolor sequences. This is a required
+  prerequisite for any color/attribute parity claim.
+- **Truecolor diagnostic classification (2026-08-06):** The first paired fresh
+  truecolor capture compared Grok's live response with Runie's placeholder
+  response and reported 738 differing cells (124 glyph, 614 attribute). The
+  semantic event recipe is not matched, so this is diagnostic evidence rather
+  than a renderer parity verdict; `exact_attributes` remains gated on matched
+  state.
 - **Live assistant placement correction (2026-08-06):** The assistant-start
   projection now emits `Thinking… → separator → response`, matching the
   captured Grok live frame after the aligned user row. The former leading

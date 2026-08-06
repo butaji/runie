@@ -37,6 +37,13 @@ Missing any of these makes the result diagnostic, not a parity decision.
 
 ## Current highest-value missing data (2026-08-06)
 
+The capture prerequisite is now closed at the instrument boundary: the private
+tmux harness advertises RGB and removes inherited `NO_COLOR` for the captured
+process. Fresh Grok output contains truecolor SGR. The next valid comparison
+must still use identical semantic events and a frozen elapsed/usage boundary;
+comparing a live Grok network answer to Runie's placeholder stream measures
+state divergence, not renderer parity.
+
 The native 80×24 comparison has zero attribute differences after marker
 selection, but still differs in dynamic telemetry and frame count. The next
 capture needs deterministic elapsed time, token counters, and a stable settled
