@@ -282,6 +282,11 @@ async fn supplied_context_reaches_first_provider_request() {
         stream.texts.lock().as_slice(),
         ["prior context", "new prompt"]
     );
+    let snapshot = test.actor.state_snapshot();
+    assert_eq!(snapshot.system_prompt, "system context");
+    assert!(snapshot.messages.iter().any(|message| {
+        matches!(message, AgentMessage::User(user) if user.content.iter().any(|content| matches!(content, UserContent::Text { text } if text == "prior context")))
+    }));
 }
 
 #[tokio::test]
@@ -312,12 +317,6 @@ async fn convert_to_llm_replaces_wire_messages_after_transform() {
         .prompt(user(), AgentContext::default())
         .await
         .unwrap();
-
-    let snapshot = test.actor.state_snapshot();
-    assert_eq!(snapshot.system_prompt, "system context");
-    assert!(snapshot.messages.iter().any(|message| {
-        matches!(message, AgentMessage::User(user) if user.content.iter().any(|content| matches!(content, UserContent::Text { text } if text == "prior context")))
-    }));
 
     assert_eq!(&*stream.texts.lock(), &["converted".to_string()]);
 }
