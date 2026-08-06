@@ -150,6 +150,11 @@ actor; `visual-activity-mixed.yaml` asserts the resulting visible `⌄` marker f
   follow-latest behavior. Existing collapsed-activity and reasoning fixtures
   pin these reducer states alongside their rendered output.
 
+- **Command-palette interaction oracle (2026-08-06):** Visual YAML steps now
+  support palette Escape and can assert actor-owned `palette_open`, query, and
+  selection index. `visual-command-palette.yaml` verifies Grok's first-Escape
+  behavior: filtering is cleared while the modal remains open.
+
 The recurring actor ownership, event-kind classification, and TUI view-tree
 patterns are already covered by thin local macros (`spawn_actor_worker!`,
 `mailbox_*`, `agent_event_kind!`, `assistant_event_kind!`, and `view!`). A

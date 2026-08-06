@@ -591,6 +591,13 @@ pub struct VisualAssertions {
     pub screen_text: Vec<String>,
     #[serde(default)]
     pub screen_excludes: Vec<String>,
+    /// Optional actor-owned command-palette state after `steps` settle.
+    #[serde(default)]
+    pub palette_open: Option<bool>,
+    #[serde(default)]
+    pub palette_query: Option<String>,
+    #[serde(default)]
+    pub palette_index: Option<usize>,
     /// Steps the TUI should perform before snapshotting the screen.
     /// Each step is a key event (e.g. "hello", "Enter", "Ctrl+C").
     #[serde(default)]
@@ -2208,6 +2215,11 @@ pub async fn render_visual_buffer(
             }
             continue;
         }
+        if step == "Esc" && app.ui.snapshot().command_palette_open {
+            app.command_palette_key(crate::app::UiMsg::CommandPaletteEscape)
+                .await;
+            continue;
+        }
         if app.ui.snapshot().command_palette_open {
             for ch in step.chars() {
                 app.command_palette_key(crate::app::UiMsg::CommandPaletteChar(ch))
@@ -2275,6 +2287,32 @@ pub async fn render_visual_buffer(
                     app.hide_welcome().await;
                 }
             }
+        }
+    }
+
+    let palette = app.ui.snapshot();
+    if let Some(expected) = vis.palette_open {
+        if palette.command_palette_open != expected {
+            return Err(format!(
+                "palette_open mismatch: expected {expected}, got {}",
+                palette.command_palette_open
+            ));
+        }
+    }
+    if let Some(expected) = &vis.palette_query {
+        if palette.command_palette_query != *expected {
+            return Err(format!(
+                "palette_query mismatch: expected {expected:?}, got {:?}",
+                palette.command_palette_query
+            ));
+        }
+    }
+    if let Some(expected) = vis.palette_index {
+        if palette.command_palette_index != expected {
+            return Err(format!(
+                "palette_index mismatch: expected {expected}, got {}",
+                palette.command_palette_index
+            ));
         }
     }
 

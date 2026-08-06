@@ -8,9 +8,10 @@ assertions:
     steps:
       - Ctrl+P
       - "new"
+      - Esc
+    palette_open: true
+    palette_query: ""
+    palette_index: 0
     screen_text:
       - "Commands"
-      - "> new"
       - "New Session"
-    screen_excludes:
-      - "Resume Session"
