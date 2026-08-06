@@ -72,6 +72,16 @@ projected through `ToolBlock`; compatibility rows have no token. Provider call
 IDs remain only the external event lookup key at the actor boundary, while
 the reducer mutation itself validates the token-bearing semantic header.
 
+## Duplicate live-ID hardening (2026-08-06)
+
+Compatibility/provider replays can present the same external call ID in more
+than one live start. `Scrollback` now stores an ordered vector of opaque row
+tokens per call ID instead of overwriting one token. Updates and completion
+target the newest token and pop only that token, allowing an older live row to
+settle independently afterward. A unit scenario covers two live starts,
+update/end of the newest row, then end of the older row. The provider ID is
+therefore only a lookup key, never the row identity.
+
 ## Evidence
 
 `visual-activity-mixed.yaml` is the regression oracle. It contains multiple

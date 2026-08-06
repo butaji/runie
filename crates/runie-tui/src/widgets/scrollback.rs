@@ -175,7 +175,11 @@ pub struct Scrollback {
     tool_names: HashMap<String, String>,
     /// Provider IDs are lookup keys only; mutations target the opaque row
     /// token stored on the corresponding line.
-    live_tool_rows: HashMap<String, u64>,
+    /// Provider IDs are not guaranteed to be unique in compatibility
+    /// replays. Keep every live opaque row token in start order; the newest
+    /// token is the target for updates and completion, while older live rows
+    /// remain independently addressable.
+    live_tool_rows: HashMap<String, Vec<u64>>,
     next_tool_row_id: u64,
     theme: ThemeKind,
     animation_frame: usize,
@@ -205,7 +209,11 @@ impl Scrollback {
         scrollback.tool_modes = snapshot.tool_modes;
         for line in &scrollback.lines {
             if let (Some(call_id), Some(row_id)) = (line.tool_call_id.as_ref(), line.tool_row_id) {
-                scrollback.live_tool_rows.insert(call_id.clone(), row_id);
+                scrollback
+                    .live_tool_rows
+                    .entry(call_id.clone())
+                    .or_default()
+                    .push(row_id);
                 scrollback.next_tool_row_id =
                     scrollback.next_tool_row_id.max(row_id.saturating_add(1));
             }
@@ -324,7 +332,10 @@ impl Scrollback {
                         .for_tool(tool_call_id.clone())
                         .for_tool_row(row_id),
                 );
-                self.live_tool_rows.insert(tool_call_id, row_id);
+                self.live_tool_rows
+                    .entry(tool_call_id)
+                    .or_default()
+                    .push(row_id);
             }
             ScrollbackMsg::ToolUpdate {
                 tool_call_id,
@@ -345,7 +356,7 @@ impl Scrollback {
                 output,
             } => {
                 self.finish_tool_by_id(&tool_call_id, header);
-                self.live_tool_rows.remove(&tool_call_id);
+                self.remove_live_tool_row(&tool_call_id);
                 if self
                     .tool_names
                     .get(&tool_call_id)
@@ -566,7 +577,7 @@ impl Scrollback {
     }
 
     fn live_header_mut(&mut self, tool_call_id: &str) -> Option<&mut Line> {
-        let row_id = *self.live_tool_rows.get(tool_call_id)?;
+        let row_id = *self.live_tool_rows.get(tool_call_id)?.last()?;
         self.lines.iter_mut().find(|line| {
             line.tool_row_id == Some(row_id)
                 && line.tool_call_id.as_deref() == Some(tool_call_id)
@@ -575,6 +586,16 @@ impl Scrollback {
                     LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
                 )
         })
+    }
+
+    fn remove_live_tool_row(&mut self, tool_call_id: &str) {
+        let Some(rows) = self.live_tool_rows.get_mut(tool_call_id) else {
+            return;
+        };
+        rows.pop();
+        if rows.is_empty() {
+            self.live_tool_rows.remove(tool_call_id);
+        }
     }
 
     fn mark_tool_error(&mut self, tool_call_id: &str) {
@@ -2566,6 +2587,50 @@ mod tests {
             .lines()
             .iter()
             .any(|line| line.kind == LineKind::ToolOutput && line.text == "live output"));
+    }
+
+    #[test]
+    fn duplicate_live_provider_ids_keep_each_opaque_row_owner() {
+        let mut scrollback = Scrollback::new();
+        scrollback.apply(ScrollbackMsg::ToolStart {
+            tool_call_id: "duplicate".into(),
+            header: "first running".into(),
+            activity: None,
+        });
+        scrollback.apply(ScrollbackMsg::ToolStart {
+            tool_call_id: "duplicate".into(),
+            header: "second running".into(),
+            activity: None,
+        });
+        scrollback.apply(ScrollbackMsg::ToolUpdate {
+            tool_call_id: "duplicate".into(),
+            header: Some("second updated".into()),
+            output: Vec::new(),
+        });
+        scrollback.apply(ScrollbackMsg::ToolEnd {
+            tool_call_id: "duplicate".into(),
+            header: "second done".into(),
+            activity: None,
+            output: Vec::new(),
+        });
+        scrollback.apply(ScrollbackMsg::ToolEnd {
+            tool_call_id: "duplicate".into(),
+            header: "first done".into(),
+            activity: None,
+            output: Vec::new(),
+        });
+
+        let headers = scrollback
+            .lines()
+            .iter()
+            .filter(|line| line.tool_call_id.as_deref() == Some("duplicate"))
+            .map(|line| line.text.as_str())
+            .collect::<Vec<_>>();
+        assert_eq!(headers, vec!["first done", "second done"]);
+        assert_ne!(
+            scrollback.lines()[0].tool_row_id,
+            scrollback.lines()[1].tool_row_id
+        );
     }
 
     #[test]
