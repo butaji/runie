@@ -671,7 +671,7 @@ impl Scrollback {
                     .tool_call_id
                     .as_ref()
                     .and_then(|id| self.tool_modes.get(id))
-                    .is_some_and(|mode| *mode == runie_core::types::ToolDisplayMode::Expanded)
+                    .is_some_and(|mode| *mode != runie_core::types::ToolDisplayMode::Collapsed)
             {
                 continue;
             }

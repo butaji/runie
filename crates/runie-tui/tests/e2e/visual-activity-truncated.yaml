@@ -19,6 +19,7 @@ assertions:
   visual:
     cols: 80
     rows: 24
+    activity_expanded: false
     screen_text:
       - "Read README.md"
       - "# runie"
