@@ -24,6 +24,8 @@ events:
       tool_call_id: call-2
       mode: collapsed
 assertions:
+  state:
+    tool_blocks: 2
   visual:
     cols: 80
     rows: 24

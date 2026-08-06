@@ -17,6 +17,8 @@ events:
       args: { task: "summarize" }
   - done: { stop_reason: tool_use }
 assertions:
+  state:
+    tool_blocks: 2
   visual:
     cols: 80
     rows: 24
