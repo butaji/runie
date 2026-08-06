@@ -798,7 +798,21 @@ impl Scrollback {
         // physical rows. We approximate by giving each line 1 "slot" plus
         // overflow based on text length and area width.
         let compact = crate::layout::grok_effective_compact(false, terminal_rows);
-        let physical_rows = self.physical_rows(area.width as usize, compact, area.height);
+        let mut physical_rows = self.physical_rows(area.width as usize, compact, area.height);
+        // Grok reserves one visual lead row for a submitted prompt. Live
+        // event sequences normally already contain a separator; direct/YAML
+        // reducer inputs may not, so add the lead only to the projection and
+        // never to actor-owned logical state.
+        if self.follow_latest_user {
+            if let Some(user_row) = physical_rows
+                .iter()
+                .position(|(kind, _, _)| *kind == LineKind::User)
+            {
+                if user_row == 0 || physical_rows[user_row - 1].0 != LineKind::Separator {
+                    physical_rows.insert(user_row, (LineKind::Separator, String::new(), false));
+                }
+            }
+        }
         let total = physical_rows.len();
         let visible = area.height as usize;
         let compact_scroll_lead =
@@ -1698,21 +1712,21 @@ mod tests {
         );
         assert_eq!(
             compact
-                .cell((0, 1))
+                .cell((0, 2))
                 .expect("compact assistant row")
                 .symbol(),
             "┃"
         );
 
-        let mut clipped = Buffer::empty(Rect::new(0, 0, 80, 2));
-        scrollback.render_with_terminal_height(Rect::new(0, 0, 80, 2), 24, &mut clipped);
+        let mut clipped = Buffer::empty(Rect::new(0, 0, 80, 3));
+        scrollback.render_with_terminal_height(Rect::new(0, 0, 80, 3), 24, &mut clipped);
         assert_eq!(
             clipped.cell((0, 0)).expect("clipped user row").symbol(),
             " "
         );
         assert_eq!(
             clipped
-                .cell((0, 1))
+                .cell((0, 2))
                 .expect("clipped assistant row")
                 .symbol(),
             "┃"
@@ -1828,7 +1842,7 @@ mod tests {
                     .is_some_and(|cell| cell.symbol() == "H")
             })
             .expect("first submitted prompt remains visible");
-        assert_eq!(first_row, 0);
+        assert_eq!(first_row, 1);
     }
 
     #[test]
@@ -2131,12 +2145,12 @@ mod tests {
     fn grok_user_feed_cursor_is_at_column_five() {
         let mut scrollback = Scrollback::new();
         scrollback.append(Line::new(LineKind::User, "Please list files"));
-        let mut buffer = Buffer::empty(Rect::new(2, 0, 76, 1));
-        scrollback.render(Rect::new(2, 0, 76, 1), &mut buffer);
+        let mut buffer = Buffer::empty(Rect::new(2, 0, 76, 2));
+        scrollback.render(Rect::new(2, 0, 76, 2), &mut buffer);
         assert_eq!(buffer.cell((2, 0)).expect("gutter").symbol(), " ");
-        assert_eq!(buffer.cell((5, 0)).expect("Grok user cursor").symbol(), "❯");
+        assert_eq!(buffer.cell((5, 1)).expect("Grok user cursor").symbol(), "❯");
         assert_eq!(
-            buffer.cell((7, 0)).expect("first user letter").symbol(),
+            buffer.cell((7, 1)).expect("first user letter").symbol(),
             "P"
         );
     }

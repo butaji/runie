@@ -427,6 +427,14 @@ prompt block, preserving the full-width background and top anchor in the real
 timestamped PTY path. A full lifecycle reducer test and an 80x24 tmux/asciinema
 capture verify the previously missing `❯ Hey` row.
 
+Absolute prompt lead correction (2026-08-06): the follow-anchor tests only
+verified that a submitted prompt was visible, not its absolute row. Grok
+always gives a submitted user block one leading separator row. `Scrollback`
+now synthesizes that separator for direct/YAML user events when the event
+sequence has not already emitted one, preserving live event ordering without
+duplication. The focused geometry assertion requires the prompt glyph at row
+1, and the full scroll snapshot covers the regression.
+
 Edit-card diff parity (2026-08-06): added Opaline-backed GrokNight/GrokDay
 insert/delete background tokens (`#063806`/`#420e14` and
 `#daf2dc`/`#f5dade`). Diff rows now paint semantic foreground and full-row

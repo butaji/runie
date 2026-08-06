@@ -397,3 +397,8 @@ Typed tool identity (2026-08-06): actor/replay start events now publish the
 tool name into the scrollback reducer separately from the display header.
 `ToolBlock.kind` therefore survives completion-header rewrites and only falls
 back to legacy header inference for compatibility-created rows.
+Responsive layout audit (2026-08-06): Grok's source derives compact mode from
+terminal height (`<= 20` rows), not merely from a boolean setting. The source
+behavior is recorded here for the pending full layout migration; the current
+fix is limited to the feed's absolute prompt lead so unrelated 12-row
+transcript geometry remains stable.
