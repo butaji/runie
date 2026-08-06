@@ -1553,9 +1553,8 @@ fn draw_visual_frame(
                     WelcomeWidget::render_hero_footer_badge(layout.footer_badge, f.buffer_mut());
                 }
             } else {
-                app.scrollback
-                    .lock()
-                    .render(layout.scrollback, f.buffer_mut());
+                let mut scrollback = app.scrollback_snapshot();
+                scrollback.render(layout.scrollback, f.buffer_mut());
             }
             if show_turn_status {
                 let projected =

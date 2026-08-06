@@ -110,6 +110,11 @@ publish immutable `watch` snapshots to the pure view.
   removing the last compatibility-state decision from that actor transition.
   Clippy and the repository lint remain clean.
 
+- **YAML view cutover (2026-08-05):** The visual YAML runner now renders from
+  `App::scrollback_snapshot()` instead of locking the compatibility scrollback
+  mutex. YAML assertions therefore exercise the same actor-owned view used by
+  the live app; unit, replay, Clippy, and lint gates remain green.
+
 ## Migration sequence
 
 1. Make event application async at the renderer boundary and await status
