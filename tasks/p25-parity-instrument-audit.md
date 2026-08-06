@@ -441,3 +441,11 @@ and background colors, including their reset forms. The comparator's previous
 parser silently discarded those SGR variants; a full-dump comparison can now
 report style-only differences instead of treating them as equal. The parser
 was syntax-checked and self-compared against the fresh 80x24 capture.
+
+Fresh final-frame selection audit (2026-08-06): the new 80×24 pair in
+`/tmp/runie-parity-current/` was dumped cell-by-cell after the indexed
+mismatch. Both grids are 80×24, but Grok's selected final frame has a blank
+row 1 while Runie's has the header (` main … 15K / 500K`). The reported first
+cell `9`/`5` mismatch therefore reflects capture termination/frame selection,
+not a header value mismatch. The strict instrument correctly exposes this
+phase error; no renderer change or oracle weakening was made.
