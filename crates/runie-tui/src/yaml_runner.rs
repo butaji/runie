@@ -1861,6 +1861,16 @@ pub async fn render_visual_buffer(
     for ev in events.into_iter() {
         renderer.apply_actor_event(ev).await;
     }
+    // The deterministic renderer applies the event directly to its projection
+    // actors. Re-publish the final theme through App's shared bus as well so
+    // PromptActor receives the same event boundary; otherwise prompt chrome
+    // can retain GrokNight while scrollback is already TerminalNative.
+    if let Some(theme) = scenario.events.iter().rev().find_map(|event| match event {
+        EventSpec::Theme { theme } => Some(parse_theme(theme)),
+        _ => None,
+    }) {
+        app.set_theme(theme).await;
+    }
     // Visual fixtures are deterministic settled snapshots; keep their
     // viewport phase independent from live follow mode so wrapped responses
     // remain visible while the real app follows newly submitted prompts.

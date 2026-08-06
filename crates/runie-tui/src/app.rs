@@ -216,6 +216,10 @@ enum PromptMsg {
     OpenFileSearch(tokio::sync::oneshot::Sender<()>),
     SetCaption(String, tokio::sync::oneshot::Sender<()>),
     SetPlaceholderVisible(bool, tokio::sync::oneshot::Sender<()>),
+    SetTheme(
+        runie_core::types::ThemeKind,
+        tokio::sync::oneshot::Sender<()>,
+    ),
 }
 
 #[derive(Clone)]
@@ -268,6 +272,12 @@ impl PromptActor {
         let (reply, result) = tokio::sync::oneshot::channel();
         self.unit(PromptMsg::SetPlaceholderVisible(visible, reply))
             .await;
+        let _ = result.await;
+    }
+
+    pub async fn set_theme(&self, theme: runie_core::types::ThemeKind) {
+        let (reply, result) = tokio::sync::oneshot::channel();
+        self.unit(PromptMsg::SetTheme(theme, reply)).await;
         let _ = result.await;
     }
 
@@ -343,6 +353,10 @@ fn handle_prompt_message(prompt: &mut PromptWidget, message: PromptMsg) {
             prompt.set_placeholder_visible(visible);
             let _ = reply.send(());
         }
+        PromptMsg::SetTheme(theme, reply) => {
+            prompt.set_theme(theme);
+            let _ = reply.send(());
+        }
     }
 }
 
@@ -391,6 +405,7 @@ impl App {
         const THEME_ACK_ATTEMPTS: usize = 16;
         self.bus
             .publish(runie_core::types::AgentEvent::ThemeChanged { theme });
+        self.prompt.set_theme(theme).await;
         for _ in 0..THEME_ACK_ATTEMPTS {
             if self.status_snapshot().theme() == theme
                 && self.scrollback_snapshot().theme() == theme

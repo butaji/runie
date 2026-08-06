@@ -52,6 +52,14 @@ raw artifacts. The provenance path is operational.
   evidence.
 - The current YAML reference uses a fixed frame index from an older capture;
   marker-locked selection is now available but not yet used for every fixture.
+- Promoting `visual-grok-feed` to attribute comparison exposed 230 mixed-theme
+  cells in the legacy frame (mostly `GrokNight` RGB prompt/background cells),
+  even though the event sequence now selects `TerminalNative`. This confirms
+  that the fixture needs a clean same-event native recapture before promotion.
+- After fixing prompt event propagation, the legacy frame still exposes 73
+  RGB cells (row 14/status or prompt chrome), so strict attribute promotion
+  remains correctly blocked on a clean same-event reference rather than being
+  weakened.
 
 This contract is the review checklist for p19, p21, p25, and p27. It is the
 data needed to make the next implementation decision faster and with fewer
