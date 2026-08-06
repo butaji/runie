@@ -384,6 +384,23 @@ impl App {
         self.ui.send(UiMsg::ToggleShortcuts).await;
     }
 
+    /// Publish a theme change and wait until both live projections acknowledge
+    /// the event. The wait is cooperative and bounded; no renderer state is
+    /// mutated directly.
+    pub async fn set_theme(&self, theme: runie_core::types::ThemeKind) {
+        const THEME_ACK_ATTEMPTS: usize = 16;
+        self.bus
+            .publish(runie_core::types::AgentEvent::ThemeChanged { theme });
+        for _ in 0..THEME_ACK_ATTEMPTS {
+            if self.status_snapshot().theme() == theme
+                && self.scrollback_snapshot().theme() == theme
+            {
+                return;
+            }
+            tokio::task::yield_now().await;
+        }
+    }
+
     pub async fn toggle_command_palette(&self) {
         self.ui.send(UiMsg::ToggleCommandPalette).await;
     }

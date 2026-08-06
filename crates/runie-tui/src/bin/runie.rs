@@ -28,7 +28,7 @@ use runie_core::tools::executor::ToolExecHooks;
 use runie_core::tools::ToolExecutorActor;
 use runie_core::tools::ToolRegistry;
 use runie_core::types::{
-    AgentContext, AgentMessage, Model, QueueMode, SimpleStreamOptions, ToolExecutionMode,
+    AgentContext, AgentMessage, Model, QueueMode, SimpleStreamOptions, ThemeKind, ToolExecutionMode,
 };
 
 use runie_tui::app::{App, AppExit, PaletteAction, UiCommand};
@@ -247,8 +247,9 @@ async fn main() -> Result<()> {
     // Resolve repository metadata before entering the redraw loop; render
     // paths only read the cached projection.
     let _ = current_branch();
+    let terminal_native = std::env::args().any(|arg| arg == "--terminal-native");
     let mut terminal = setup_terminal()?;
-    let res = run_app(&mut terminal).await;
+    let res = run_app(&mut terminal, terminal_native).await;
     restore_terminal(&mut terminal)?;
     if let Err(error) = res {
         eprintln!("runie TUI error: {error:#}");
@@ -281,7 +282,10 @@ fn restore_terminal(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result
     clippy::too_many_lines,
     reason = "terminal event-loop ownership and redraw are intentionally co-located"
 )]
-async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<AppExit> {
+async fn run_app(
+    terminal: &mut Terminal<CrosstermBackend<Stdout>>,
+    terminal_native: bool,
+) -> Result<AppExit> {
     let bus = EventBus::new();
     let state = AgentStateActor::new();
     let steering = SteeringQueueActor::new();
@@ -309,6 +313,9 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<Ap
     };
     let actor = LoopActor::new(deps);
     let app = App::new(actor, bus.clone());
+    if terminal_native {
+        app.set_theme(ThemeKind::TerminalNative).await;
+    }
     let mut ui_commands = app.subscribe_ui_commands();
     app.refresh_model_caption().await;
     app.prompt

@@ -53,6 +53,10 @@ unverified full-screen frame or core event family remains open.
   for this mode, while the existing GrokNight/GrokDay tokens remain unchanged.
   `visual-grok-feed.yaml` now selects the mode through a theme event, and both
   the YAML discovery test and the Grok feed visual assertion pass.
+- Live selector (2026-08-06): `runie --terminal-native` now publishes the same
+  `ThemeChanged` event used by YAML and waits cooperatively for the status and
+  scrollback actor snapshots to acknowledge it. Full-mode behavior remains the
+  default, so the four-geometry RGB fixtures are unchanged.
 - Architecture gate: production status/scrollback projections are actor-owned
   watch snapshots; declarative view/render separation and legacy adapter
   removal remain open under p23/p26.
