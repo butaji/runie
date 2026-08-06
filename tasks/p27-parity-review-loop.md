@@ -57,6 +57,8 @@ unverified full-screen frame or core event family remains open.
   `ThemeChanged` event used by YAML and waits cooperatively for the status and
   scrollback actor snapshots to acknowledge it. Full-mode behavior remains the
   default, so the four-geometry RGB fixtures are unchanged.
+- Reproducible command (2026-08-06): `just tui-native` exposes that live mode
+  for tmux/asciinema captures and manual Grok-vs-Runie comparison.
 - Architecture gate: production status/scrollback projections are actor-owned
   watch snapshots; declarative view/render separation and legacy adapter
   removal remain open under p23/p26.

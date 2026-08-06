@@ -5,6 +5,10 @@ default:
 tui:
     cargo run -p runie-tui --bin runie
 
+# Run the TUI with Grok minimal-mode terminal-native colors.
+tui-native:
+    cargo run -p runie-tui --bin runie -- --terminal-native
+
 # Build everything.
 build:
     cargo build --workspace
