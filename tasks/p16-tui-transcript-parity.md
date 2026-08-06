@@ -463,3 +463,8 @@ Edit-card diff parity (2026-08-06): added Opaline-backed GrokNight/GrokDay
 insert/delete background tokens (`#063806`/`#420e14` and
 `#daf2dc`/`#f5dade`). Diff rows now paint semantic foreground and full-row
 background, with renderer tests covering both light-theme colors.
+
+Generalized group truncation remains open: Grok defaults to ten visible
+members and emits an `N more` header for larger contiguous groups; Runie
+currently switches between all activity rows and no activity rows. A 12-member
+YAML trace with a group break is required before changing this projection.

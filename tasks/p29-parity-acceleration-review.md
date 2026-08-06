@@ -62,6 +62,28 @@ The `Hey` scenario now carries a four-geometry `layout_matrix`, and the
 runner executes each case through the same live adapter. This removes the
 previous gap where the four-size test existed only in compiled Rust code.
 
+## Focused audit: grouped activity sizing (2026-08-06)
+
+The source comparison found a concrete Grok policy: `group_max_visible`
+defaults to `10`. Grok applies dense-run truncation: groups larger than the
+threshold render an `N more` header, hidden members have zero layout height,
+and navigation/reveal can restore them. Setting the value to `0` disables the
+pass. Grok tests cover the threshold, disabled mode, group breaks, and reveal.
+
+Runie currently has a coarser projection: `activity_expanded=false` hides all
+tool rows in the activity projection, while `true` renders all rows. It has no
+bounded dense-run policy, `N more` header, zero-height hidden-member model, or
+reveal state. This is a genuine multi-member parity gap, but it is not safe to
+patch from a single `Hey` frame: the decisive missing data is the ordered
+tool-event sequence, group break conditions, configured threshold, and
+selected/reveal interaction.
+
+Acceleration decision: add a YAML trace with 12 ordered tool calls, one
+non-groupable break, and threshold assertions before implementing the
+projection. This is the smallest oracle that distinguishes collapsed activity
+from Grok's `N more` truncation. Until then, the three-worker lifecycle frame
+is a fixture-specific pass, not generalized group parity.
+
 ## Success metric
 
 The review loop is faster when a run answers “what data is missing?” without
