@@ -817,6 +817,7 @@ impl Scrollback {
             return;
         }
 
+        let mut selected_non_tool_row = None;
         for (row, (kind, text, code_row)) in physical_rows[start..end].iter().enumerate() {
             let line = if *code_row {
                 styled_code_line(text, self.theme)
@@ -850,15 +851,49 @@ impl Scrollback {
                     }
                 }
                 if selected_non_tool_text.is_some_and(|value| text.contains(value)) {
-                    let border_style = appearance::selected_border_style_for(self.theme);
-                    if let Some(cell) = buf.cell_mut((area.x, area.y + row as u16)) {
-                        cell.set_symbol("│").set_style(border_style);
+                    selected_non_tool_row = Some(area.y + row as u16);
+                }
+            }
+        }
+        if let Some(inner_y) = selected_non_tool_row {
+            let border_style = appearance::selected_border_style_for(self.theme);
+            let left = area.x;
+            let right = area.x + area.width.saturating_sub(1);
+            if let Some(cell) = buf.cell_mut((left, inner_y)) {
+                cell.set_symbol("│").set_style(border_style);
+            }
+            if right > left {
+                if let Some(cell) = buf.cell_mut((right, inner_y)) {
+                    cell.set_symbol("│").set_style(border_style);
+                }
+            }
+            if inner_y > area.y {
+                let top = inner_y - 1;
+                for x in left..=right {
+                    if let Some(cell) = buf.cell_mut((x, top)) {
+                        cell.set_symbol(if x == left {
+                            "┌"
+                        } else if x == right {
+                            "┐"
+                        } else {
+                            "─"
+                        })
+                        .set_style(border_style);
                     }
-                    if area.width > 1 {
-                        let right = area.x + area.width - 1;
-                        if let Some(cell) = buf.cell_mut((right, area.y + row as u16)) {
-                            cell.set_symbol("│").set_style(border_style);
-                        }
+                }
+            }
+            let bottom = inner_y.saturating_add(1);
+            if bottom < area.y.saturating_add(area.height) {
+                for x in left..=right {
+                    if let Some(cell) = buf.cell_mut((x, bottom)) {
+                        cell.set_symbol(if x == left {
+                            "└"
+                        } else if x == right {
+                            "┘"
+                        } else {
+                            "─"
+                        })
+                        .set_style(border_style);
                     }
                 }
             }
@@ -2071,7 +2106,7 @@ mod tests {
         for text in ["one", "two", "three", "four", "five"] {
             scrollback.apply(ScrollbackMsg::Append(Line::new(LineKind::User, text)));
         }
-        for _ in 0..4 {
+        for _ in 0..5 {
             scrollback.apply(ScrollbackMsg::SelectNextEntry);
         }
         let mut buffer = Buffer::empty(Rect::new(0, 0, 20, 2));

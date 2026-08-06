@@ -352,6 +352,11 @@ and failed workers clip out of the 24-row fixture. The default remains on the
 compatibility path until grouped lifecycle layout is implemented and validated
 as one event-sequence/YAML scenario.
 
+Selection-box geometry (2026-08-06): selected non-tool rows now receive a
+post-render Grok-style box overlay: theme-token `│` side rails plus `┌─┐` and
+`└─┘` corners when the adjacent rows are inside the viewport. Clipped rows
+retain only the visible rail, matching Grok's clipped selection-box rule.
+
 Typed block projection (2026-08-06): added `Scrollback::tool_blocks()` as a
 pure read-only projection over actor-owned lines. It preserves first-seen
 parallel tool ordering, call IDs, headers, output members, error/running
