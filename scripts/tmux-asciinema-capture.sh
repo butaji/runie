@@ -139,10 +139,13 @@ jq -n \
   --arg colorterm "$capture_colorterm" \
   --arg cast "$cast" \
   --arg raw "${cast%.cast}.raw" \
+  --arg probe "$prompt" \
+  --arg quit_key "$quit_key" \
   --argjson cols "$cols" \
   --argjson rows "$rows" \
   '{captured_at:$captured_at, repo_revision:$repo_revision,
     command:$command, capture_env:$capture_env,
+    probe:{prompt:$probe, quit_key:$quit_key},
     grok_path:$grok_path, grok_version:$grok_version,
     capture_tools:{tmux:$tmux_version, asciinema:$asciinema_version},
     terminal:{cols:$cols, rows:$rows, term:$term, colorterm:$colorterm},

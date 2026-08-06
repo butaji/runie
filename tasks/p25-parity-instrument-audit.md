@@ -17,6 +17,11 @@ called parity.
   evidence from the remaining viewport sizes.
 - `cast_compare --dump`: VT replay with glyph, fg, bg, bold, italic,
   underline, inverse, geometry, and full-cell JSON.
+- Capture manifests (`*.meta.json`) are now validated automatically when both
+  paired casts have them. The comparator rejects incomplete metadata and
+  mismatched probe prompt, geometry, `TERM`, or `COLORTERM` before reporting
+  cell differences; Grok/Runie command strings remain intentionally allowed to
+  differ.
 - `cast_compare --frames`: opt-in indexed frame replay. It retains the full
   cell/style grid after every output event and reports frame counts plus the
   first corresponding-frame divergence, making timing/frame alignment visible

@@ -81,6 +81,43 @@ fn dimensions(header: &Value) -> Result<(u16, u16)> {
     ))
 }
 
+fn validate_capture_metadata(left: &Path, right: &Path) -> Result<()> {
+    let left_path = left.with_extension("meta.json");
+    let right_path = right.with_extension("meta.json");
+    let left_exists = left_path.exists();
+    let right_exists = right_path.exists();
+    if left_exists != right_exists {
+        bail!(
+            "paired capture metadata is incomplete: {} / {}",
+            left_path.display(),
+            right_path.display()
+        );
+    }
+    if !left_exists {
+        return Ok(());
+    }
+    let left_meta: Value = serde_json::from_str(
+        &std::fs::read_to_string(&left_path).with_context(|| left_path.display().to_string())?,
+    )?;
+    let right_meta: Value = serde_json::from_str(
+        &std::fs::read_to_string(&right_path).with_context(|| right_path.display().to_string())?,
+    )?;
+    for (path, label) in [
+        ("probe.prompt", "prompt"),
+        ("terminal.cols", "terminal columns"),
+        ("terminal.rows", "terminal rows"),
+        ("terminal.term", "TERM"),
+        ("terminal.colorterm", "COLORTERM"),
+    ] {
+        let left_value = path.split('.').fold(&left_meta, |value, key| &value[key]);
+        let right_value = path.split('.').fold(&right_meta, |value, key| &value[key]);
+        if left_value != right_value {
+            bail!("capture metadata mismatch for {label}: left={left_value} right={right_value}");
+        }
+    }
+    Ok(())
+}
+
 fn cells(parser: &vt100::Parser, rows: u16, cols: u16) -> Vec<Cell> {
     let screen = parser.screen();
     (0..rows)
@@ -254,6 +291,7 @@ fn main() -> Result<()> {
             "usage: cast_compare [--dump|--frames|--frames-after=MARKER[#N]] LEFT.cast RIGHT.cast"
         );
     }
+    validate_capture_metadata(Path::new(&left), Path::new(&right))?;
     if frames {
         let (left_geometry, left_frames) =
             replay_frames(Path::new(&left), phase_marker.as_deref())?;
