@@ -9,6 +9,142 @@ use std::fmt;
 
 use runie_core::types::ThemeKind;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct LayoutViewport {
+    pub width: u16,
+    pub height: u16,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LayoutDirection {
+    Vertical,
+    Horizontal,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LayoutSize {
+    Auto,
+    Fixed(u16),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct LayoutEntry {
+    pub slot: Slot,
+    pub basis: LayoutSize,
+    pub grow: u16,
+    pub shrink: u16,
+    pub min_size: u16,
+    pub max_size: Option<u16>,
+}
+
+impl LayoutEntry {
+    pub const fn fixed(slot: Slot, size: u16) -> Self {
+        Self {
+            slot,
+            basis: LayoutSize::Fixed(size),
+            grow: 0,
+            shrink: 1,
+            min_size: 0,
+            max_size: None,
+        }
+    }
+
+    pub const fn grow(slot: Slot, min_size: u16) -> Self {
+        Self {
+            slot,
+            basis: LayoutSize::Auto,
+            grow: 1,
+            shrink: 1,
+            min_size,
+            max_size: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct StackLayout {
+    pub direction: LayoutDirection,
+    pub gap: u16,
+    pub entries: &'static [LayoutEntry],
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Overscroll {
+    Chain,
+    Contain,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ScrollLayout {
+    pub slot: Slot,
+    pub primary: bool,
+    pub overscroll: Overscroll,
+    pub follow_end: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LayoutNode {
+    Stack(StackLayout),
+    Scroll(ScrollLayout),
+    Slot(Slot),
+}
+
+/// Pure actor-owned scroll projection, equivalent to pi's ScrollView state.
+/// Rendering only consumes this value; it never decides whether the feed
+/// follows new content.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ScrollState {
+    pub scroll_top: u16,
+    pub content_height: u16,
+    pub viewport_height: u16,
+    pub following_end: bool,
+}
+
+impl ScrollState {
+    pub const fn new(follow_end: bool) -> Self {
+        Self {
+            scroll_top: 0,
+            content_height: 0,
+            viewport_height: 0,
+            following_end: follow_end,
+        }
+    }
+
+    pub const fn max_scroll_top(self) -> u16 {
+        self.content_height.saturating_sub(self.viewport_height)
+    }
+
+    pub const fn update_layout(mut self, content_height: u16, viewport_height: u16) -> Self {
+        self.content_height = content_height;
+        self.viewport_height = viewport_height;
+        let max = self.max_scroll_top();
+        self.scroll_top = if self.following_end || self.scroll_top > max {
+            max
+        } else {
+            self.scroll_top
+        };
+        if self.following_end && self.content_height <= self.viewport_height {
+            self.scroll_top = 0;
+        }
+        self
+    }
+
+    pub const fn scroll_to(mut self, requested: u16) -> Self {
+        let max = self.max_scroll_top();
+        self.scroll_top = if requested < max { requested } else { max };
+        self.following_end = self.scroll_top == max;
+        self
+    }
+
+    pub const fn append_content(mut self, content_height: u16) -> Self {
+        self.content_height = content_height;
+        if self.following_end {
+            self.scroll_top = self.max_scroll_top();
+        }
+        self
+    }
+}
+
 /// Small, explicit view DSL. It only expands to `Element` constructors; it
 /// owns no state and performs no rendering.
 #[macro_export]
@@ -254,7 +390,7 @@ pub fn component(slot: Slot) -> ComponentSpec {
 mod tests {
     use super::{
         chat_view, chat_view_with_props, component, ChatViewProps, ComponentKind, Direction,
-        Element, HeaderViewProps, Slot, StateOwner,
+        Element, HeaderViewProps, ScrollState, Slot, StateOwner,
     };
     use runie_core::types::ThemeKind;
 
@@ -318,5 +454,31 @@ mod tests {
         };
         assert_eq!(props.meter, "15K / 500K");
         assert_eq!(props.theme, ThemeKind::GrokNight);
+    }
+
+    #[test]
+    fn scroll_state_follows_new_content_until_user_scrolls() {
+        let state = ScrollState::new(true).update_layout(20, 5);
+        assert_eq!(state.scroll_top, 15);
+        let state = state.scroll_to(4);
+        assert_eq!(state.scroll_top, 4);
+        assert!(!state.following_end);
+        let state = state.append_content(30);
+        assert_eq!(state.scroll_top, 4);
+        let state = state.scroll_to(25).append_content(40);
+        assert_eq!(state.scroll_top, 35);
+        assert!(state.following_end);
+    }
+
+    #[test]
+    fn scroll_state_clamps_when_viewport_grows_or_content_shrinks() {
+        let state = ScrollState::new(false)
+            .update_layout(40, 10)
+            .scroll_to(30)
+            .update_layout(40, 20);
+        assert_eq!(state.scroll_top, 20);
+        let state = state.update_layout(8, 20);
+        assert_eq!(state.scroll_top, 0);
+        assert_eq!(state.max_scroll_top(), 0);
     }
 }

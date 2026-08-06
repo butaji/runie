@@ -48,6 +48,11 @@ viewport offset, and terminal cell-width behavior from `layout-node` and
 `scroll-view`; the current YAML contract records final text but not the
 measure/layout inputs that explain wrapping and scrolling changes.
 
+Implementation progress (2026-08-06): Runie's view DSL now contains a pure
+`ScrollState` projection with follow-end, explicit user scroll handoff, and
+viewport/content clamping. Its focused reducer tests pass; stack measurement
+and YAML exposure of these layout inputs remain open.
+
 ## Success metric
 
 The review loop is faster when a run answers “what data is missing?” without

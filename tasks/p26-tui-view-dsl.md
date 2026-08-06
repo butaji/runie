@@ -29,12 +29,17 @@ renderer paints terminal cells.
   uses its overlay slots for doctor, shortcuts, and command-palette decisions.
 - Added `HeaderViewProps` and routed live header meter/theme acquisition
   through the same App projection boundary.
+- Added pure `LayoutNode`, `LayoutEntry`, `StackLayout`, and `ScrollLayout`
+  contracts plus actor-projection `ScrollState`. The scroll reducer models
+  pi's follow-end, clamping, viewport growth, and user-scroll handoff without
+  depending on Ratatui or terminal cells; focused tests pin the transitions.
 
 ## Next boundaries
 
 1. Represent component props from actor snapshots as immutable view models.
-2. Add a terminal-independent cell/style intent layer.
-3. Adapt scrollback, prompt, status, and overlays one component at a time;
+2. Add stack measurement/reflow from `LayoutEntry` basis/grow/shrink values.
+3. Add a terminal-independent cell/style intent layer.
+4. Adapt scrollback, prompt, status, and overlays one component at a time;
    preserve existing YAML replay snapshots throughout migration.
 
 The DSL is intentionally small: it describes structure and ownership without
