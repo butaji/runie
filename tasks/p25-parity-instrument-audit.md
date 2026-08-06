@@ -65,6 +65,16 @@ are now classified as a VT replay/frame-selection issue, not evidence that the
 theme-token styling is absent. The raw stream must be reconciled with the
 selected settled frame before changing widget styling.
 
+**Same-size capture recheck (2026-08-06):** A valid 62×32 pair from the
+current capture set was compared with `--frames-after=Worked for` and the
+full-cell gate. It reported 142 final-screen deltas and one settled-frame
+delta. The visible `/doctor` row exists only in Grok's diagnostic startup
+surface (`xai-grok-pager/src/startup.rs`) and is correctly classified as
+Grok-only because it has no Pi-core event/state mapping. The apparent footer
+bold deltas came from an older Runie cast; current `render_live_ready_footer`
+already emits bold shortcut spans, so a fresh same-revision capture is
+required before changing styling.
+
 The ready footer is now rendered only once in the live binary: the ready status
 projection is not painted and then overwritten by the binary footer. The footer
 segments are written directly with Opaline-derived styles, avoiding Ratatui
