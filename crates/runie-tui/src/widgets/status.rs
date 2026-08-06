@@ -108,6 +108,7 @@ pub struct TurnStatus {
     frame: usize,
     phase: TurnStatusPhase,
     chrome: String,
+    theme: ThemeKind,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -130,6 +131,7 @@ impl TurnStatus {
             frame,
             phase: TurnStatusPhase::Starting,
             chrome: String::new(),
+            theme: ThemeKind::GrokNight,
         }
     }
 
@@ -140,6 +142,11 @@ impl TurnStatus {
 
     pub fn with_chrome(mut self, chrome: impl Into<String>) -> Self {
         self.chrome = chrome.into();
+        self
+    }
+
+    pub fn with_theme(mut self, theme: ThemeKind) -> Self {
+        self.theme = theme;
         self
     }
 
@@ -169,14 +176,14 @@ impl TurnStatus {
         let spinner = Self::FRAMES[(self.frame / Self::SPINNER_DIVISOR) % Self::FRAMES.len()];
         let waiting = self.phase == TurnStatusPhase::Waiting;
         let spinner_style = if waiting {
-            appearance::base_style()
+            appearance::base_style_for(self.theme)
         } else {
-            appearance::accent_style()
+            appearance::accent_style_for(self.theme)
         };
         let text_style = if waiting {
-            appearance::base_style()
+            appearance::base_style_for(self.theme)
         } else {
-            appearance::muted_style()
+            appearance::muted_style_for(self.theme)
         };
         let mut line = Line::from(vec![
             ratatui::text::Span::raw("  "),
@@ -296,7 +303,8 @@ impl StatusBar {
         Some(
             TurnStatus::new(self.animation_frame)
                 .phase(phase)
-                .with_chrome(chrome),
+                .with_chrome(chrome)
+                .with_theme(self.theme()),
         )
     }
 
@@ -338,9 +346,11 @@ impl StatusBar {
     fn footer_line(&self) -> Line<'static> {
         use ratatui::text::Span;
         let spans = match self.state {
-            Status::Ready => ready_footer_spans(),
-            Status::Loading => loading_footer_spans(self.animation_frame),
-            Status::Thinking | Status::Streaming | Status::Waiting(_) => active_footer_spans(),
+            Status::Ready => ready_footer_spans(self.theme()),
+            Status::Loading => loading_footer_spans(self.animation_frame, self.theme()),
+            Status::Thinking | Status::Streaming | Status::Waiting(_) => {
+                active_footer_spans(self.theme())
+            }
             _ => vec![Span::styled(
                 self.state.label(),
                 self.state.style_for(self.theme()),
@@ -379,8 +389,8 @@ fn format_trimmed_decimal(value: f64, suffix: char) -> String {
     format!("{rendered}{suffix}")
 }
 
-fn ready_footer_spans() -> Vec<ratatui::text::Span<'static>> {
-    let bold = Style::default().add_modifier(Modifier::BOLD);
+fn ready_footer_spans(theme: ThemeKind) -> Vec<ratatui::text::Span<'static>> {
+    let bold = footer_key_style(theme).add_modifier(Modifier::BOLD);
     vec![
         ratatui::text::Span::styled("Enter", bold),
         ratatui::text::Span::raw(":send  │  "),
@@ -391,17 +401,17 @@ fn ready_footer_spans() -> Vec<ratatui::text::Span<'static>> {
     ]
 }
 
-fn loading_footer_spans(frame: usize) -> Vec<ratatui::text::Span<'static>> {
+fn loading_footer_spans(frame: usize, theme: ThemeKind) -> Vec<ratatui::text::Span<'static>> {
     let frames = dot_spinner_frames();
     let spinner = frames[frame % frames.len()];
     vec![ratatui::text::Span::styled(
         format!("{spinner} Loading..."),
-        Style::default().add_modifier(Modifier::DIM),
+        footer_muted_style(theme).add_modifier(Modifier::DIM),
     )]
 }
 
-fn active_footer_spans() -> Vec<ratatui::text::Span<'static>> {
-    let bold = Style::default().add_modifier(Modifier::BOLD);
+fn active_footer_spans(theme: ThemeKind) -> Vec<ratatui::text::Span<'static>> {
+    let bold = footer_key_style(theme).add_modifier(Modifier::BOLD);
     vec![
         ratatui::text::Span::styled("Shift+Tab", bold),
         ratatui::text::Span::raw(":mode  │  "),
@@ -410,6 +420,22 @@ fn active_footer_spans() -> Vec<ratatui::text::Span<'static>> {
         ratatui::text::Span::styled("Ctrl+.", bold),
         ratatui::text::Span::raw(":shortcuts"),
     ]
+}
+
+fn footer_key_style(theme: ThemeKind) -> Style {
+    if theme == ThemeKind::GrokNight {
+        Style::default()
+    } else {
+        appearance::base_style_for(theme)
+    }
+}
+
+fn footer_muted_style(theme: ThemeKind) -> Style {
+    if theme == ThemeKind::GrokNight {
+        Style::default()
+    } else {
+        appearance::muted_style_for(theme)
+    }
 }
 
 #[cfg(test)]
@@ -432,6 +458,29 @@ mod tests {
         assert_eq!(bar.theme(), ThemeKind::GrokNight);
         bar.set_theme(ThemeKind::GrokDay);
         assert_eq!(bar.theme(), ThemeKind::GrokDay);
+    }
+
+    #[test]
+    fn status_footer_and_turn_status_use_selected_theme_tokens() {
+        let mut bar = StatusBar::new();
+        bar.set_theme(ThemeKind::GrokDay);
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 80, 1));
+        bar.render(Rect::new(0, 0, 80, 1), &mut buffer);
+        let enter = buffer.cell((0, 0)).expect("footer cell");
+        assert_eq!(
+            Some(enter.fg),
+            appearance::base_style_for(ThemeKind::GrokDay).fg
+        );
+
+        let mut turn_buffer = Buffer::empty(Rect::new(0, 0, 40, 1));
+        TurnStatus::new(0)
+            .phase(TurnStatusPhase::Thinking)
+            .with_theme(ThemeKind::GrokDay)
+            .render(Rect::new(0, 0, 40, 1), &mut turn_buffer);
+        assert_eq!(
+            Some(turn_buffer.cell((2, 0)).expect("spinner cell").fg),
+            appearance::accent_style_for(ThemeKind::GrokDay).fg
+        );
     }
 
     #[test]

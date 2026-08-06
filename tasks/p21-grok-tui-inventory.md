@@ -234,6 +234,14 @@ updates are treated as card state rather than transcript text, preventing
 `visual-specialized-tools.yaml` fixture and the full-mode tool snapshot cover
 the corrected event sequence and rendered output.
 
+Status chrome theme propagation (2026-08-06): `TurnStatus` and the status
+footer now resolve spinner, label, shortcut, and loading styles from the
+actor-selected theme. A GrokDay regression renders both the footer and active
+turn row and asserts their Opaline foreground tokens; the previous helpers
+were still using terminal-default styles after a theme event. The GrokNight
+default path intentionally preserves Grok's terminal-default foreground
+attributes, while alternate themes use explicit Opaline tokens.
+
 Architecture audit note: `PromptActor` and `UiActor` own mailbox/watch state,
 but `Scrollback` and `StatusBar` are still shared behind `parking_lot::Mutex`
 and are mutated by `EventRenderer` and the render loop. This is a remaining
