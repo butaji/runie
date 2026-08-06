@@ -17,7 +17,9 @@ assertions:
     messages: 4
     tool_blocks: 1
     tool_output_lines: 0
-    tool_row_kinds: [status]
+    tool_row_kinds: [status, status]
+  transcript_contains:
+    - "tool failed"
   visual:
     cols: 80
     rows: 30

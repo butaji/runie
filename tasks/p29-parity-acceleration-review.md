@@ -217,3 +217,13 @@ error text but maps an empty content array to an empty body.
 `Read empty.txt (0 lines)`, one tool card, zero output rows, and no leaked
 `"content"` envelope. Image payload transport remains covered by the media
 fixture; Grok's inline-image rendering is outside terminal text-cell parity.
+
+## Error-result card parity (2026-08-06)
+
+Grok's expanded tool blocks retain error text as red status rows rather than
+discarding the tool result body. Runie's live `ToolExecutionEnd` projection
+now emits non-empty error content as `LineKind::ToolError`; the existing
+`visual-tool-error.yaml` fixture asserts the ordered header/status rows and
+the preserved `tool failed` text while the collapsed full-screen view keeps
+the same Grok error-card surface. Actor and live paths now retain the same
+error payload semantics.

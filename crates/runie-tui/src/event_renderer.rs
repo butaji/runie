@@ -965,8 +965,10 @@ impl EventRenderer {
             }
         }
         let mut output = Vec::new();
-        if !is_error {
-            let kind = if matches!(
+        {
+            let kind = if is_error {
+                LineKind::ToolError
+            } else if matches!(
                 tool_name.as_str(),
                 "list_dir"
                     | "list_files"
@@ -995,7 +997,7 @@ impl EventRenderer {
                 }
                 output.push((kind, line.to_owned()));
             }
-            if matches!(tool_name.as_str(), "web_search" | "web-search") {
+            if !is_error && matches!(tool_name.as_str(), "web_search" | "web-search") {
                 if let Some(sources) = web_search_sources_line(&tool_result_text(&result)) {
                     if self.scrollback_actor.is_none() {
                         self.scrollback.lock().append(
