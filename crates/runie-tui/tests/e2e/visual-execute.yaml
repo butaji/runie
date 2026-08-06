@@ -1,0 +1,24 @@
+name: visual-execute
+description: >-
+  Grok execute-card header parity: shell tools use the semantic Run label and
+  command text instead of the generic serialized tool fallback.
+initial_prompt: "Run the command"
+tools:
+  - name: bash
+    kind: bash
+events:
+  - start
+  - tool_call:
+      name: bash
+      args: { command: "cargo test -q" }
+  - done: { stop_reason: stop }
+assertions:
+  state:
+    is_streaming: false
+  visual:
+    cols: 80
+    rows: 24
+    screen_text:
+      - "Run cargo test -q"
+    screen_excludes:
+      - "bash {"

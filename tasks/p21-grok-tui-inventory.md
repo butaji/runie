@@ -180,6 +180,10 @@ vpad when the available content area is smaller than three rows. Runie's
 `Line::has_vpad` metadata and terminal-height-aware renderer now preserve that
 distinction, with unit coverage for full, compact, and undersized panes.
 
+Execute-card progress: shell/exec tool headers now use Grok's semantic `Run`
+label with the command argument, and `visual-execute.yaml` exercises the path
+through the real event replay and rendered screen assertions.
+
 Architecture audit note: `PromptActor` and `UiActor` own mailbox/watch state,
 but `Scrollback` and `StatusBar` are still shared behind `parking_lot::Mutex`
 and are mutated by `EventRenderer` and the render loop. This is a remaining

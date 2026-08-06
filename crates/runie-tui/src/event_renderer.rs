@@ -816,6 +816,14 @@ fn tool_header(tool_name: &str, args: &serde_json::Value) -> String {
                 .unwrap_or("");
             format!("Fetch {url}")
         }
+        "bash" | "shell" | "exec" | "run" => {
+            let command = args
+                .get("command")
+                .or_else(|| args.get("cmd"))
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("");
+            format!("Run {command}")
+        }
         _ => format!(
             "{tool_name} {}",
             serde_json::to_string(args).unwrap_or_default()
@@ -1239,7 +1247,7 @@ mod tests {
             is_error: false,
         });
         let lines = sb.lock();
-        assert!(lines.find_first_containing("bash").is_some());
+        assert!(lines.find_first_containing("Run ls").is_some());
         assert!(lines.find_first_containing("✓").is_some());
         let _ = (
             StopReason::Stop,
