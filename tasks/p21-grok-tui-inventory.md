@@ -178,6 +178,12 @@ search/web/background cards), followed by theme palette propagation and the
 remaining YAML state/effect matrix. Strict feed, waiting, collapsed, mixed, and
 truncated fixed-grid replays are green.
 
+Typed tool-block projection (2026-08-06): Runie now exposes a pure
+`Scrollback::tool_blocks()` projection over the actor snapshot, aligned with
+Grok's block/member model for parallel IDs and display modes. This is the
+foundation for the remaining foldable navigation and specialized card layout;
+it does not claim those behaviors are complete.
+
 Command-palette projection progress (2026-08-06): aligned the modal heading
 with Grok's `Commands` vocabulary and bounded keyboard selection to the
 currently filtered entry set. The state remains UI-actor-owned and the visual

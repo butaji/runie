@@ -183,6 +183,18 @@ pub struct Scrollback {
     animation_frame: usize,
 }
 
+/// Read-only typed projection of one Grok tool block. It is rebuilt from the
+/// actor-owned scrollback lines; it is not a second mutable source of truth.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ToolBlock {
+    pub tool_call_id: String,
+    pub header: String,
+    pub output: Vec<String>,
+    pub mode: runie_core::types::ToolDisplayMode,
+    pub is_running: bool,
+    pub is_error: bool,
+}
+
 impl Scrollback {
     pub fn new() -> Self {
         Self {
@@ -316,6 +328,57 @@ impl Scrollback {
 
     pub fn theme(&self) -> ThemeKind {
         self.theme
+    }
+
+    /// Project line storage into Grok's typed tool-block view. Ordering follows
+    /// first appearance in the transcript, including parallel tool calls.
+    #[allow(
+        clippy::too_many_lines,
+        reason = "keeps the pure line-to-block projection together"
+    )]
+    pub fn tool_blocks(&self) -> Vec<ToolBlock> {
+        let mut blocks = Vec::new();
+        for line in &self.lines {
+            let Some(id) = line.tool_call_id.as_deref() else {
+                continue;
+            };
+            let Some(index) = blocks
+                .iter()
+                .position(|block: &ToolBlock| block.tool_call_id == id)
+            else {
+                if matches!(
+                    line.kind,
+                    LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
+                ) {
+                    blocks.push(ToolBlock {
+                        tool_call_id: id.to_owned(),
+                        header: line.text.clone(),
+                        output: Vec::new(),
+                        mode: self
+                            .tool_modes
+                            .get(id)
+                            .copied()
+                            .unwrap_or(runie_core::types::ToolDisplayMode::Expanded),
+                        is_running: line.kind == LineKind::ToolRunning,
+                        is_error: line.kind == LineKind::ToolError,
+                    });
+                }
+                continue;
+            };
+            let block = &mut blocks[index];
+            match line.kind {
+                LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError => {
+                    block.header = line.text.clone();
+                    block.is_running = line.kind == LineKind::ToolRunning;
+                    block.is_error = line.kind == LineKind::ToolError;
+                }
+                LineKind::ToolOutput | LineKind::ToolResult => {
+                    block.output.push(line.text.clone());
+                }
+                _ => {}
+            }
+        }
+        blocks
     }
 
     fn replace_tool_by_id(&mut self, tool_call_id: &str, text: String) {
@@ -1649,6 +1712,42 @@ mod tests {
             .expect("expanded style")
             .modifier
             .contains(Modifier::ITALIC));
+    }
+
+    #[test]
+    fn typed_tool_blocks_rebuild_from_parallel_actor_rows() {
+        let mut scrollback = Scrollback::new();
+        scrollback.apply(ScrollbackMsg::ToolStart {
+            tool_call_id: "a".into(),
+            header: "Read a.txt".into(),
+            activity: None,
+        });
+        scrollback.apply(ScrollbackMsg::ToolStart {
+            tool_call_id: "b".into(),
+            header: "Run tests".into(),
+            activity: None,
+        });
+        scrollback.apply(ScrollbackMsg::ToolEnd {
+            tool_call_id: "b".into(),
+            header: "Run tests (ok)".into(),
+            activity: None,
+            output: vec![(LineKind::ToolResult, "passed".into())],
+        });
+        scrollback.apply(ScrollbackMsg::SetToolMode(
+            "a".into(),
+            runie_core::types::ToolDisplayMode::Truncated,
+        ));
+
+        let blocks = scrollback.tool_blocks();
+        assert_eq!(blocks.len(), 2);
+        assert_eq!(blocks[0].tool_call_id, "a");
+        assert_eq!(
+            blocks[0].mode,
+            runie_core::types::ToolDisplayMode::Truncated
+        );
+        assert!(!blocks[0].is_running);
+        assert_eq!(blocks[1].output, vec!["passed"]);
+        assert!(!blocks[1].is_running);
     }
 
     #[test]

@@ -315,3 +315,10 @@ YAML fixtures now cover Grok's member-card rule that an individually expanded
 expanded or truncated tool remains visible while the surrounding activity
 group is collapsed. The
 full typed block/navigation model and cast-wide reconciliation remain open.
+
+Typed block projection (2026-08-06): added `Scrollback::tool_blocks()` as a
+pure read-only projection over actor-owned lines. It preserves first-seen
+parallel tool ordering, call IDs, headers, output members, error/running
+classification, and `Collapsed`/`Truncated`/`Expanded` mode without introducing
+a second mutable state store. A reducer test pins the projection; navigation
+and specialized block rendering remain open.
