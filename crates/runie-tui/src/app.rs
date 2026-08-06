@@ -591,7 +591,7 @@ mod tests {
     fn view_document_preserves_declarative_composition_and_ownership() {
         let model = super::TuiSnapshot {
             ui: UiState::new(),
-            feed: super::Scrollback::new().model_snapshot(),
+            feed: runie_tui_model::FeedState::default().snapshot(),
             prompt: super::PromptWidget::new().model_snapshot(),
             status: super::StatusBar::new().model_snapshot(),
         };

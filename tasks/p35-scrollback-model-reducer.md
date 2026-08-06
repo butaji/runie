@@ -131,3 +131,8 @@ published snapshot. The first renderer-independent event-sequence test and
 actor suite pass. Remaining work is to remove the duplicate compatibility
 reducer and move any still-needed pure row-expansion helpers below the widget
 boundary.
+
+The declarative composition test now seeds its feed from `FeedState` directly,
+and production actor call sites remain free of `Scrollback::new()` and widget
+reduction. Direct `Scrollback::apply` calls are retained only by legacy widget
+unit tests until the renderer adapter migration is complete.
