@@ -103,7 +103,7 @@
     {
       "id": "p16",
       "file": "p16-tui-transcript-parity.md",
-      "status": "pending",
+      "status": "in_progress",
       "title": "TUI: transcript rendering parity (verb-group activity folding, markdown, tool cards, reasoning fold)"
     },
     {

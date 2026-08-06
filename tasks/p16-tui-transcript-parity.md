@@ -307,3 +307,9 @@ Transcript block states:
   actor event loop continues advancing the feed animation after foreground
   status becomes idle. Completion removes that demand; the reducer test pins
   both transitions.
+
+The remaining p16 implementation gap is the full Grok block model: typed
+foldable tool entries, interactive member-card expansion, and strict
+cast-wide frame reconciliation. These remain intentionally open; current
+YAML fixtures cover the implemented collapsed/expanded activity projection
+and lifecycle rows.
