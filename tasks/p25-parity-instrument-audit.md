@@ -388,3 +388,14 @@ captures remain useful for discovering behavior, but are not exact pixel
 oracles because the installed provider independently changes answer text,
 usage, timestamps, and elapsed time. Matrix acceptance therefore requires a
 frozen transcript/usage/clock contract, not merely matching terminal size.
+
+### Strict attribute probe — 2026-08-06
+
+Temporarily enabling `reference.exact_attributes` for the locked
+`visual-grok-feed` frame failed with 480 cells. The diagnostic showed the
+checked-in `grok-rich.cast` carries terminal-default foreground/background
+attributes while Runie emits the Opaline Grok RGB tokens (`#141414` base and
+`#6c6c6c` muted rail). The symbol oracle still passes. The probe was reverted;
+the next valid attribute gate must use a freshly captured full-color Grok cast
+from the same scenario and geometry, rather than normalizing or weakening the
+existing color comparison.
