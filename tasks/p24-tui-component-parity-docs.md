@@ -22,3 +22,7 @@ status, themes, animation, command palette, and welcome.
 
 In progress. Documentation scaffolding is complete; per-block measurement,
 vertical-padding metadata, sticky headers, and strict cast parity remain open.
+
+Animation contract refresh (2026-08-06): the component manifest and animation
+page now document the independent actor-owned scrollback demand signal and
+the Grok running-bullet sequence, linked to `visual-background-work.yaml`.
