@@ -16,25 +16,7 @@ use runie_core::types::ThemeKind;
 use unicode_width::UnicodeWidthStr;
 
 use crate::appearance;
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum PromptOutcome {
-    /// Enter pressed; prompt was non-empty.
-    Submitted(String),
-    /// Key modified the buffer.
-    Edited,
-    /// Key had no effect.
-    Ignored,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum InputMode {
-    Normal,
-    Alternate,
-    Plan,
-    FileSearch,
-    FileViewer,
-}
+pub use runie_tui_model::{InputMode, PromptOutcome};
 
 #[derive(Clone)]
 pub struct PromptWidget {

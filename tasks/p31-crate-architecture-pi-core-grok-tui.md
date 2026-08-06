@@ -62,6 +62,11 @@ terminal code.
 The runtime binary remains the effect owner: it consumes the intent and
 publishes core events or performs application shutdown.
 
+Prompt vocabulary is now model-owned as well: `InputMode` and
+`PromptOutcome` are re-exported by the widget for compatibility, while key
+handling, cursor geometry, history storage, and terminal rendering remain in
+the prompt actor/widget.
+
 Theme identity remains in the core event wire for now because
 `AgentEvent::ThemeChanged` is part of the compatibility contract. Extracting
 it requires a serialized compatibility mapping first; no TUI-only type is

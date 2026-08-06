@@ -5,10 +5,12 @@
 //! only consume them.
 
 mod feed;
+mod prompt;
 mod status;
 mod ui;
 
 pub use feed::{FeedSnapshot, Line, LineKind, ScrollbackMsg, ToolBlock, ToolCardKind};
+pub use prompt::{InputMode, PromptOutcome};
 pub use status::{Status, StatusMsg};
 pub use ui::{PaletteAction, UiCommand, UiMsg, UiState};
 
