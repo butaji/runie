@@ -1593,6 +1593,21 @@ pub(crate) fn tool_result_text(result: &serde_json::Value) -> String {
                 .and_then(serde_json::Value::as_str)
                 .map(str::to_owned)
         })
+        .or_else(|| {
+            result
+                .get("error")
+                .and_then(serde_json::Value::as_str)
+                .map(str::to_owned)
+        })
+        // Pi normalizes tools that return no content to `content: []`. Do
+        // not leak the serialized protocol envelope into Grok's transcript;
+        // an empty result is an intentional zero-row card.
+        .or_else(|| {
+            result
+                .get("content")
+                .filter(|content| content.as_array().is_some_and(Vec::is_empty))
+                .map(|_| String::new())
+        })
         .unwrap_or_else(|| serde_json::to_string(result).unwrap_or_default())
 }
 
@@ -2182,6 +2197,14 @@ mod tests {
         assert_eq!(
             tool_result_text(&serde_json::json!({"output":"one\ntwo"})),
             "one\ntwo"
+        );
+        assert_eq!(
+            tool_result_text(&serde_json::json!({"content": [], "isError": false})),
+            ""
+        );
+        assert_eq!(
+            tool_result_text(&serde_json::json!({"content": [], "error": "denied"})),
+            "denied"
         );
         assert_eq!(
             web_search_site_count(

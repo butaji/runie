@@ -206,3 +206,14 @@ Runie therefore keeps `RevealLatest` explicit for a user who has detached the
 viewport; wiring it unconditionally to `ToolExecutionEnd` would diverge from
 Grok by stealing an intentional scroll position. The next lifecycle parity
 work is the richer prompt page-flip/preserve policy, not a tool-end jump.
+
+## Empty tool-result contract (2026-08-06)
+
+Pi normalizes a tool that returns no content to `content: []`. Runie's former
+generic result fallback serialized that protocol envelope into the feed,
+diverging from Grok's zero-row card. `tool_result_text` now preserves explicit
+error text but maps an empty content array to an empty body.
+`visual-read-empty.yaml` drives the complete lifecycle and asserts
+`Read empty.txt (0 lines)`, one tool card, zero output rows, and no leaked
+`"content"` envelope. Image payload transport remains covered by the media
+fixture; Grok's inline-image rendering is outside terminal text-cell parity.

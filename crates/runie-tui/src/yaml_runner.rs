@@ -1125,9 +1125,13 @@ impl AgentTool for ReplayTool {
         if let Some(on_update) = on_update {
             on_update(serde_json::json!({"output": self.output}));
         }
-        let mut content = vec![ToolResultContent::Text {
-            text: self.output.clone(),
-        }];
+        let mut content = if self.output.is_empty() {
+            Vec::new()
+        } else {
+            vec![ToolResultContent::Text {
+                text: self.output.clone(),
+            }]
+        };
         if let Some(mime_type) = &self.media {
             content.push(ToolResultContent::Image {
                 data: "replay-image".into(),

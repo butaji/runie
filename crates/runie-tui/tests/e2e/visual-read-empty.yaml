@@ -1,0 +1,26 @@
+name: visual-read-empty
+description: Pi empty tool content remains a zero-row Grok card.
+initial_prompt: "inspect the empty file"
+tools:
+  - name: read
+    kind: read
+    output: ""
+events:
+  - start
+  - tool_call:
+      name: read
+      args: { path: "empty.txt" }
+  - done: { stop_reason: tool_use }
+assertions:
+  state:
+    tool_blocks: 1
+    tool_output_lines: 0
+    tool_headers: ["Read empty.txt (0 lines)"]
+  visual:
+    cols: 80
+    rows: 30
+    screen_text:
+      - "Read empty.txt (0 lines)"
+      - "Enter:send"
+    screen_excludes:
+      - '"content"'
