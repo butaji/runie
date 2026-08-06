@@ -94,6 +94,23 @@ publishes only `FeedSnapshot`. This is an architecture gap, not a parity
 claim; completion requires model-owned `FeedState` transitions and YAML
 coverage for every command family.
 
+## Projection seam audit (2026-08-06)
+
+The production event-to-feed paths are intentionally split by ownership:
+`scrollback_messages_for_event` is the complete compatibility projection used
+by the renderer, while `ScrollbackActor`'s bus projection accepts only the
+background/workflow, theme, tool-mode, and tool-start facts that the actor
+owns. Replacing the narrower bus mapper with the complete mapper would replay
+user/assistant transcript events into the actor and double-append them when
+the renderer also consumes those events. This is therefore not a safe
+deduplication opportunity.
+
+The next extraction target is a model-owned declarative event projection with
+explicit delivery scopes (transcript, actor-only, or status), so both paths
+can share event construction without sharing delivery policy. Until that
+scope is represented, the two mapper surfaces remain deliberately separate;
+the actor-boundary validator and full replay suite are the safety evidence.
+
 The first p35 slice is complete: animation-frame ownership is part of the
 model-owned `FeedNavigation` value object, with pure advance/reset tests; the
 widget only adapts that fact for terminal rendering.
