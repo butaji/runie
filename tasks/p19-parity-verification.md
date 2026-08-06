@@ -8,6 +8,14 @@ GrokNight Opaline surface (`fg #6c6c6c`, `bg #141414`). The fixture remains
 symbol-exact; a fresh truecolor Grok capture is required before this oracle
 can be promoted without comparing incompatible terminal capabilities.
 
+**Fresh isolated capture (2026-08-06):** Captured Grok and Runie independently
+at 80×24 through `just tmux-cast` with the same `Hey` probe and truecolor
+environment hints. The indexed phase comparator reports Grok 3 visible frames
+versus Runie 20; after the `Worked for` marker, the first corresponding-frame
+divergence is at frame 1, cell `(69,1)` (`9` versus `5`). This is a real
+capture-phase/content mismatch and is preserved in `/tmp/runie-parity-current/`;
+the oracle remains strict and was not weakened.
+
 **Latest parity note (2026-08-05):** `LoopActor::continue_run` now drains
 queued steering before follow-up messages when the context ends in an
 assistant, matching pi's continuation behavior; `LastIsAssistant` remains the
