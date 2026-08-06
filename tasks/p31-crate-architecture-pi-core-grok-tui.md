@@ -423,3 +423,9 @@ no-tool phases, live Grok layout selection, and tool-row identity are now
 model-owned in `FeedNavigation`. Snapshot round-trips and the four-size
 live/replay visual matrix validate that both construction paths retain the
 same feed geometry and identity.
+
+The thirteenth p35 slice has started: actor-owned feed reduction now runs in
+the renderer-neutral `FeedState`, with `Scrollback` restricted to snapshot
+rehydration and terminal painting. A model event-sequence test validates the
+tool lifecycle projection; duplicate widget reducer removal remains the next
+extraction step.

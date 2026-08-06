@@ -11,6 +11,7 @@ use runie_core::types::AgentEvent;
 use runie_core::{mailbox_ack, spawn_actor_worker, spawn_owned_worker, task_owner::TaskOwner};
 
 use crate::widgets::{FeedSnapshot, LineKind, Scrollback, ScrollbackMsg};
+use runie_tui_model::FeedState;
 
 enum Command {
     ApplyBatch(Vec<ScrollbackMsg>, oneshot::Sender<()>),
@@ -26,17 +27,17 @@ pub struct ScrollbackActor {
 
 impl ScrollbackActor {
     pub fn new() -> Self {
-        let (snapshot_tx, snapshot) = watch::channel(Scrollback::new().model_snapshot());
+        let (snapshot_tx, snapshot) = watch::channel(FeedState::default().snapshot());
         let (tx, owner) = spawn_actor_worker!(32, |mut rx: mpsc::Receiver<Command>| async move {
-            let mut state = Scrollback::new();
+            let mut state = FeedState::default();
             while let Some(command) = rx.recv().await {
                 let (messages, reply) = match command {
                     Command::ApplyBatch(messages, reply) => (messages, reply),
                 };
                 for message in messages {
-                    state.apply(message);
+                    state.reduce(message);
                 }
-                let _ = snapshot_tx.send(state.model_snapshot());
+                let _ = snapshot_tx.send(state.snapshot());
                 let _ = reply.send(());
             }
         });

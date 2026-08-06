@@ -120,3 +120,14 @@ all four capture sizes. The full replay and visual matrix passes.
 The memory-search projection slice also establishes a model-only structured
 result parser below the reducer boundary, so live and replay paths do not
 format provider output independently.
+
+### Slice 13 in progress: FeedState reducer ownership
+
+`FeedState` now lives in `runie-tui-model` and owns the actor's transcript
+reduction, navigation, tool identity, workflow facts, and immutable snapshot
+projection. `ScrollbackActor` reduces `ScrollbackMsg` through `FeedState`; the
+Ratatui `Scrollback` remains a compatibility renderer rehydrated from the
+published snapshot. The first renderer-independent event-sequence test and
+actor suite pass. Remaining work is to remove the duplicate compatibility
+reducer and move any still-needed pure row-expansion helpers below the widget
+boundary.

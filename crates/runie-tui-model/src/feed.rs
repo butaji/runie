@@ -4,6 +4,8 @@ use std::collections::{HashMap, HashSet};
 
 use runie_core::types::{ThemeKind, ToolDisplayMode};
 
+pub const GROK_GROUP_MAX_VISIBLE: usize = 10;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LineKind {
     User,
@@ -370,6 +372,87 @@ mod tests {
         navigation.reset();
         assert_eq!(navigation, super::FeedNavigation::default());
     }
+
+    #[test]
+    fn feed_state_reduces_event_sequence_without_renderer_types() {
+        let mut state = super::FeedState::default();
+        for message in [
+            super::ScrollbackMsg::Append(super::Line::new(super::LineKind::User, "Hey")),
+            super::ScrollbackMsg::SetToolName("call-1".into(), "read".into()),
+            super::ScrollbackMsg::ToolStart {
+                tool_call_id: "call-1".into(),
+                header: "Read README.md".into(),
+                activity: None,
+            },
+            super::ScrollbackMsg::ToolUpdate {
+                tool_call_id: "call-1".into(),
+                header: None,
+                output: vec!["line one".into()],
+            },
+            super::ScrollbackMsg::ToolEnd {
+                tool_call_id: "call-1".into(),
+                header: "Read README.md (1 line)".into(),
+                activity: None,
+                output: vec![(super::LineKind::ToolResult, "done".into())],
+            },
+        ] {
+            state.reduce(message);
+        }
+        let snapshot = state.snapshot();
+        assert_eq!(snapshot.lines[0].kind, super::LineKind::User);
+        assert_eq!(snapshot.tool_blocks.len(), 1);
+        assert_eq!(snapshot.tool_blocks[0].output, ["line one", "done"]);
+        assert_eq!(snapshot.tool_blocks[0].kind, super::ToolCardKind::Read);
+    }
+}
+
+fn workflow_text_model(
+    header: &str,
+    phases: &[(String, String)],
+    status: &str,
+    elapsed_ms: Option<u64>,
+    active_agents: u32,
+) -> String {
+    let body = header.strip_prefix("Workflow ").unwrap_or(header);
+    let (name, objective) = body.split_once(':').unwrap_or((body, ""));
+    let duration = elapsed_ms
+        .map(|ms| format!("{:.1}s", ms as f64 / 1000.0))
+        .unwrap_or_default();
+    let elapsed = if duration.is_empty() {
+        String::new()
+    } else {
+        format!(" in {duration}")
+    };
+    let verb = match status {
+        "active" => format!("{name}: "),
+        "cancelled" => format!("{name} ◌ cancelled after {duration}: "),
+        "paused" => format!("{name} paused at {duration}: "),
+        "failed" | "interrupted" => format!("{name} failed{elapsed}: "),
+        _ => format!("{name} done{elapsed}: "),
+    };
+    let objective = objective.split_whitespace().collect::<Vec<_>>().join(" ");
+    let trail = phases
+        .iter()
+        .map(|(title, phase_state)| {
+            let mark = match phase_state.as_str() {
+                "active" | "running" => '●',
+                "done" | "completed" => '✓',
+                "failed" => '○',
+                "cancelled" => '◌',
+                _ => '○',
+            };
+            format!("{title} {mark}")
+        })
+        .collect::<Vec<_>>()
+        .join(" · ");
+    let mut result = format!("Workflow {verb}{objective}");
+    if !trail.is_empty() {
+        result.push_str(&format!("  [{trail}]"));
+    }
+    if status == "active" && active_agents > 0 {
+        result.push_str(&format!("  ({active_agents} agents)"));
+    }
+    result
 }
 
 impl FeedSnapshot {
@@ -497,4 +580,526 @@ pub enum ScrollbackMsg {
         summary: String,
         settled_no_tool_phase: bool,
     },
+}
+
+/// Pure actor-owned feed state. It contains transcript facts and navigation
+/// only; terminal geometry, styles, and Ratatui buffers remain outside this
+/// crate.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct FeedState {
+    pub lines: Vec<Line>,
+    pub navigation: FeedNavigation,
+}
+
+impl FeedState {
+    pub fn snapshot(&self) -> FeedSnapshot {
+        FeedSnapshot {
+            lines: self.lines.clone(),
+            tool_blocks: project_tool_blocks(
+                &self.lines,
+                &self.navigation.tool_names,
+                &self.navigation.tool_modes,
+            ),
+            tool_names: self.navigation.tool_names.clone(),
+            settled_no_tool_phase: self.navigation.settled_no_tool_phase,
+            live_grok_layout: self.navigation.live_grok_layout,
+            next_tool_row_id: self.navigation.next_tool_row_id,
+            autoscroll: self.navigation.autoscroll,
+            scroll_offset: self.navigation.scroll_offset,
+            reasoning_expanded: self.navigation.reasoning_expanded,
+            activity_expanded: self.navigation.activity_expanded,
+            prompt_timestamp: self.navigation.prompt_timestamp.clone(),
+            revealed_dense_groups: self.navigation.revealed_dense_groups.clone(),
+            center_revealed_entry: self.navigation.center_revealed_entry,
+            workflow_headers: self.navigation.workflow_headers.clone(),
+            workflow_phases: self.navigation.workflow_phases.clone(),
+            follow_latest_user: self.navigation.follow_latest_user,
+            selected_tool_id: self.navigation.selected_tool_id.clone(),
+            selected_entry: self.navigation.selected_entry,
+            theme: self.navigation.theme,
+            animation_frame: self.navigation.animation_frame,
+            tool_modes: self.navigation.tool_modes.clone(),
+        }
+    }
+
+    #[allow(
+        clippy::cognitive_complexity,
+        clippy::too_many_lines,
+        reason = "the event vocabulary is reduced in one explicit actor boundary"
+    )]
+    pub fn reduce(&mut self, message: ScrollbackMsg) {
+        match message {
+            ScrollbackMsg::Append(line) => {
+                self.append(line);
+            }
+            ScrollbackMsg::AppendTurnSummary(text) => {
+                self.append(Line::new(LineKind::TurnSummary, text));
+            }
+            ScrollbackMsg::Clear => self.clear(),
+            ScrollbackMsg::SetTheme(theme) => self.navigation.theme = theme,
+            ScrollbackMsg::AdvanceAnimation => self.navigation.advance_animation(),
+            ScrollbackMsg::RemoveKind(kind) => self.lines.retain(|line| line.kind != kind),
+            ScrollbackMsg::NormalizeLiveCompletedAssistants => {
+                for line in &mut self.lines {
+                    if line.kind == LineKind::Assistant && !line.text.is_empty() {
+                        line.kind = LineKind::CompletedAssistant;
+                    }
+                }
+            }
+            ScrollbackMsg::AddLiveAssistantTimestamp(_) => {}
+            ScrollbackMsg::RemoveEmptyAfter(kind) => self.remove_empty_after(kind),
+            ScrollbackMsg::NormalizeActivitySpacing => self.normalize_activity_spacing(),
+            ScrollbackMsg::SetReasoningExpanded(value) => {
+                self.navigation.reasoning_expanded = value
+            }
+            ScrollbackMsg::SetActivityExpanded(value) => self.navigation.activity_expanded = value,
+            ScrollbackMsg::ToggleActivityExpanded => {
+                self.navigation.activity_expanded = !self.navigation.activity_expanded;
+            }
+            ScrollbackMsg::SetPromptTimestamp(value) => self.navigation.prompt_timestamp = value,
+            ScrollbackMsg::SetFollowLatestUser(value) => self.navigation.follow_latest_user = value,
+            ScrollbackMsg::SetToolName(id, name) => {
+                self.navigation.tool_names.insert(id, name);
+            }
+            ScrollbackMsg::SetToolMode(id, mode) => {
+                self.navigation.tool_modes.insert(id, mode);
+            }
+            ScrollbackMsg::ToggleToolMode(id) => self.toggle_tool_mode(&id),
+            ScrollbackMsg::SelectNextTool => self.select_tool(1),
+            ScrollbackMsg::SelectPreviousTool => self.select_tool(-1),
+            ScrollbackMsg::SelectNextEntry => self.select_entry(1),
+            ScrollbackMsg::SelectPreviousEntry => self.select_entry(-1),
+            ScrollbackMsg::ScrollBy(delta) => self.scroll_by(delta),
+            ScrollbackMsg::RevealLatest => self.navigation.reveal_latest(self.lines.len()),
+            ScrollbackMsg::MarkToolError(id) => self.mark_tool_error(&id),
+            ScrollbackMsg::ReplaceLine(index, text) => {
+                if let Some(line) = self.lines.get_mut(index) {
+                    line.text = text;
+                }
+            }
+            ScrollbackMsg::ReplaceLastByKind(kind, text) => {
+                if let Some(line) = self.lines.iter_mut().rev().find(|line| line.kind == kind) {
+                    line.text = text;
+                }
+            }
+            ScrollbackMsg::AppendToLastByKind(kind, text) => {
+                if let Some(line) = self.lines.iter_mut().rev().find(|line| line.kind == kind) {
+                    line.text.push_str(&text);
+                } else {
+                    self.append(Line::new(kind, text));
+                }
+            }
+            ScrollbackMsg::ToolStart {
+                tool_call_id,
+                header,
+                activity,
+            }
+            | ScrollbackMsg::ToolStartRunning {
+                tool_call_id,
+                header,
+                activity,
+            } => {
+                self.replace_or_append_activity(activity);
+                if let Some(tool_name) = self.navigation.tool_names.get(&tool_call_id) {
+                    self.navigation
+                        .tool_modes
+                        .entry(tool_call_id.clone())
+                        .or_insert_with(|| default_tool_display_mode(tool_name));
+                }
+                let kind = if header.starts_with("Subagent running:") {
+                    LineKind::ToolRunning
+                } else {
+                    LineKind::Tool
+                };
+                let row_id = self.navigation.next_tool_row_id;
+                self.navigation.next_tool_row_id = row_id.wrapping_add(1);
+                self.append(
+                    Line::new(kind, header)
+                        .for_tool(tool_call_id)
+                        .for_tool_row(row_id),
+                );
+            }
+            ScrollbackMsg::ToolUpdate {
+                tool_call_id,
+                header,
+                output,
+            } => {
+                if let Some(header) = header {
+                    self.replace_tool(&tool_call_id, header);
+                }
+                for text in output {
+                    self.append(Line::new(LineKind::ToolOutput, text).for_tool(&tool_call_id));
+                }
+            }
+            ScrollbackMsg::ToolEnd {
+                tool_call_id,
+                header,
+                activity,
+                output,
+            } => {
+                self.replace_tool(&tool_call_id, header);
+                if self
+                    .navigation
+                    .tool_names
+                    .get(&tool_call_id)
+                    .is_some_and(|name| matches!(name.as_str(), "bash" | "shell" | "exec" | "run"))
+                    && self.navigation.tool_modes.get(&tool_call_id)
+                        == Some(&ToolDisplayMode::Truncated)
+                {
+                    self.navigation
+                        .tool_modes
+                        .insert(tool_call_id.clone(), ToolDisplayMode::Expanded);
+                }
+                for (kind, text) in output {
+                    self.append(Line::new(kind, text).for_tool(&tool_call_id));
+                }
+                self.replace_or_append_activity(activity);
+            }
+            ScrollbackMsg::WorkflowStart {
+                run_id,
+                name,
+                objective,
+            } => {
+                let header = format!("Workflow {name}: {objective}");
+                self.navigation
+                    .workflow_headers
+                    .insert(run_id.clone(), header.clone());
+                self.navigation
+                    .workflow_phases
+                    .insert(run_id.clone(), Vec::new());
+                self.append(Line::new(LineKind::ToolRunning, header).for_tool(run_id));
+            }
+            ScrollbackMsg::WorkflowProgress {
+                run_id,
+                phase,
+                state,
+                active_agents,
+            } => {
+                let phases = self
+                    .navigation
+                    .workflow_phases
+                    .entry(run_id.clone())
+                    .or_default();
+                if let Some(existing) = phases.iter_mut().find(|(title, _)| title == &phase) {
+                    existing.1 = state;
+                } else {
+                    phases.push((phase, state));
+                }
+                let header = self
+                    .navigation
+                    .workflow_headers
+                    .get(&run_id)
+                    .cloned()
+                    .unwrap_or_else(|| "Workflow".into());
+                let phases = self
+                    .navigation
+                    .workflow_phases
+                    .get(&run_id)
+                    .cloned()
+                    .unwrap_or_default();
+                self.replace_tool(
+                    &run_id,
+                    workflow_text_model(&header, &phases, "active", None, active_agents),
+                );
+            }
+            ScrollbackMsg::WorkflowEnd {
+                run_id,
+                status,
+                elapsed_ms,
+            } => {
+                let header = self
+                    .navigation
+                    .workflow_headers
+                    .get(&run_id)
+                    .cloned()
+                    .unwrap_or_else(|| "Workflow".into());
+                let phases = self
+                    .navigation
+                    .workflow_phases
+                    .get(&run_id)
+                    .cloned()
+                    .unwrap_or_default();
+                self.replace_tool(
+                    &run_id,
+                    workflow_text_model(&header, &phases, &status, elapsed_ms, 0),
+                );
+            }
+            ScrollbackMsg::FinalizeAssistant {
+                has_reasoning,
+                reasoning_expanded,
+                summary,
+                settled_no_tool_phase,
+            } => {
+                self.navigation.settled_no_tool_phase = settled_no_tool_phase;
+                if !has_reasoning || reasoning_expanded {
+                    self.lines
+                        .retain(|line| line.kind != LineKind::ThinkingStatus);
+                } else if let Some(line) = self
+                    .lines
+                    .iter_mut()
+                    .rev()
+                    .find(|line| line.kind == LineKind::ThinkingStatus)
+                {
+                    line.kind = LineKind::TurnSummary;
+                    line.text = summary;
+                    self.lines.retain(|line| line.kind != LineKind::Reasoning);
+                }
+            }
+        }
+    }
+
+    fn append(&mut self, line: Line) {
+        if line.kind == LineKind::User {
+            self.navigation.follow_latest_user = true;
+        }
+        self.lines.push(line);
+        if self.navigation.autoscroll {
+            self.navigation.scroll_offset = self.lines.len();
+        }
+    }
+
+    fn clear(&mut self) {
+        self.lines.clear();
+        self.navigation.tool_names.clear();
+        self.navigation.tool_modes.clear();
+        self.navigation.workflow_headers.clear();
+        self.navigation.workflow_phases.clear();
+        self.navigation.revealed_dense_groups.clear();
+        self.navigation.next_tool_row_id = 0;
+        self.navigation.selected_tool_id = None;
+        self.navigation.selected_entry = None;
+        self.navigation.scroll_offset = 0;
+        self.navigation.follow_latest_user = false;
+    }
+
+    fn replace_tool(&mut self, id: &str, text: String) {
+        if let Some(line) = self.lines.iter_mut().rev().find(|line| {
+            line.tool_call_id.as_deref() == Some(id)
+                && matches!(
+                    line.kind,
+                    LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
+                )
+        }) {
+            line.text = text;
+            line.kind = LineKind::Tool;
+            line.settle_tool_row();
+        }
+    }
+
+    fn mark_tool_error(&mut self, id: &str) {
+        if let Some(line) = self.lines.iter_mut().rev().find(|line| {
+            line.tool_call_id.as_deref() == Some(id)
+                && matches!(
+                    line.kind,
+                    LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
+                )
+        }) {
+            line.kind = LineKind::ToolError;
+        }
+    }
+
+    fn replace_or_append_activity(&mut self, activity: Option<String>) {
+        let Some(activity) = activity else {
+            return;
+        };
+        if let Some(line) = self
+            .lines
+            .iter_mut()
+            .rev()
+            .find(|line| line.kind == LineKind::Activity)
+        {
+            line.text = activity;
+        } else {
+            self.append(Line::new(LineKind::Activity, activity));
+        }
+    }
+
+    fn remove_empty_after(&mut self, kind: LineKind) {
+        if let Some(index) = self.lines.iter().position(|line| line.kind == kind) {
+            if self
+                .lines
+                .get(index + 1)
+                .is_some_and(|line| line.text.is_empty())
+            {
+                self.lines.remove(index + 1);
+            }
+        }
+    }
+
+    fn normalize_activity_spacing(&mut self) {
+        let Some(index) = self
+            .lines
+            .iter()
+            .position(|line| line.kind == LineKind::Activity)
+        else {
+            return;
+        };
+        self.lines
+            .retain(|line| !(line.kind == LineKind::System && line.text.is_empty()));
+        self.lines
+            .insert(index + 1, Line::new(LineKind::Separator, ""));
+    }
+
+    fn selectable_entries(&self) -> Vec<usize> {
+        let mut seen = HashSet::new();
+        self.lines
+            .iter()
+            .enumerate()
+            .filter_map(|(index, line)| {
+                let selectable = match line.kind {
+                    LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError => line
+                        .tool_call_id
+                        .as_ref()
+                        .is_none_or(|id| seen.insert(id.clone())),
+                    LineKind::User | LineKind::Assistant | LineKind::Reasoning => true,
+                    _ => false,
+                };
+                selectable.then_some(index)
+            })
+            .collect()
+    }
+
+    fn select_entry(&mut self, direction: i8) {
+        let entries = self.selectable_entries();
+        if entries.is_empty() {
+            self.navigation.selected_entry = None;
+            return;
+        }
+        let current = self
+            .navigation
+            .selected_entry
+            .and_then(|entry| entries.iter().position(|candidate| *candidate == entry));
+        let next = match (current, direction) {
+            (None, 1) => 0,
+            (None, -1) => entries.len() - 1,
+            (Some(index), 1) => (index + 1) % entries.len(),
+            (Some(0), -1) => entries.len() - 1,
+            (Some(index), -1) => index - 1,
+            _ => 0,
+        };
+        self.navigation.selected_entry = Some(entries[next]);
+        self.navigation.selected_tool_id = self.lines[entries[next]].tool_call_id.clone();
+        self.navigation.detach_from_tail();
+    }
+
+    fn select_tool(&mut self, direction: i8) {
+        let ids: Vec<String> = project_tool_blocks(
+            &self.lines,
+            &self.navigation.tool_names,
+            &self.navigation.tool_modes,
+        )
+        .into_iter()
+        .map(|block| block.tool_call_id)
+        .collect();
+        if ids.is_empty() {
+            self.navigation.selected_tool_id = None;
+            return;
+        }
+        let current = self
+            .navigation
+            .selected_tool_id
+            .as_ref()
+            .and_then(|id| ids.iter().position(|candidate| candidate == id));
+        let next = match (current, direction) {
+            (None, 1) => 0,
+            (None, -1) => ids.len() - 1,
+            (Some(index), 1) => (index + 1) % ids.len(),
+            (Some(0), -1) => ids.len() - 1,
+            (Some(index), -1) => index - 1,
+            _ => 0,
+        };
+        self.navigation.selected_tool_id = Some(ids[next].clone());
+        self.reveal_dense_group(&ids[next]);
+    }
+
+    fn reveal_dense_group(&mut self, tool_id: &str) {
+        let Some(member_index) = self
+            .lines
+            .iter()
+            .position(|line| line.tool_call_id.as_deref() == Some(tool_id))
+        else {
+            return;
+        };
+        let start = self.lines[..=member_index]
+            .iter()
+            .rposition(|line| {
+                !matches!(
+                    line.kind,
+                    LineKind::Tool
+                        | LineKind::ToolRunning
+                        | LineKind::ToolError
+                        | LineKind::ToolOutput
+                        | LineKind::ToolResult
+                )
+            })
+            .map_or(0, |index| index + 1);
+        let ids: Vec<String> = self.lines[start..]
+            .iter()
+            .take_while(|line| {
+                matches!(
+                    line.kind,
+                    LineKind::Tool
+                        | LineKind::ToolRunning
+                        | LineKind::ToolError
+                        | LineKind::ToolOutput
+                        | LineKind::ToolResult
+                )
+            })
+            .filter_map(|line| line.tool_call_id.clone())
+            .collect();
+        if ids.len() > GROK_GROUP_MAX_VISIBLE {
+            self.navigation.revealed_dense_groups.insert(ids[0].clone());
+            self.navigation.selected_entry = Some(member_index);
+            self.navigation.center_revealed_entry = true;
+        }
+    }
+
+    fn toggle_tool_mode(&mut self, id: &str) {
+        let read_card = self
+            .navigation
+            .tool_names
+            .get(id)
+            .is_some_and(|name| matches!(name.as_str(), "read" | "read_file"));
+        let running_generic_card = project_tool_blocks(
+            &self.lines,
+            &self.navigation.tool_names,
+            &self.navigation.tool_modes,
+        )
+        .iter()
+        .any(|block| {
+            block.tool_call_id == id && block.is_running && block.kind == ToolCardKind::Generic
+        });
+        let mode = self
+            .navigation
+            .tool_modes
+            .get(id)
+            .copied()
+            .unwrap_or(ToolDisplayMode::Expanded);
+        let next = match mode {
+            ToolDisplayMode::Collapsed if read_card || running_generic_card => {
+                ToolDisplayMode::Truncated
+            }
+            ToolDisplayMode::Collapsed => ToolDisplayMode::Expanded,
+            ToolDisplayMode::Truncated => ToolDisplayMode::Collapsed,
+            ToolDisplayMode::Expanded if running_generic_card => ToolDisplayMode::Truncated,
+            ToolDisplayMode::Expanded => ToolDisplayMode::Collapsed,
+        };
+        self.navigation.tool_modes.insert(id.to_owned(), next);
+    }
+
+    fn scroll_by(&mut self, delta: i32) {
+        if delta == 0 {
+            return;
+        }
+        self.navigation.detach_from_tail();
+        if delta.is_negative() {
+            self.navigation.scroll_offset = self
+                .navigation
+                .scroll_offset
+                .saturating_sub(delta.unsigned_abs() as usize);
+        } else {
+            self.navigation.scroll_offset =
+                self.navigation.scroll_offset.saturating_add(delta as usize);
+        }
+    }
 }
