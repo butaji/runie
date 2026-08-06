@@ -27,6 +27,12 @@ called parity.
    rows and attributes.
 4. No visual assertion may be weakened to make the workspace gate green.
 
+5. The committed compact-autoscroll change was rechecked after reverting an
+   experimental full-mode spacing adjustment: the YAML fixture-discovery gate
+   passes, while the independent `visual_snapshots` suite still reports the
+   known full-mode spacing/resize differences. This keeps the two evidence
+   classes separate instead of treating a narrow YAML pass as global parity.
+
 ## Status
 
 In progress. Full-cell dumps, row diagnostics, and phase-locked frame
