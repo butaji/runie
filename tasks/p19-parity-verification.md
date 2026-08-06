@@ -191,6 +191,14 @@ their error schema rather than a core lifecycle vector. Every sidecar also
 declares state expectations. The remaining verification gap is therefore the
 cast-wide frame oracle, not untested successful replay fixtures.
 
+**Aborted-turn YAML coverage (2026-08-06):** Added
+`visual-aborted-turn.yaml`, which drives a partial assistant response to
+`done.stop_reason: aborted` through the real provider, loop, state actor, and
+TUI renderer. It asserts the terminal ready state, retained partial text, and
+the ordered lifecycle subsequence without sleeps. This closes the previously
+Rust-only YAML gap for the Pi abort contract; scheduler-driven mid-stream
+abort timing remains covered by the dedicated async core tests.
+
 **Cast state inventory (2026-08-05):** Added a terminal-emulator-backed
 state inventory oracle covering every output frame in both Grok casts. The
 current recordings classify as: `grok-full` 72 frames across welcome, prompt,

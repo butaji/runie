@@ -1,5 +1,9 @@
 # p20 — Thin actor DSLs and YAML-first tests
 
+**Aborted-turn fixture (2026-08-06):** `visual-aborted-turn.yaml` now keeps
+the Pi-compatible partial-response abort contract editable as an event
+sequence and state assertion without recompiling a scenario-specific test.
+
 **Objective:** keep recurring actor ownership boilerplate small and make
 behavior fixtures editable without recompiling Rust.
 

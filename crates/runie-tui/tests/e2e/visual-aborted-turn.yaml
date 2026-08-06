@@ -1,0 +1,22 @@
+name: visual-aborted-turn
+description: Pi-compatible aborted assistant turn through the actor loop.
+initial_prompt: "stop this"
+events:
+  - start
+  - text_delta: "partial output"
+  - done: { stop_reason: aborted }
+assertions:
+  required_events: [agent_start, turn_start, message_start, message_update, message_end, turn_end, agent_end]
+  state:
+    status: ready
+    is_streaming: false
+    pending_tool_calls: 0
+    messages: 2
+  transcript_contains:
+    - "stop this"
+    - "partial output"
+  scrollback_lines:
+    - kind: user
+      contains: "stop this"
+    - kind: assistant
+      contains: "partial output"
