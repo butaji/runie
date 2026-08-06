@@ -281,6 +281,9 @@ fn coerce_json_schema(
     schema: &serde_json::Value,
     value: serde_json::Value,
 ) -> Result<serde_json::Value, String> {
+    if let Some(value) = coerce_combinator(schema, value.clone())? {
+        return Ok(value);
+    }
     let Some(kind) = schema.get("type").and_then(serde_json::Value::as_str) else {
         return Ok(value);
     };
@@ -304,6 +307,35 @@ fn coerce_json_schema(
         "string" | "number" | "integer" | "boolean" | "null" => coerce_scalar(kind, value),
         _ => Ok(value),
     }
+}
+
+fn coerce_combinator(
+    schema: &serde_json::Value,
+    value: serde_json::Value,
+) -> Result<Option<serde_json::Value>, String> {
+    if let Some(schemas) = schema.get("allOf").and_then(serde_json::Value::as_array) {
+        return schemas
+            .iter()
+            .try_fold(value, |value, schema| coerce_json_schema(schema, value))
+            .map(Some);
+    }
+    for keyword in ["anyOf", "oneOf"] {
+        let Some(schemas) = schema.get(keyword).and_then(serde_json::Value::as_array) else {
+            continue;
+        };
+        let matches = schemas
+            .iter()
+            .filter_map(|branch| coerce_json_schema(branch, value.clone()).ok())
+            .collect::<Vec<_>>();
+        if (keyword == "anyOf" && !matches.is_empty()) || (keyword == "oneOf" && matches.len() == 1)
+        {
+            return Ok(Some(
+                matches.into_iter().next().expect("schema match exists"),
+            ));
+        }
+        return Err(format!("root: does not match {keyword}"));
+    }
+    Ok(None)
 }
 
 fn coerce_scalar(kind: &str, value: serde_json::Value) -> Result<serde_json::Value, String> {

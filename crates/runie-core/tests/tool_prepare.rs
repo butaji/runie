@@ -161,7 +161,7 @@ impl AgentTool for SchemaRecordingTool {
             "type": "object",
             "properties": {
                 "count": {"type": "integer"},
-                "enabled": {"type": "boolean"}
+                "enabled": {"anyOf": [{"type": "boolean"}, {"type": "integer"}]}
             },
             "required": ["count", "enabled"]
         }))

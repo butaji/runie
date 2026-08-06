@@ -35,9 +35,9 @@
 - **Portable schema boundary (2026-08-06):** `AgentTool::parameters()` is a
   JSON-schema equivalent of Pi's TypeBox parameters. `schema_rec` replay
   coverage proves string-to-integer and number-to-boolean coercion through the
-  real loop, tool actor, and result event. Full TypeBox union semantics remain
-  a documented follow-up because the Rust trait intentionally avoids a new
-  schema compiler dependency.
+  real loop, tool actor, and result event. `allOf`, `anyOf`, and `oneOf` now
+  reduce through the same recursive coercion path; a schema compiler is still
+  intentionally out of scope for the portable Rust trait.
 
 ## State machine / variants
 
