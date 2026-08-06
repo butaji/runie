@@ -171,6 +171,12 @@
       "file": "p28-parity-data-contract.md",
       "status": "in_progress",
       "title": "Verification: runtime data contract for reliable pi/Grok parity decisions"
+    },
+    {
+      "id": "p29",
+      "file": "p29-parity-acceleration-review.md",
+      "status": "in_progress",
+      "title": "Process: per-run missing-data review and parity acceleration loop"
     }
   ]
 }
