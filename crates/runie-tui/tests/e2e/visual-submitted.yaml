@@ -11,6 +11,10 @@ events:
   - done: { stop_reason: stop }
 
 assertions:
+  state:
+    is_streaming: false
+    pending_tool_calls: 0
+    messages: 2
   visual:
     cols: 80
     rows: 30

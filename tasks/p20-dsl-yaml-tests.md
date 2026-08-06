@@ -66,3 +66,8 @@ runtime-discovered and editable without recompiling the runner.
   the replay harness. YAML owns projection values while startup-error,
   abort, and success branches reuse one readable macro expansion for
   `is_streaming`, pending-tool, and error assertions.
+
+- **Submitted-turn state coverage (2026-08-05):** Added declarative state
+  assertions to `visual-submitted.yaml`, pinning the post-event state
+  (`is_streaming: false`, no pending tools, two messages) alongside its visual
+  transcript assertions.
