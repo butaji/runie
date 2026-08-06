@@ -339,6 +339,12 @@ Failure-detail parity (2026-08-06): failed background events preserve an
 optional provider error and render Grok's `(error)` suffix; the YAML fixture
 asserts the exact terminal row.
 
+Actor-owned fold intent (2026-08-06): added `ScrollbackMsg::ToggleToolMode`,
+which cycles a selected tool block between Grok-compatible expanded and
+collapsed states while preserving truncated output as retained state. The
+transition is pure reducer state owned by `ScrollbackActor`; selected-entry
+navigation and the live key-to-selection wiring remain open.
+
 Typed card-family projection (2026-08-06): `ToolBlock` now exposes a
 theme-independent `ToolCardKind` (`execute`, `read`, `edit`, `list_dir`,
 `search`, web, background, or generic), and mixed/truncated YAML replays pin

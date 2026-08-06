@@ -141,6 +141,7 @@ pub enum ScrollbackMsg {
     ToggleActivityExpanded,
     SetPromptTimestamp(Option<String>),
     SetToolMode(String, runie_core::types::ToolDisplayMode),
+    ToggleToolMode(String),
     MarkToolError(String),
     ReplaceLine(usize, String),
     ReplaceLastByKind(LineKind, String),
@@ -290,6 +291,7 @@ impl Scrollback {
             }
             ScrollbackMsg::SetPromptTimestamp(timestamp) => self.set_prompt_timestamp(timestamp),
             ScrollbackMsg::SetToolMode(id, mode) => self.set_tool_mode(id, mode),
+            ScrollbackMsg::ToggleToolMode(id) => self.toggle_tool_mode(&id),
             ScrollbackMsg::MarkToolError(id) => self.mark_tool_error(&id),
             ScrollbackMsg::ReplaceLine(index, text) => {
                 if let Some(line) = self.line_mut(index) {
@@ -590,6 +592,26 @@ impl Scrollback {
         mode: runie_core::types::ToolDisplayMode,
     ) {
         self.tool_modes.insert(tool_call_id.into(), mode);
+    }
+
+    /// Apply Grok's fold action to one selected tool block. The actor owns the
+    /// transition; callers only publish the tool id as an intent.
+    pub fn toggle_tool_mode(&mut self, tool_call_id: &str) {
+        let next = match self
+            .tool_modes
+            .get(tool_call_id)
+            .copied()
+            .unwrap_or(runie_core::types::ToolDisplayMode::Expanded)
+        {
+            runie_core::types::ToolDisplayMode::Collapsed
+            | runie_core::types::ToolDisplayMode::Truncated => {
+                runie_core::types::ToolDisplayMode::Expanded
+            }
+            runie_core::types::ToolDisplayMode::Expanded => {
+                runie_core::types::ToolDisplayMode::Collapsed
+            }
+        };
+        self.set_tool_mode(tool_call_id, next);
     }
 
     /// Find the index of the first line whose `text` contains the needle.
@@ -1790,6 +1812,30 @@ mod tests {
         assert!(!blocks[0].is_running);
         assert_eq!(blocks[1].output, vec!["passed"]);
         assert!(!blocks[1].is_running);
+    }
+
+    #[test]
+    fn selected_tool_fold_cycles_collapsed_and_expanded_modes() {
+        let mut scrollback = Scrollback::new();
+        scrollback.apply(ScrollbackMsg::ToolStart {
+            tool_call_id: "call-1".into(),
+            header: "Read README.md".into(),
+            activity: None,
+        });
+        assert_eq!(
+            scrollback.tool_blocks()[0].mode,
+            runie_core::types::ToolDisplayMode::Expanded
+        );
+        scrollback.apply(ScrollbackMsg::ToggleToolMode("call-1".into()));
+        assert_eq!(
+            scrollback.tool_blocks()[0].mode,
+            runie_core::types::ToolDisplayMode::Collapsed
+        );
+        scrollback.apply(ScrollbackMsg::ToggleToolMode("call-1".into()));
+        assert_eq!(
+            scrollback.tool_blocks()[0].mode,
+            runie_core::types::ToolDisplayMode::Expanded
+        );
     }
 
     #[test]
