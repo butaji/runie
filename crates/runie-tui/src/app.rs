@@ -458,7 +458,7 @@ impl App {
         tokio::task::JoinHandle<()>,
         tokio::sync::watch::Sender<bool>,
     ) {
-        let renderer = EventRenderer::with_actors(
+        let renderer = EventRenderer::with_live_actors(
             self.scrollback_actor.clone(),
             self.status_actor.clone(),
             false,

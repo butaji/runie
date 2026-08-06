@@ -332,6 +332,9 @@ pub struct EventRenderer {
     /// If true, the next AgentStart emits the welcome modal lines
     /// (matching grok's minimal-mode chrome) and then clears this flag.
     emit_welcome: bool,
+    /// The live Grok surface places the thinking row directly after the user
+    /// entry; deterministic replay keeps the historical four-row contract.
+    live_grok_layout: bool,
 }
 
 impl EventRenderer {
@@ -384,6 +387,7 @@ impl EventRenderer {
             activity_group_open: false,
             turn_started: false,
             emit_welcome,
+            live_grok_layout: false,
         }
     }
 
@@ -402,6 +406,17 @@ impl EventRenderer {
             Some(status_actor),
             emit_welcome,
         )
+    }
+
+    /// Production interactive projection with Grok's live assistant spacing.
+    pub fn with_live_actors(
+        scrollback_actor: ScrollbackActor,
+        status_actor: StatusActor,
+        emit_welcome: bool,
+    ) -> Self {
+        let mut renderer = Self::with_actors(scrollback_actor, status_actor, emit_welcome);
+        renderer.live_grok_layout = true;
+        renderer
     }
 
     /// Drain bus events until the channel closes. Returns when receiver hits
@@ -490,6 +505,17 @@ impl EventRenderer {
                             } else {
                                 scrollback_messages_for_event(&event)
                             };
+                            if self.live_grok_layout
+                                && matches!(
+                                    event,
+                                    AgentEvent::MessageStart {
+                                        message: runie_core::types::AgentMessage::Assistant(_),
+                                    }
+                                )
+                                && matches!(feed_messages.first(), Some(ScrollbackMsg::Append(line)) if line.kind == LineKind::Separator)
+                            {
+                                feed_messages.remove(0);
+                            }
                             if matches!(event, AgentEvent::AgentStart) {
                                 feed_messages.extend(agent_start_messages(self.emit_welcome));
                             }

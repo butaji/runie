@@ -221,7 +221,7 @@ impl StreamFn for PlaceholderStream {
             },
             AssistantMessageEvent::TextDelta {
                 index: 0,
-                delta: "Hey — what are you working on? I can help with code, tests, debugging, or anything else in this repo.".into(),
+                delta: "Hey — what would you like to work on in runie?".into(),
                 partial: AssistantMessage::default(),
             },
             AssistantMessageEvent::Done {

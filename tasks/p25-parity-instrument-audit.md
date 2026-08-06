@@ -35,6 +35,16 @@ called parity.
   response text/timing, usage formatting, and a one-row thought/response
   placement shift. This is valid product evidence, not a capture-launch
   failure, and remains open for semantic alignment.
+- **Fresh response alignment (2026-08-06):** The controlled live placeholder
+  now uses Grok's current captured `Hey` response
+  `Hey — what would you like to work on in runie?`; deterministic YAML
+  fixtures retain their own event-owned responses.
+- **Live assistant placement correction (2026-08-06):** The assistant-start
+  projection now emits `Thinking… → separator → response`, matching the
+  captured Grok live frame after the aligned user row. The former leading
+  separator placed the complete thought/response/completion block one row
+  too low. The pure event-mapping oracle was updated from four to three
+  messages; all event-renderer tests must remain green before recapturing.
 - **Same-event alternate-screen correction (2026-08-06):** Raw replay showed
   Grok writes its settled feed and `ESC[?1049l` in one PTY output event.
   `cast_compare` previously applied Grok's terminal clear before processing the
