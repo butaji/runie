@@ -53,6 +53,10 @@ reducer. The runtime supplies the optional parity elapsed-tick seed; the
 renderer only rehydrates `StatusBar` from the immutable snapshot. This keeps
 capture-clock policy explicit without putting terminal timing into the model.
 
+Animation scheduling now reads `StatusSnapshot::animation_demand()` directly
+from the actor projection rather than rehydrating `StatusBar` for the
+predicate.
+
 Progress: the first boundary extraction is complete. The renderer-independent
 `ScrollState` projection now lives in `runie-tui-model`; `runie-tui` keeps a
 compatibility re-export, so existing widgets and YAML replay remain stable.

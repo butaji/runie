@@ -50,6 +50,14 @@ pub struct StatusSnapshot {
 }
 
 impl StatusSnapshot {
+    /// Whether the runtime should schedule another animation tick.
+    pub fn animation_demand(&self) -> bool {
+        matches!(
+            self.state,
+            Status::Loading | Status::Thinking | Status::Streaming | Status::Waiting(_)
+        )
+    }
+
     /// Reduce one status intent into the actor-owned immutable projection.
     /// `elapsed_seed` is supplied by the runtime only for deterministic parity
     /// captures; the model remains independent of clocks and terminal I/O.
@@ -125,5 +133,15 @@ mod tests {
             Some(17),
         );
         assert!(state.turn_usage.is_some());
+    }
+
+    #[test]
+    fn animation_demand_is_a_snapshot_predicate() {
+        let mut state = StatusSnapshot::default();
+        assert!(!state.animation_demand());
+        state.state = Status::Thinking;
+        assert!(state.animation_demand());
+        state.state = Status::Ready;
+        assert!(!state.animation_demand());
     }
 }

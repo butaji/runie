@@ -389,7 +389,7 @@ impl EventRenderer {
         const ANIMATION_TICK: Duration = Duration::from_millis(50);
         let mut tick = Box::pin(tokio::time::sleep(ANIMATION_TICK));
         loop {
-            let animation_demand = status_actor.snapshot().animation_demand()
+            let animation_demand = status_actor.model_snapshot().animation_demand()
                 || scrollback_actor.snapshot().animation_demand();
             tokio::select! {
                 biased;
