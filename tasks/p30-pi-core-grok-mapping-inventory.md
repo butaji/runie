@@ -4,6 +4,25 @@ Status: active (2026-08-06)
 
 ## Fresh source audit (2026-08-06)
 
+**Event-boundary audit (2026-08-06):** Pi's `AgentEvent` union in
+`packages/agent/src/types.ts` contains exactly ten wire events: `agent_start`,
+`agent_end`, `turn_start`, `turn_end`, `message_start`, `message_update`,
+`message_end`, `tool_execution_start`, `tool_execution_update`, and
+`tool_execution_end`. Runie's broader `AgentEvent` also carries local
+configuration, waiting, theme, background, and workflow events, but those are
+not Pi-core events. `PiAgentEvent` is the closed adapter: it accepts exactly
+the ten upstream variants and rejects local-only variants. This is important
+for the event-everywhere rule: local state still changes through events, but
+local presentation events must never be mistaken for Pi compatibility.
+
+The boundary is checked in two ways: the source-backed validator compares the
+Rust contract with Pi's TypeScript union, and YAML replay assertions convert
+each emitted event through `PiAgentEvent::try_from`. A fixture that emits a
+Runie-only event in a Pi trace therefore fails instead of producing a false
+parity result. The lifecycle ordering remains Pi-owned (`agent_start` before
+turns, `turn_end` before the next turn or `agent_end`); viewport, theme, and
+animation transitions remain separate actor-owned event streams.
+
 **Context-tool precedence correction (2026-08-06):** `LoopActor` now keeps
 non-empty caller-supplied `AgentContext.tools` in the actor snapshot and only
 falls back to the registered executor tools when the context omits tools.
