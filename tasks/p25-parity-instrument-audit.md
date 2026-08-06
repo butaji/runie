@@ -408,3 +408,15 @@ now requires the working footer (`Shift+Tab`, `Enter:send`, or the explicit
 `Type your message` prompt), preventing a capture from typing into welcome and
 being mislabeled as a settled scenario. This is an instrument-only change;
 the exact full-color Grok scenario still needs a clean isolated capture.
+
+### Valid Grok transition capture — 2026-08-06
+
+After the readiness correction, a fresh private 80x24 capture successfully
+performed Grok's welcome `Enter` transition and recorded a settled `Hey` turn:
+the cast contains the working `Shift+Tab` footer and `Worked for` completion
+marker. Its raw ANSI stream contains only default/attribute SGR sequences and
+no `38;2`/`48;2` RGB sequences, even with `TERM=xterm-256color`,
+`COLORTERM=truecolor`, and `FORCE_COLOR=1`. This isolates the remaining
+full-color attribute-oracle gap to Grok's emitted terminal stream/capture
+environment; Runie's Opaline token emission is independently covered by its
+theme tests.

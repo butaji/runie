@@ -44,11 +44,19 @@ tmux send-keys -t "$session" Enter
 # Wait for the actual prompt, not merely alternate-screen initialization.
 # Grok may spend several seconds rendering its welcome surface first.
 ready=0
+welcome_advanced=0
 for _ in $(seq 1 "$probe_iterations"); do
     screen=$(tmux capture-pane -p -t "$session" 2>/dev/null || true)
     # The welcome surface also contains `❯` and `Grok 4.5`; those are not an
-    # editable prompt. Require a working prompt footer so captures cannot
-    # type into the welcome screen and still be labeled as a scenario run.
+    # editable working prompt. Grok advances from that surface with Enter.
+    if (( ! welcome_advanced )) \
+        && printf '%s' "$screen" | grep -Fq 'Coming from Codex' \
+        && printf '%s' "$screen" | grep -Fq 'Grok 4.5'; then
+        tmux send-keys -t "$session" Enter
+        welcome_advanced=1
+    fi
+    # Require a working prompt footer so captures cannot type into welcome and
+    # still be labeled as a settled scenario run.
     if printf '%s' "$screen" | grep -Fq 'Shift+Tab' \
         || printf '%s' "$screen" | grep -Fq 'Enter:send' \
         || printf '%s' "$screen" | grep -Fq 'Type your message'; then
