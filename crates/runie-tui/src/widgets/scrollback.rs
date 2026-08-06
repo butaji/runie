@@ -222,6 +222,7 @@ pub struct Scrollback {
     settled_no_tool_phase: bool,
     tool_modes: HashMap<String, runie_core::types::ToolDisplayMode>,
     revealed_dense_groups: HashSet<String>,
+    center_revealed_entry: bool,
     tool_names: HashMap<String, String>,
     theme: ThemeKind,
     animation_frame: usize,
@@ -312,6 +313,7 @@ impl Scrollback {
             settled_no_tool_phase: false,
             tool_modes: HashMap::new(),
             revealed_dense_groups: HashSet::new(),
+            center_revealed_entry: false,
             tool_names: HashMap::new(),
             theme: ThemeKind::GrokNight,
             animation_frame: 0,
@@ -575,6 +577,7 @@ impl Scrollback {
         self.tool_names.clear();
         self.tool_modes.clear();
         self.revealed_dense_groups.clear();
+        self.center_revealed_entry = false;
         self.scroll_offset = 0;
         self.selected_tool_id = None;
         self.selected_entry = None;
@@ -819,6 +822,7 @@ impl Scrollback {
                 .lines
                 .iter()
                 .position(|line| line.tool_call_id.as_deref() == Some(tool_id));
+            self.center_revealed_entry = true;
             if let Some(anchor) = groups.iter().find_map(|(id, (index, size))| {
                 (*size == *group_size && *index == 0).then_some(id.clone())
             }) {
@@ -930,7 +934,12 @@ impl Scrollback {
                     .iter()
                     .position(|(_, text, _)| text.contains(selected_text))
                 {
-                    if selected_row < self.scroll_offset {
+                    if self.center_revealed_entry {
+                        let max_offset = total.saturating_sub(visible);
+                        self.scroll_offset =
+                            selected_row.saturating_sub(visible / 2).min(max_offset);
+                        self.center_revealed_entry = false;
+                    } else if selected_row < self.scroll_offset {
                         self.scroll_offset = selected_row;
                     } else if selected_row >= self.scroll_offset + visible {
                         self.scroll_offset = selected_row.saturating_sub(visible - 1);

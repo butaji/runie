@@ -115,6 +115,12 @@ that the previously hidden first member is visible afterward. This closes the
 reveal interaction oracle without recompiling a scenario-specific test; the
 remaining evidence gap is the exact centered offset value.
 
+Reveal viewport progress (2026-08-06): selecting a hidden member now sets a
+one-shot actor-owned centering intent. The renderer clamps the selected row to
+the viewport midpoint on the next frame, matching Grok's
+`scroll_to_entry_center` phase while retaining normal visibility-following for
+ordinary selection. Focused and full gates pass.
+
 ## Success metric
 
 The review loop is faster when a run answers “what data is missing?” without
