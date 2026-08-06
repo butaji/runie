@@ -196,3 +196,10 @@ because it would conceal ownership and make YAML event assertions impossible.
   partial header updates now produce acknowledged `ScrollbackMsg::ToolUpdate`
   messages in the async event loop. Updates address rows by tool-call ID and
   no longer replace the actor snapshot wholesale.
+
+- **ToolEnd actor cutover (2026-08-05):** Tool completion now emits an
+  acknowledged `ScrollbackMsg::ToolEnd` carrying the final semantic header,
+  activity completion text, error state, and output/result rows. The complete
+  start/update/end lifecycle is now actor-routed; compatibility mutation is
+  retained only as a transitional adapter until the renderer state maps are
+  removed.
