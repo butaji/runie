@@ -458,7 +458,8 @@ async fn run_app(
                             }
                             let status = app.status_snapshot().current().clone();
                             let streaming = matches!(status, Status::Thinking | Status::Streaming);
-                            match map_key(key, !app.prompt.snapshot().is_empty(), streaming) {
+                            let prompt_model = app.model_snapshot().prompt;
+                            match map_key(key, !prompt_model.is_empty(), streaming) {
                                 Action::ClearPrompt => {
                                     app.prompt.clear().await;
                                     continue;
@@ -560,8 +561,8 @@ async fn run_app(
                         }
                     }
                 }
-                if matches!(app.status_snapshot().current(), Status::Ready)
-                    && !app.scrollback_snapshot().is_empty()
+                let model = app.model_snapshot();
+                if matches!(model.status.state, Status::Ready) && !model.feed.is_empty()
                 {
                     // In Grok's settled conversation view the prompt keeps
                     // only its cursor marker; placeholder text is an idle

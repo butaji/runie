@@ -34,3 +34,28 @@ pub struct PromptSnapshot {
     pub viewer_lines: Vec<String>,
     pub theme: ThemeKind,
 }
+
+impl PromptSnapshot {
+    pub fn is_empty(&self) -> bool {
+        self.text.trim().is_empty()
+    }
+
+    pub fn render_height(&self) -> u16 {
+        if self.mode == InputMode::FileViewer {
+            return self.viewer_lines.len().saturating_add(2) as u16;
+        }
+        let prompt_lines = self.text.lines().count();
+        let candidate_lines = if self.mode == InputMode::FileSearch {
+            self.file_candidates
+                .iter()
+                .filter(|candidate| candidate.contains(&self.text))
+                .count()
+                .min(5)
+        } else {
+            0
+        };
+        prompt_lines
+            .saturating_add(candidate_lines)
+            .saturating_add(2) as u16
+    }
+}

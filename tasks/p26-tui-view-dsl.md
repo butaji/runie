@@ -54,6 +54,9 @@ renderer paints terminal cells.
   overlay slots, avoiding an additional independent actor read for the same
   declarative tree. Ratatui widget compatibility reads remain isolated to
   terminal-specific painting and cursor geometry.
+- `PromptSnapshot` now owns pure emptiness and intrinsic-height calculations;
+  App layout and live key/settled-feed decisions consume those model facts
+  instead of asking the compatibility widget.
 
 ## Next boundaries
 

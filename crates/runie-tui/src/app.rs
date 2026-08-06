@@ -517,7 +517,8 @@ impl App {
 
     /// Lay out the widgets and render them into the given area using `f`.
     pub fn render<F: FnMut(Rect, &mut Buffer)>(&self, area: Rect, mut f: F) {
-        let layout = chat_layout_with_prompt_height(area, self.prompt.snapshot().render_height());
+        let layout =
+            chat_layout_with_prompt_height(area, self.prompt.model_snapshot().render_height());
         let mut sb = self.scrollback_snapshot();
         let mut buf = Buffer::empty(area);
         sb.render_with_terminal_height(layout.scrollback, area.height, &mut buf);
