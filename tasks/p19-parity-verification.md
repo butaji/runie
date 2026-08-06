@@ -1183,3 +1183,7 @@ The oracle is a table: `scenario → pi_reference(file:line) → expected_events
   events use `contentIndex`; Runie's text, thinking, and tool-call index
   fields now serialize with that exact camelCase key while retaining the
   internal `index` field name. The wire-shape test covers the family.
+
+- **Assistant terminal reason (2026-08-06):** `Done.stop_reason` now emits
+  pi's `reason` wire key (for example `toolUse`) rather than `stopReason`,
+  with a matching serde assertion.

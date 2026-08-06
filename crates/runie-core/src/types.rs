@@ -856,6 +856,7 @@ pub enum AssistantMessageEvent {
         tool_call: ToolCall,
     },
     Done {
+        #[serde(rename = "reason")]
         stop_reason: StopReason,
         usage: Usage,
         /// Full terminal assistant payload when the provider supplies it.
@@ -1251,6 +1252,15 @@ mod tests {
             .expect("text start serializes");
         assert_eq!(stream_start["contentIndex"], 2);
         assert!(stream_start.get("index").is_none());
+
+        let done = serde_json::to_value(AssistantMessageEvent::Done {
+            stop_reason: StopReason::ToolUse,
+            usage: Usage::default(),
+            message: None,
+        })
+        .expect("done event serializes");
+        assert_eq!(done["reason"], "toolUse");
+        assert!(done.get("stopReason").is_none());
 
         let stream = AssistantMessageEvent::ToolCallEnd {
             index: 0,
