@@ -159,6 +159,12 @@
       "file": "p26-tui-view-dsl.md",
       "status": "in_progress",
       "title": "Architecture: declarative TUI view tree separated from terminal rendering"
+    },
+    {
+      "id": "p27",
+      "file": "p27-parity-review-loop.md",
+      "status": "in_progress",
+      "title": "Process: independent source-to-fixture parity review loop"
     }
   ]
 }
