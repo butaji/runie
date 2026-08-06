@@ -181,6 +181,7 @@ fn main() -> Result<()> {
     let mut attributes = 0;
     let mut row_differences = vec![0usize; left_geometry.1.max(right_geometry.1) as usize];
     let mut coordinates = Vec::new();
+    let mut attribute_coordinates = Vec::new();
     for (index, (left, right)) in left_cells.iter().zip(right_cells.iter()).enumerate() {
         if left.symbol != right.symbol {
             glyphs += 1;
@@ -194,6 +195,14 @@ fn main() -> Result<()> {
         } else if left != right {
             attributes += 1;
             row_differences[index / left_geometry.0 as usize] += 1;
+            if attribute_coordinates.len() < 20 {
+                attribute_coordinates.push(serde_json::json!({
+                    "x": index % left_geometry.0 as usize,
+                    "y": index / left_geometry.0 as usize,
+                    "left": left,
+                    "right": right,
+                }));
+            }
         }
     }
     let different = glyphs + attributes + left_cells.len().abs_diff(right_cells.len());
@@ -204,7 +213,7 @@ fn main() -> Result<()> {
         .map(|(row, count)| format!("{}:{}", row + 1, count))
         .collect();
     println!(
-        "{{\"left\":{{\"cols\":{},\"rows\":{}}},\"right\":{{\"cols\":{},\"rows\":{}}},\"compared_cells\":{},\"different_cells\":{},\"different_glyphs\":{},\"different_attributes\":{},\"row_hotspots\":[{}],\"glyph_coordinates\":{:?},\"exact\":{}}}",
+        "{{\"left\":{{\"cols\":{},\"rows\":{}}},\"right\":{{\"cols\":{},\"rows\":{}}},\"compared_cells\":{},\"different_cells\":{},\"different_glyphs\":{},\"different_attributes\":{},\"row_hotspots\":[{}],\"glyph_coordinates\":{:?},\"attribute_coordinates\":{},\"exact\":{}}}",
         left_geometry.0,
         left_geometry.1,
         right_geometry.0,
@@ -219,6 +228,7 @@ fn main() -> Result<()> {
             .collect::<Vec<_>>()
             .join(","),
         coordinates,
+        serde_json::to_string(&attribute_coordinates)?,
         geometry_equal && different == 0
     );
     for (row, count) in row_differences
