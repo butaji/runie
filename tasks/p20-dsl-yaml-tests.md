@@ -82,6 +82,9 @@ behavior fixtures editable without recompiling Rust.
   integration harnesses so YAML event names have one source of truth.
 - Added `assistant_event_kind!`, removing the handwritten provider-event
   naming match from the replay harness and covering the macro expansion.
+- Extended `typed_action_registry!` with generated filtering, selection, and
+  count helpers. The command palette now has one declarative action registry;
+  its Pi-limited three-action scope remains explicit and YAML-editable.
 - Existing `.sse.yaml` replay fixtures and TUI `tests/e2e/*.yaml` runners are
   the canonical fast behavior surface; the replay harness discovers all 183
   sidecars dynamically, and the TUI integration suite exercises all 22 YAML

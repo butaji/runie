@@ -8,25 +8,6 @@ runie_core::typed_action_registry! {
     }
 }
 
-impl PaletteAction {
-    pub fn filtered_labels(query: &str) -> Vec<&'static str> {
-        let query = query.to_ascii_lowercase();
-        Self::labels()
-            .iter()
-            .copied()
-            .filter(|entry| query.is_empty() || entry.to_ascii_lowercase().contains(&query))
-            .collect()
-    }
-
-    pub fn selected_label(query: &str, selected: usize) -> Option<&'static str> {
-        Self::filtered_labels(query).into_iter().nth(selected)
-    }
-
-    pub fn entry_count(query: &str) -> usize {
-        Self::filtered_labels(query).len()
-    }
-}
-
 /// Pure intent emitted by the UI actor for an effect-owning consumer.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UiCommand {

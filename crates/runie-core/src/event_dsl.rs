@@ -80,6 +80,25 @@ macro_rules! typed_action_registry {
                     _ => return None,
                 })
             }
+
+            $vis fn filtered_labels(query: &str) -> Vec<&'static str> {
+                let query = query.to_ascii_lowercase();
+                Self::labels()
+                    .iter()
+                    .copied()
+                    .filter(|entry| {
+                        query.is_empty() || entry.to_ascii_lowercase().contains(&query)
+                    })
+                    .collect()
+            }
+
+            $vis fn selected_label(query: &str, selected: usize) -> Option<&'static str> {
+                Self::filtered_labels(query).into_iter().nth(selected)
+            }
+
+            $vis fn entry_count(query: &str) -> usize {
+                Self::filtered_labels(query).len()
+            }
         }
     };
 }
@@ -100,6 +119,9 @@ mod tests {
         assert_eq!(TestAction::labels(), &["First", "Second"]);
         assert_eq!(TestAction::from_label("First"), Some(TestAction::First));
         assert_eq!(TestAction::from_label("missing"), None);
+        assert_eq!(TestAction::filtered_labels("sec"), ["Second"]);
+        assert_eq!(TestAction::selected_label("", 1), Some("Second"));
+        assert_eq!(TestAction::entry_count("first"), 1);
     }
 
     #[test]
