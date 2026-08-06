@@ -189,6 +189,11 @@ Grok tool-output projection (indented neutral metadata) instead of the generic
 green result-arrow row. A YAML scenario pins the URL header, HTTP metadata,
 and output line kinds through the real actor replay.
 
+Web-search card progress (2026-08-06): completion cardinality now follows
+Grok's distinct-site vocabulary (`site`/`sites`) and deduplicates citation
+domains before rendering the header. YAML replay covers repeated `docs.rs`
+citations and a second domain.
+
 Source audit: Grok's `UserMessageBlock` is the only standard conversation block
 that enables prompt vpad; system, session-event, thinking, background, and all
 specialized tool blocks explicitly disable it. The renderer also suppresses

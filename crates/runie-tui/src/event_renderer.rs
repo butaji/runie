@@ -1232,13 +1232,10 @@ fn completed_tool_header(
             )
         }
         "web_search" | "web-search" => {
-            let sources = output
-                .lines()
-                .filter(|line| !line.trim().is_empty())
-                .count();
+            let sites = web_search_site_count(&output);
             format!(
-                "{pending_header} ({sources} source{})",
-                if sources == 1 { "" } else { "s" }
+                "{pending_header} ({sites} site{})",
+                if sites == 1 { "" } else { "s" }
             )
         }
         "search_tools" | "search-tools" => {
@@ -1324,6 +1321,31 @@ fn tool_result_text(result: &serde_json::Value) -> String {
                 .map(str::to_owned)
         })
         .unwrap_or_else(|| serde_json::to_string(result).unwrap_or_default())
+}
+
+fn web_search_site_count(output: &str) -> usize {
+    let mut domains = std::collections::HashSet::new();
+    for token in output.split_whitespace() {
+        let Some(url) = token
+            .strip_prefix("https://")
+            .or_else(|| token.strip_prefix("http://"))
+        else {
+            continue;
+        };
+        if let Some(domain) = url.split(['/', '?', '#', ')', ']', ',']).next() {
+            if !domain.is_empty() {
+                domains.insert(domain.to_ascii_lowercase());
+            }
+        }
+    }
+    if domains.is_empty() {
+        output
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+            .count()
+    } else {
+        domains.len()
+    }
 }
 
 fn structured_update_text(result: &serde_json::Value) -> Option<String> {
@@ -1783,6 +1805,12 @@ mod tests {
         assert_eq!(
             tool_result_text(&serde_json::json!({"output":"one\ntwo"})),
             "one\ntwo"
+        );
+        assert_eq!(
+            web_search_site_count(
+                "https://docs.rs/a\nhttps://docs.rs/b\nhttps://rust-lang.org/learn"
+            ),
+            2
         );
         let (mut renderer, _, _) = new_renderer();
         let end = renderer.handle_tool_end(

@@ -686,6 +686,10 @@ fn build_scenario_loop(scenario: &Scenario) -> Result<(EventBus, LoopActor), Sce
     Ok((bus, LoopActor::new(deps)))
 }
 
+#[allow(
+    clippy::too_many_lines,
+    reason = "the YAML tool registry keeps declarative replay variants together"
+)]
 fn register_scenario_tool(
     registry: &mut ToolRegistry,
     tool: &ToolSpec,
@@ -719,6 +723,10 @@ fn register_scenario_tool(
         "web_fetch" => registry.register(Arc::new(ReplayTool::new(
             &tool.name,
             "status: 200\ncontent_type: text/html\nsize: 14.2 KB\nbody",
+        ))),
+        "web_search" => registry.register(Arc::new(ReplayTool::new(
+            &tool.name,
+            "https://docs.rs/runie\nhttps://docs.rs/ratatui\nhttps://rust-lang.org/learn",
         ))),
         "error" => registry.register(Arc::new(ReplayTool::failing(&tool.name, "tool failed"))),
         "structured_update" => registry.register(Arc::new(ReplayTool::structured(
@@ -1219,6 +1227,10 @@ pub async fn render_visual_buffer(
             "web_fetch" => reg.register(Arc::new(ReplayTool::new(
                 &t.name,
                 "status: 200\ncontent_type: text/html\nsize: 14.2 KB\nbody",
+            ))),
+            "web_search" => reg.register(Arc::new(ReplayTool::new(
+                &t.name,
+                "https://docs.rs/runie\nhttps://docs.rs/ratatui\nhttps://rust-lang.org/learn",
             ))),
             "error" => reg.register(Arc::new(ReplayTool::failing(&t.name, "tool failed"))),
             "structured_update" => {

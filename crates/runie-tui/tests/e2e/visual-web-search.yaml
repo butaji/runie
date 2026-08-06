@@ -1,0 +1,22 @@
+name: visual-web-search
+description: Grok Web Search cards summarize distinct citation sites and retain neutral source rows.
+initial_prompt: "Find Rust terminal UI documentation"
+tools:
+  - name: web_search
+    kind: web_search
+events:
+  - start
+  - tool_call:
+      name: web_search
+      args: { query: "Rust terminal UI" }
+  - done: { stop_reason: stop }
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    screen_text:
+      - "Web Search Rust terminal UI (2 sites)"
+      - "https://docs.rs/runie"
+    scrollback_lines:
+      - kind: tool_result
+        contains: "https://docs.rs/runie"
