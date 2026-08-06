@@ -37,6 +37,11 @@ An item becomes visible after its owning reducer acknowledges the start/update
 event. Animation ticks may repaint an existing live item but must not create
 feed content.
 
+Lifecycle mutation invariant: update, completion, and error intents resolve the
+semantic tool-header row, never an arbitrary output line sharing the same call
+ID. This preserves Grok's separate header/status and body/output surfaces and
+is now enforced by the Runie scrollback reducer.
+
 ## Animation and timing contract
 
 | Effect | Source | Behavior to reproduce | Runie status |

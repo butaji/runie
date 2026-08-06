@@ -511,12 +511,13 @@ impl Scrollback {
     }
 
     fn mark_tool_error(&mut self, tool_call_id: &str) {
-        if let Some(line) = self
-            .lines
-            .iter_mut()
-            .rev()
-            .find(|line| line.tool_call_id.as_deref() == Some(tool_call_id))
-        {
+        if let Some(line) = self.lines.iter_mut().rev().find(|line| {
+            line.tool_call_id.as_deref() == Some(tool_call_id)
+                && matches!(
+                    line.kind,
+                    LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
+                )
+        }) {
             line.kind = LineKind::ToolError;
         }
     }
