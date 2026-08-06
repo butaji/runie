@@ -126,3 +126,16 @@ ordinary selection. Focused and full gates pass.
 The review loop is faster when a run answers “what data is missing?” without
 manual inspection and when each iteration produces either a reduced classified
 mismatch set or a stronger replay oracle.
+
+## Lifecycle adapter checkpoint (2026-08-06)
+
+The ordinary-tool running-state experiment established a reproducible harness
+boundary: `replay_scenario_events` drives `EventRenderer::apply_actor_event`,
+while YAML compatibility setup can also seed `ScrollbackMsg::ToolStart` rows.
+Those paths share tool IDs but not row ownership. Promoting all starts to
+`ToolRunning`, or settling all matching IDs, corrupts the existing mixed-tool
+header oracle. The acceptance condition for the next implementation is a
+single actor-owned live-row identity (or an explicit compatibility-row marker)
+that proves `ToolExecutionStart -> ToolRunning -> ToolExecutionEnd` without
+merging fixture-seeded rows. Until that condition is met, the current green
+YAML suite is the authoritative regression baseline.
