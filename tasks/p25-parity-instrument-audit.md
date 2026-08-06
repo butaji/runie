@@ -492,3 +492,11 @@ wide glyph lead cells are width 2, continuation cells width 0, and ordinary
 cells width 1. The VT parser uses its wide/continuation flags; Ratatui frames
 derive the same classification from Unicode display width and neighboring
 cells. Width is part of cell equality and dump diagnostics.
+## Classified attribute diagnostics (2026-08-06)
+
+`cast_compare --dump` now reports attribute mismatches by width, foreground /
+background colors, terminal style flags, and any remaining modeled cell
+attributes. This keeps the strict equality decision unchanged while making
+the next Grok capture actionable: a mismatch can be assigned to terminal
+capability, glyph geometry, styling, or an unmodeled attribute without
+inspecting raw JSON manually.

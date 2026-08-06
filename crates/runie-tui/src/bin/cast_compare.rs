@@ -192,6 +192,7 @@ fn replay(path: &Path) -> Result<Replay> {
 
 #[allow(
     clippy::too_many_lines,
+    clippy::cognitive_complexity,
     reason = "the CLI keeps replay, diagnostics, and exact exit semantics together"
 )]
 fn main() -> Result<()> {
@@ -307,6 +308,10 @@ fn main() -> Result<()> {
     }
     let compared = left_cells.len().min(right_cells.len());
     let mut glyphs = 0;
+    let mut widths = 0;
+    let mut colors = 0;
+    let mut styles = 0;
+    let mut other_attributes = 0;
     let mut attributes = 0;
     let mut row_differences = vec![0usize; left_geometry.1.max(right_geometry.1) as usize];
     let mut coordinates = Vec::new();
@@ -323,6 +328,29 @@ fn main() -> Result<()> {
             }
         } else if left != right {
             attributes += 1;
+            if left.width != right.width {
+                widths += 1;
+            }
+            if left.fg != right.fg || left.bg != right.bg {
+                colors += 1;
+            }
+            if left.bold != right.bold
+                || left.italic != right.italic
+                || left.underline != right.underline
+                || left.inverse != right.inverse
+            {
+                styles += 1;
+            }
+            if left.width == right.width
+                && left.fg == right.fg
+                && left.bg == right.bg
+                && left.bold == right.bold
+                && left.italic == right.italic
+                && left.underline == right.underline
+                && left.inverse == right.inverse
+            {
+                other_attributes += 1;
+            }
             row_differences[index / left_geometry.0 as usize] += 1;
             if attribute_coordinates.len() < 20 {
                 attribute_coordinates.push(serde_json::json!({
@@ -342,7 +370,7 @@ fn main() -> Result<()> {
         .map(|(row, count)| format!("{}:{}", row + 1, count))
         .collect();
     println!(
-        "{{\"left\":{{\"cols\":{},\"rows\":{}}},\"right\":{{\"cols\":{},\"rows\":{}}},\"compared_cells\":{},\"different_cells\":{},\"different_glyphs\":{},\"different_attributes\":{},\"row_hotspots\":[{}],\"glyph_coordinates\":{:?},\"attribute_coordinates\":{},\"exact\":{}}}",
+        "{{\"left\":{{\"cols\":{},\"rows\":{}}},\"right\":{{\"cols\":{},\"rows\":{}}},\"compared_cells\":{},\"different_cells\":{},\"different_glyphs\":{},\"different_attributes\":{},\"attribute_breakdown\":{{\"width\":{},\"colors\":{},\"styles\":{},\"other\":{}}},\"row_hotspots\":[{}],\"glyph_coordinates\":{:?},\"attribute_coordinates\":{},\"exact\":{}}}",
         left_geometry.0,
         left_geometry.1,
         right_geometry.0,
@@ -351,6 +379,10 @@ fn main() -> Result<()> {
         different,
         glyphs,
         attributes,
+        widths,
+        colors,
+        styles,
+        other_attributes,
         hotspots
             .iter()
             .map(|hotspot| format!("\"{hotspot}\""))
