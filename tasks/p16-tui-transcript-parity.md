@@ -614,3 +614,8 @@ actor path and asserts the complete header text.
 The same fixture DSL now supports `media: image/png`, producing the existing
 Pi `ToolResultContent::Image` variant. `visual-read-media.yaml` asserts the
 Grok image suffix without adding renderer-owned state.
+
+YAML tool registration is now one shared declarative path: both state replay
+and visual-buffer replay call `register_scenario_tool`. This removes the
+previous duplicated match table that could silently make a fixture's visual
+and non-visual results diverge.

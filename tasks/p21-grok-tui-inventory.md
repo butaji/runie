@@ -636,3 +636,7 @@ through the real loop, actor, and visual buffer. Error behavior remains
 covered by `visual-tool-error.yaml`; a distinct typed error payload is still
 not modeled because the core event already carries `is_error` and the error
 text.
+
+The YAML harness now uses `register_scenario_tool` as the single registration
+source for both normal and visual replay. This keeps declarative fixture
+fields and built-in tool variants consistent across all test entry points.

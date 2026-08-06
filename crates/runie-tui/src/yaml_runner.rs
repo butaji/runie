@@ -2397,51 +2397,7 @@ pub async fn render_visual_buffer(
     let follow_up = runie_core::queues::FollowUpQueueActor::new();
     let mut reg = ToolRegistry::new();
     for t in &scenario.tools {
-        if t.output.is_some() || t.details.is_some() || t.error.is_some() || t.media.is_some() {
-            reg.register(Arc::new(ReplayTool::configured(
-                &t.name,
-                t.output.clone().unwrap_or_default(),
-                t.details.clone().unwrap_or(serde_json::Value::Null),
-                t.error.is_some(),
-                t.media.clone(),
-            )));
-            continue;
-        }
-        match t.kind.as_str() {
-            "echo" => reg.register(Arc::new(EchoTool::new(t.parameters.clone()))),
-            "list_dir" => reg.register(Arc::new(ReplayTool::new(
-                &t.name,
-                "Cargo.toml\nsrc\ncrates",
-            ))),
-            "read" => reg.register(Arc::new(ReplayTool::new(
-                &t.name,
-                "# runie\n\nThis is **Runie**.",
-            ))),
-            "edit" => reg.register(Arc::new(ReplayTool::new(
-                &t.name,
-                "@@ -1 +1 @@\n-old\n+new",
-            ))),
-            "bash" => reg.register(Arc::new(ReplayTool::new(&t.name, "cargo test completed"))),
-            "subagent" => reg.register(Arc::new(ReplayTool::new(&t.name, "subagent completed"))),
-            "memory_search" => reg.register(Arc::new(ReplayTool::new(
-                &t.name,
-                "Found 2 memory result(s):\n\n### Result 1 (score: 0.72, source: global)\n**File:** /memory/MEMORY.md (lines 0-10)\n```\nactors\n```\n\n### Result 2 (score: 0.42, source: session)\n**File:** /memory/session.md (lines 4-7)\n```\nreplay\n```",
-            ))),
-            "workflow" => reg.register(Arc::new(ReplayTool::new(&t.name, "workflow done"))),
-            "web_fetch" => reg.register(Arc::new(ReplayTool::new(
-                &t.name,
-                "status: 200\ncontent_type: text/html\nsize: 14.2 KB\nbody",
-            ))),
-            "web_search" => reg.register(Arc::new(ReplayTool::new(
-                &t.name,
-                "https://docs.rs/runie\nhttps://docs.rs/ratatui\nhttps://rust-lang.org/learn",
-            ))),
-            "error" => reg.register(Arc::new(ReplayTool::failing(&t.name, "tool failed"))),
-            "structured_update" => {
-                reg.register(Arc::new(ReplayTool::structured(&t.name, "first\nsecond")))
-            }
-            other => return Err(format!("unknown tool kind: {other}")),
-        }
+        register_scenario_tool(&mut reg, t).map_err(|error| error.to_string())?;
     }
     let tool_executor = ToolExecutorActor::new(Arc::new(reg));
     let provider = ProviderActor::new(Arc::new(ScenarioStream {
