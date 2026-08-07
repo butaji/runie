@@ -1,6 +1,7 @@
 //! Actor-owned telemetry capability for Pi-compatible span lifecycles.
 
 use std::collections::HashMap;
+use std::future::Future;
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
@@ -299,6 +300,30 @@ impl TelemetryActor {
             id: result.await.ok()?,
         })
     }
+
+    /// Execute a callback inside an actor-owned span, matching Pi's
+    /// callback-scoped `startSpan` contract. Completion always settles the
+    /// span through mailbox commands before the result is returned.
+    pub async fn with_span<F, Fut, T, E>(
+        &self,
+        parent_id: Option<u64>,
+        name: impl Into<String>,
+        attributes: HashMap<String, serde_json::Value>,
+        callback: F,
+    ) -> Option<Result<T, E>>
+    where
+        F: FnOnce(TelemetrySpan) -> Fut,
+        Fut: Future<Output = Result<T, E>>,
+    {
+        let span = self.start_span(parent_id, name, attributes).await?;
+        let result = callback(span.clone()).await;
+        match &result {
+            Ok(_) => span.status(SpanStatus::Ok).await,
+            Err(_) => span.status(SpanStatus::Error).await,
+        }
+        span.end().await;
+        Some(result)
+    }
 }
 
 impl Default for TelemetryActor {
@@ -406,5 +431,30 @@ mod tests {
         span.end().await;
         span.event("late", HashMap::new()).await;
         assert!(actor.snapshot().spans[0].events.is_empty());
+    }
+
+    #[tokio::test]
+    async fn callback_scoped_span_settles_success_and_error_through_actor() {
+        let actor = TelemetryActor::new();
+        let success = actor
+            .with_span(None, "success", HashMap::new(), |span| async move {
+                span.event("finished", HashMap::new()).await;
+                Ok::<_, &'static str>("done")
+            })
+            .await
+            .unwrap()
+            .unwrap();
+        let failure = actor
+            .with_span(None, "failure", HashMap::new(), |_span| async {
+                Err::<(), _>("failed")
+            })
+            .await
+            .unwrap();
+        assert_eq!(success, "done");
+        assert_eq!(failure, Err("failed"));
+        let snapshot = actor.snapshot();
+        assert_eq!(snapshot.spans[0].status, SpanStatus::Ok);
+        assert_eq!(snapshot.spans[1].status, SpanStatus::Error);
+        assert!(snapshot.spans.iter().all(|span| span.ended));
     }
 }
