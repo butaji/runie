@@ -40,6 +40,12 @@ The model owns the semantic `◈ Listed/Read/Ran` vocabulary and failure suffix;
 the renderer only styles the resulting line. Actor lifecycle tests preserve
 the exact label and keep this event → snapshot behavior covered.
 
+Completion-header extraction (2026-08-08): Grok's tool-result cardinality,
+read-range/image suffixes, and terminal completion vocabulary now live in
+`runie-tui-model::completed_tool_header_with_args`. The feed actor consumes
+that projection directly, removing the final completion-format dependency on
+`event_renderer` while preserving existing tool-card replay behavior.
+
 Reset lifecycle increment (2026-08-07): `AgentEvent::Reset` now maps to
 explicit status/feed reset reducers. Status clears terminal turn facts while
 preserving theme/context configuration, and feed clear resets turn-summary

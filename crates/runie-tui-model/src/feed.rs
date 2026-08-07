@@ -167,6 +167,144 @@ pub fn activity_text(
     text
 }
 
+/// Add Grok's result cardinality/range suffix to a retained tool header.
+#[allow(
+    clippy::too_many_lines,
+    clippy::cognitive_complexity,
+    reason = "tool-card completion variants are one semantic DSL"
+)]
+pub fn completed_tool_header_with_args(
+    pending_header: &str,
+    tool_name: &str,
+    args: &serde_json::Value,
+    result: &serde_json::Value,
+) -> String {
+    let output = tool_result_text(result);
+    if matches!(tool_name, "read" | "read_file") {
+        if result
+            .get("content")
+            .and_then(serde_json::Value::as_array)
+            .is_some_and(|items| {
+                items.iter().any(|item| {
+                    item.get("type") == Some(&serde_json::Value::String("image".into()))
+                })
+            })
+        {
+            return format!("{pending_header} (image)");
+        }
+        if let Some(offset) = args.get("offset").and_then(serde_json::Value::as_u64) {
+            let lines = output
+                .lines()
+                .take_while(|line| !line.starts_with('['))
+                .count() as u64;
+            let end = offset.saturating_add(lines.max(1));
+            let total = result
+                .get("details")
+                .and_then(|v| v.get("truncation"))
+                .and_then(|v| v.get("totalLines"))
+                .and_then(serde_json::Value::as_u64)
+                .or_else(|| {
+                    output.lines().find_map(|line| {
+                        line.split(" of ")
+                            .nth(1)
+                            .and_then(|part| part.split(|c: char| !c.is_ascii_digit()).next())
+                            .and_then(|value| value.parse().ok())
+                    })
+                });
+            return match total {
+                Some(total) => format!("{pending_header} ({}-{} of {total})", offset + 1, end),
+                None => format!("{pending_header} ({}-{end})", offset + 1),
+            };
+        }
+    }
+    let count = |nonempty: bool| {
+        output
+            .lines()
+            .filter(|line| !nonempty || !line.trim().is_empty())
+            .count()
+    };
+    match tool_name {
+        "list_dir" | "list_files" | "ls" => {
+            let n = count(true);
+            format!(
+                "{pending_header} ({n} entr{})",
+                if n == 1 { "y" } else { "ies" }
+            )
+        }
+        "read" | "read_file" => format!("{pending_header} ({} lines)", output.lines().count()),
+        "search" | "grep" | "find" | "glob" => {
+            let n = count(true);
+            format!(
+                "{pending_header} ({n} match{})",
+                if n == 1 { "" } else { "es" }
+            )
+        }
+        "web_search" | "web-search" => {
+            let mut domains = std::collections::HashSet::new();
+            for token in output.split_whitespace() {
+                if let Some(url) = token
+                    .strip_prefix("https://")
+                    .or_else(|| token.strip_prefix("http://"))
+                {
+                    domains.insert(
+                        url.split('/')
+                            .next()
+                            .unwrap_or(url)
+                            .trim_end_matches(|c: char| !c.is_ascii_alphanumeric() && c != '.'),
+                    );
+                }
+            }
+            let n = domains.len();
+            format!(
+                "{pending_header} ({n} site{})",
+                if n == 1 { "" } else { "s" }
+            )
+        }
+        "memory_search" | "memory-search" => {
+            let n = crate::memory::parse_memory_results(&output).len();
+            format!(
+                "{pending_header} ({n} result{})",
+                if n == 1 { "" } else { "s" }
+            )
+        }
+        "todo" | "todo_write" | "todo-write" => {
+            let n = count(true);
+            if n == 0 {
+                pending_header.to_owned()
+            } else {
+                format!(
+                    "{pending_header} ({n} item{})",
+                    if n == 1 { "" } else { "s" }
+                )
+            }
+        }
+        "workflow" | "run_workflow" | "run-workflow" => pending_header
+            .strip_prefix("Workflow ")
+            .map(|n| format!("Workflow completed: {n}"))
+            .unwrap_or_else(|| pending_header.to_owned()),
+        "use" | "use_tool" | "use-tool" => pending_header
+            .strip_prefix("Use ")
+            .map(|n| format!("Used {n}"))
+            .unwrap_or_else(|| pending_header.to_owned()),
+        "subagent" | "agent" | "task" => pending_header
+            .strip_prefix("Subagent started: ")
+            .map(|n| format!("Subagent completed: {n}"))
+            .unwrap_or_else(|| pending_header.to_owned()),
+        "edit" | "write" | "write_file" | "search_replace" => {
+            let n = count(true);
+            if n == 0 {
+                pending_header.to_owned()
+            } else {
+                format!(
+                    "{pending_header} ({n} edit{})",
+                    if n == 1 { "" } else { "s" }
+                )
+            }
+        }
+        _ => format!("{pending_header} → ✓"),
+    }
+}
+
 pub const GROK_GROUP_MAX_VISIBLE: usize = 10;
 
 /// Viewport-relative terminal cell coordinate used by Grok's text selection.
