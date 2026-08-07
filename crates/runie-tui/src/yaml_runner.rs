@@ -1064,6 +1064,7 @@ pub struct StateAssertions {
     pub session_labels: Option<BTreeMap<String, String>>,
     pub session_name: Option<String>,
     pub session_lanes: Option<BTreeMap<String, Option<String>>>,
+    pub session_lane_branch_entry_ids: Option<BTreeMap<String, Vec<String>>>,
     /// Ordered admitted Pi operation-lane record kinds.
     pub session_lane_records: Option<Vec<String>>,
     /// Ordered actor-owned assistant step operation IDs.
@@ -2942,6 +2943,24 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         outcome.session.lanes(),
         "session_lanes"
     );
+    if let Some(expected_branches) = &expected.session_lane_branch_entry_ids {
+        let actual_branches = outcome
+            .session
+            .lanes()
+            .keys()
+            .map(|lane| {
+                (
+                    lane.clone(),
+                    outcome.session.branch_entry_ids_for_lane(lane),
+                )
+            })
+            .collect::<BTreeMap<_, _>>();
+        if &actual_branches != expected_branches {
+            return Err(format!(
+                "state session_lane_branch_entry_ids mismatch: expected {expected_branches:?}, got {actual_branches:?}"
+            ));
+        }
+    }
     if let Some(expected_records) = &expected.session_lane_records {
         let actual_records = outcome
             .session

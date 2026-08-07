@@ -1571,6 +1571,19 @@ impl SessionSnapshot {
         self.branch_entry_ids_from_leaf(self.lanes().get(lane).cloned().flatten())
     }
 
+    /// Return message entries on one lane's selected branch, oldest first.
+    pub fn entries_for_lane(&self, lane: &str) -> Vec<SessionEntry> {
+        let ids = self
+            .branch_entry_ids_for_lane(lane)
+            .into_iter()
+            .collect::<std::collections::BTreeSet<_>>();
+        self.entries
+            .iter()
+            .filter(|entry| ids.contains(&entry.id))
+            .cloned()
+            .collect()
+    }
+
     fn branch_entry_ids_from_leaf(&self, leaf_id: Option<String>) -> Vec<String> {
         let mut parents = BTreeMap::new();
         for entry in &self.entries {
@@ -3182,6 +3195,14 @@ mod tests {
         assert_eq!(snapshot.entries[1].parent_id.as_deref(), Some("entry-1"));
         assert_eq!(
             snapshot.branch_entry_ids_for_lane("feature"),
+            vec!["entry-1", "entry-2"]
+        );
+        assert_eq!(
+            snapshot
+                .entries_for_lane("feature")
+                .iter()
+                .map(|entry| entry.id.as_str())
+                .collect::<Vec<_>>(),
             vec!["entry-1", "entry-2"]
         );
         assert_eq!(

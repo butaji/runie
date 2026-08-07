@@ -13,3 +13,6 @@ assertions:
     session_lanes:
       main: entry-2
       feature: entry-3
+    session_lane_branch_entry_ids:
+      main: [entry-1, entry-2]
+      feature: [entry-1, entry-3]
