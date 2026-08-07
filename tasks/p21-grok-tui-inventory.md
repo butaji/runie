@@ -465,6 +465,25 @@ mouse/text-selection box (including split-group behavior and optional copy/
 view controls) is distinct from Runie's keyboard entry cursor and should not
 be claimed as closed by the existing token test.
 
+### Mouse/text selection contract (2026-08-07)
+
+The next implementation boundary is explicit. Grok's mouse drag is a
+transcript-cell selection, not an entry-index selection: the input layer owns
+an anchor cell and current head cell, normalizes reversed coordinates, and
+projects a rectangular range across wrapped rows. A split drag may begin and
+end inside different feed blocks, so the selection must be represented as
+viewport-relative row/column coordinates and rehydrated after scroll/resize;
+it must not be inferred from rendered text. Copy/view actions are effects
+after the reducer acknowledges the selected range.
+
+Runie's existing `SelectRange` stores logical feed indices and remains correct
+for keyboard navigation, but cannot represent this contract. The required
+event sequence is `MouseSelectionStart -> MouseSelectionExtend* ->
+MouseSelectionCommit/Clear`, reduced by the input/feed actor; the renderer may
+only paint a pure `SelectionSurface` projection using theme tokens. YAML must
+declare cell coordinates and assert the normalized range, selected text rows,
+and copy intent without invoking a clipboard in tests.
+
 YAML selection oracle (2026-08-06): `tool_select: next|previous` replays
 through the same scrollback actor and `selected_tool_id` asserts the resulting
 projection. The mixed activity fixture now pins both forward and reverse
