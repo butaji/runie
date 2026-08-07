@@ -273,6 +273,12 @@
       "file": "p51-pi-session-records.md",
       "status": "in_progress",
       "title": "Core: Pi session configuration records through actor-owned events"
+    },
+    {
+      "id": "p52",
+      "file": "p52-pi-session-lane-parity.md",
+      "status": "in_progress",
+      "title": "Core: Pi typed session lanes, durable JSONL, and compaction parity"
     }
   ]
 }

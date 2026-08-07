@@ -1,0 +1,69 @@
+# Pi session lane and durable storage parity
+
+Status: in_progress
+
+## Source contract
+
+The authoritative upstream files are:
+
+- `~/Code/agents/pi/packages/agent/src/harness/session/types.ts`
+- `~/Code/agents/pi/packages/agent/src/harness/session/jsonl/storage.ts`
+- `~/Code/agents/pi/packages/agent/src/harness/session/jsonl/codec.ts`
+- `~/Code/agents/pi/packages/agent/src/harness/compaction/compaction.ts`
+
+Pi's session model has two ordered lanes. The message lane contains parent-
+linked entries; the operation lane contains typed records. The covered record
+families are `operation_started`, `abort_requested`, `operation_finished`,
+`step_attempt`, `tool_started`, `queue_enqueued`, `queue_cancelled`,
+`write_deferred`, and `usage`. Records carry an id, sequence, lane, and
+timestamp, and operation admission rejects a second open operation in one
+lane.
+
+The JSONL backend creates and loads a versioned header, appends mutations in
+sequence order, repairs an unterminated/torn final line, and publishes a
+complete temporary file atomically before rename. Forks copy a validated
+branch prefix into a new session. Compaction entries preserve the summary,
+retained tail, token count, usage, and implementation details.
+
+## Current Runie mapping
+
+`runie-core/src/session.rs` owns parent-linked message/config entries and
+reduces generic `OperationRecordCreated` facts into active operation,
+outcome, kind, error, and navigation projections. JSONL v4 export/import and
+terminated message metadata are covered by replay tests.
+
+The following are not yet exact Pi parity:
+
+- operation records are generic `(record_type, data)` rather than typed lane
+  records with admission and sequence validation;
+- there is no durable actor-owned JSONL storage backend, atomic publish, torn
+  tail repair, or fork writer;
+- queue, deferred-write, tool-start, step-attempt, and usage records are not
+  emitted as their own session events;
+- compaction is journaled when supplied by an event, but Runie does not yet
+  implement Pi's context-building and summary/retained-tail algorithm.
+
+## Implementation order
+
+1. Add a typed `SessionLaneRecord` event DSL while retaining the Pi wire event
+   boundary; each variant must reduce through `SessionActor` only.
+2. Add pure record admission/sequence/parent validation and YAML fixtures for
+   every lane family, including duplicate-open-operation rejection.
+3. Add an async owned JSONL storage actor with atomic temp-file publication,
+   torn-tail repair, load/export, and fork operations.
+4. Add compaction context/result events and replay assertions for summary,
+   retained tail, tokens, usage, and details.
+5. Add YAML state assertions for ordered records and restart/recovery state;
+   only then promote the session inventory row to covered.
+
+## Acceptance
+
+- every upstream lane record has an explicit event, reducer, and YAML trace;
+- reloading a persisted actor snapshot produces the same ordered state;
+- interrupted writes leave the prior published file valid and repair the
+  final torn record deterministically;
+- no TUI or provider code mutates session state directly;
+- `just ci` and the source inventory remain green.
+
+This workstream is required for the stated 100% Pi-core parity goal; it is not
+classified as out of scope.

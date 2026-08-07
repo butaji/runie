@@ -243,3 +243,11 @@ Live event delivery now carries the same fact: `SessionActor` owns a
 tool-call-id → termination projection while reducing `ToolExecutionEnd`, then
 attaches it to the matching `MessageEnd` session entry. The mailbox regression
 proves this event sequence without sleeps or direct state mutation.
+
+Session-lane parity correction (2026-08-07): the former inventory wording
+understated the stated Runie objective. Upstream Pi also provides typed
+operation lanes, durable atomic JSONL storage, torn-tail repair, forks, and
+compaction context/result behavior. These are now tracked as required
+implementation work in `p52-pi-session-lane-parity.md`; Runie does not claim
+100% core parity until that workstream is covered by actor events and YAML
+restart/recovery traces.
