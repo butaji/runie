@@ -1885,6 +1885,13 @@ fn styled_line_for(kind: LineKind, text: &str, theme: ThemeKind) -> RatLine<'sta
         return styled_activity_line(text, style);
     }
     if matches!(kind, LineKind::ToolOutput | LineKind::ToolResult) {
+        if let Some(sources) = text.strip_prefix("  Sources: ") {
+            let label = "  Sources: ";
+            return RatLine::from(vec![
+                Span::styled(label.to_owned(), appearance::muted_style_for(theme)),
+                Span::styled(sources.to_owned(), appearance::base_style_for(theme)),
+            ]);
+        }
         let diff_style = if text.starts_with('+') && !text.starts_with("+++") {
             Some(appearance::diff_insert_style_for(theme))
         } else if text.starts_with('-') && !text.starts_with("---") {
@@ -2564,6 +2571,23 @@ mod tests {
             .style
             .add_modifier
             .contains(Modifier::BOLD));
+    }
+
+    #[test]
+    fn web_search_source_label_uses_muted_token() {
+        let rendered = styled_line_for(
+            LineKind::ToolOutput,
+            "  Sources: example.com, docs.rs (+2 more)",
+            ThemeKind::GrokDay,
+        );
+        assert_eq!(
+            rendered.spans[0].style.fg,
+            appearance::muted_style_for(ThemeKind::GrokDay).fg
+        );
+        assert_eq!(
+            rendered.spans[1].style.fg,
+            appearance::base_style_for(ThemeKind::GrokDay).fg
+        );
     }
 
     #[test]

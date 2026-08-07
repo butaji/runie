@@ -662,3 +662,8 @@ Search-scope typography (2026-08-06): search headers now split the bold
 `Search` action, query, `in` separator, and scope path; the scope resolves
 through the same semantic path token as file cards. A focused GrokNight span
 assertion pins the separation.
+
+Web-source typography (2026-08-06): Grok's web-search card renders the
+`Sources:` label in the muted token while source domains use the primary body
+token. Runie now preserves that label/domain distinction in the output-row
+renderer, with a GrokDay token assertion.
