@@ -85,7 +85,7 @@ animation advances.
 The first input migration is now implemented: an owned worker reads
 `crossterm::event::EventStream` and sends `KeyEvent` values through a bounded
 mailbox. The render loop no longer calls `event::poll` or `event::read`, and
-all prompt/UI state changes still cross actor mailboxes. A final refinement is
-to select directly on the input mailbox rather than `try_recv` from the render
-tick; that removes input latency coupling to frame cadence and remains an
-open closure item for strict fully-reactive timing.
+all prompt/UI state changes still cross actor mailboxes. The main loop now
+selects directly on the input mailbox rather than `try_recv` from the render
+tick. Key routing remains actor-mailbox based, while the render tick is
+reserved for drawing and actor-owned animation progress.

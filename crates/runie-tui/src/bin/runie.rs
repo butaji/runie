@@ -386,13 +386,19 @@ async fn run_app(
     });
 
     let mut tick = tokio::time::interval(Duration::from_millis(50));
+    let mut pending_key = None;
 
     loop {
         tokio::select! {
+            key = input_rx.recv() => {
+                let Some(key) = key else { return Ok(AppExit::Quit) };
+                pending_key = Some(key);
+                continue;
+            }
             _ = tick.tick() => {
                 // Input has already crossed the owned async input actor's
                 // mailbox; rendering never touches the terminal reader.
-                if let Ok(key) = input_rx.try_recv() {
+                if let Some(key) = pending_key.take() {
                         if key.kind == KeyEventKind::Press {
                             if app.ui.snapshot().command_palette_open
                                 && key.code == KeyCode::Esc
