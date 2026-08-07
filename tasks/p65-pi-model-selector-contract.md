@@ -1,6 +1,6 @@
 # P65 — Pi model selector and scoped-model contract
 
-Status: catalog semantics and async actor implemented; selector UI/refresh adapter open (2026-08-08)
+Status: catalog semantics, async actor, and provider discovery seam implemented; concrete adapter/selector UI open (2026-08-08)
 
 ## Source contract
 
