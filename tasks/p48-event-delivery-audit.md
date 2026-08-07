@@ -1,6 +1,6 @@
 # p48 — Event-delivery audit and closure criteria
 
-Status: audited; implementation follow-up remains (2026-08-07)
+Status: audited; compatibility retirement remains (2026-08-07)
 
 ## Invariant
 
@@ -48,3 +48,26 @@ its replay projection to the owning actor, add an event-order assertion, and
 prove that live and replay renders consume equivalent snapshots. Do not solve
 this by introducing a second shared mutable model.
 
+## Direct-write audit (2026-08-07)
+
+The production paths were re-scanned after the measured-layout event work. The
+remaining assignments are reducer-local writes or compatibility-only adapters:
+
+- `runie-core` writes mutable fields only inside state/session/queue/tool actor
+  reducers, after an actor command or `AgentEvent`.
+- `runie-tui-model` writes `FeedState`, `StatusState`, and `UiState` only in
+  pure message reducers; renderers consume immutable snapshots.
+- `App`, `EventRenderer::run`, and live widgets do not write another actor's
+  state. Layout facts use `ScrollbackMsg::LayoutMeasured` and the actor
+  mailbox.
+- `EventRenderer` transient fields (tool rows, stream buffers, activity
+  counters, and lifecycle flags) are reachable only from synchronous
+  compatibility/replay adapters. `with_live_actors` disables those reducers;
+  live facts come from actor snapshots.
+- Direct widget assignments are reducer internals or snapshot hydration, not
+  application-level state changes.
+
+This remains open by design: removing the compatibility mirror requires
+migrating each replay caller to an actor-backed snapshot without changing its
+deterministic YAML contract. Acceptance remains the full YAML suite plus a
+source audit proving that `with_live_actors` cannot access `Projection::Legacy`.
