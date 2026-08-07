@@ -17,6 +17,12 @@
       "title": "Architecture: transfer every observable state change through owned actor events"
     },
     {
+      "id": "p37",
+      "file": "p37-pi-provider-transport-boundary.md",
+      "status": "planned",
+      "title": "Define the transport boundary for remaining Pi provider request options"
+    },
+    {
       "id": "p35",
       "file": "p35-scrollback-model-reducer.md",
       "status": "done",
