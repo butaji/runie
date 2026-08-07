@@ -239,6 +239,7 @@ fn format_error(is_error: bool, error: Option<&str>) -> String {
 #[derive(Clone)]
 enum Projection<T> {
     #[cfg(test)]
+    #[allow(dead_code)]
     Legacy(Arc<Mutex<T>>),
     #[cfg(test)]
     Actor,
@@ -303,26 +304,6 @@ impl EventRenderer {
                 .model_snapshot()
                 .assistant_stream_open
         }
-    }
-
-    #[cfg(test)]
-    pub fn new(scrollback: Arc<Mutex<Scrollback>>, status: Arc<Mutex<StatusBar>>) -> Self {
-        Self::with_welcome(scrollback, status, false)
-    }
-
-    #[cfg(test)]
-    pub fn with_welcome(
-        scrollback: Arc<Mutex<Scrollback>>,
-        status: Arc<Mutex<StatusBar>>,
-        emit_welcome: bool,
-    ) -> Self {
-        Self::with_projections(
-            Projection::Legacy(scrollback),
-            Projection::Legacy(status),
-            None,
-            None,
-            emit_welcome,
-        )
     }
 
     fn with_projections(
@@ -679,93 +660,6 @@ impl EventRenderer {
         }
     }
 
-    #[allow(
-        clippy::cognitive_complexity,
-        clippy::too_many_lines,
-        reason = "event loop coordinates owned status/feed projections and shutdown"
-    )]
-    pub fn apply_event(&mut self, event: AgentEvent) {
-        if self.status_actor.is_none() {
-            for message in status_messages_for_event(&event) {
-                self.status.lock().apply(message);
-            }
-        }
-        match event {
-            AgentEvent::AgentStart => {
-                self.handle_agent_start();
-            }
-            AgentEvent::AgentEnd { .. } => self.handle_agent_end(),
-            AgentEvent::Error { .. } => {}
-            AgentEvent::ThinkingLevelChanged { .. } => {}
-            AgentEvent::Reset => self.handle_reset(),
-            AgentEvent::TurnStart => {
-                if self.scrollback_actor.is_none() {
-                    self.scrollback.lock().apply(ScrollbackMsg::TurnStart);
-                }
-            }
-            AgentEvent::Waiting { reason } => {
-                let _ = reason;
-            }
-            AgentEvent::ThemeChanged { theme } => {
-                if self.scrollback_actor.is_none() {
-                    self.scrollback.lock().set_theme(theme);
-                }
-            }
-            AgentEvent::ModelChanged { .. } => {}
-            AgentEvent::ToolDisplayModeChanged { tool_call_id, mode } => {
-                if self.scrollback_actor.is_none() {
-                    self.scrollback.lock().set_tool_mode(tool_call_id, mode);
-                }
-            }
-            AgentEvent::TurnEnd { .. } => {}
-            AgentEvent::MessageStart { message } => {
-                self.handle_message_start(message);
-            }
-            AgentEvent::MessageUpdate { event, .. } => self.handle_message_update(event),
-            AgentEvent::MessageEnd { message } => self.handle_message_end(message),
-            AgentEvent::ToolExecutionStart {
-                tool_call_id,
-                tool_name,
-                args,
-            } => {
-                let _ = self.handle_tool_start(tool_call_id.clone(), tool_name.clone(), args);
-                if self.scrollback_actor.is_none() {
-                    self.scrollback.lock().set_tool_mode(
-                        tool_call_id,
-                        runie_tui_model::default_tool_display_mode(&tool_name),
-                    );
-                }
-            }
-            AgentEvent::ToolExecutionUpdate {
-                tool_call_id,
-                partial_result,
-                ..
-            } => {
-                let _ = self.handle_tool_update(tool_call_id, partial_result);
-            }
-            AgentEvent::ToolExecutionEnd {
-                tool_call_id,
-                tool_name,
-                result,
-                is_error,
-            } => {
-                let _ = self.handle_tool_end(tool_call_id, tool_name, result, is_error);
-            }
-            AgentEvent::BackgroundWorkStarted { .. }
-            | AgentEvent::BackgroundWorkProgress { .. }
-            | AgentEvent::BackgroundWorkFinished { .. }
-            | AgentEvent::BackgroundWorkCancelled { .. }
-            | AgentEvent::ActiveToolsChanged { .. }
-            | AgentEvent::BranchSummaryCreated { .. }
-            | AgentEvent::CustomSessionEntryCreated { .. }
-            | AgentEvent::CompactionCreated { .. }
-            | AgentEvent::OperationRecordCreated { .. }
-            | AgentEvent::WorkflowStarted { .. }
-            | AgentEvent::WorkflowProgress { .. }
-            | AgentEvent::WorkflowFinished { .. } => {}
-        }
-    }
-
     /// Maintain renderer-local event metadata needed to construct the next
     /// actor message batch. This deliberately has no projection writes: the
     /// production path has already delivered the event to the status and
@@ -826,39 +720,6 @@ impl EventRenderer {
             actor.model_snapshot().thinking_elapsed_ms
         } else {
             self.status.lock().model_snapshot().thinking_elapsed_ms
-        }
-    }
-
-    fn handle_reset(&mut self) {
-        if self.scrollback_actor.is_none() {
-            self.scrollback.lock().clear();
-        }
-        if self.status_actor.is_none() {
-            self.status.lock().set(Status::Ready);
-        }
-    }
-
-    fn handle_agent_end(&mut self) {
-        let turn_started = self
-            .scrollback_actor
-            .as_ref()
-            .map(|actor| actor.model_snapshot().turn_started)
-            .unwrap_or_else(|| self.scrollback.lock().model_snapshot().turn_started);
-        if turn_started && self.scrollback_actor.is_none() {
-            let worked_for = self
-                .status_actor
-                .as_ref()
-                .map(|actor| actor.model_snapshot().worked_for_label())
-                .unwrap_or_else(|| self.status.lock().worked_for_label());
-            let mut scrollback = self.scrollback.lock();
-            scrollback.append(Line::new(LineKind::Separator, ""));
-            scrollback.append(Line::new(LineKind::TurnSummary, worked_for));
-        }
-        if self.scrollback_actor.is_none() {
-            self.scrollback.lock().apply(ScrollbackMsg::TurnEnd);
-        }
-        if self.status_actor.is_none() {
-            self.status.lock().set(Status::Ready);
         }
     }
 
@@ -1122,31 +983,6 @@ impl EventRenderer {
             header: tool_buffer,
             activity,
             output,
-        }
-    }
-
-    fn handle_agent_start(&mut self) {
-        if self.scrollback_actor.is_none() {
-            if self.emit_welcome {
-                self.emit_welcome_modal();
-                self.emit_welcome = false;
-            } else {
-                let mut scrollback = self.scrollback.lock();
-                scrollback.append(Line::new(LineKind::Separator, ""));
-                scrollback.append(Line::new(
-                    LineKind::SessionStart,
-                    "◆ session_start  [hooks: 1]",
-                ));
-                scrollback.append(Line::new(LineKind::Separator, ""));
-            }
-        } else {
-            self.emit_welcome = false;
-        }
-        if self.status_actor.is_none() {
-            self.status.lock().set(Status::Thinking);
-        }
-        if self.scrollback_actor.is_none() {
-            self.scrollback.lock().apply(ScrollbackMsg::TurnEnd);
         }
     }
 
@@ -1467,15 +1303,6 @@ impl EventRenderer {
             last.text.push_str(delta);
         } else {
             sb.append(Line::new(LineKind::Reasoning, delta.to_string()));
-        }
-    }
-
-    /// Emit the welcome-modal lines (matches grok-build's minimal-mode chrome).
-    /// Called once on the first `AgentStart` to seed the transcript with the
-    /// version/cwd/model block, the event-log entry, and the hint line.
-    fn emit_welcome_modal(&mut self) {
-        for line in welcome_modal_lines() {
-            self.scrollback.lock().append(line);
         }
     }
 }
