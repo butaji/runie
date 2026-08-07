@@ -3,6 +3,8 @@ description: YAML-owned Pi tool schema coercion through the real actor/tool path
 initial_prompt: "coerce arguments"
 tools:
   - name: echo
+    label: Echo prepared
+    description: Applies deterministic prepared arguments.
     kind: echo
     output: "$args"
     prepared_arguments: { count: 7, enabled: true }
@@ -27,6 +29,7 @@ assertions:
     is_streaming: false
     pending_tool_calls: 0
     messages: 4
+    tool_labels: [Echo prepared]
     tool_call_arguments: { count: "1", enabled: 0 }
   transcript_contains:
     - '"count":7'

@@ -376,3 +376,7 @@ Pi `prepareArguments` replacement path onto deterministic replay tools.
 and exposes the prepared execution arguments in the resulting tool output.
 The deterministic `$args` output marker makes the prepared execution input
 visible in the transcript without adding production-only hooks.
+
+Tool metadata replay (2026-08-07): YAML `label` and `description` now flow
+through the owned replay registry; `tool_labels` asserts the registered actor
+projection so Pi presentation metadata is not hardcoded in the runner.

@@ -201,6 +201,11 @@ impl Scenario {
 #[derive(Debug, Deserialize)]
 pub struct ToolSpec {
     pub name: String,
+    /// Optional Pi tool presentation metadata.
+    #[serde(default)]
+    pub label: Option<String>,
+    #[serde(default)]
+    pub description: Option<String>,
     #[serde(default = "default_tool_kind")]
     pub kind: String,
     /// Optional Pi-compatible JSON Schema used by deterministic replay tools.
@@ -831,6 +836,8 @@ pub struct StateAssertions {
     pub tool_call_arguments: Option<serde_json::Value>,
     pub session_entries: Option<usize>,
     pub tool_count: Option<usize>,
+    /// Ordered labels from the actor-owned registered tool projection.
+    pub tool_labels: Option<Vec<String>>,
     pub streaming_contains: Option<String>,
     pub error_contains: Option<String>,
     pub context_window: Option<u64>,
@@ -1296,6 +1303,8 @@ impl AgentTool for EchoTool {
 /// fixed so the TestBackend frame never depends on the host filesystem.
 pub struct ReplayTool {
     name: String,
+    label: String,
+    description: String,
     output: String,
     error: bool,
     details: serde_json::Value,
@@ -1311,6 +1320,8 @@ impl ReplayTool {
     fn new(name: &str, output: &str) -> Self {
         Self {
             name: name.into(),
+            label: name.into(),
+            description: "Deterministic visual replay tool.".into(),
             output: output.into(),
             error: false,
             details: serde_json::Value::Null,
@@ -1326,6 +1337,8 @@ impl ReplayTool {
     fn failing(name: &str, output: &str) -> Self {
         Self {
             name: name.into(),
+            label: name.into(),
+            description: "Deterministic visual replay tool.".into(),
             output: output.into(),
             error: true,
             details: serde_json::Value::Null,
@@ -1341,6 +1354,8 @@ impl ReplayTool {
     fn structured(name: &str, output: &str) -> Self {
         Self {
             name: name.into(),
+            label: name.into(),
+            description: "Deterministic visual replay tool.".into(),
             output: output.into(),
             error: false,
             details: serde_json::Value::Null,
@@ -1359,6 +1374,8 @@ impl ReplayTool {
     )]
     fn configured(
         name: &str,
+        label: Option<String>,
+        description: Option<String>,
         output: String,
         details: serde_json::Value,
         usage: Option<Usage>,
@@ -1371,6 +1388,8 @@ impl ReplayTool {
     ) -> Self {
         Self {
             name: name.into(),
+            label: label.unwrap_or_else(|| name.into()),
+            description: description.unwrap_or_else(|| "Deterministic visual replay tool.".into()),
             output,
             error,
             details,
@@ -1390,10 +1409,10 @@ impl AgentTool for ReplayTool {
         &self.name
     }
     fn label(&self) -> &str {
-        &self.name
+        &self.label
     }
     fn description(&self) -> &str {
-        "Deterministic visual replay tool."
+        &self.description
     }
     fn execution_mode(&self) -> Option<ToolExecutionMode> {
         self.execution_mode
@@ -1861,6 +1880,8 @@ fn register_scenario_tool(
     {
         registry.register(Arc::new(ReplayTool::configured(
             &tool.name,
+            tool.label.clone(),
+            tool.description.clone(),
             tool.output.clone().unwrap_or_default(),
             tool.details.clone().unwrap_or(serde_json::Value::Null),
             tool.usage.clone(),
@@ -2182,6 +2203,14 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
             .map(|result| result.is_error)
             .unwrap_or(false);
         assert_yaml_eq!(Some(expected_error), actual_error, "tool_result_is_error");
+    }
+    if let Some(expected_labels) = &expected.tool_labels {
+        let actual_labels = actual
+            .tools
+            .iter()
+            .map(|tool| tool.label().to_owned())
+            .collect::<Vec<_>>();
+        assert_yaml_eq!(Some(expected_labels.clone()), actual_labels, "tool_labels");
     }
     if let Some(expected_arguments) = &expected.tool_call_arguments {
         let actual_arguments = latest_tool_call_arguments()
