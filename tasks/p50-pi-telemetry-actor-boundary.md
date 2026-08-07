@@ -74,5 +74,10 @@ The provider projection is covered by
 callback nesting, exceptions, exporter behavior, and YAML-declared span
 conformance vectors remain open.
 
+Typed DSL increment (2026-08-07): `telemetry_replay!` provides a compact
+Rust-side declaration for small adapter tests. It expands only to
+`TelemetryAction` values; runtime scenarios continue to use the YAML replay
+fixture so edits do not require recompilation.
+
 Until these conditions exist, p37 and p19 must continue to classify telemetry
 parity as open; no placeholder field should be presented as implementation.

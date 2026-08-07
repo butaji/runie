@@ -72,6 +72,59 @@ macro_rules! event_sequence {
     };
 }
 
+/// Declare a compact telemetry replay sequence for typed Rust adapters.
+///
+/// YAML remains the no-recompile format for scenario coverage; this macro is
+/// intentionally limited to empty-attribute lifecycle commands so it cannot
+/// hide actor ownership or reducer behavior.
+#[macro_export]
+macro_rules! telemetry_replay {
+    (
+        $(start $name:literal $(parent $parent:expr)?;)*
+        $(event $event_id:literal $event_name:literal;)*
+        $(status $status_id:literal $status:ident;)*
+        $(end $end_id:literal;)*
+    ) => {
+        ::std::vec![
+            $(
+                $crate::telemetry::TelemetryAction::Start {
+                    parent_id: $crate::telemetry_parent_id!($($parent)?),
+                    name: $name.to_owned(),
+                    attributes: ::std::collections::HashMap::new(),
+                }
+            ),*,
+            $(
+                $crate::telemetry::TelemetryAction::Event {
+                    id: $event_id,
+                    name: $event_name.to_owned(),
+                    attributes: ::std::collections::HashMap::new(),
+                }
+            ),*,
+            $(
+                $crate::telemetry::TelemetryAction::Status {
+                    id: $status_id,
+                    status: $crate::telemetry::SpanStatus::$status,
+                    error: None,
+                }
+            ),*,
+            $(
+                $crate::telemetry::TelemetryAction::End { id: $end_id }
+            ),*
+        ]
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! telemetry_parent_id {
+    ($parent:expr) => {
+        Some($parent)
+    };
+    () => {
+        None
+    };
+}
+
 /// Declare a small string-backed action registry without hand-written label
 /// matching. The expansion remains a plain enum plus readable `from_label`
 /// match, so callers can inspect it with `cargo expand`.
@@ -185,5 +238,31 @@ mod tests {
 
         let repeated = crate::event_sequence![crate::types::AgentEvent::Reset; 2];
         assert_eq!(repeated.len(), 2);
+    }
+
+    #[test]
+    fn telemetry_replay_macro_constructs_declarative_actions() {
+        let actions = crate::telemetry_replay![
+            start "run";
+            start "child" parent 0;
+            event 1 "finished";
+            status 1 Ok;
+            end 1;
+            end 0;
+        ];
+        assert!(matches!(
+            actions[1],
+            crate::telemetry::TelemetryAction::Start {
+                parent_id: Some(0),
+                ..
+            }
+        ));
+        assert!(matches!(
+            actions[3],
+            crate::telemetry::TelemetryAction::Status {
+                status: crate::telemetry::SpanStatus::Ok,
+                ..
+            }
+        ));
     }
 }
