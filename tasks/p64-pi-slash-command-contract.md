@@ -35,11 +35,14 @@ being treated as successful no-ops.
 
 The first executable subset is now routed through the same boundaries in the
 live binary and YAML runner: `/new` awaits the loop reset, `/hotkeys` sends a
-`ToggleShortcuts` mailbox message, and `/quit` is consumed only by the live
-application exit boundary. `/compact` and other unsupported commands remain
+`ToggleShortcuts` mailbox message, `/model provider/model` publishes the
+actor-owned `ModelChanged` event, and `/quit` is consumed only by the live
+application exit boundary. Model catalog lookup/selector UI is still open;
+the current route accepts an explicit reference. `/compact` and other unsupported commands remain
 ordinary prompt text. `visual-slash-hotkeys.yaml` proves the route without a
 provider submission; `visual-slash-new.yaml` proves reset clears the resulting
-actor-owned message/feed projection.
+actor-owned message/feed projection, and `visual-slash-model.yaml` proves the
+model caption projection.
 
 Required next evidence:
 

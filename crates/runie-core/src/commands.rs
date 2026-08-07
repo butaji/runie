@@ -74,11 +74,12 @@ pub fn matching_pi_builtin_slash_commands(query: &str) -> Vec<SlashCommand> {
 /// The subset whose effects already have an owning Runie actor boundary.
 /// Keeping this separate from the complete registry prevents unsupported Pi
 /// commands from being reported as successful no-ops.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MappableBuiltinCommand {
     NewSession,
     Hotkeys,
     Quit,
+    Model { reference: String },
 }
 
 /// Parse an exact Pi built-in command that Runie can currently route through
@@ -89,6 +90,15 @@ pub fn parse_mappable_builtin_command(input: &str) -> Option<MappableBuiltinComm
         "/new" => Some(MappableBuiltinCommand::NewSession),
         "/hotkeys" => Some(MappableBuiltinCommand::Hotkeys),
         "/quit" => Some(MappableBuiltinCommand::Quit),
+        value if value.starts_with("/model ") => {
+            let reference = value[7..].trim();
+            reference
+                .split_once('/')
+                .filter(|(provider, model)| !provider.is_empty() && !model.is_empty())
+                .map(|_| MappableBuiltinCommand::Model {
+                    reference: reference.to_owned(),
+                })
+        }
         _ => None,
     }
 }
@@ -139,5 +149,12 @@ mod tests {
             "unsupported commands must remain ordinary prompt input"
         );
         assert_eq!(parse_mappable_builtin_command("/quit now"), None);
+        assert_eq!(
+            parse_mappable_builtin_command("/model openai/gpt-5"),
+            Some(MappableBuiltinCommand::Model {
+                reference: "openai/gpt-5".into()
+            })
+        );
+        assert_eq!(parse_mappable_builtin_command("/model"), None);
     }
 }

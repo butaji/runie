@@ -702,6 +702,19 @@ async fn run_app(
                                                     MappableBuiltinCommand::Hotkeys => {
                                                         app.toggle_shortcuts().await;
                                                     }
+                                                    MappableBuiltinCommand::Model { reference } => {
+                                                        let (provider, model) = reference
+                                                            .split_once('/')
+                                                            .expect("mappable model was validated");
+                                                        app.loop_actor
+                                                            .set_model(Model {
+                                                                id: model.to_owned(),
+                                                                name: model.to_owned(),
+                                                                provider: provider.to_owned(),
+                                                                ..Model::default()
+                                                            })
+                                                            .await;
+                                                    }
                                                     MappableBuiltinCommand::Quit => {
                                                         return Ok(AppExit::Quit);
                                                     }

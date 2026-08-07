@@ -1,0 +1,12 @@
+name: visual-slash-model
+description: Pi's /model provider/model command publishes ModelChanged and updates the prompt projection.
+events: []
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    steps:
+      - "/model openai/gpt-5"
+      - Enter
+    screen_text:
+      - "gpt-5 (high)"

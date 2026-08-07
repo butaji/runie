@@ -4721,6 +4721,19 @@ pub async fn render_visual_buffer(
                         MappableBuiltinCommand::Hotkeys => {
                             app.toggle_shortcuts().await;
                         }
+                        MappableBuiltinCommand::Model { reference } => {
+                            let (provider, model) = reference
+                                .split_once('/')
+                                .expect("mappable model was validated");
+                            app.loop_actor
+                                .set_model(runie_core::types::Model {
+                                    id: model.to_owned(),
+                                    name: model.to_owned(),
+                                    provider: provider.to_owned(),
+                                    ..runie_core::types::Model::default()
+                                })
+                                .await;
+                        }
                         // The offline runner cannot terminate its test task;
                         // consuming the typed command still proves it crossed
                         // the same parser boundary as the live binary.
