@@ -619,3 +619,10 @@ YAML tool registration is now one shared declarative path: both state replay
 and visual-buffer replay call `register_scenario_tool`. This removes the
 previous duplicated match table that could silently make a fixture's visual
 and non-visual results diverge.
+
+Semantic paint boundary (2026-08-06): `ToolCardRow` now exposes a pure
+`ToolCardPaintIntent` (`Header`, `Content`, `Success`, `Error`, `Muted`). The
+model owns lifecycle-to-role classification; the renderer must resolve these
+roles through theme tokens. A focused model test covers header/content/error
+states without terminal types. Wiring every specialized card's spans through
+this intent remains the next renderer slice.

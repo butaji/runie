@@ -15,8 +15,8 @@ mod ui;
 pub use events::{is_actor_feed_event, status_messages_for_event};
 pub use feed::{
     default_tool_display_mode, project_tool_blocks, project_tool_card_rows, FeedNavigation,
-    FeedSnapshot, FeedState, Line, LineKind, ScrollbackMsg, ToolBlock, ToolCardKind, ToolCardRow,
-    ToolCardRowKind,
+    FeedSnapshot, FeedState, Line, LineKind, ScrollbackMsg, ToolBlock, ToolCardKind,
+    ToolCardPaintIntent, ToolCardRow, ToolCardRowKind,
 };
 pub use memory::{memory_display_lines, parse_memory_results, MemoryResult};
 pub use prompt::{InputMode, PromptOutcome, PromptSnapshot};

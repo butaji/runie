@@ -165,6 +165,19 @@ pub enum ToolCardRowKind {
     Status,
 }
 
+/// Renderer-neutral semantic paint role for a typed Grok card row.
+///
+/// This is deliberately not a terminal colour or Ratatui style: theme and
+/// capability resolution belongs to the renderer boundary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ToolCardPaintIntent {
+    Header,
+    Content,
+    Success,
+    Error,
+    Muted,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ToolCardRow {
     pub tool_call_id: String,
@@ -174,6 +187,17 @@ pub struct ToolCardRow {
     pub mode: ToolDisplayMode,
     pub is_running: bool,
     pub is_error: bool,
+}
+
+impl ToolCardRow {
+    pub fn paint_intent(&self) -> ToolCardPaintIntent {
+        match self.row_kind {
+            ToolCardRowKind::Header => ToolCardPaintIntent::Header,
+            ToolCardRowKind::Content => ToolCardPaintIntent::Content,
+            ToolCardRowKind::Status if self.is_error => ToolCardPaintIntent::Error,
+            ToolCardRowKind::Status => ToolCardPaintIntent::Success,
+        }
+    }
 }
 
 /// Project transcript rows into semantic card rows in transcript order.
@@ -396,7 +420,7 @@ impl ToolCardKind {
 mod tests {
     use super::{
         default_tool_display_mode, project_tool_blocks, project_tool_card_rows, Line, LineKind,
-        ToolCardKind, ToolCardRowKind,
+        ToolCardKind, ToolCardPaintIntent, ToolCardRow, ToolCardRowKind,
     };
     use runie_core::types::ToolDisplayMode;
     use std::collections::HashMap;
@@ -476,6 +500,32 @@ mod tests {
         );
         assert_eq!(blocks[0].output, ["line"]);
         assert_eq!(blocks[1].kind, ToolCardKind::Execute);
+    }
+
+    #[test]
+    fn typed_card_rows_expose_semantic_paint_intents() {
+        let header = ToolCardRow {
+            tool_call_id: "read-1".into(),
+            card_kind: ToolCardKind::Read,
+            row_kind: ToolCardRowKind::Header,
+            text: "Read file".into(),
+            mode: ToolDisplayMode::Collapsed,
+            is_running: true,
+            is_error: false,
+        };
+        let output = ToolCardRow {
+            row_kind: ToolCardRowKind::Content,
+            ..header.clone()
+        };
+        let error = ToolCardRow {
+            row_kind: ToolCardRowKind::Status,
+            is_running: false,
+            is_error: true,
+            ..header.clone()
+        };
+        assert_eq!(header.paint_intent(), ToolCardPaintIntent::Header);
+        assert_eq!(output.paint_intent(), ToolCardPaintIntent::Content);
+        assert_eq!(error.paint_intent(), ToolCardPaintIntent::Error);
     }
 
     #[test]
