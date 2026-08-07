@@ -7,6 +7,8 @@ events:
       data:
         id: op-yaml
         lane: main
+        intent:
+          kind: run
   - operation_record:
       record_type: abort_requested
       data:
@@ -23,6 +25,8 @@ events:
       data:
         id: op-failed
         lane: main
+        intent:
+          kind: compaction
   - operation_record:
       record_type: operation_finished
       data:
@@ -44,6 +48,9 @@ assertions:
     operation_outcomes:
       op-yaml: aborted
       op-failed: failed
+    operation_kinds:
+      op-yaml: run
+      op-failed: compaction
     operation_errors:
       op-failed:
         code: provider_error

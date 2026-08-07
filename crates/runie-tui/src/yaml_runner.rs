@@ -940,6 +940,8 @@ pub struct StateAssertions {
     pub navigation: Option<NavigationAssertion>,
     /// Terminal Pi operation outcomes keyed by operation ID.
     pub operation_outcomes: Option<BTreeMap<String, String>>,
+    /// Pi operation intent kinds keyed by operation ID.
+    pub operation_kinds: Option<BTreeMap<String, String>>,
     /// Pi failure metadata keyed by operation ID.
     pub operation_errors: Option<BTreeMap<String, OperationErrorAssertion>>,
     /// Ordered Pi session configuration-record kinds from the actor journal.
@@ -2557,6 +2559,11 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         &expected.operation_outcomes,
         &outcome.session.operation_outcomes,
         "operation_outcomes"
+    );
+    assert_yaml_eq!(
+        &expected.operation_kinds,
+        &outcome.session.operation_kinds,
+        "operation_kinds"
     );
     if let Some(expected_errors) = &expected.operation_errors {
         let actual_errors = outcome

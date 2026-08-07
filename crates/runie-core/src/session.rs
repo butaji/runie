@@ -148,6 +148,8 @@ pub struct SessionSnapshot {
     /// active operations so completion is observable without retaining a
     /// finished operation in the active projection.
     pub operation_outcomes: BTreeMap<String, String>,
+    /// Pi operation intent kinds keyed by operation ID.
+    pub operation_kinds: BTreeMap<String, String>,
     /// Pi failure metadata keyed by operation ID.
     pub operation_errors: BTreeMap<String, OperationErrorSnapshot>,
     /// Last admitted Pi navigation intent. This is deliberately a projection
@@ -394,6 +396,22 @@ impl SessionSnapshot {
                                 .and_then(|value| value.as_str())
                                 .map(str::to_owned),
                         });
+                    }
+                }
+                if entry_type == "operation_started" {
+                    if let (Some(operation_id), Some(kind)) = (
+                        value
+                            .get("runId")
+                            .or_else(|| value.get("id"))
+                            .and_then(serde_json::Value::as_str),
+                        value
+                            .get("intent")
+                            .and_then(|intent| intent.get("kind"))
+                            .and_then(serde_json::Value::as_str),
+                    ) {
+                        snapshot
+                            .operation_kinds
+                            .insert(operation_id.to_owned(), kind.to_owned());
                     }
                 }
                 if entry_type == "operation_finished" {
@@ -712,6 +730,15 @@ impl SessionActor {
                             if let Some(operation_id) = operation_id {
                                 match record_type.as_str() {
                                     "operation_started" => {
+                                        if let Some(kind) = data
+                                            .get("intent")
+                                            .and_then(|intent| intent.get("kind"))
+                                            .and_then(serde_json::Value::as_str)
+                                        {
+                                            state
+                                                .operation_kinds
+                                                .insert(operation_id.clone(), kind.to_owned());
+                                        }
                                         state
                                             .active_operations
                                             .insert(operation_id, "started".into());
@@ -1083,6 +1110,7 @@ mod tests {
             config_records: Vec::new(),
             active_operations: BTreeMap::new(),
             operation_outcomes: BTreeMap::new(),
+            operation_kinds: BTreeMap::new(),
             operation_errors: BTreeMap::new(),
             navigation: None,
         };
@@ -1120,6 +1148,7 @@ mod tests {
             ],
             active_operations: BTreeMap::new(),
             operation_outcomes: BTreeMap::new(),
+            operation_kinds: BTreeMap::new(),
             operation_errors: BTreeMap::new(),
             navigation: None,
         };

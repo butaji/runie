@@ -103,6 +103,19 @@ Failed-operation metadata now follows the same event boundary: Pi's optional
 YAML fixture. The raw operation record remains lossless; the typed projection
 is what consumers use for deterministic state assertions.
 
+## Typed operation intent projection (2026-08-07)
+
+Pi's `OperationStartedRecord.intent.kind` is a closed set for the supported
+core surface: `run`, `compaction`, and `navigation`. Runie now reduces that
+kind through the `OperationRecordCreated` event into the actor-owned
+`SessionSnapshot::operation_kinds` map and restores it during JSONL replay.
+The YAML lifecycle fixture asserts both kinds without compiled fixture logic.
+This keeps operation records lossless while exposing the typed state needed by
+renderers and replay assertions. Lane admission, duplicate-start rejection,
+unknown-operation rejection, and terminal ordering remain explicit follow-up
+policy work; they must be implemented as actor events/results rather than
+direct mutation by callers.
+
 ## Navigation intent projection (2026-08-07)
 
 Pi's `operation_started` record can carry a `navigation` intent with
