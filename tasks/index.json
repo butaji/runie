@@ -53,6 +53,12 @@
       "title": "Await Pi-compatible asynchronous turn hooks before queue polling"
     },
     {
+      "id": "p43",
+      "file": "p43-provider-retry-metadata.md",
+      "status": "planned",
+      "title": "Preserve provider retry metadata before implementing max retry delay"
+    },
+    {
       "id": "p35",
       "file": "p35-scrollback-model-reducer.md",
       "status": "done",
