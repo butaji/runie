@@ -1490,8 +1490,11 @@ full-cell capture evidence.
 **Reset-oracle increment (2026-08-07):** The runtime YAML suite now includes a
 `theme → started reasoning turn → reset` scenario. It asserts status/feed
 settlement, theme preservation, and explicit clearing of thinking duration.
-This closes reset-state evidence, but does not change the two authoritative
-full-parity gaps above.
+This closes reset-state evidence, but does not change the authoritative
+full-parity gaps above. Pi-core parity also remains open for provider-specific
+WebSocket behavior and telemetry lifecycle; those are tracked separately in
+`p37-pi-provider-transport-boundary.md` and must not be hidden by the TUI
+oracle's green result.
 
 **Fresh truecolor capture audit (2026-08-07):** The tmux/asciinema helper now
 recognizes the current Grok 0.2.118 working prompt (`Grok 4.5` plus `❯`); the

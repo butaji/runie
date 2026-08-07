@@ -1,6 +1,6 @@
 # p36 — Events are the state-transfer boundary
 
-Status: in progress — actor/event boundary audited and closure criteria recorded; compatibility renderer retirement and strict color proof remain (2026-08-07)
+Status: in progress — actor/event boundary audited and closure criteria recorded; compatibility renderer retirement, strict color proof, and provider-boundary parity remain (2026-08-07)
 
 Runie keeps mutable state inside its owning actor. Commands are actor-local
 requests; durable state changes are transferred through `AgentEvent` (core)
