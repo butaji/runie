@@ -239,6 +239,9 @@ pub struct SessionSnapshot {
     pub sequence: u64,
     pub leaf_id: Option<String>,
     pub entries: Vec<SessionEntry>,
+    /// Actor-owned lane identity for message entries. Kept as a side
+    /// projection while legacy callers still use the lane-neutral entry type.
+    pub entry_lanes: BTreeMap<String, String>,
     /// Ordered configuration records delivered through the session actor.
     /// Message `entries` remains the compatibility projection for existing
     /// callers; these records never become synthetic messages.
@@ -544,11 +547,27 @@ impl CompactionContextProjection {
 }
 
 impl SessionSnapshot {
+    pub fn entry_lane(&self, entry_id: &str) -> Option<&str> {
+        self.entry_lanes.get(entry_id).map(String::as_str)
+    }
+
     /// Reduce ordered Pi lane mutations into the latest leaf per lane.
     pub fn lanes(&self) -> BTreeMap<String, Option<String>> {
+        let mut changes = vec![(0_u64, "main".to_owned(), None)];
+        for entry in &self.entries {
+            if let Some(lane) = self.entry_lanes.get(&entry.id) {
+                changes.push((entry.seq, lane.clone(), Some(entry.id.clone())));
+            }
+        }
+        changes.extend(
+            self.lane_facts
+                .iter()
+                .map(|fact| (fact.seq, fact.lane.clone(), fact.leaf_id.clone())),
+        );
+        changes.sort_by_key(|(seq, _, _)| *seq);
         let mut lanes = BTreeMap::new();
-        for fact in &self.lane_facts {
-            lanes.insert(fact.lane.clone(), fact.leaf_id.clone());
+        for (_, lane, leaf_id) in changes {
+            lanes.insert(lane, leaf_id);
         }
         lanes
     }
@@ -1760,9 +1779,7 @@ impl SessionSnapshot {
                     .push(SessionLaneFact { seq, lane, leaf_id });
                 continue;
             }
-            if value.get("kind").and_then(serde_json::Value::as_str) != Some("entry")
-                || value.get("lane").and_then(serde_json::Value::as_str) != Some("main")
-            {
+            if value.get("kind").and_then(serde_json::Value::as_str) != Some("entry") {
                 return Err(format!(
                     "unsupported session mutation at line {}",
                     line_index + 2
@@ -1991,6 +2008,12 @@ impl SessionSnapshot {
                 .unwrap_or(false);
             snapshot.sequence = seq;
             snapshot.leaf_id = Some(id.clone());
+            let entry_lane = value
+                .get("lane")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("main")
+                .to_owned();
+            snapshot.entry_lanes.insert(id.clone(), entry_lane);
             snapshot.entries.push(SessionEntry {
                 id,
                 seq,
@@ -2053,7 +2076,7 @@ impl SessionSnapshot {
             .map(|session_entry| {
                 let mut entry = serde_json::json!({
                     "kind": "entry",
-                    "lane": "main",
+                    "lane": self.entry_lane(&session_entry.id).unwrap_or("main"),
                     "type": "message",
                     "id": session_entry.id,
                     "parentId": session_entry.parent_id,
@@ -2211,7 +2234,12 @@ impl SessionSnapshot {
 }
 
 enum Command {
-    Append(Box<AgentMessage>, bool, oneshot::Sender<()>),
+    Append(
+        String,
+        Box<AgentMessage>,
+        bool,
+        oneshot::Sender<Result<(), String>>,
+    ),
     ToolStarted {
         tool_call_id: String,
         tool_name: String,
@@ -2519,7 +2547,12 @@ impl SessionActor {
             let mut pending_tool_starts = Vec::<PendingToolStart>::new();
             while let Some(command) = rx.recv().await {
                 match command {
-                    Command::Append(message, terminate, reply) => {
+                    Command::Append(lane, message, terminate, reply) => {
+                        let lane_leaf = state.lanes().get(&lane).cloned().flatten();
+                        if lane != "main" && !state.lanes().contains_key(&lane) {
+                            let _ = reply.send(Err(format!("session lane does not exist: {lane}")));
+                            continue;
+                        }
                         state.sequence += 1;
                         let id = match message.as_ref() {
                             AgentMessage::ToolResult(result) => tool_result_ids
@@ -2570,12 +2603,15 @@ impl SessionActor {
                         let entry = SessionEntry {
                             id: id.clone(),
                             seq: state.sequence,
-                            parent_id: state.leaf_id.clone(),
+                            parent_id: lane_leaf.clone().or_else(|| state.leaf_id.clone()),
                             timestamp: message.timestamp(),
                             message: *message,
                             terminate,
                         };
-                        state.leaf_id = Some(id.clone());
+                        state.entry_lanes.insert(id.clone(), lane.clone());
+                        if lane == "main" {
+                            state.leaf_id = Some(id.clone());
+                        }
                         state.entries.push(entry);
                         if let Some(assistant) = assistant {
                             let data = serde_json::json!({
@@ -2612,7 +2648,7 @@ impl SessionActor {
                             }
                         }
                         let _ = snapshot_tx.send(state.clone());
-                        let _ = reply.send(());
+                        let _ = reply.send(Ok(()));
                     }
                     Command::ToolStarted {
                         tool_call_id,
@@ -2786,7 +2822,7 @@ impl SessionActor {
                             _ => false,
                         };
                         if !mailbox_ack!(tx, |reply| {
-                            Command::Append(Box::new(message), terminate, reply)
+                            Command::Append("main".into(), Box::new(message), terminate, reply)
                         }) {
                             break;
                         }
@@ -2836,8 +2872,21 @@ impl SessionActor {
 
     pub async fn append(&self, message: AgentMessage) {
         let _ = mailbox_ack!(self.tx, |reply| {
-            Command::Append(Box::new(message), false, reply)
+            Command::Append("main".into(), Box::new(message), false, reply)
         });
+    }
+
+    /// Append through a named Pi session lane. Invalid lanes are rejected at
+    /// the actor boundary without publishing a partial entry.
+    pub async fn append_to_lane(&self, lane: String, message: AgentMessage) -> Result<(), String> {
+        let (reply_tx, reply_rx) = oneshot::channel();
+        self.tx
+            .send(Command::Append(lane, Box::new(message), false, reply_tx))
+            .await
+            .map_err(|_| "session actor is closed".to_owned())?;
+        reply_rx
+            .await
+            .map_err(|_| "session actor response was dropped".to_owned())?
     }
 
     /// Apply a session configuration fact through the owning mailbox.
@@ -3084,6 +3133,31 @@ mod tests {
             .await
             .is_err());
         assert_eq!(actor.snapshot().lane_facts.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn append_to_lane_updates_only_that_lane_and_persists_identity() {
+        let actor = SessionActor::new();
+        actor.append(user("main")).await;
+        actor
+            .record_lane("feature".into(), Some("entry-1".into()), true)
+            .await
+            .expect("lane create");
+        actor
+            .append_to_lane("feature".into(), user("feature"))
+            .await
+            .expect("lane append");
+        let snapshot = actor.snapshot();
+        assert_eq!(snapshot.entries.len(), 2);
+        assert_eq!(snapshot.entry_lane("entry-2"), Some("feature"));
+        assert_eq!(snapshot.entries[1].parent_id.as_deref(), Some("entry-1"));
+        assert_eq!(
+            snapshot.lanes().get("feature"),
+            Some(&Some("entry-2".into()))
+        );
+        let (_, _, imported) = SessionSnapshot::from_jsonl(&snapshot.to_jsonl("s", 1, "/tmp"))
+            .expect("lane append JSONL");
+        assert_eq!(imported.entry_lane("entry-2"), Some("feature"));
     }
 
     #[tokio::test]
@@ -4396,6 +4470,7 @@ mod tests {
                 message: user("stop here"),
                 terminate: true,
             }],
+            entry_lanes: BTreeMap::from([(String::from("entry-1"), String::from("main"))]),
             config_records: Vec::new(),
             lane_facts: Vec::new(),
             lane_records: Vec::new(),
@@ -4417,6 +4492,7 @@ mod tests {
             sequence: 2,
             leaf_id: Some("entry-2".into()),
             entries: Vec::new(),
+            entry_lanes: BTreeMap::new(),
             config_records: vec![
                 SessionConfigEntry {
                     id: "entry-1".into(),

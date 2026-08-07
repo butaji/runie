@@ -1,6 +1,6 @@
 # P62 — Pi lane-aware entry append
 
-Status: source-audited; structural implementation next.
+Status: first actor/persistence increment implemented; YAML event bridge pending.
 
 Pi Core’s `SessionStorage.appendEntry(entry, lane)` is a single state
 mutation: it validates that the lane exists, sets the entry’s `parentId` to
@@ -27,3 +27,10 @@ Required implementation:
 Do not emulate this by changing the global `leaf_id` or by inferring lane from
 operation records; that would violate both Pi semantics and the SSOT actor
 boundary.
+
+Current increment: `SessionSnapshot::entry_lanes` is an actor-owned lane
+identity projection; `SessionActor::append_to_lane` validates and appends with
+the selected lane leaf, updates only that lane, and preserves identity in
+JSONL. Focused regressions cover parent selection, invalid lanes, and import.
+The remaining bridge is a typed application event plus YAML `session_append`
+syntax so this path is also replayable without compiled fixture code.
