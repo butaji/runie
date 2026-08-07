@@ -29,7 +29,7 @@ pub enum StateCommand {
     SetModel(Model),
     SetThinkingLevel(ThinkingLevel),
     PushMessage(AgentMessage, Option<oneshot::Sender<()>>),
-    ReplaceMessages(Vec<AgentMessage>),
+    ReplaceMessages(Vec<AgentMessage>, oneshot::Sender<()>),
     SetTools(Vec<Arc<dyn AgentTool>>),
     MarkStreaming(bool),
     SetStreamingMessage(Option<AgentMessage>),
@@ -87,7 +87,15 @@ impl AgentStateActor {
     }
 
     pub async fn replace_messages(&self, msgs: Vec<AgentMessage>) {
-        let _ = self.tx.send(StateCommand::ReplaceMessages(msgs)).await;
+        let (ack_tx, ack_rx) = oneshot::channel();
+        if self
+            .tx
+            .send(StateCommand::ReplaceMessages(msgs, ack_tx))
+            .await
+            .is_ok()
+        {
+            let _ = ack_rx.await;
+        }
     }
 
     pub async fn set_tools(&self, tools: Vec<Arc<dyn AgentTool>>) {
@@ -380,7 +388,10 @@ fn apply(state: &mut AgentStateSnapshot, cmd: StateCommand) {
         StateCommand::SetModel(m) => state.model = m,
         StateCommand::SetThinkingLevel(t) => state.thinking_level = t,
         StateCommand::PushMessage(m, ack) => apply_push_message(state, m, ack),
-        StateCommand::ReplaceMessages(msgs) => state.messages = msgs,
+        StateCommand::ReplaceMessages(msgs, ack) => {
+            state.messages = msgs;
+            let _ = ack.send(());
+        }
         StateCommand::SetTools(tools) => state.tools = tools,
         StateCommand::MarkStreaming(on) => state.is_streaming = on,
         StateCommand::SetStreamingMessage(m) => state.streaming_message = m,
@@ -446,6 +457,21 @@ mod tests {
         actor.sync().await;
         let snap = actor.snapshot();
         assert_eq!(snap.messages.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn replace_messages_acknowledges_before_returning() {
+        let actor = AgentStateActor::new();
+        actor
+            .replace_messages(vec![AgentMessage::User(UserMessage {
+                content: vec![UserContent::Text {
+                    text: "restored".into(),
+                }],
+                timestamp: 1,
+            })])
+            .await;
+        assert_eq!(actor.snapshot().messages.len(), 1);
+        assert_eq!(actor.snapshot().messages[0].timestamp(), 1);
     }
 
     #[tokio::test]

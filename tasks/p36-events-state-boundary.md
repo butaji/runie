@@ -111,3 +111,9 @@ renderer adapter still have private mutation paths. Queue contents and the
 actor-owned FeedState and queue modes already satisfy the event boundary. p38 preserves the
 closed Pi event contract while introducing Runie application control events
 and snapshot-only compatibility rendering.
+
+State mailbox acknowledgement closure (2026-08-06): `ReplaceMessages` now
+carries an explicit one-shot acknowledgement. `LoopActor::replace_messages`
+and YAML session-context restore therefore return only after
+`AgentStateActor` has reduced the replacement, eliminating a
+scheduler-dependent state race.
