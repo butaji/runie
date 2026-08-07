@@ -332,9 +332,9 @@ impl App {
         self.loop_actor.reset().await
     }
 
-    /// Publish a theme change and wait until all live projections acknowledge
-    /// the event. The wait is cooperative and bounded; no renderer state is
-    /// mutated directly.
+    /// Deliver one typed theme event to every owning projection and await all
+    /// mailbox acknowledgements. No renderer state or snapshot is mutated
+    /// directly, and no polling is needed for completion.
     pub async fn set_theme(&self, theme: runie_core::types::ThemeKind) {
         let event = AgentEvent::ThemeChanged { theme };
         self.prompt.apply_event(event.clone()).await;
