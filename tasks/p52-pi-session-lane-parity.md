@@ -22,6 +22,14 @@ with type, custom-type, cursor, newest-first, and limit filters. The query is
 pure and does not create synthetic messages or mutate the actor-owned journal.
 Regression coverage verifies mixed-lane order and custom-entry filtering.
 
+## Completed slice (2026-08-08, session statistics)
+
+`SessionSnapshot::stats` now mirrors Pi's `getStats()` projection: message
+count, cached tokens, uncached input/cache-write tokens, total tokens, and
+cost total are recomputed from actor-owned message and usage-lane facts. The
+projection is pure and replay-stable, including missing optional usage fields.
+Regression coverage pins Pi's token accounting and decimal cost behavior.
+
 ## Completed slice (2026-08-07)
 
 `runie-core` now classifies all nine Pi operation-lane record families with

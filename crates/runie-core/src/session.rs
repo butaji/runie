@@ -173,6 +173,16 @@ pub struct SessionEntryQuery {
     pub limit: Option<usize>,
 }
 
+/// Pi's durable session statistics projection.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct SessionStats {
+    pub message_count: u64,
+    pub cached_tokens: u64,
+    pub uncached_tokens: u64,
+    pub total_tokens: u64,
+    pub cost_total: f64,
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct SessionSnapshot {
     pub sequence: u64,
@@ -426,6 +436,44 @@ impl CompactionContextProjection {
 }
 
 impl SessionSnapshot {
+    /// Recompute Pi's session statistics from the immutable journal.
+    pub fn stats(&self) -> SessionStats {
+        let mut stats = SessionStats {
+            message_count: self.entries.len() as u64,
+            ..SessionStats::default()
+        };
+        for record in &self.lane_records {
+            if record.record_type != "usage" {
+                continue;
+            }
+            let Some(usage) = record.data.get("usage") else {
+                continue;
+            };
+            stats.cached_tokens += usage
+                .get("cacheRead")
+                .and_then(serde_json::Value::as_u64)
+                .unwrap_or_default();
+            stats.uncached_tokens += usage
+                .get("input")
+                .and_then(serde_json::Value::as_u64)
+                .unwrap_or_default()
+                + usage
+                    .get("cacheWrite")
+                    .and_then(serde_json::Value::as_u64)
+                    .unwrap_or_default();
+            stats.total_tokens += usage
+                .get("totalTokens")
+                .and_then(serde_json::Value::as_u64)
+                .unwrap_or_default();
+            stats.cost_total += usage
+                .get("cost")
+                .and_then(|cost| cost.get("total"))
+                .and_then(serde_json::Value::as_f64)
+                .unwrap_or_default();
+        }
+        stats
+    }
+
     /// Find ordered message/config entries using Pi's EntryQuery semantics.
     pub fn find_entries(&self, query: &SessionEntryQuery) -> Vec<SessionEntryRecord> {
         let mut entries = self
@@ -2692,6 +2740,48 @@ mod tests {
         });
         assert_eq!(custom.len(), 1);
         assert!(matches!(custom[0], SessionEntryRecord::Config(_)));
+    }
+
+    #[test]
+    fn session_stats_reduce_usage_records_like_pi() {
+        let mut snapshot = SessionSnapshot {
+            entries: vec![SessionEntry {
+                id: "entry-1".into(),
+                seq: 1,
+                parent_id: None,
+                timestamp: 7,
+                message: user("hello"),
+                terminate: false,
+            }],
+            ..SessionSnapshot::default()
+        };
+        snapshot.lane_records.push(SessionLaneRecordSnapshot {
+            record_type: "usage".into(),
+            id: "entry-1".into(),
+            lane: Some("main".into()),
+            seq: Some(2),
+            timestamp: Some(7),
+            data: serde_json::json!({
+                "usage": {
+                    "input": 10,
+                    "output": 8,
+                    "cacheRead": 3,
+                    "cacheWrite": 2,
+                    "totalTokens": 18,
+                    "cost": {"total": 9.5}
+                }
+            }),
+        });
+        assert_eq!(
+            snapshot.stats(),
+            SessionStats {
+                message_count: 1,
+                cached_tokens: 3,
+                uncached_tokens: 12,
+                total_tokens: 18,
+                cost_total: 9.5,
+            }
+        );
     }
 
     #[test]
