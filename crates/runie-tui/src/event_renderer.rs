@@ -296,6 +296,9 @@ pub struct EventRenderer {
     /// The live Grok surface places the thinking row directly after the user
     /// entry; deterministic replay keeps the historical four-row contract.
     live_grok_layout: bool,
+    /// Live tool lifecycle reduction is owned by `ScrollbackActor`'s bus
+    /// projection; replay/legacy renderers retain their explicit adapter.
+    live_tool_events_owned: bool,
 }
 
 impl EventRenderer {
@@ -351,6 +354,7 @@ impl EventRenderer {
             turn_started: false,
             emit_welcome,
             live_grok_layout: false,
+            live_tool_events_owned: false,
         }
     }
 
@@ -379,6 +383,7 @@ impl EventRenderer {
     ) -> Self {
         let mut renderer = Self::with_actors(scrollback_actor, status_actor, emit_welcome);
         renderer.live_grok_layout = true;
+        renderer.live_tool_events_owned = true;
         renderer
     }
 
@@ -425,7 +430,9 @@ impl EventRenderer {
                             // status transition rather than racing a second
                             // bus-owned projection.
                             status_actor.apply_event(&event).await;
-                            let actor_tool_start = match &event {
+                            let actor_tool_start = if self.live_tool_events_owned {
+                                None
+                            } else { match &event {
                                 AgentEvent::ToolExecutionStart {
                                     tool_call_id,
                                     tool_name,
@@ -436,8 +443,10 @@ impl EventRenderer {
                                     args.clone(),
                                 )),
                                 _ => None,
-                            };
-                            let actor_tool_update = match &event {
+                            }};
+                            let actor_tool_update = if self.live_tool_events_owned {
+                                None
+                            } else { match &event {
                                 AgentEvent::ToolExecutionUpdate {
                                     tool_call_id,
                                     partial_result,
@@ -447,8 +456,10 @@ impl EventRenderer {
                                     partial_result.clone(),
                                 ),
                                 _ => None,
-                            };
-                            let actor_tool_end = match &event {
+                            }};
+                            let actor_tool_end = if self.live_tool_events_owned {
+                                None
+                            } else { match &event {
                                 AgentEvent::ToolExecutionEnd {
                                     tool_call_id,
                                     tool_name,
@@ -461,7 +472,7 @@ impl EventRenderer {
                                     *is_error,
                                 )),
                                 _ => None,
-                            };
+                            }};
                             let turn_was_started = scrollback_actor.model_snapshot().turn_started;
                             let mut feed_messages = if matches!(
                                 event,

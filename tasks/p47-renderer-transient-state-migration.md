@@ -64,6 +64,16 @@ the compatibility reducer remains available for synchronous tests.
 The baseline `visual-hey.yaml` fixture now asserts the final `false` value
 directly from the feed snapshot.
 
+## Tool lifecycle increment (2026-08-06)
+
+The live `App` now constructs `ScrollbackActor::new_with_bus`. Its owned bus
+projection is the production reducer for tool headers, arguments, activity
+counters, structured updates, completion output, and errors. The live
+`EventRenderer` no longer runs its duplicate tool lifecycle reducer;
+`with_actors` remains the deterministic replay/compatibility adapter. This
+removes a second production source of tool-card state while preserving the
+same event vocabulary and YAML replay path.
+
 ## Acceptance evidence
 
 - Every migrated field is present in `FeedSnapshot` or a core actor snapshot;
