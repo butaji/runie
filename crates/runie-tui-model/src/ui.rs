@@ -42,6 +42,7 @@ pub fn ui_messages_for_event(event: &AgentEvent) -> Vec<UiMsg> {
         | AgentEvent::Waiting { .. }
         | AgentEvent::ThemeChanged { .. }
         | AgentEvent::ModelChanged { .. }
+        | AgentEvent::ActiveToolsChanged { .. }
         | AgentEvent::ToolDisplayModeChanged { .. }
         | AgentEvent::TurnEnd { .. }
         | AgentEvent::MessageStart { .. }

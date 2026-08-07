@@ -272,6 +272,7 @@ fn bus_messages_for_event(event: AgentEvent) -> Vec<ScrollbackMsg> {
         | AgentEvent::AgentEnd { .. }
         | AgentEvent::Error { .. }
         | AgentEvent::ThinkingLevelChanged { .. }
+        | AgentEvent::ActiveToolsChanged { .. }
         | AgentEvent::TurnStart
         | AgentEvent::Waiting { .. }
         | AgentEvent::TurnEnd { .. }
@@ -559,6 +560,7 @@ fn background_messages_for_event(event: AgentEvent) -> Vec<ScrollbackMsg> {
         | AgentEvent::Waiting { .. }
         | AgentEvent::ThemeChanged { .. }
         | AgentEvent::ModelChanged { .. }
+        | AgentEvent::ActiveToolsChanged { .. }
         | AgentEvent::ToolDisplayModeChanged { .. }
         | AgentEvent::TurnEnd { .. }
         | AgentEvent::MessageStart { .. }

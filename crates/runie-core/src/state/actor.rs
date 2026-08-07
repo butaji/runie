@@ -193,6 +193,10 @@ impl AgentStateActor {
             AgentEvent::ModelChanged { model } => {
                 state.model = model;
             }
+            AgentEvent::ActiveToolsChanged { .. } => {
+                // Session configuration is reduced by SessionActor; the
+                // agent message/state projection has no active-tool field.
+            }
             AgentEvent::MessageStart { message } if is_assistant(&message) => {
                 state.is_streaming = true;
                 state.streaming_message = Some(message);

@@ -89,6 +89,7 @@ pub fn status_messages_for_event(event: &AgentEvent) -> Vec<StatusMsg> {
             messages
         }
         AgentEvent::ThinkingLevelChanged { .. }
+        | AgentEvent::ActiveToolsChanged { .. }
         | AgentEvent::ToolDisplayModeChanged { .. }
         | AgentEvent::MessageStart { .. }
         | AgentEvent::MessageEnd { .. }

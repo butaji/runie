@@ -20,6 +20,7 @@ use crate::types::{AgentEvent, AgentMessage, ThinkingLevel};
 pub enum SessionConfigRecord {
     ModelChanged { provider: String, model_id: String },
     ThinkingLevelChanged { level: ThinkingLevel },
+    ActiveToolsChanged { tool_names: Vec<String> },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -170,6 +171,17 @@ impl SessionSnapshot {
                         )
                         .map_err(|error| format!("invalid thinkingLevel: {error}"))?,
                     },
+                    "active_tools_change" => SessionConfigRecord::ActiveToolsChanged {
+                        tool_names: serde_json::from_value(
+                            value.get("activeToolNames").cloned().ok_or_else(|| {
+                                format!(
+                                    "session entry {} is missing activeToolNames",
+                                    line_index + 2
+                                )
+                            })?,
+                        )
+                        .map_err(|error| format!("invalid activeToolNames: {error}"))?,
+                    },
                     _ => {
                         return Err(format!(
                             "unsupported session mutation at line {}",
@@ -268,6 +280,10 @@ impl SessionSnapshot {
                     serde_json::json!({
                         "thinkingLevel": level,
                     }),
+                ),
+                SessionConfigRecord::ActiveToolsChanged { tool_names } => (
+                    "active_tools_change",
+                    serde_json::json!({ "activeToolNames": tool_names }),
                 ),
             };
             entry["kind"] = serde_json::Value::String("entry".into());
@@ -439,6 +455,16 @@ impl SessionActor {
                             break;
                         }
                     }
+                    AgentEvent::ActiveToolsChanged { tool_names } => {
+                        if !mailbox_ack!(tx, |reply| {
+                            Command::Config(
+                                SessionConfigRecord::ActiveToolsChanged { tool_names },
+                                reply,
+                            )
+                        }) {
+                            break;
+                        }
+                    }
                     AgentEvent::ToolExecutionEnd {
                         tool_call_id,
                         result,
@@ -485,6 +511,12 @@ impl SessionActor {
             AgentEvent::ThinkingLevelChanged { level } => {
                 self.record_config(SessionConfigRecord::ThinkingLevelChanged { level: *level })
                     .await;
+            }
+            AgentEvent::ActiveToolsChanged { tool_names } => {
+                self.record_config(SessionConfigRecord::ActiveToolsChanged {
+                    tool_names: tool_names.clone(),
+                })
+                .await;
             }
             AgentEvent::Reset => self.reset().await,
             _ => {}
@@ -658,18 +690,29 @@ mod tests {
     #[test]
     fn jsonl_round_trip_preserves_configuration_records() {
         let snapshot = SessionSnapshot {
-            sequence: 1,
-            leaf_id: Some("entry-1".into()),
+            sequence: 2,
+            leaf_id: Some("entry-2".into()),
             entries: Vec::new(),
-            config_records: vec![SessionConfigEntry {
-                id: "entry-1".into(),
-                seq: 1,
-                parent_id: None,
-                timestamp: 0,
-                record: SessionConfigRecord::ThinkingLevelChanged {
-                    level: crate::types::ThinkingLevel::High,
+            config_records: vec![
+                SessionConfigEntry {
+                    id: "entry-1".into(),
+                    seq: 1,
+                    parent_id: None,
+                    timestamp: 0,
+                    record: SessionConfigRecord::ThinkingLevelChanged {
+                        level: crate::types::ThinkingLevel::High,
+                    },
                 },
-            }],
+                SessionConfigEntry {
+                    id: "entry-2".into(),
+                    seq: 2,
+                    parent_id: Some("entry-1".into()),
+                    timestamp: 0,
+                    record: SessionConfigRecord::ActiveToolsChanged {
+                        tool_names: vec!["read".into(), "bash".into()],
+                    },
+                },
+            ],
         };
         let jsonl = snapshot.to_jsonl("session-1", 5, "/workspace");
         assert!(jsonl.contains("\"type\":\"thinking_level_change\""));

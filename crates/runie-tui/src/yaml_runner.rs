@@ -307,6 +307,9 @@ pub enum EventSpec {
     ThinkingLevel {
         thinking_level: String,
     },
+    ActiveTools {
+        active_tools: Vec<String>,
+    },
     ToolMode {
         tool_mode: ToolModeSpec,
     },
@@ -635,6 +638,7 @@ impl EventSpec {
             Self::Theme { .. } => None,
             Self::ContextWindow { .. } => None,
             Self::ThinkingLevel { .. } => None,
+            Self::ActiveTools { .. } => None,
             Self::ToolMode { .. } => None,
             Self::ToolFold { .. } => None,
             Self::ToolSelect { .. } => None,
@@ -671,6 +675,9 @@ impl EventSpec {
             }),
             Self::ThinkingLevel { thinking_level } => Some(AgentEvent::ThinkingLevelChanged {
                 level: parse_thinking_level(thinking_level),
+            }),
+            Self::ActiveTools { active_tools } => Some(AgentEvent::ActiveToolsChanged {
+                tool_names: active_tools.clone(),
             }),
             Self::ToolMode { tool_mode } => Some(AgentEvent::ToolDisplayModeChanged {
                 tool_call_id: tool_mode.tool_call_id.clone(),
@@ -2424,6 +2431,9 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
                 runie_core::session::SessionConfigRecord::ThinkingLevelChanged { .. } => {
                     "thinking_level_change".to_owned()
                 }
+                runie_core::session::SessionConfigRecord::ActiveToolsChanged { .. } => {
+                    "active_tools_change".to_owned()
+                }
             })
             .collect::<Vec<_>>();
         if actual_records.as_slice() != expected_records.as_slice() {
@@ -3018,6 +3028,7 @@ fn event_kind(event: &runie_core::types::AgentEvent) -> &'static str {
         Waiting { .. } => "waiting",
         ThemeChanged { .. } => "theme_changed",
         ModelChanged { .. } => "model_changed",
+        ActiveToolsChanged { .. } => "active_tools_changed",
         ToolDisplayModeChanged { .. } => "tool_display_mode_changed",
         TurnEnd { .. } => "turn_end",
         MessageStart { .. } => "message_start",

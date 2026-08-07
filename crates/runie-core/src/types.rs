@@ -959,6 +959,11 @@ pub enum AgentEvent {
     ModelChanged {
         model: Model,
     },
+    /// Session-journal configuration event. This is application-owned and is
+    /// intentionally outside the closed Pi agent event boundary.
+    ActiveToolsChanged {
+        tool_names: Vec<String>,
+    },
     ToolDisplayModeChanged {
         tool_call_id: String,
         mode: ToolDisplayMode,

@@ -5,6 +5,7 @@ description: |
 events:
   - start
   - thinking_level: high
+  - active_tools: [read, bash]
   - text_delta: "working"
 assertions:
   state:
@@ -14,6 +15,7 @@ assertions:
     messages: 1
     session_config_records:
       - thinking_level_change
+      - active_tools_change
   visual:
     cols: 80
     rows: 24

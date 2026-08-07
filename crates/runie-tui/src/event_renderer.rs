@@ -201,6 +201,7 @@ pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
         | AgentEvent::AgentEnd { .. }
         | AgentEvent::Error { .. }
         | AgentEvent::ThinkingLevelChanged { .. }
+        | AgentEvent::ActiveToolsChanged { .. }
         | AgentEvent::TurnStart
         | AgentEvent::Waiting { .. }
         | AgentEvent::TurnEnd { .. }
@@ -757,6 +758,7 @@ impl EventRenderer {
             | AgentEvent::BackgroundWorkProgress { .. }
             | AgentEvent::BackgroundWorkFinished { .. }
             | AgentEvent::BackgroundWorkCancelled { .. }
+            | AgentEvent::ActiveToolsChanged { .. }
             | AgentEvent::WorkflowStarted { .. }
             | AgentEvent::WorkflowProgress { .. }
             | AgentEvent::WorkflowFinished { .. } => {}
@@ -801,6 +803,7 @@ impl EventRenderer {
             | AgentEvent::Waiting { .. }
             | AgentEvent::ThemeChanged { .. }
             | AgentEvent::ModelChanged { .. }
+            | AgentEvent::ActiveToolsChanged { .. }
             | AgentEvent::ToolDisplayModeChanged { .. }
             | AgentEvent::TurnEnd { .. }
             | AgentEvent::BackgroundWorkStarted { .. }

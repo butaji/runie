@@ -1,7 +1,7 @@
 # p51 — Pi session configuration records
 
-Status: in progress — model/thinking records and JSONL round-trip implemented;
-active-tools record remains open (2026-08-07)
+Status: in progress — all three configuration records and JSONL round-trip
+implemented; broader Pi record families remain open (2026-08-07)
 
 ## Source contract
 
@@ -55,7 +55,9 @@ JSONL v4 import/export preserves their `type`, payload, sequence, parent, and
 timestamp metadata. The YAML `visual-status-working.yaml` fixture asserts the
 ordered kind after the same event sequence that drives the TUI status.
 
-`active_tools_change` still needs a typed core event and actor reduction.
+`active_tools_change` now has a typed application event, actor reduction, YAML
+replay coverage, and JSONL round-trip coverage. Compaction, branch-summary,
+custom entries, and operation-lane records remain separate follow-up work.
 
 ## Explicitly separate
 
