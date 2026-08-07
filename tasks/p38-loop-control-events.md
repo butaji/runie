@@ -25,6 +25,15 @@ Prompt admission now uses one actor-owned semaphore permit spanning the whole
 run. Busy rejection is therefore an ownership failure, and permit release is
 scope-based even when the run returns an error.
 
+## Control snapshot slice (2026-08-06)
+
+`LoopActor` now reduces typed `LoopControlEvent` values into one immutable
+`LoopControlSnapshot` containing run state, abort intent, and both queue modes.
+Mode changes, run start/finish, and abort are represented by the reducer rather
+than by unrelated state projections. `control_snapshot()` is read-only and
+does not alter Pi's closed `AgentEvent` wire contract. The reducer has an
+event-sequence unit test covering all transitions.
+
 ## Remaining design
 
 Add a private `LoopCommand` mailbox and a loop-control reducer owned by

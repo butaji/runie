@@ -39,6 +39,38 @@ pub enum LoopError {
     LastIsAssistant,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LoopControlSnapshot {
+    pub running: bool,
+    pub abort_requested: bool,
+    pub steering_mode: QueueMode,
+    pub follow_up_mode: QueueMode,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LoopControlEvent {
+    RunStarted,
+    RunFinished,
+    AbortRequested,
+    AbortCleared,
+    SteeringModeChanged(QueueMode),
+    FollowUpModeChanged(QueueMode),
+}
+
+fn reduce_control(snapshot: &mut LoopControlSnapshot, event: LoopControlEvent) {
+    match event {
+        LoopControlEvent::RunStarted => {
+            snapshot.running = true;
+            snapshot.abort_requested = false;
+        }
+        LoopControlEvent::RunFinished => snapshot.running = false,
+        LoopControlEvent::AbortRequested => snapshot.abort_requested = true,
+        LoopControlEvent::AbortCleared => snapshot.abort_requested = false,
+        LoopControlEvent::SteeringModeChanged(mode) => snapshot.steering_mode = mode,
+        LoopControlEvent::FollowUpModeChanged(mode) => snapshot.follow_up_mode = mode,
+    }
+}
+
 #[derive(Clone)]
 pub struct LoopDeps {
     pub state: AgentStateActor,
@@ -102,6 +134,8 @@ struct Inner {
     running: Arc<Semaphore>,
     /// Abort channel sender (pi `Agent.abort()`).
     abort_tx: tokio::sync::watch::Sender<bool>,
+    control_tx: watch::Sender<LoopControlSnapshot>,
+    control_rx: watch::Receiver<LoopControlSnapshot>,
 }
 
 impl LoopActor {
@@ -110,6 +144,12 @@ impl LoopActor {
         deps.abort = Some(abort_rx);
         let (steering_mode_tx, steering_mode_rx) = watch::channel(deps.steering_mode);
         let (follow_up_mode_tx, follow_up_mode_rx) = watch::channel(deps.follow_up_mode);
+        let (control_tx, control_rx) = watch::channel(LoopControlSnapshot {
+            running: false,
+            abort_requested: false,
+            steering_mode: deps.steering_mode,
+            follow_up_mode: deps.follow_up_mode,
+        });
         Self {
             inner: Arc::new(Inner {
                 deps,
@@ -120,6 +160,8 @@ impl LoopActor {
                 current: Mutex::new(None),
                 running: Arc::new(Semaphore::new(1)),
                 abort_tx,
+                control_tx,
+                control_rx,
             }),
         }
     }
@@ -132,7 +174,9 @@ impl LoopActor {
         // Busy guard: ownership of the single permit spans the complete run
         // (pi agent.ts:340), so no mutable boolean is shared across callers.
         let _run_permit = self.acquire_run().await?;
+        self.publish_control(LoopControlEvent::RunStarted);
         let result = self.run_inner(prompts, context, false).await;
+        self.publish_control(LoopControlEvent::RunFinished);
         result
     }
 
@@ -194,7 +238,9 @@ impl LoopActor {
         context: AgentContext,
     ) -> Result<Vec<AgentMessage>, LoopError> {
         let _run_permit = self.acquire_run().await?;
+        self.publish_control(LoopControlEvent::RunStarted);
         let result = self.continue_inner(context).await;
+        self.publish_control(LoopControlEvent::RunFinished);
         result
     }
 
@@ -308,6 +354,7 @@ impl LoopActor {
     /// Controls how steering messages are drained on subsequent turns.
     pub async fn set_steering_mode(&self, mode: QueueMode) {
         let _ = self.inner.steering_mode_tx.send(mode);
+        self.publish_control(LoopControlEvent::SteeringModeChanged(mode));
     }
 
     pub async fn steering_mode(&self) -> QueueMode {
@@ -317,6 +364,7 @@ impl LoopActor {
     /// Controls how follow-up messages are drained on subsequent turns.
     pub async fn set_follow_up_mode(&self, mode: QueueMode) {
         let _ = self.inner.follow_up_mode_tx.send(mode);
+        self.publish_control(LoopControlEvent::FollowUpModeChanged(mode));
     }
 
     pub async fn follow_up_mode(&self) -> QueueMode {
@@ -325,6 +373,17 @@ impl LoopActor {
 
     pub fn abort(&self) {
         let _ = self.inner.abort_tx.send(true);
+        self.publish_control(LoopControlEvent::AbortRequested);
+    }
+
+    fn publish_control(&self, event: LoopControlEvent) {
+        self.inner
+            .control_tx
+            .send_modify(|snapshot| reduce_control(snapshot, event));
+    }
+
+    pub fn control_snapshot(&self) -> LoopControlSnapshot {
+        self.inner.control_rx.borrow().clone()
     }
 
     pub async fn wait_for_idle(&self) {
@@ -385,6 +444,32 @@ fn spawn_pi_subscriber_bridge(bus: &EventBus, subscribers: &SubscriberRegistry) 
 mod tests {
     use super::*;
     use crate::types::AgentEvent;
+
+    #[test]
+    fn control_events_reduce_to_one_snapshot() {
+        let mut snapshot = LoopControlSnapshot {
+            running: false,
+            abort_requested: false,
+            steering_mode: QueueMode::OneAtATime,
+            follow_up_mode: QueueMode::OneAtATime,
+        };
+        reduce_control(
+            &mut snapshot,
+            LoopControlEvent::SteeringModeChanged(QueueMode::All),
+        );
+        reduce_control(
+            &mut snapshot,
+            LoopControlEvent::FollowUpModeChanged(QueueMode::All),
+        );
+        reduce_control(&mut snapshot, LoopControlEvent::RunStarted);
+        reduce_control(&mut snapshot, LoopControlEvent::AbortRequested);
+        assert_eq!(snapshot.steering_mode, QueueMode::All);
+        assert_eq!(snapshot.follow_up_mode, QueueMode::All);
+        assert!(snapshot.running);
+        assert!(snapshot.abort_requested);
+        reduce_control(&mut snapshot, LoopControlEvent::RunFinished);
+        assert!(!snapshot.running);
+    }
 
     struct DeliverySubscriber {
         delivered: Option<tokio::sync::oneshot::Sender<AgentEvent>>,
