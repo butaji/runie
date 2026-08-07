@@ -6,7 +6,7 @@
 
 use std::sync::Arc;
 
-use tokio::sync::{watch, Mutex};
+use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::{pi_event::PiAgentEvent, types::AgentEvent};
 
@@ -38,9 +38,10 @@ pub trait PiSubscriber: Send + Sync + 'static {
     async fn handle_pi(&mut self, event: &PiAgentEvent);
 }
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct SubscriberRegistry {
-    inner: Arc<Mutex<RegistryInner>>,
+    tx: mpsc::Sender<RegistryCommand>,
+    _owner: Arc<crate::task_owner::TaskOwner>,
 }
 
 #[derive(Default)]
@@ -56,30 +57,109 @@ enum SubscriberEntry {
     Pi(Box<dyn PiSubscriber>),
 }
 
+enum RegistryCommand {
+    RegisterApplication(Box<dyn Subscriber>, oneshot::Sender<SubId>),
+    RegisterPi(Box<dyn PiSubscriber>, oneshot::Sender<SubId>),
+    Unregister(SubId, oneshot::Sender<()>),
+    DispatchApplication(
+        AgentEvent,
+        Option<watch::Receiver<bool>>,
+        oneshot::Sender<()>,
+    ),
+    DispatchPi(PiAgentEvent, oneshot::Sender<()>),
+    Len(oneshot::Sender<usize>),
+    IsEmpty(oneshot::Sender<bool>),
+}
+
 impl SubscriberRegistry {
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the registry constructor keeps mailbox ownership and ordered dispatch together"
+    )]
     pub fn new() -> Self {
-        Self::default()
+        let (tx, mut commands) = mpsc::channel(32);
+        let owner = crate::spawn_owned_worker!(async move {
+            let mut state = RegistryInner::default();
+            while let Some(command) = commands.recv().await {
+                match command {
+                    RegistryCommand::RegisterApplication(sub, reply) => {
+                        let id = next_id(&mut state);
+                        state.subs.push((id, SubscriberEntry::Application(sub)));
+                        let _ = reply.send(id);
+                    }
+                    RegistryCommand::RegisterPi(sub, reply) => {
+                        let id = next_id(&mut state);
+                        state.subs.push((id, SubscriberEntry::Pi(sub)));
+                        let _ = reply.send(id);
+                    }
+                    RegistryCommand::Unregister(id, reply) => {
+                        state.subs.retain(|(sid, _)| *sid != id);
+                        let _ = reply.send(());
+                    }
+                    RegistryCommand::DispatchApplication(event, abort, reply) => {
+                        for (_, sub) in &mut state.subs {
+                            if let SubscriberEntry::Application(sub) = sub {
+                                sub.handle_with_abort(&event, abort.as_ref()).await;
+                            }
+                        }
+                        let _ = reply.send(());
+                    }
+                    RegistryCommand::DispatchPi(event, reply) => {
+                        for (_, sub) in &mut state.subs {
+                            if let SubscriberEntry::Pi(sub) = sub {
+                                sub.handle_pi(&event).await;
+                            }
+                        }
+                        let _ = reply.send(());
+                    }
+                    RegistryCommand::Len(reply) => {
+                        let _ = reply.send(state.subs.len());
+                    }
+                    RegistryCommand::IsEmpty(reply) => {
+                        let _ = reply.send(state.subs.is_empty());
+                    }
+                }
+            }
+        });
+        Self { tx, _owner: owner }
     }
 
     pub async fn register(&self, sub: Box<dyn Subscriber>) -> SubId {
-        let mut g = self.inner.lock().await;
-        let id = SubId(g.next_id);
-        g.next_id += 1;
-        g.subs.push((id, SubscriberEntry::Application(sub)));
-        id
+        let (reply, result) = oneshot::channel();
+        if self
+            .tx
+            .send(RegistryCommand::RegisterApplication(sub, reply))
+            .await
+            .is_err()
+        {
+            return SubId(usize::MAX);
+        }
+        result.await.unwrap_or(SubId(usize::MAX))
     }
 
     pub async fn register_pi(&self, sub: Box<dyn PiSubscriber>) -> SubId {
-        let mut g = self.inner.lock().await;
-        let id = SubId(g.next_id);
-        g.next_id += 1;
-        g.subs.push((id, SubscriberEntry::Pi(sub)));
-        id
+        let (reply, result) = oneshot::channel();
+        if self
+            .tx
+            .send(RegistryCommand::RegisterPi(sub, reply))
+            .await
+            .is_err()
+        {
+            return SubId(usize::MAX);
+        }
+        result.await.unwrap_or(SubId(usize::MAX))
     }
 
     pub async fn unregister(&self, id: SubId) {
-        let mut g = self.inner.lock().await;
-        g.subs.retain(|(sid, _)| *sid != id);
+        let (reply, result) = oneshot::channel();
+        if self
+            .tx
+            .send(RegistryCommand::Unregister(id, reply))
+            .await
+            .is_ok()
+        {
+            let _ = result.await;
+        }
     }
 
     /// Dispatch `event` to every subscriber in registration order, awaiting
@@ -94,31 +174,61 @@ impl SubscriberRegistry {
         event: &AgentEvent,
         abort: Option<&watch::Receiver<bool>>,
     ) {
-        let mut g = self.inner.lock().await;
-        for (_, sub) in &mut g.subs {
-            if let SubscriberEntry::Application(sub) = sub {
-                sub.handle_with_abort(event, abort).await;
-            }
+        let (reply, result) = oneshot::channel();
+        if self
+            .tx
+            .send(RegistryCommand::DispatchApplication(
+                event.clone(),
+                abort.cloned(),
+                reply,
+            ))
+            .await
+            .is_ok()
+        {
+            let _ = result.await;
         }
     }
 
     /// Dispatch only the closed Pi contract, preserving registration order.
     pub async fn dispatch_pi(&self, event: &PiAgentEvent) {
-        let mut g = self.inner.lock().await;
-        for (_, sub) in &mut g.subs {
-            if let SubscriberEntry::Pi(sub) = sub {
-                sub.handle_pi(event).await;
-            }
+        let (reply, result) = oneshot::channel();
+        if self
+            .tx
+            .send(RegistryCommand::DispatchPi(event.clone(), reply))
+            .await
+            .is_ok()
+        {
+            let _ = result.await;
         }
     }
 
     pub async fn len(&self) -> usize {
-        self.inner.lock().await.subs.len()
+        let (reply, result) = oneshot::channel();
+        if self.tx.send(RegistryCommand::Len(reply)).await.is_err() {
+            return 0;
+        }
+        result.await.unwrap_or(0)
     }
 
     pub async fn is_empty(&self) -> bool {
-        self.inner.lock().await.subs.is_empty()
+        let (reply, result) = oneshot::channel();
+        if self.tx.send(RegistryCommand::IsEmpty(reply)).await.is_err() {
+            return true;
+        }
+        result.await.unwrap_or(true)
     }
+}
+
+impl Default for SubscriberRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+fn next_id(state: &mut RegistryInner) -> SubId {
+    let id = SubId(state.next_id);
+    state.next_id += 1;
+    id
 }
 
 #[cfg(test)]

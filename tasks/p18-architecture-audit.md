@@ -43,6 +43,13 @@ cannot create a second production source of truth.
 
 ## Progress
 
+- **Subscriber registry ownership (2026-08-08):** Replaced the registry's
+  `Arc<Mutex<RegistryInner>>` with an owned mailbox worker. Registration,
+  unregistration, ordered application/Pi dispatch, and size queries now cross
+  one actor command boundary; the worker owns subscriber mutation and awaits
+  each listener in Pi registration order. The registry remains cloneable while
+  its `TaskOwner` cancels the worker with the final handle.
+
 - **Loop run ownership (2026-08-08):** Removed the redundant
   `Arc<Mutex<Option<JoinHandle<RunLoopOutcome>>>>` from `LoopActor`. The
   actor's single-run semaphore is now the sole admission/idle projection;
