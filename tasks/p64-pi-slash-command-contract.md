@@ -41,7 +41,8 @@ actor-owned `ModelChanged` event, `/name` publishes `SessionNameChanged` and
 awaits the session actor, and `/quit` is consumed only by the live application
 exit boundary. `/scoped-models` opens the actor-owned model selector in
 scoped-only mode and re-runs catalog search through the catalog actor before
-projecting rows. Other unsupported commands
+projecting rows. `visual-slash-scoped-models.yaml` seeds an editable catalog,
+asserts the scoped row, and verifies the whole selector screen. Other unsupported commands
 remain ordinary prompt text. `visual-slash-hotkeys.yaml` proves the route without a
 provider submission; `visual-slash-new.yaml` proves reset clears the resulting
 actor-owned message/feed projection, and `visual-slash-model.yaml` proves the

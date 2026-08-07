@@ -4611,6 +4611,30 @@ pub async fn render_visual_buffer(
 
     // Apply keystrokes.
     for step in &vis.steps {
+        if step == "SeedModelCatalog" {
+            let available = vec![
+                Model {
+                    id: "gpt-5".into(),
+                    name: "GPT-5".into(),
+                    provider: "openai".into(),
+                    ..Model::default()
+                },
+                Model {
+                    id: "grok-4".into(),
+                    name: "Grok 4".into(),
+                    provider: "xai".into(),
+                    ..Model::default()
+                },
+            ];
+            app.model_catalog.load(available.clone()).await;
+            app.model_catalog
+                .set_scope(vec![runie_core::model_catalog::ScopedModel {
+                    model: available[1].clone(),
+                    thinking_level: None,
+                }])
+                .await;
+            continue;
+        }
         if step == "Ctrl+J" {
             app.scroll_scrollback_by(1).await;
             continue;

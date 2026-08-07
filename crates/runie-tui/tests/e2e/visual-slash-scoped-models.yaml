@@ -6,11 +6,14 @@ assertions:
     cols: 80
     rows: 24
     steps:
+      - SeedModelCatalog
       - "/scoped-models"
       - Enter
     ui:
       model_selector_open: true
       model_selector_scoped_only: true
+      model_selector_index: 0
     screen_text:
       - "Model Selector"
       - "Models (scoped)"
+      - "xai/grok-4"
