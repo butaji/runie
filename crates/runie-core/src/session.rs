@@ -30,6 +30,114 @@ pub struct SessionSnapshot {
 }
 
 impl SessionSnapshot {
+    /// Parse the message-only subset emitted by [`Self::to_jsonl`].
+    /// Validation follows Pi's v4 invariants for header, sequence, and parent
+    /// linkage; unsupported mutation kinds are rejected explicitly.
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the importer keeps the JSONL validation boundary explicit"
+    )]
+    pub fn from_jsonl(input: &str) -> Result<(String, String, Self), String> {
+        let mut lines = input.lines().filter(|line| !line.trim().is_empty());
+        let header: serde_json::Value = serde_json::from_str(
+            lines
+                .next()
+                .ok_or_else(|| "session JSONL is empty".to_owned())?,
+        )
+        .map_err(|error| format!("invalid session header: {error}"))?;
+        if header.get("kind").and_then(serde_json::Value::as_str) != Some("header")
+            || header.get("version").and_then(serde_json::Value::as_u64) != Some(4)
+        {
+            return Err("unsupported session header (expected JSONL v4)".into());
+        }
+        let session_id = header
+            .get("id")
+            .and_then(serde_json::Value::as_str)
+            .ok_or_else(|| "session header is missing id".to_owned())?
+            .to_owned();
+        let cwd = header
+            .get("cwd")
+            .and_then(serde_json::Value::as_str)
+            .ok_or_else(|| "session header is missing cwd".to_owned())?
+            .to_owned();
+        let mut snapshot = Self::default();
+        for (line_index, line) in lines.enumerate() {
+            let value: serde_json::Value = serde_json::from_str(line)
+                .map_err(|error| format!("invalid session entry {}: {error}", line_index + 2))?;
+            if value.get("kind").and_then(serde_json::Value::as_str) != Some("entry")
+                || value.get("type").and_then(serde_json::Value::as_str) != Some("message")
+                || value.get("lane").and_then(serde_json::Value::as_str) != Some("main")
+            {
+                return Err(format!(
+                    "unsupported session mutation at line {}",
+                    line_index + 2
+                ));
+            }
+            let seq = value
+                .get("seq")
+                .and_then(serde_json::Value::as_u64)
+                .ok_or_else(|| format!("session entry {} is missing seq", line_index + 2))?;
+            if seq != snapshot.sequence + 1 {
+                return Err(format!(
+                    "session entry {} has non-consecutive seq",
+                    line_index + 2
+                ));
+            }
+            let parent_id = match value.get("parentId") {
+                Some(value) if value.is_null() => None,
+                Some(value) => Some(
+                    value
+                        .as_str()
+                        .ok_or_else(|| {
+                            format!("session entry {} has invalid parentId", line_index + 2)
+                        })?
+                        .to_owned(),
+                ),
+                None => {
+                    return Err(format!(
+                        "session entry {} is missing parentId",
+                        line_index + 2
+                    ))
+                }
+            };
+            if parent_id != snapshot.leaf_id {
+                return Err(format!(
+                    "session entry {} has broken parent link",
+                    line_index + 2
+                ));
+            }
+            let id = value
+                .get("id")
+                .and_then(serde_json::Value::as_str)
+                .ok_or_else(|| format!("session entry {} is missing id", line_index + 2))?
+                .to_owned();
+            let timestamp = value
+                .get("timestamp")
+                .and_then(serde_json::Value::as_i64)
+                .ok_or_else(|| format!("session entry {} has invalid timestamp", line_index + 2))?;
+            let message =
+                serde_json::from_value(value.get("message").cloned().ok_or_else(|| {
+                    format!("session entry {} is missing message", line_index + 2)
+                })?)
+                .map_err(|error| {
+                    format!(
+                        "session entry {} has invalid message: {error}",
+                        line_index + 2
+                    )
+                })?;
+            snapshot.sequence = seq;
+            snapshot.leaf_id = Some(id.clone());
+            snapshot.entries.push(SessionEntry {
+                id,
+                seq,
+                parent_id,
+                timestamp,
+                message,
+            });
+        }
+        Ok((session_id, cwd, snapshot))
+    }
+
     /// Encode the message lane using Pi's JSONL v4 header/entry shape.
     /// Filesystem writes stay outside this pure projection function.
     pub fn to_jsonl(&self, session_id: &str, created_at: i64, cwd: &str) -> String {
@@ -244,5 +352,50 @@ mod tests {
         assert_eq!(values[1]["parentId"], serde_json::Value::Null);
         assert_eq!(values[2]["parentId"], "entry-1");
         assert_eq!(values[2]["seq"], 2);
+    }
+
+    #[tokio::test]
+    async fn snapshot_jsonl_round_trips_through_validated_importer() {
+        let actor = SessionActor::new();
+        actor.append(user("one")).await;
+        actor.append(user("two")).await;
+        let original = actor.snapshot();
+        let jsonl = original.to_jsonl("session-1", 5, "/workspace");
+
+        let (session_id, cwd, imported) = SessionSnapshot::from_jsonl(&jsonl).expect("valid JSONL");
+        assert_eq!(session_id, "session-1");
+        assert_eq!(cwd, "/workspace");
+        assert_eq!(imported, original);
+    }
+
+    #[test]
+    fn jsonl_import_rejects_broken_sequence_parent_and_entry_kind() {
+        let header = serde_json::json!({
+            "kind": "header", "version": 4, "id": "s", "createdAt": 5, "cwd": "/w"
+        })
+        .to_string();
+        let message = serde_json::json!({
+            "role": "user", "content": [{"type": "text", "text": "one"}], "timestamp": 7
+        });
+        let entry = |seq, parent, kind| {
+            serde_json::json!({
+                "kind": kind, "lane": "main", "type": "message", "id": "entry-1",
+                "parentId": parent, "seq": seq, "timestamp": 7, "message": message
+            })
+            .to_string()
+        };
+
+        let broken_sequence = format!("{header}\n{}\n", entry(2, serde_json::Value::Null, "entry"));
+        assert!(SessionSnapshot::from_jsonl(&broken_sequence).is_err());
+        let broken_parent = format!(
+            "{header}\n{}\n",
+            entry(1, serde_json::json!("wrong"), "entry")
+        );
+        assert!(SessionSnapshot::from_jsonl(&broken_parent).is_err());
+        let unsupported_kind = format!(
+            "{header}\n{}\n",
+            entry(1, serde_json::Value::Null, "branch")
+        );
+        assert!(SessionSnapshot::from_jsonl(&unsupported_kind).is_err());
     }
 }

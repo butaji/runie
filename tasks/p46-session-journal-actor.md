@@ -19,6 +19,11 @@ Runie now has a minimal session-tree foundation in `runie-core::session`:
   making rendering responsible for session state.
 - `SessionSnapshot::to_jsonl` emits a pure Pi JSONL v4 header plus parent-linked
   message entries; filesystem writes remain a separate storage boundary.
+- `SessionSnapshot::from_jsonl` is the inverse pure boundary for this supported
+  message lane. It validates the v4 header, required fields, consecutive
+  sequence numbers, and parent links, and rejects unsupported entry kinds
+  instead of silently importing partial state. Export/import round-trip and
+  malformed-input tests exercise these invariants.
 
 This is intentionally the journal seam, not a claim that Pi JSONL storage,
 forking, compaction, labels, or durable filesystem recovery are complete.
