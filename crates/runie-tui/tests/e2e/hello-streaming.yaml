@@ -47,6 +47,10 @@ assertions:
     pending_tool_calls: 0
     messages: 2
     session_entries: 2
+    compaction_token_estimates: [40, 40]
+    compaction_keep_recent_tokens: 20
+    compaction_first_kept_entry_index: 1
+    compaction_split_turn: true
   transcript_contains:
     - "Hello world"
     - "say hi"

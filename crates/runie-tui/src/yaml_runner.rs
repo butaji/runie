@@ -962,6 +962,11 @@ pub struct StateAssertions {
     pub session_config_records: Option<Vec<String>>,
     /// Ordered admitted Pi operation-lane record kinds.
     pub session_lane_records: Option<Vec<String>>,
+    /// Runtime-declared token estimates for the pure compaction oracle.
+    pub compaction_token_estimates: Option<Vec<u64>>,
+    pub compaction_keep_recent_tokens: Option<u64>,
+    pub compaction_first_kept_entry_index: Option<usize>,
+    pub compaction_split_turn: Option<bool>,
     /// Termination metadata on the latest actor-owned session entry.
     pub session_last_terminate: Option<bool>,
     pub tool_count: Option<usize>,
@@ -2713,6 +2718,35 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
                 "session lane records mismatch: expected {expected_records:?}, got {actual_records:?}"
             ));
         }
+    }
+    if expected.compaction_token_estimates.is_some()
+        || expected.compaction_keep_recent_tokens.is_some()
+    {
+        let estimates = expected
+            .compaction_token_estimates
+            .as_ref()
+            .ok_or_else(|| "compaction token estimates are required".to_owned())?;
+        let keep_recent = expected
+            .compaction_keep_recent_tokens
+            .ok_or_else(|| "compaction keep_recent_tokens is required".to_owned())?;
+        let cut = runie_core::session::find_compaction_cut_point(
+            &outcome.session.entries,
+            estimates,
+            0,
+            outcome.session.entries.len(),
+            keep_recent,
+        )
+        .map_err(|error| format!("compaction cut point: {error}"))?;
+        assert_yaml_eq!(
+            expected.compaction_first_kept_entry_index,
+            cut.first_kept_entry_index,
+            "compaction_first_kept_entry_index"
+        );
+        assert_yaml_eq!(
+            expected.compaction_split_turn,
+            cut.is_split_turn,
+            "compaction_split_turn"
+        );
     }
     assert_yaml_eq!(
         &expected.active_operations,

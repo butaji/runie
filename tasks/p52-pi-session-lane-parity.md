@@ -88,8 +88,8 @@ algorithm.
 It accepts caller-owned token estimates, excludes tool-result entries from cut
 points, preserves the recent-token budget, and reports a split-turn prefix for
 the async summarization owner. Unit coverage pins the split-turn behavior.
-YAML exposure remains the next step because the runtime scenario schema must
-declare token estimates and cut-point expectations without recompilation.
+The YAML runner now accepts runtime token estimates and cut-point assertions;
+`hello-streaming.yaml` exercises the contract without recompilation.
 
 ## Current Runie mapping
 
