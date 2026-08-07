@@ -84,6 +84,12 @@ authoritative pi core event union is `packages/agent/src/types.ts`; the
 authoritative Grok block/render contracts are under
 `xai-grok-pager/src/scrollback` and `xai-grok-pager-render/src`.
 
+**Verification refresh (2026-08-07):** `scripts/source-inventory.sh` was
+rerun against both authoritative checkouts. It emitted 790 entries with the
+contract counts unchanged: Pi agent 48, Pi AI 174, Grok pager 496, and
+Grok pager-render 68. No upstream source delta requires a new Runie mapping in
+this scan.
+
 The complete current file listing is maintained in
 `tasks/pi-core-file-inventory.md`. It is generated from both Pi source trees,
 classified by capability family, and must be reviewed alongside this matrix;
