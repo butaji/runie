@@ -310,6 +310,9 @@ pub enum EventSpec {
     ActiveTools {
         active_tools: Vec<String>,
     },
+    BranchSummary {
+        branch_summary: BranchSummarySpec,
+    },
     ToolMode {
         tool_mode: ToolModeSpec,
     },
@@ -420,6 +423,14 @@ pub struct WorkflowEndSpec {
     pub status: String,
     #[serde(default)]
     pub elapsed_ms: Option<u64>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct BranchSummarySpec {
+    pub from_id: String,
+    pub summary: String,
+    #[serde(default)]
+    pub details: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -639,6 +650,7 @@ impl EventSpec {
             Self::ContextWindow { .. } => None,
             Self::ThinkingLevel { .. } => None,
             Self::ActiveTools { .. } => None,
+            Self::BranchSummary { .. } => None,
             Self::ToolMode { .. } => None,
             Self::ToolFold { .. } => None,
             Self::ToolSelect { .. } => None,
@@ -678,6 +690,11 @@ impl EventSpec {
             }),
             Self::ActiveTools { active_tools } => Some(AgentEvent::ActiveToolsChanged {
                 tool_names: active_tools.clone(),
+            }),
+            Self::BranchSummary { branch_summary } => Some(AgentEvent::BranchSummaryCreated {
+                from_id: branch_summary.from_id.clone(),
+                summary: branch_summary.summary.clone(),
+                details: branch_summary.details.clone(),
             }),
             Self::ToolMode { tool_mode } => Some(AgentEvent::ToolDisplayModeChanged {
                 tool_call_id: tool_mode.tool_call_id.clone(),
@@ -2434,6 +2451,9 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
                 runie_core::session::SessionConfigRecord::ActiveToolsChanged { .. } => {
                     "active_tools_change".to_owned()
                 }
+                runie_core::session::SessionConfigRecord::BranchSummaryCreated { .. } => {
+                    "branch_summary".to_owned()
+                }
             })
             .collect::<Vec<_>>();
         if actual_records.as_slice() != expected_records.as_slice() {
@@ -3029,6 +3049,7 @@ fn event_kind(event: &runie_core::types::AgentEvent) -> &'static str {
         ThemeChanged { .. } => "theme_changed",
         ModelChanged { .. } => "model_changed",
         ActiveToolsChanged { .. } => "active_tools_changed",
+        BranchSummaryCreated { .. } => "branch_summary_created",
         ToolDisplayModeChanged { .. } => "tool_display_mode_changed",
         TurnEnd { .. } => "turn_end",
         MessageStart { .. } => "message_start",

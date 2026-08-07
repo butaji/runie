@@ -18,9 +18,21 @@ use crate::types::{AgentEvent, AgentMessage, ThinkingLevel};
 /// until the complete JSONL record union is migrated.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SessionConfigRecord {
-    ModelChanged { provider: String, model_id: String },
-    ThinkingLevelChanged { level: ThinkingLevel },
-    ActiveToolsChanged { tool_names: Vec<String> },
+    ModelChanged {
+        provider: String,
+        model_id: String,
+    },
+    ThinkingLevelChanged {
+        level: ThinkingLevel,
+    },
+    ActiveToolsChanged {
+        tool_names: Vec<String>,
+    },
+    BranchSummaryCreated {
+        from_id: String,
+        summary: String,
+        details: Option<serde_json::Value>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -182,6 +194,26 @@ impl SessionSnapshot {
                         )
                         .map_err(|error| format!("invalid activeToolNames: {error}"))?,
                     },
+                    "branch_summary" => SessionConfigRecord::BranchSummaryCreated {
+                        from_id: value
+                            .get("fromId")
+                            .and_then(serde_json::Value::as_str)
+                            .ok_or_else(|| {
+                                format!("session entry {} is missing fromId", line_index + 2)
+                            })?
+                            .to_owned(),
+                        summary: value
+                            .get("summary")
+                            .and_then(serde_json::Value::as_str)
+                            .ok_or_else(|| {
+                                format!("session entry {} is missing summary", line_index + 2)
+                            })?
+                            .to_owned(),
+                        details: value
+                            .get("details")
+                            .cloned()
+                            .filter(|value| !value.is_null()),
+                    },
                     _ => {
                         return Err(format!(
                             "unsupported session mutation at line {}",
@@ -284,6 +316,14 @@ impl SessionSnapshot {
                 SessionConfigRecord::ActiveToolsChanged { tool_names } => (
                     "active_tools_change",
                     serde_json::json!({ "activeToolNames": tool_names }),
+                ),
+                SessionConfigRecord::BranchSummaryCreated {
+                    from_id,
+                    summary,
+                    details,
+                } => (
+                    "branch_summary",
+                    serde_json::json!({ "fromId": from_id, "summary": summary, "details": details }),
                 ),
             };
             entry["kind"] = serde_json::Value::String("entry".into());
@@ -465,6 +505,24 @@ impl SessionActor {
                             break;
                         }
                     }
+                    AgentEvent::BranchSummaryCreated {
+                        from_id,
+                        summary,
+                        details,
+                    } => {
+                        if !mailbox_ack!(tx, |reply| {
+                            Command::Config(
+                                SessionConfigRecord::BranchSummaryCreated {
+                                    from_id,
+                                    summary,
+                                    details,
+                                },
+                                reply,
+                            )
+                        }) {
+                            break;
+                        }
+                    }
                     AgentEvent::ToolExecutionEnd {
                         tool_call_id,
                         result,
@@ -515,6 +573,18 @@ impl SessionActor {
             AgentEvent::ActiveToolsChanged { tool_names } => {
                 self.record_config(SessionConfigRecord::ActiveToolsChanged {
                     tool_names: tool_names.clone(),
+                })
+                .await;
+            }
+            AgentEvent::BranchSummaryCreated {
+                from_id,
+                summary,
+                details,
+            } => {
+                self.record_config(SessionConfigRecord::BranchSummaryCreated {
+                    from_id: from_id.clone(),
+                    summary: summary.clone(),
+                    details: details.clone(),
                 })
                 .await;
             }

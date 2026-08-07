@@ -964,6 +964,13 @@ pub enum AgentEvent {
     ActiveToolsChanged {
         tool_names: Vec<String>,
     },
+    /// Application-owned session branch summary; navigation identity is kept
+    /// in the event so the journal cannot reduce an anonymous summary.
+    BranchSummaryCreated {
+        from_id: String,
+        summary: String,
+        details: Option<serde_json::Value>,
+    },
     ToolDisplayModeChanged {
         tool_call_id: String,
         mode: ToolDisplayMode,

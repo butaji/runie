@@ -56,23 +56,22 @@ timestamp metadata. The YAML `visual-status-working.yaml` fixture asserts the
 ordered kind after the same event sequence that drives the TUI status.
 
 `active_tools_change` now has a typed application event, actor reduction, YAML
-replay coverage, and JSONL round-trip coverage. Compaction, branch-summary,
-custom entries, and operation-lane records remain separate follow-up work.
+replay coverage, and JSONL round-trip coverage. Compaction, custom entries, and
+operation-lane records remain separate follow-up work.
 
 ## Branch-summary boundary audit (2026-08-07)
 
 Pi's `BranchSummaryEntry` carries `fromId`, `summary`, optional `details`, and
 the normal entry base. The source reducer couples it to a `navigation` intent
 (`targetId`, `summarize`, optional `summaryEntryId`) and uses the summary entry
-when reconstructing the selected branch context. A standalone summary event
-without navigation identity would therefore lose observable Pi behavior. The
-next implementation must introduce an actor-owned navigation event and keep
-the summary record's parent/leaf invariants in the same ordered journal; this
-is intentionally not approximated by adding a summary string to a message
-entry.
+when reconstructing the selected branch context. The implementation now
+introduces `BranchSummaryCreated` with navigation identity and reduces it into
+the same actor-owned ordered journal. Full branch navigation/context
+reconstruction remains separate; this slice does not pretend that a summary
+record alone implements navigation.
 
 ## Explicitly separate
 
-Compaction/branch navigation, custom entries, and operation-lane records remain
-separate follow-up work until their Pi source semantics, storage lifecycle, and
-actor events are mapped in detail.
+Compaction/full branch navigation, custom entries, and operation-lane records
+remain separate follow-up work until their Pi source semantics, storage
+lifecycle, and actor events are mapped in detail.

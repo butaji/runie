@@ -6,6 +6,11 @@ events:
   - start
   - thinking_level: high
   - active_tools: [read, bash]
+  - branch_summary:
+      from_id: entry-1
+      summary: "Earlier branch"
+      details:
+        source: replay
   - text_delta: "working"
 assertions:
   state:
@@ -16,6 +21,7 @@ assertions:
     session_config_records:
       - thinking_level_change
       - active_tools_change
+      - branch_summary
   visual:
     cols: 80
     rows: 24

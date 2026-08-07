@@ -197,6 +197,9 @@ impl AgentStateActor {
                 // Session configuration is reduced by SessionActor; the
                 // agent message/state projection has no active-tool field.
             }
+            AgentEvent::BranchSummaryCreated { .. } => {
+                // SessionActor owns branch-summary journal records.
+            }
             AgentEvent::MessageStart { message } if is_assistant(&message) => {
                 state.is_streaming = true;
                 state.streaming_message = Some(message);
