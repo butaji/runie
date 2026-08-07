@@ -104,10 +104,7 @@ impl UiActor {
     }
 
     pub async fn send(&self, message: UiMsg) {
-        let (applied, acknowledged) = tokio::sync::oneshot::channel();
-        if self.tx.send((message, applied)).await.is_ok() {
-            let _ = acknowledged.await;
-        }
+        let _ = runie_core::mailbox_ack!(self.tx, |reply| (message, reply));
     }
 
     pub fn snapshot(&self) -> UiState {

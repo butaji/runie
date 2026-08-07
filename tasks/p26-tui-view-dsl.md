@@ -149,3 +149,10 @@ after layout at the renderer boundary. No terminal color, modifier, or cell
 coordinate leaks into `ViewDocument` or `ViewProps`. The remaining work is
 exhaustive intent coverage for additional Grok card variants, not a missing
 model/render separation.
+
+Mailbox DSL audit (2026-08-06): `UiActor::send` now uses the shared
+`mailbox_ack!` expansion for its acknowledged event delivery. The macro only
+removes repeated one-shot plumbing; the `UiMsg` payload, actor mailbox, and
+acknowledgement boundary remain visible at the call site. This is the accepted
+DSL pattern for future actors: reduce ceremony, never hide ownership or state
+reduction.
