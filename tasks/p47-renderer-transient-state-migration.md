@@ -543,3 +543,11 @@ boundary validators remain green.
 compatibility event table was reduced to its only remaining local concern: the
 one-shot welcome emission flag. Actor-owned lifecycle, feed, status, tool, and
 session events are no longer reclassified by a renderer metadata hook.
+
+**Live tool-update delivery correction (2026-08-08):** The live renderer had
+been computing `ToolUpdate` messages and discarding them behind the
+`live_tool_events_owned` bypass, even though `App` constructs a plain
+`ScrollbackActor` and the renderer is its bus delivery boundary. The bypass is
+removed; tool start/update/end messages now all reach the actor mailbox. A
+joined live-bus regression proves a start creates the running block and an
+update produces the expected output row.

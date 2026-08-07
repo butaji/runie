@@ -244,9 +244,6 @@ pub struct EventRenderer {
     /// The live Grok surface places the thinking row directly after the user
     /// entry; deterministic replay keeps the historical four-row contract.
     live_grok_layout: bool,
-    /// Live tool lifecycle reduction is owned by `ScrollbackActor`'s bus
-    /// projection; replay/legacy renderers retain their explicit adapter.
-    live_tool_events_owned: bool,
 }
 
 impl EventRenderer {
@@ -260,7 +257,6 @@ impl EventRenderer {
             status_actor,
             emit_welcome,
             live_grok_layout: false,
-            live_tool_events_owned: false,
         }
     }
 
@@ -283,7 +279,6 @@ impl EventRenderer {
     ) -> Self {
         let mut renderer = Self::with_actors(scrollback_actor, status_actor, emit_welcome);
         renderer.live_grok_layout = true;
-        renderer.live_tool_events_owned = true;
         renderer
     }
 
@@ -324,9 +319,7 @@ impl EventRenderer {
                             // status transition rather than racing a second
                             // bus-owned projection.
                             status_actor.apply_event(&event).await;
-                            let actor_tool_start = if self.live_tool_events_owned {
-                                None
-                            } else { match &event {
+                            let actor_tool_start = match &event {
                                 AgentEvent::ToolExecutionStart {
                                     tool_call_id,
                                     tool_name,
@@ -337,10 +330,8 @@ impl EventRenderer {
                                     args.clone(),
                                 )),
                                 _ => None,
-                            }};
-                            let actor_tool_update = if self.live_tool_events_owned {
-                                None
-                            } else { match &event {
+                            };
+                            let actor_tool_update = match &event {
                                 AgentEvent::ToolExecutionUpdate {
                                     tool_call_id,
                                     partial_result,
@@ -350,10 +341,8 @@ impl EventRenderer {
                                     partial_result.clone(),
                                 ),
                                 _ => None,
-                            }};
-                            let actor_tool_end = if self.live_tool_events_owned {
-                                None
-                            } else { match &event {
+                            };
+                            let actor_tool_end = match &event {
                                 AgentEvent::ToolExecutionEnd {
                                     tool_call_id,
                                     tool_name,
@@ -366,7 +355,7 @@ impl EventRenderer {
                                     *is_error,
                                 )),
                                 _ => None,
-                            }};
+                            };
                             let turn_was_started = scrollback_actor.model_snapshot().turn_started;
                             let mut feed_messages = if matches!(
                                 event,
@@ -447,10 +436,10 @@ impl EventRenderer {
                             if let Some(tool_start) = actor_tool_start {
                                 scrollback_actor.apply(tool_start).await;
                             } else if let Some(tool_update) = actor_tool_update {
-                                let _ = tool_update;
+                                scrollback_actor.apply(tool_update).await;
                             } else if let Some(tool_end) = actor_tool_end {
                                 scrollback_actor.apply(tool_end).await;
-                            } else if !self.live_tool_events_owned {
+                            } else {
                                 self.apply_actor_metadata(event);
                             }
                         }
@@ -1559,6 +1548,47 @@ mod tests {
             .await
             .expect("renderer status delivery");
         assert_eq!(status.snapshot().current(), &Status::Thinking);
+
+        shutdown_tx.send(true).expect("renderer shutdown");
+        task.await.expect("renderer task");
+    }
+
+    #[tokio::test]
+    async fn live_renderer_delivers_tool_updates_to_the_feed_actor() {
+        let bus = runie_core::events::EventBus::new();
+        let status = StatusActor::new();
+        let scrollback = ScrollbackActor::new();
+        let mut feed = scrollback.subscribe();
+        let renderer = EventRenderer::with_live_actors(scrollback.clone(), status, false);
+        let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
+        // OWNER: test — joins the renderer after the shutdown event.
+        let task = tokio::spawn(renderer.run(bus.subscribe(), shutdown_rx));
+
+        bus.publish(AgentEvent::ToolExecutionStart {
+            tool_call_id: "tool-1".into(),
+            tool_name: "read".into(),
+            args: serde_json::json!({"path":"src/lib.rs"}),
+        });
+        feed.changed().await.expect("tool start delivery");
+        assert!(scrollback
+            .model_snapshot()
+            .tool_blocks
+            .iter()
+            .any(|block| block.tool_call_id == "tool-1" && block.is_running));
+
+        bus.publish(AgentEvent::ToolExecutionUpdate {
+            tool_call_id: "tool-1".into(),
+            tool_name: "read".into(),
+            args: serde_json::json!({"path":"src/lib.rs"}),
+            partial_result: serde_json::json!({"output":"hello"}),
+        });
+        feed.changed().await.expect("tool update delivery");
+        assert!(scrollback
+            .model_snapshot()
+            .tool_blocks
+            .iter()
+            .any(|block| block.tool_call_id == "tool-1"
+                && block.output.iter().any(|row| row == "hello")));
 
         shutdown_tx.send(true).expect("renderer shutdown");
         task.await.expect("renderer task");
