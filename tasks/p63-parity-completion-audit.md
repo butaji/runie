@@ -17,6 +17,9 @@ provider-specific contract”. The source of truth is the current Pi tree at
   functions; `scripts/validate-feed-actor-boundary.py` enforces the feed seam.
 - YAML replay, whole-screen cell/style assertions, asciinema references, and
   four capture sizes run through `just ci`.
+- `session_flush: true` is exercised by
+  `visual-operation-queue-lifecycle.yaml`, proving that YAML can place an
+  awaited session-actor barrier between declared lane facts without sleeps.
 - Runtime TUI modules reject synchronous filesystem/process APIs through
   `lint-check`; offline YAML/capture binaries remain explicitly isolated.
 
