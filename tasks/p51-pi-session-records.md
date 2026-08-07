@@ -74,6 +74,11 @@ Custom extension records now also use `CustomSessionEntryCreated` and preserve
 `customType`/`data` through the actor journal and JSONL. YAML replay covers the
 payload path without compiling extension-specific test code.
 
+`SessionActor::append_custom_entry` now exposes the corresponding actor-owned
+Pi session operation as an acknowledged async API. It validates the custom
+type before mailbox reduction, preserves opaque data, and has a JSONL
+round-trip regression; callers do not construct or mutate journal entries.
+
 Compaction payloads now use `CompactionCreated` and preserve summary, retained
 tail, token count, optional details, and usage through the same event, actor,
 JSONL, and YAML paths. This is journal parity only; the compaction algorithm,

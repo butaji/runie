@@ -2937,6 +2937,21 @@ impl SessionActor {
             .map_err(|_| "session actor response was dropped".to_owned())?
     }
 
+    /// Append a Pi custom journal entry through the session owner. Custom
+    /// entries are opaque extension data: the actor journals and persists the
+    /// payload but never interprets it as an agent message.
+    pub async fn append_custom_entry(
+        &self,
+        custom_type: String,
+        data: Option<serde_json::Value>,
+    ) -> Result<(), String> {
+        if custom_type.trim().is_empty() {
+            return Err("custom session entry type cannot be empty".to_owned());
+        }
+        self.record_config(SessionConfigRecord::CustomSessionEntryCreated { custom_type, data })
+            .await
+    }
+
     /// Apply a session configuration fact through the owning mailbox.
     pub async fn record_config(&self, record: SessionConfigRecord) -> Result<(), String> {
         let (reply_tx, reply_rx) = oneshot::channel();
@@ -3226,6 +3241,38 @@ mod tests {
         let (_, _, imported) = SessionSnapshot::from_jsonl(&snapshot.to_jsonl("s", 1, "/tmp"))
             .expect("lane append JSONL");
         assert_eq!(imported.entry_lane("entry-2"), Some("feature"));
+    }
+
+    #[tokio::test]
+    async fn append_custom_entry_is_actor_owned_and_round_trips() {
+        let actor = SessionActor::new();
+        actor.append(user("before")).await;
+        actor
+            .append_custom_entry(
+                "replay.marker".into(),
+                Some(serde_json::json!({"source": "yaml"})),
+            )
+            .await
+            .expect("custom entry");
+
+        let snapshot = actor.snapshot();
+        let custom = snapshot.find_entries(&SessionEntryQuery {
+            record_type: Some("custom".into()),
+            custom_type: Some("replay.marker".into()),
+            ..SessionEntryQuery::default()
+        });
+        assert_eq!(custom.len(), 1);
+        let jsonl = snapshot.to_jsonl("session", 1, "/tmp");
+        let (_, _, restored) = SessionSnapshot::from_jsonl(&jsonl).expect("custom JSONL");
+        assert_eq!(
+            restored.find_entries(&SessionEntryQuery {
+                record_type: Some("custom".into()),
+                custom_type: Some("replay.marker".into()),
+                ..SessionEntryQuery::default()
+            }),
+            custom
+        );
+        assert!(actor.append_custom_entry(" ".into(), None).await.is_err());
     }
 
     #[tokio::test]
