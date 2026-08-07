@@ -1243,11 +1243,15 @@ pub struct RegionGeometry {
     pub height: u16,
 }
 
-#[derive(Debug, Deserialize, Default, Clone, Copy)]
+#[derive(Debug, Deserialize, Default, Clone)]
 pub struct LayoutMatrixCase {
     pub cols: u16,
     pub rows: u16,
-    pub layout: LayoutAssertions,
+    pub layout: Option<LayoutAssertions>,
+    #[serde(default)]
+    pub screen_text: Vec<String>,
+    #[serde(default)]
+    pub screen_excludes: Vec<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -3871,13 +3875,7 @@ async fn assert_visual_expectations(
     if let Some(expected) = visual.layout {
         assert_layout_expectations(visual.cols, visual.rows, expected)?;
     }
-    for case in &visual.layout_matrix {
-        let mut matrix_visual = visual.clone();
-        matrix_visual.cols = case.cols;
-        matrix_visual.rows = case.rows;
-        render_visual_buffer(scenario, &matrix_visual).await?;
-        assert_layout_expectations(case.cols, case.rows, case.layout)?;
-    }
+    assert_layout_matrix(scenario, visual).await?;
     let screen = buffer_to_screen(&buffer);
     for needle in &visual.screen_text {
         if !screen.contains(needle) {
@@ -3901,6 +3899,39 @@ async fn assert_visual_expectations(
                 .to_owned()
                 + "tmux/asciinema capture or disable `pty` rather than accepting a false pass",
         );
+    }
+    Ok(())
+}
+
+async fn assert_layout_matrix(
+    scenario: &Scenario,
+    visual: &VisualAssertions,
+) -> Result<(), String> {
+    for case in &visual.layout_matrix {
+        let mut matrix_visual = visual.clone();
+        matrix_visual.cols = case.cols;
+        matrix_visual.rows = case.rows;
+        let matrix_buffer = render_visual_buffer(scenario, &matrix_visual).await?;
+        if let Some(layout) = case.layout {
+            assert_layout_expectations(case.cols, case.rows, layout)?;
+        }
+        let matrix_screen = buffer_to_screen(&matrix_buffer);
+        for needle in &case.screen_text {
+            if !matrix_screen.contains(needle) {
+                return Err(format!(
+                    "matrix screen missing {needle:?} at {}x{}\nscreen:\n{matrix_screen}",
+                    case.cols, case.rows
+                ));
+            }
+        }
+        for needle in &case.screen_excludes {
+            if matrix_screen.contains(needle) {
+                return Err(format!(
+                    "matrix screen unexpectedly contains {needle:?} at {}x{}\nscreen:\n{matrix_screen}",
+                    case.cols, case.rows
+                ));
+            }
+        }
     }
     Ok(())
 }

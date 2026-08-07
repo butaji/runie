@@ -31,3 +31,20 @@ assertions:
     screen_excludes:
       - "Run seven"
       - "Run twelve"
+    layout_matrix:
+      - cols: 62
+        rows: 32
+        screen_text: ["Ran 12 commands"]
+        screen_excludes: ["Run seven", "Run twelve"]
+      - cols: 80
+        rows: 24
+        screen_text: ["Ran 12 commands"]
+        screen_excludes: ["Run seven", "Run twelve"]
+      - cols: 100
+        rows: 30
+        screen_text: ["Ran 12 commands"]
+        screen_excludes: ["Run seven", "Run twelve"]
+      - cols: 120
+        rows: 36
+        screen_text: ["Ran 12 commands"]
+        screen_excludes: ["Run seven", "Run twelve"]

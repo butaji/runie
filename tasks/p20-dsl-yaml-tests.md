@@ -1,5 +1,11 @@
 # p20 — Thin actor DSLs and YAML-first tests
 
+**Geometry-matrix DSL (2026-08-08):** `layout_matrix` cases may now omit
+layout coordinates and declare per-geometry `screen_text` and
+`screen_excludes`. The renderer replays each case through the same actor
+snapshot and validates the full terminal buffer, keeping responsive parity
+checks runtime-editable without recompilation.
+
 **Aborted-turn fixture (2026-08-06):** `visual-aborted-turn.yaml` now keeps
 the Pi-compatible partial-response abort contract editable as an event
 sequence and state assertion without recompiling a scenario-specific test.
