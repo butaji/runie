@@ -31,6 +31,7 @@ pub mod r#loop;
 pub mod pi_event;
 pub mod provider;
 pub mod queues;
+pub mod session;
 pub mod state;
 pub mod tools;
 

@@ -18,6 +18,7 @@ use runie_core::provider::stream_fn::{AssistantMessageEventStream, StreamError, 
 use runie_core::provider::ProviderActor;
 use runie_core::queues::{FollowUpQueueActor, SteeringQueueActor};
 use runie_core::r#loop::{LoopActor, LoopDeps};
+use runie_core::session::SessionActor;
 use runie_core::state::AgentStateActor;
 use runie_core::tools::executor::ToolExecHooks;
 use runie_core::tools::{ToolExecutorActor, ToolRegistry};
@@ -783,6 +784,7 @@ pub struct StateAssertions {
     pub is_streaming: Option<bool>,
     pub pending_tool_calls: Option<usize>,
     pub messages: Option<usize>,
+    pub session_entries: Option<usize>,
     pub tool_count: Option<usize>,
     pub streaming_contains: Option<String>,
     pub error_contains: Option<String>,
@@ -1344,6 +1346,7 @@ pub struct ScenarioOutcome {
     pub selected_entry: Option<usize>,
     pub scroll_offset: usize,
     pub state: runie_core::state::AgentStateSnapshot,
+    pub session: runie_core::session::SessionSnapshot,
     pub status: crate::widgets::StatusSnapshot,
     pub provider_options: Vec<SimpleStreamOptions>,
     pub steering_mode: runie_core::types::QueueMode,
@@ -1375,10 +1378,12 @@ impl std::fmt::Display for ScenarioError {
 
 #[allow(
     clippy::too_many_lines,
+    clippy::cognitive_complexity,
     reason = "scenario execution keeps actor and snapshot assembly together"
 )]
 pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, ScenarioError> {
     let (bus, actor, options_seen) = build_scenario_loop(scenario)?;
+    let session = SessionActor::new_with_bus(&bus);
     let listener_events = Arc::new(Mutex::new(Vec::new()));
     actor
         .subscribe(Box::new(ScenarioListener {
@@ -1406,6 +1411,7 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
 
     let actor_snapshot = actor.clone();
     let mut events_from_task = record_and_run_scenario(actor, bus, scenario).await;
+    session.flush().await;
     let declared_events = declared_control_events(scenario);
     events_from_task.extend(declared_events.iter().cloned());
     for event in &declared_events {
@@ -1431,6 +1437,7 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
         scroll_offset: feed.scroll_offset,
         feed,
         state: actor_snapshot.state_snapshot(),
+        session: session.snapshot(),
         status,
         provider_options,
         steering_mode: actor_snapshot.steering_mode().await,
@@ -1939,6 +1946,11 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         "pending_tool_calls"
     );
     assert_yaml_eq!(expected.messages, actual.messages.len(), "messages");
+    assert_yaml_eq!(
+        expected.session_entries,
+        outcome.session.entries.len(),
+        "session_entries"
+    );
     assert_yaml_eq!(expected.tool_count, actual.tools.len(), "tool_count");
     assert_yaml_eq!(
         expected.steering_mode,

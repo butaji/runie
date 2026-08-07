@@ -46,6 +46,7 @@ assertions:
     is_streaming: false
     pending_tool_calls: 0
     messages: 2
+    session_entries: 2
   transcript_contains:
     - "Hello world"
     - "say hi"
