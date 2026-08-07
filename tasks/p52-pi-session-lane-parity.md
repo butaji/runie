@@ -309,6 +309,16 @@ lossless lane fact, so malformed events cannot create state. The lane-family
 YAML fixture now carries a real provisioned target, and a core event test
 covers missing targets, successful cancellation, and mismatched operations.
 
+### Operation reference admission (2026-08-08)
+
+Operation-owned records carrying `runId` are now admitted only while that
+operation is active and before its `operation_finished` record. Unknown and
+post-finish references are rejected by the same pure session validation used
+for live events and JSONL replay. Records without an operation owner retain
+the existing compatibility behavior for queue facts that Pi permits outside a
+run. Regression coverage exercises unknown and post-finish `step_attempt`
+events.
+
 ### Queue emission audit (2026-08-07)
 
 Pi's `queue_enqueued` record is not just a notification: it carries the queue

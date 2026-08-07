@@ -676,8 +676,37 @@ pub fn validate_session_lane_record(
             operation_id.expect("checked above")
         ));
     }
+    validate_operation_lane_record(snapshot, kind, data)?;
     validate_queue_lane_record(snapshot, kind, data)?;
     Ok(kind)
+}
+
+fn validate_operation_lane_record(
+    snapshot: &SessionSnapshot,
+    kind: SessionLaneRecordKind,
+    data: &serde_json::Value,
+) -> Result<(), String> {
+    if kind == SessionLaneRecordKind::OperationStarted {
+        return Ok(());
+    }
+    let Some(run_id) = data
+        .get("runId")
+        .and_then(serde_json::Value::as_str)
+        .filter(|value| !value.is_empty())
+    else {
+        return Ok(());
+    };
+    if !snapshot.active_operations.contains_key(run_id) {
+        return Err(format!("record references unknown operation {run_id:?}"));
+    }
+    let finished = snapshot.lane_records.iter().any(|record| {
+        record.record_type == "operation_finished"
+            && record.data.get("runId").and_then(serde_json::Value::as_str) == Some(run_id)
+    });
+    if finished {
+        return Err(format!("record follows finished operation {run_id:?}"));
+    }
+    Ok(())
 }
 
 fn validate_queue_lane_record(
@@ -2165,6 +2194,34 @@ mod tests {
     }
 
     #[test]
+    fn operation_lane_records_require_an_active_operation() {
+        let mut snapshot = SessionSnapshot::default();
+        assert!(validate_session_lane_record(
+            &snapshot,
+            "step_attempt",
+            &serde_json::json!({"runId": "missing-run"})
+        )
+        .is_err());
+        snapshot
+            .active_operations
+            .insert("op-1".into(), "started".into());
+        snapshot.lane_records.push(SessionLaneRecordSnapshot {
+            record_type: "operation_finished".into(),
+            id: "finish-1".into(),
+            lane: None,
+            seq: None,
+            timestamp: None,
+            data: serde_json::json!({"runId": "op-1"}),
+        });
+        assert!(validate_session_lane_record(
+            &snapshot,
+            "step_attempt",
+            &serde_json::json!({"runId": "op-1"})
+        )
+        .is_err());
+    }
+
+    #[test]
     fn queue_lane_records_require_a_linked_provisioned_target() {
         let mut snapshot = SessionSnapshot::default();
         assert!(validate_session_lane_record(
@@ -2173,6 +2230,9 @@ mod tests {
             &serde_json::json!({"id": "queue-1", "queue": "steer"})
         )
         .is_err());
+        snapshot
+            .active_operations
+            .insert("run-1".into(), "started".into());
         let enqueue = serde_json::json!({
             "id": "queue-1",
             "runId": "run-1",
