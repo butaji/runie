@@ -30,6 +30,12 @@ actor before `LoopActor` publishes the actor-owned `ModelChanged` event, and a
 YAML-tested explicit
 refresh result path admits successful catalogs and preserves the prior catalog
 on typed refresh failure.
+
+Provider discovery now has an explicit async capability chain:
+`StreamFn::list_models` → `ProviderActor` mailbox → `LoopActor` →
+`App::refresh_models` → `ModelCatalogActor::refresh`. The default provider
+implementation returns a typed unsupported error; no provider-specific wire
+behavior is invented by the generic actor.
 `/model provider/model` route. It does not yet own a model catalog, scoped
 model projection, async refresh result, selection query/index, or cycle
 direction. The current route must therefore remain explicit and must not claim
