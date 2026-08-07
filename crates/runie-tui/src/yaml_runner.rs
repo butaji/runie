@@ -4636,16 +4636,28 @@ pub async fn render_visual_buffer(
         if step == "PaletteEnter" {
             let mut ui_commands = app.subscribe_ui_commands();
             app.activate_command_palette().await;
-            if matches!(
-                ui_commands.recv().await,
+            match ui_commands.recv().await {
                 Ok(crate::app::UiCommand::ActivatePaletteEntry(
                     crate::app::PaletteAction::NewSession,
-                ))
-            ) {
-                // Route the reset through the core actor's event boundary and
-                // await its acknowledgement so YAML observes the reduced UI
-                // state rather than racing the broadcast subscriber.
-                let _ = app.reset_session().await;
+                )) => {
+                    // Route the reset through the core actor's event boundary
+                    // and await its acknowledgement so YAML observes the
+                    // reduced UI state rather than racing the subscriber.
+                    let _ = app.reset_session().await;
+                }
+                Ok(crate::app::UiCommand::ActivatePaletteEntry(
+                    crate::app::PaletteAction::KeyboardShortcuts,
+                )) => {
+                    app.toggle_shortcuts().await;
+                }
+                Ok(crate::app::UiCommand::ActivatePaletteEntry(
+                    crate::app::PaletteAction::Quit,
+                )) => {
+                    // The offline runner has no process to terminate. The
+                    // typed action is still consumed at the same command
+                    // boundary; live shutdown remains owned by the binary.
+                }
+                _ => {}
             }
             continue;
         }

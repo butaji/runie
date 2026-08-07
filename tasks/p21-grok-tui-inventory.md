@@ -66,6 +66,17 @@ palette registry. The remaining three-action registry is declarative through
 the actor model and palette projection, while YAML replay remains the behavior
 oracle.
 
+Palette execution reconciliation (2026-08-08): Grok's palette is a searchable
+union of shortcuts, slash commands, and skills (`docs/user-guide/03-keyboard-
+shortcuts.md`, “Command Palette”). Runie intentionally advertises only the
+Pi-mappable actions currently implemented by its executable: `New Session`,
+`Keyboard Shortcuts`, and `Quit`. The live binary already consumes all three
+through `UiActor`'s typed command broadcast; the YAML runner now consumes the
+same `KeyboardShortcuts` and `Quit` variants instead of dropping them. The new
+`visual-command-palette-shortcuts.yaml` fixture proves the action-to-UI-state
+transition without recompilation. Grok-only slash/skill actions remain
+excluded until their corresponding Pi-core contract exists.
+
 ## Findings
 
 - Grok has 402 pager source files and a typed `RenderBlock` projection:

@@ -1,0 +1,19 @@
+name: visual-command-palette-shortcuts
+description: Palette Keyboard Shortcuts activation reaches the UI actor state.
+events: []
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    steps:
+      - Ctrl+P
+      - "keyboard"
+      - PaletteEnter
+    ui:
+      show_welcome: true
+      shortcuts_open: true
+      command_palette_open: false
+      command_palette_query: ""
+      command_palette_index: 0
+    screen_text:
+      - "Shortcuts"
