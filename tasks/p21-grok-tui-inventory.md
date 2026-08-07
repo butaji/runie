@@ -355,6 +355,12 @@ asserts expanded Grok geometry directly (`Run one`, `Run eleven`, and
 `Run twelve` are all visible). Collapsed hidden-prefix behavior remains
 isolated in the truncated-group fixture.
 
+Collapsed-tail geometry (2026-08-06): a dedicated twelve-member collapsed
+fixture now asserts the viewport-visible tail (`Run seven` through `Run
+twelve`). The source `N more` row is above the tail at the 80×30 capture
+height, so the oracle intentionally checks the actual visible screen rather
+than claiming a clipped row is present.
+
 Status chrome theme propagation (2026-08-06): `TurnStatus` and the status
 footer now resolve spinner, label, shortcut, and loading styles from the
 actor-selected theme. A GrokDay regression renders both the footer and active
