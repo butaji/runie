@@ -50,9 +50,11 @@ This closes the inventory item “unnamed TUI transition” for production actor
 APIs. The remaining direct methods on `Scrollback` and `PromptWidget` are
 reducer-local implementation details or compatibility constructors; they are
 not called by the production actor boundary. The next architectural change is
-therefore mechanical: retire the compatibility `EventRenderer` state mirror
-after its replay callers have moved to actor snapshots. It must not be
-replaced with another cross-actor mutation path.
+therefore mechanical: migrate the remaining renderer-owned transient fields
+using [p47](p47-renderer-transient-state-migration.md), then retire the
+compatibility `EventRenderer` state mirror after replay callers have moved to
+actor snapshots. It must not be replaced with another cross-actor mutation
+path.
 
 The separate strict color gap is tracked in p19/p25: the checked-in Grok cast
 is symbol-exact but was captured with terminal-default SGR, while Runie emits
