@@ -686,6 +686,15 @@ The YAML harness now uses `register_scenario_tool` as the single registration
 source for both normal and visual replay. This keeps declarative fixture
 fields and built-in tool variants consistent across all test entry points.
 
+Current metadata boundary (2026-08-06): Re-audited the remaining typed-read
+metadata item against Pi's `ToolExecutionEnd` contract. Runie's event boundary
+intentionally carries the same opaque JSON result that Pi exposes; the TUI
+actor owns the only projection of its `details`, content kind, and error flag.
+Range and media cases are covered through the real event → actor → card path.
+A future typed metadata event would duplicate the Pi payload rather than
+improve parity, so remaining work is limited to any new Grok card variant
+demonstrated by a Pi-carried result—not an unverified renderer-side parser.
+
 Documentation reconciliation (2026-08-06): `ToolStartRunning`, opaque row
 ownership, the running fold-cycle test, and the YAML projection are the
 authoritative current contract; no generic running-card gap remains at the
