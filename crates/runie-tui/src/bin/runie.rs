@@ -389,7 +389,14 @@ async fn run_app(
     let (input_tx, mut input_rx) = mpsc::channel::<InputEvent>(32);
     let _input_owner = runie_core::spawn_owned_worker!(async move {
         let mut input = EventStream::new();
-        let mut scroll_normalizer = runie_tui_model::ScrollNormalizer::default();
+        let terminal_brand = std::env::var("TERM_PROGRAM")
+            .or_else(|_| std::env::var("TERM"))
+            .unwrap_or_else(|_| "unknown".into());
+        let remuxed = ["TMUX", "STY", "ZELLIJ"]
+            .into_iter()
+            .any(|name| std::env::var_os(name).is_some());
+        let mut scroll_normalizer =
+            runie_tui_model::ScrollNormalizer::for_terminal_context(&terminal_brand, remuxed);
         let scroll_epoch = Instant::now();
         while let Some(result) = input.next().await {
             let event = match result {

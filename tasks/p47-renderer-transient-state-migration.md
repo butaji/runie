@@ -282,6 +282,13 @@ fractional carry without floating-point drift or sleeps. The interactive
 worker uses the same timestamped reducer; terminal-profile selection and
 trackpad-specific heuristics remain open.
 
+Terminal profile slice (2026-08-07): `ScrollNormalizer::for_terminal_context`
+now models Grok's one-event profiles for WezTerm, iTerm2, VS Code-family
+terminals, and remuxed tmux/screen/zellij contexts, while retaining the
+three-event default elsewhere. The interactive worker derives the brand and
+remux signal from terminal environment variables. More detailed terminal
+metadata and trackpad mode selection remain open.
+
 Mouse capture lifecycle closure (2026-08-07): the interactive terminal now
 enables crossterm mouse capture together with the alternate screen and disables
 it during restoration. This makes the already-owned mouse event path reachable

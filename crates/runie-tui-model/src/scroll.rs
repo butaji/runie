@@ -49,6 +49,24 @@ impl ScrollNormalizer {
         }
     }
 
+    /// Select Grok's conservative wheel profile from terminal metadata.
+    /// Multiplexers re-encode mouse streams and therefore use one event per
+    /// tick regardless of the outer terminal brand.
+    pub fn for_terminal_context(brand: &str, remuxed: bool) -> Self {
+        let brand = brand.to_ascii_lowercase();
+        let events_per_tick = if remuxed
+            || matches!(
+                brand.as_str(),
+                "wezterm" | "iterm.app" | "vscode" | "cursor" | "windsurf" | "zed"
+            ) {
+            1
+        } else {
+            3
+        };
+        let lines_per_tick = if events_per_tick == 1 { 1 } else { 3 };
+        Self::new(events_per_tick, lines_per_tick)
+    }
+
     pub const fn push(self, direction: ScrollDirection) -> (Self, i32) {
         self.push_with_multiplier(direction, BASE_MULTIPLIER)
     }
@@ -143,5 +161,15 @@ mod tests {
         assert_eq!(base, 1);
         assert_eq!(medium, 1);
         assert_eq!(fast, 2);
+    }
+
+    #[test]
+    fn terminal_profiles_follow_grok_event_density_defaults() {
+        let remuxed = ScrollNormalizer::for_terminal_context("xterm", true);
+        let wezterm = ScrollNormalizer::for_terminal_context("WezTerm", false);
+        let unknown = ScrollNormalizer::for_terminal_context("xterm", false);
+        assert_eq!(remuxed.push(ScrollDirection::Down).1, 1);
+        assert_eq!(wezterm.push(ScrollDirection::Down).1, 1);
+        assert_eq!(unknown.push(ScrollDirection::Down).1, 1);
     }
 }
