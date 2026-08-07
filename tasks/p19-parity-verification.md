@@ -1192,9 +1192,9 @@ those differences are not promoted into the deterministic Pi-core oracle.
   phase from those events and uses `grok-rich.cast` to select the reference
   frame. A strict comparison was intentionally attempted and exposed the
   remaining working-row mismatch: Grok's selected frame contains `┃  ◆
-  Thinking…`, while Runie's current row is `⠋ Thinking… 0.0s ⇣0 [stop]`.
-  The fixture currently keeps this row comparison marker-based until the
-  renderer implements that missing Grok variant.
+  Thinking…`, while Runie's current row was `⠋ Thinking… 0.0s ⇣0 [stop]`.
+  The declarative `Thinking` turn-status projection now emits the Grok marker;
+  the fixture remains the regression oracle for its geometry and styling.
 - **Event-to-state YAML assertions (2026-08-05):** `ScenarioOutcome` now
   exposes the final actor-owned `AgentStateSnapshot`; TUI YAML can assert
   `is_streaming`, pending-tool count, message count, streaming text, and

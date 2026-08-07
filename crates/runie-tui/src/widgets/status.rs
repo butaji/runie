@@ -121,6 +121,9 @@ impl TurnStatus {
     }
 
     pub fn text(&self) -> String {
+        if self.phase == TurnStatusPhase::Thinking {
+            return "┃  ◆ Thinking…".to_owned();
+        }
         let label = match self.phase {
             TurnStatusPhase::Starting => "Starting session… 0.0s",
             // The recorded full-mode waiting row includes the right-aligned
@@ -137,6 +140,14 @@ impl TurnStatus {
     }
 
     pub fn render(self, area: Rect, buf: &mut Buffer) {
+        if self.phase == TurnStatusPhase::Thinking {
+            Paragraph::new(Line::from(vec![ratatui::text::Span::styled(
+                "┃  ◆ Thinking…",
+                appearance::accent_style_for(self.theme).add_modifier(Modifier::BOLD),
+            )]))
+            .render(area, buf);
+            return;
+        }
         let label = match self.phase {
             TurnStatusPhase::Starting => "Starting session… 0.0s",
             TurnStatusPhase::Waiting => self.waiting_label.as_str(),
@@ -799,6 +810,14 @@ mod tests {
             .phase(TurnStatusPhase::Responding)
             .text()
             .contains("Responding…"));
+    }
+
+    #[test]
+    fn thinking_turn_status_matches_grok_working_marker() {
+        assert_eq!(
+            TurnStatus::new(0).phase(TurnStatusPhase::Thinking).text(),
+            "┃  ◆ Thinking…"
+        );
     }
 
     #[test]

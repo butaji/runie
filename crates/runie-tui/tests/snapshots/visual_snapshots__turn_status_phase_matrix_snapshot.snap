@@ -1,8 +1,9 @@
 ---
 source: crates/runie-tui/tests/visual_snapshots.rs
+assertion_line: 689
 expression: "phases.iter().map(|(name, status)|\nformat!(\"{name}: {}\", status.text())).collect::<Vec<_>>().join(\"\\n\")"
 ---
 starting:   ⠋ Starting session… 0.0s
 waiting:   ⠙ Waiting for response… 0.0s                            0.0s ⇣3.18k [stop]
-thinking:   ⠋ Thinking…
+thinking: ┃  ◆ Thinking…
 responding:   ⠙ Responding… 0.0s                                                                              2.3s ⇣6.39k [stop]
