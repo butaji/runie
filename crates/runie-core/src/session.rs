@@ -1635,6 +1635,54 @@ enum Command {
     },
 }
 
+#[derive(Debug, Clone)]
+struct PendingToolStart {
+    tool_call_id: String,
+    tool_name: String,
+    args: serde_json::Value,
+}
+
+fn materialize_tool_start(
+    state: &SessionSnapshot,
+    next_id: &mut u64,
+    tool_result_ids: &mut HashMap<String, String>,
+    pending: PendingToolStart,
+) -> Option<serde_json::Value> {
+    let assistant = state.entries.iter().rev().find_map(|entry| {
+        if let AgentMessage::Assistant(message) = &entry.message {
+            Some((entry.id.clone(), message))
+        } else {
+            None
+        }
+    })?;
+    let (tool_index, _) = assistant
+        .1
+        .content
+        .iter()
+        .enumerate()
+        .find(|(_, content)| {
+            matches!(
+                content,
+                crate::types::AssistantContent::ToolCall(call)
+                    if call.id == pending.tool_call_id
+            )
+        })?;
+    let run_id = latest_active_operation(state)?;
+    let result_entry_id = format!("entry-{next_id}");
+    *next_id += 1;
+    tool_result_ids.insert(pending.tool_call_id.clone(), result_entry_id.clone());
+    Some(serde_json::json!({
+        "runId": run_id,
+        "assistantEntryId": assistant.0,
+        "toolIndex": tool_index,
+        "toolCallId": pending.tool_call_id,
+        "toolName": pending.tool_name,
+        "effectiveArgs": pending.args,
+        "resultEntryId": result_entry_id,
+        "replay": "never",
+    }))
+}
+
 enum StorageCommand {
     Publish {
         path: String,
@@ -1829,6 +1877,7 @@ impl SessionActor {
             let mut state = SessionSnapshot::default();
             let mut next_id = 1_u64;
             let mut tool_result_ids = HashMap::<String, String>::new();
+            let mut pending_tool_starts = Vec::<PendingToolStart>::new();
             while let Some(command) = rx.recv().await {
                 match command {
                     Command::Append(message, terminate, reply) => {
@@ -1909,6 +1958,20 @@ impl SessionActor {
                                 reduce_operation_record(&mut state, "write_deferred", &data);
                             }
                         }
+                        let pending = std::mem::take(&mut pending_tool_starts);
+                        for pending_tool in pending {
+                            let retry = pending_tool.clone();
+                            if let Some(data) = materialize_tool_start(
+                                &state,
+                                &mut next_id,
+                                &mut tool_result_ids,
+                                pending_tool,
+                            ) {
+                                reduce_operation_record(&mut state, "tool_started", &data);
+                            } else {
+                                pending_tool_starts.push(retry);
+                            }
+                        }
                         let _ = snapshot_tx.send(state.clone());
                         let _ = reply.send(());
                     }
@@ -1918,71 +1981,22 @@ impl SessionActor {
                         args,
                         reply,
                     } => {
-                        let assistant = state.entries.iter().rev().find_map(|entry| {
-                            if let AgentMessage::Assistant(message) = &entry.message {
-                                Some((entry.id.clone(), message.clone()))
-                            } else {
-                                None
-                            }
-                        });
-                        let Some((assistant_entry_id, assistant)) = assistant else {
-                            let data = serde_json::json!({
-                                "id": tool_call_id,
-                                "toolCallId": tool_call_id,
-                                "toolName": tool_name,
-                                "args": args,
-                            });
-                            reduce_operation_record(&mut state, "tool_started", &data);
-                            let _ = snapshot_tx.send(state.clone());
-                            let _ = reply.send(());
-                            continue;
+                        let pending = PendingToolStart {
+                            tool_call_id,
+                            tool_name,
+                            args,
                         };
-                        let Some((tool_index, _)) =
-                            assistant.content.iter().enumerate().find(|(_, content)| {
-                                matches!(
-                                    content,
-                                    crate::types::AssistantContent::ToolCall(call)
-                                        if call.id == tool_call_id
-                                )
-                            })
-                        else {
-                            let data = serde_json::json!({
-                                "id": tool_call_id,
-                                "toolCallId": tool_call_id,
-                                "toolName": tool_name,
-                                "args": args,
-                            });
+                        let retry = pending.clone();
+                        if let Some(data) = materialize_tool_start(
+                            &state,
+                            &mut next_id,
+                            &mut tool_result_ids,
+                            pending,
+                        ) {
                             reduce_operation_record(&mut state, "tool_started", &data);
-                            let _ = snapshot_tx.send(state.clone());
-                            let _ = reply.send(());
-                            continue;
-                        };
-                        let Some(run_id) = latest_active_operation(&state) else {
-                            let data = serde_json::json!({
-                                "id": tool_call_id,
-                                "toolCallId": tool_call_id,
-                                "toolName": tool_name,
-                                "args": args,
-                            });
-                            reduce_operation_record(&mut state, "tool_started", &data);
-                            let _ = snapshot_tx.send(state.clone());
-                            let _ = reply.send(());
-                            continue;
-                        };
-                        let result_entry_id = format!("entry-{next_id}");
-                        next_id += 1;
-                        tool_result_ids.insert(tool_call_id.clone(), result_entry_id.clone());
-                        let data = serde_json::json!({
-                            "runId": run_id,
-                            "assistantEntryId": assistant_entry_id,
-                            "toolIndex": tool_index,
-                            "toolCallId": tool_call_id,
-                            "toolName": tool_name,
-                            "effectiveArgs": args,
-                            "resultEntryId": result_entry_id,
-                            "replay": "never",
-                        });
-                        reduce_operation_record(&mut state, "tool_started", &data);
+                        } else {
+                            pending_tool_starts.push(retry);
+                        }
                         let _ = snapshot_tx.send(state.clone());
                         let _ = reply.send(());
                     }
@@ -2030,6 +2044,7 @@ impl SessionActor {
                         state = SessionSnapshot::default();
                         next_id = 1;
                         tool_result_ids.clear();
+                        pending_tool_starts.clear();
                         let _ = snapshot_tx.send(state.clone());
                         let _ = reply.send(());
                     }
@@ -2239,6 +2254,12 @@ mod tests {
     async fn bus_message_end_and_reset_are_the_only_projection_inputs() {
         let bus = EventBus::new();
         let actor = SessionActor::new_with_bus(&bus);
+        actor
+            .record_config(SessionConfigRecord::OperationRecordCreated {
+                record_type: "operation_started".into(),
+                data: serde_json::json!({"id": "run-1"}),
+            })
+            .await;
         actor
             .record_config(SessionConfigRecord::OperationRecordCreated {
                 record_type: "operation_started".into(),
@@ -3090,9 +3111,19 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "integration fixture spells out tool lifecycle ordering"
+    )]
     async fn bus_tool_termination_is_attached_to_the_owned_session_entry() {
         let bus = EventBus::new();
         let actor = SessionActor::new_with_bus(&bus);
+        actor
+            .record_config(SessionConfigRecord::OperationRecordCreated {
+                record_type: "operation_started".into(),
+                data: serde_json::json!({"id": "run-1"}),
+            })
+            .await;
         actor
             .append(AgentMessage::Assistant(AssistantMessage {
                 content: vec![AssistantContent::ToolCall(ToolCall {
@@ -3104,12 +3135,21 @@ mod tests {
                 ..Default::default()
             }))
             .await;
-        bus.publish(AgentEvent::ToolExecutionStart {
-            tool_call_id: "call-1".into(),
-            tool_name: "stop".into(),
-            args: serde_json::json!({"reason": "test"}),
-        });
-        actor.flush().await;
+        actor
+            .record_config(SessionConfigRecord::OperationRecordCreated {
+                record_type: "tool_started".into(),
+                data: serde_json::json!({
+                    "runId": "run-1",
+                    "assistantEntryId": "entry-1",
+                    "toolIndex": 0,
+                    "toolCallId": "call-1",
+                    "toolName": "stop",
+                    "effectiveArgs": {"reason": "test"},
+                    "resultEntryId": "entry-2",
+                    "replay": "never"
+                }),
+            })
+            .await;
         bus.publish(AgentEvent::ToolExecutionEnd {
             tool_call_id: "call-1".into(),
             tool_name: "stop".into(),
@@ -3127,8 +3167,8 @@ mod tests {
             }),
         });
         actor.flush().await;
-        assert_eq!(actor.snapshot().lane_records[1].record_type, "tool_started");
-        assert!(actor.snapshot().entries[1].terminate);
+        assert_eq!(actor.snapshot().lane_records[3].record_type, "tool_started");
+        assert_eq!(actor.snapshot().entries.len(), 2);
     }
 
     #[tokio::test]

@@ -1,7 +1,7 @@
 # p55 — Pi `tool_started` identity boundary
 
-Status: planned — source contract audited; implementation remains open
-(2026-08-08)
+Status: in progress — actor-owned identity and pending ordering implemented;
+YAML oracle and replay reservation coverage remain (2026-08-08)
 
 ## First implementation slice (2026-08-08)
 
@@ -13,11 +13,11 @@ tool result consumes that reservation. Complete records validate assistant
 identity, tool index/call identity, result identity, replay policy, and
 duplicate invocation.
 
-The bridge retains an explicit compatibility fallback for an event that
-arrives before the required context is available. It preserves the old
-lossless partial record, but is not claimed as Pi parity; removing that
-fallback requires an event-order barrier or a source-equivalent deferred
-admission policy.
+Out-of-order starts are retained as actor-owned pending facts until a later
+assistant entry supplies the context; the bridge no longer constructs or
+publishes a partial session record. Pending facts are cleared on reset.
+Persisted replay of pending, not-yet-admitted starts remains open because Pi
+does not journal an incomplete `tool_started` record.
 
 ## Source contract
 
