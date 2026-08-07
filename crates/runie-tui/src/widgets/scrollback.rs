@@ -1202,6 +1202,26 @@ impl Scrollback {
                     Style::default().fg(Color::Reset).bg(panel_background),
                 ));
             }
+            if self.navigation.live_grok_layout
+                && matches!(*kind, LineKind::ToolOutput | LineKind::ToolResult)
+                && text.starts_with("    ")
+            {
+                // Grok's memory/search snippets are panel rows, not merely
+                // panel-colored text. Make the trailing cells explicit so a
+                // narrow or wide terminal cannot inherit the surrounding
+                // feed background from Paragraph's implicit fill.
+                let panel_background =
+                    appearance::panel_background_style_for(self.navigation.theme)
+                        .bg
+                        .expect("panel background color");
+                let remaining = area.width.saturating_sub(line.width() as u16) as usize;
+                if remaining > 0 {
+                    line.spans.push(Span::styled(
+                        " ".repeat(remaining),
+                        Style::default().fg(Color::Reset).bg(panel_background),
+                    ));
+                }
+            }
             if self.navigation.live_grok_layout && *kind == LineKind::CompletedAssistant {
                 let assistant = appearance::assistant_body_style_for(self.navigation.theme);
                 for span in &mut line.spans {
@@ -2599,6 +2619,43 @@ mod tests {
             buffer.cell((2, row)).expect("user gutter foreground").fg,
             Color::Reset,
             "Grok leaves the user-row lead gutter at terminal-default foreground"
+        );
+    }
+
+    #[test]
+    fn memory_snippet_paints_grok_panel_background_across_the_row() {
+        let mut scrollback = Scrollback::new();
+        scrollback.apply(ScrollbackMsg::SetToolName(
+            "memory-1".into(),
+            "memory_search".into(),
+        ));
+        scrollback.apply(ScrollbackMsg::ToolStart {
+            tool_call_id: "memory-1".into(),
+            header: "Memory Search memory".into(),
+            activity: None,
+        });
+        scrollback.apply(ScrollbackMsg::ToolEnd {
+            tool_call_id: "memory-1".into(),
+            header: "Memory Search memory".into(),
+            activity: None,
+            output: vec![(LineKind::ToolOutput, "    memory snippet".into())],
+        });
+        scrollback.set_tool_mode("memory-1", runie_core::types::ToolDisplayMode::Expanded);
+        scrollback.set_live_grok_layout(true);
+        let rows = scrollback.physical_rows(80, false, 24);
+        let snippet_row = rows
+            .iter()
+            .position(|(_, text, _)| text.contains("memory snippet"))
+            .expect("memory snippet row");
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 80, 8));
+        scrollback.render_with_terminal_height(Rect::new(0, 0, 80, 8), 24, &mut buffer);
+        let row = snippet_row as u16;
+        assert_eq!(
+            buffer
+                .cell((79, row))
+                .expect("full snippet row background")
+                .bg,
+            Color::Rgb(36, 36, 36)
         );
     }
 

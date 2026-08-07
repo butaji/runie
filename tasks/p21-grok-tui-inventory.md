@@ -806,6 +806,13 @@ fallback rule before live and YAML consumers receive rows. The specialized
 fixture and pure model tests cover both forms; styling and panel fill remain
 renderer concerns.
 
+Memory snippet surface closure (2026-08-08): Grok paints each snippet as a
+panel-background row, including trailing terminal cells. Runie's live Grok
+layout now emits the remaining panel cells explicitly from the theme token for
+memory/search content rows. A buffer-level regression verifies the far-right
+cell through the real scrollback renderer; this avoids relying on Ratatui's
+implicit paragraph fill.
+
 Pi error-vector closure (2026-08-06): `visual-tool-error.yaml` now also
 asserts the complete Pi lifecycle vector through tool execution, tool-result
 message boundaries, continuation turn, and `agent_end`. This keeps the
