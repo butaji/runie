@@ -1288,8 +1288,21 @@ impl SessionActor {
                             message: *message,
                             terminate,
                         };
-                        state.leaf_id = Some(id);
+                        state.leaf_id = Some(id.clone());
                         state.entries.push(entry);
+                        if let AgentMessage::Assistant(assistant) = &state
+                            .entries
+                            .last()
+                            .expect("message was just inserted")
+                            .message
+                        {
+                            let data = serde_json::json!({
+                                "entryId": id,
+                                "usage": serde_json::to_value(&assistant.usage)
+                                    .unwrap_or(serde_json::Value::Null),
+                            });
+                            reduce_operation_record(&mut state, "usage", &data);
+                        }
                         let _ = snapshot_tx.send(state.clone());
                         let _ = reply.send(());
                     }
@@ -1524,7 +1537,9 @@ impl Default for SessionActor {
 mod tests {
     use super::*;
     use crate::events::EventBus;
-    use crate::types::{ToolResultContent, ToolResultMessage, UserContent, UserMessage};
+    use crate::types::{
+        AssistantMessage, ToolResultContent, ToolResultMessage, Usage, UserContent, UserMessage,
+    };
 
     fn user(text: &str) -> AgentMessage {
         AgentMessage::User(UserMessage {
@@ -2035,6 +2050,22 @@ mod tests {
         actor.flush().await;
         assert_eq!(actor.snapshot().lane_records[0].record_type, "tool_started");
         assert!(actor.snapshot().entries[0].terminate);
+    }
+
+    #[tokio::test]
+    async fn assistant_message_end_emits_owned_usage_lane_record() {
+        let bus = EventBus::new();
+        let actor = SessionActor::new_with_bus(&bus);
+        let assistant = AssistantMessage {
+            usage: Usage::default(),
+            ..Default::default()
+        };
+        bus.publish(AgentEvent::MessageEnd {
+            message: AgentMessage::Assistant(assistant),
+        });
+        actor.flush().await;
+        assert_eq!(actor.snapshot().lane_records[0].record_type, "usage");
+        assert_eq!(actor.snapshot().lane_records[0].id, "entry-1");
     }
 
     #[tokio::test]

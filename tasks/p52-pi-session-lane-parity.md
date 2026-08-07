@@ -216,6 +216,16 @@ reduction still occurs through the event bus and `SessionActor`.
 oracle for both `steer` and `followUp` enqueue/cancel pairs, asserting stable
 identity-bearing records in order.
 
+## Completed slice (2026-08-07, assistant usage emission)
+
+When the session actor receives the existing `MessageEnd` event for an
+assistant message, it now appends the message entry and derives a lossless Pi
+`usage` lane record from that assistant's usage payload in the same mailbox
+reduction. The generated `entryId` is the actor-issued message entry ID, so
+usage identity cannot drift from the journal. Coverage verifies the event
+sequence and identity; the all-family YAML fixture continues to exercise the
+runtime usage record shape.
+
 ## Implementation order
 
 1. Replace the generic Rust operation-record payload with a typed internal

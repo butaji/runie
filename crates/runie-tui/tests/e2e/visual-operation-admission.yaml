@@ -41,6 +41,7 @@ assertions:
       - operation_finished
       - operation_finished
     session_lane_records:
+      - usage
       - operation_started
       - operation_finished
     active_operations: {}
