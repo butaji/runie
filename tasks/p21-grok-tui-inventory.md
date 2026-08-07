@@ -666,6 +666,12 @@ special cycle only to running generic cards. The reducer test
 `running_generic_tool_uses_grok_truncated_fold_cycle_then_settled_cycle`
 replays both phases without timers or renderer state.
 
+The runtime fixture `visual-tool-running-fold.yaml` now replays the complete
+running `truncated → expanded → truncated` cycle through three declarative
+`tool_fold` events and asserts the final actor-owned mode and screen. This
+keeps the fold contract in the no-recompile YAML path, alongside the pure
+reducer oracle.
+
 ### Web-search sources projection (2026-08-06)
 
 Grok's `WebSearchToolCallBlock` renders a separate `Sources:` row after the
