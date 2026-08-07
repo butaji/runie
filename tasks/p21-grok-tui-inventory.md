@@ -182,10 +182,10 @@ The reference feed component matrix is now recorded explicitly:
 |---|---|---|
 | User/assistant | prompt, markdown, tables, code, links, streaming | YAML + snapshots |
 | Thinking | running spinner, collapsed `Thought`, expanded reasoning | YAML + renderer tests |
-| Tool cards | execute, read, edit, list-dir, search, web, lifecycle, generic | partial; typed core events and line projection; full member-card geometry open |
-| Tool display | collapsed, truncated, expanded, running/finished/error | collapsed/expanded activity fixtures; typed fold state and keyboard selection; full member navigation open |
+| Tool cards | execute, read, edit, list-dir, search, web, lifecycle, generic | typed core events, semantic rows, range/media/error headers, and whole-screen YAML fixtures; full member-card geometry remains open |
+| Tool display | collapsed, truncated, expanded, running/finished/error | actor-owned fold state, running/settled cycles, keyboard selection, and YAML fixtures; full member navigation remains open |
 | Verb groups | Read, Listed, Searched, Ran, subagent counts; running/past verbs | activity summary projection |
-| Background work | subagent, workflow, task output, waiting reasons | waiting reasons; block rendering open |
+| Background work | subagent, workflow, task output, waiting reasons | actor-owned lifecycle reducers, workflow/background YAML fixtures, and whole-screen rendering; broader Grok effect variants remain open |
 | Chrome | header meter, status telemetry, prompt/footer, doctor hint | strict feed/waiting frames |
 | Effects | braille/dot spinners, animated accents, overlays, terminal capability paths | demand-driven spinner; broader effects open |
 
