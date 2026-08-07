@@ -127,9 +127,7 @@ pub async fn run_loop(
         }
 
         if continue_after_turn(has_more_tool_calls, &deps, &mut all_new).await {
-            deps.state
-                .publish_pi_event(&deps.bus, PiAgentEvent::TurnStart)
-                .await;
+            publish_pi_and_apply(&deps, PiAgentEvent::TurnStart).await;
             continue;
         }
         break;
@@ -169,14 +167,13 @@ async fn continue_after_turn(
 }
 
 async fn end_run(all_new: Vec<AgentMessage>, deps: &RunLoopDeps) -> RunLoopOutcome {
-    deps.state
-        .publish_pi_event(
-            &deps.bus,
-            PiAgentEvent::AgentEnd {
-                messages: all_new.clone(),
-            },
-        )
-        .await;
+    publish_pi_and_apply(
+        deps,
+        PiAgentEvent::AgentEnd {
+            messages: all_new.clone(),
+        },
+    )
+    .await;
     RunLoopOutcome {
         new_messages: all_new,
     }
@@ -203,7 +200,9 @@ async fn publish_and_apply(deps: &RunLoopDeps, event: AgentEvent) {
 }
 
 async fn publish_pi_and_apply(deps: &RunLoopDeps, event: PiAgentEvent) {
+    let application_event = event.clone().try_into_agent_event();
     deps.state.publish_pi_event(&deps.bus, event.clone()).await;
+    deps.subscribers.dispatch(&application_event).await;
     deps.subscribers.dispatch_pi(&event).await;
 }
 

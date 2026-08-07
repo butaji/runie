@@ -22,6 +22,11 @@ production `LoopActor` no longer starts the old broadcast-to-registry bridge;
 the broadcast bus remains observational and cannot duplicate lifecycle
 callbacks.
 
+The common `Subscriber` contract receives the converted Pi event and is the
+awaited lifecycle listener surface; `PiSubscriber` remains an additional
+closed-wire adapter and is dispatched separately. `loop_entry.rs` proves an
+`AgentEnd` listener can hold prompt settlement until a watch-channel release.
+
 ## Required implementation
 
 Add a separate awaited lifecycle-delivery path for Pi-compatible events:

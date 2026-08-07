@@ -7,7 +7,9 @@ use std::sync::Arc;
 use futures::stream;
 use futures::StreamExt;
 use parking_lot::Mutex;
+use runie_core::events::Subscriber;
 use runie_core::provider::stream_fn::{AssistantMessageEventStream, StreamError, StreamFn};
+use runie_core::types::AgentEvent;
 use runie_core::types::{
     AgentContext, AgentMessage, AssistantMessage, AssistantMessageEvent, Model,
     SimpleStreamOptions, StopReason, ToolCall, Usage, UserContent, UserMessage,
@@ -25,6 +27,23 @@ struct BlockingStream {
 
 struct SignalCaptureStream {
     seen: tokio::sync::watch::Sender<bool>,
+}
+
+struct SettlingSubscriber {
+    entered: tokio::sync::watch::Sender<bool>,
+    release: Option<tokio::sync::watch::Receiver<bool>>,
+}
+
+#[async_trait::async_trait]
+impl Subscriber for SettlingSubscriber {
+    async fn handle(&mut self, event: &AgentEvent) {
+        if matches!(event, AgentEvent::AgentEnd { .. }) {
+            let _ = self.entered.send(true);
+            if let Some(mut release) = self.release.take() {
+                let _ = release.changed().await;
+            }
+        }
+    }
 }
 
 #[async_trait::async_trait]
@@ -132,6 +151,40 @@ async fn prompt_propagates_abort_signal_to_provider_options() {
         .await
         .expect("prompt completes");
     assert!(*seen_rx.borrow_and_update());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn wait_for_idle_waits_for_async_pi_listener_settlement() {
+    let test = TestLoopBuilder::new(Arc::new(MockStreamFn::hello())).build();
+    let (entered_tx, mut entered_rx) = tokio::sync::watch::channel(false);
+    let (release_tx, release_rx) = tokio::sync::watch::channel(false);
+    test.actor
+        .subscribe(Box::new(SettlingSubscriber {
+            entered: entered_tx,
+            release: Some(release_rx),
+        }))
+        .await;
+
+    let actor = test.actor.clone();
+    let (finished_tx, mut finished_rx) = tokio::sync::oneshot::channel();
+    tokio::spawn(async move {
+        let result = actor
+            .prompt(vec![user("listener", 1)], AgentContext::default())
+            .await;
+        let _ = finished_tx.send(result);
+    });
+
+    while !*entered_rx.borrow() {
+        let _ = entered_rx.changed().await;
+    }
+    tokio::task::yield_now().await;
+    assert!(
+        finished_rx.try_recv().is_err(),
+        "listener must hold run settlement"
+    );
+
+    let _ = release_tx.send(true);
+    assert!(finished_rx.await.unwrap().is_ok());
 }
 
 #[tokio::test(flavor = "multi_thread")]
