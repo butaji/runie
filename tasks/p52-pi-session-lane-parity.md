@@ -319,6 +319,13 @@ the existing compatibility behavior for queue facts that Pi permits outside a
 run. Regression coverage exercises unknown and post-finish `step_attempt`
 events.
 
+### Operation-finished outcome admission (2026-08-08)
+
+`operation_finished` now validates Pi's closed outcome union (`completed`,
+`aborted`, `failed`, or `declined`) and requires both `error.code` and
+`error.message` when error metadata is present. The check is performed by the
+session actor before journal admission and is covered by core event tests.
+
 ### Step-attempt shape admission (2026-08-08)
 
 `step_attempt` now validates Pi's closed shape before the session actor

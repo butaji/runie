@@ -677,9 +677,36 @@ pub fn validate_session_lane_record(
         ));
     }
     validate_operation_lane_record(snapshot, kind, data)?;
+    validate_operation_finished_record(kind, data)?;
     validate_step_attempt_record(kind, data)?;
     validate_queue_lane_record(snapshot, kind, data)?;
     Ok(kind)
+}
+
+fn validate_operation_finished_record(
+    kind: SessionLaneRecordKind,
+    data: &serde_json::Value,
+) -> Result<(), String> {
+    if kind != SessionLaneRecordKind::OperationFinished {
+        return Ok(());
+    }
+    let outcome = data
+        .get("outcome")
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| "operation_finished is missing outcome".to_owned())?;
+    if !matches!(outcome, "completed" | "aborted" | "failed" | "declined") {
+        return Err(format!(
+            "operation_finished has unknown outcome {outcome:?}"
+        ));
+    }
+    if let Some(error) = data.get("error") {
+        let code = error.get("code").and_then(serde_json::Value::as_str);
+        let message = error.get("message").and_then(serde_json::Value::as_str);
+        if code.is_none_or(str::is_empty) || message.is_none_or(str::is_empty) {
+            return Err("operation_finished error requires code and message".into());
+        }
+    }
+    Ok(())
 }
 
 fn validate_step_attempt_record(
@@ -2284,6 +2311,35 @@ mod tests {
             })
         )
         .is_ok());
+    }
+
+    #[test]
+    fn operation_finished_records_match_pi_outcomes_and_errors() {
+        for outcome in ["completed", "aborted", "failed", "declined"] {
+            assert!(validate_operation_finished_record(
+                SessionLaneRecordKind::OperationFinished,
+                &serde_json::json!({"outcome": outcome})
+            )
+            .is_ok());
+        }
+        assert!(validate_operation_finished_record(
+            SessionLaneRecordKind::OperationFinished,
+            &serde_json::json!({"outcome": "unknown"})
+        )
+        .is_err());
+        assert!(validate_operation_finished_record(
+            SessionLaneRecordKind::OperationFinished,
+            &serde_json::json!({
+                "outcome": "failed",
+                "error": {"code": "provider", "message": "unavailable"}
+            })
+        )
+        .is_ok());
+        assert!(validate_operation_finished_record(
+            SessionLaneRecordKind::OperationFinished,
+            &serde_json::json!({"outcome": "failed", "error": {"code": "provider"}})
+        )
+        .is_err());
     }
 
     #[test]
