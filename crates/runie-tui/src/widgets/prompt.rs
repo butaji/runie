@@ -10,7 +10,7 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Style;
-use ratatui::text::Line;
+use ratatui::text::{Line, Span};
 use ratatui::widgets::{Paragraph, Widget};
 use runie_core::types::ThemeKind;
 use unicode_width::UnicodeWidthStr;
@@ -443,12 +443,25 @@ impl PromptWidget {
         let caption_width = UnicodeWidthStr::width(caption.as_str()) as u16 + 2;
         if caption_width + 2 < area.width {
             let caption_x = right.saturating_sub(caption_width + 1);
-            buf.set_string(
-                caption_x,
-                bottom,
-                format!(" {caption} "),
-                appearance::model_caption_style_for(self.theme),
-            );
+            let mut spans = vec![Span::raw(" ")];
+            for (index, part) in caption.split(" · ").enumerate() {
+                if index > 0 {
+                    spans.push(Span::styled(
+                        " · ",
+                        appearance::header_path_style_for(self.theme),
+                    ));
+                }
+                spans.push(Span::styled(
+                    part.to_owned(),
+                    if index == 0 {
+                        appearance::model_caption_style_for(self.theme)
+                    } else {
+                        appearance::muted_style_for(self.theme)
+                    },
+                ));
+            }
+            spans.push(Span::raw(" "));
+            buf.set_line(caption_x, bottom, &Line::from(spans), caption_width);
         }
     }
 
@@ -689,6 +702,58 @@ mod tests {
             .map(|x| buffer.cell((x, 3)).expect("caption cell").symbol())
             .collect::<String>();
         assert!(row.contains("test-model (high)"));
+    }
+
+    #[test]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the cell oracle keeps all caption token roles in one assertion"
+    )]
+    fn model_caption_uses_grok_semantic_segments() {
+        let mut prompt = PromptWidget::new();
+        prompt.set_model_caption("Grok 4.5 (high) · always-approve");
+        let area = Rect::new(0, 0, 80, 4);
+        let mut buffer = Buffer::empty(area);
+        Widget::render(prompt, area, &mut buffer);
+        let row = (0..area.width)
+            .map(|x| buffer.cell((x, 3)).expect("caption cell").symbol())
+            .collect::<String>();
+        let model_start = row
+            .chars()
+            .collect::<Vec<_>>()
+            .windows("Grok 4.5 (high)".chars().count())
+            .position(|window| window == "Grok 4.5 (high)".chars().collect::<Vec<_>>())
+            .expect("model caption") as u16;
+        let separator_start = row
+            .chars()
+            .collect::<Vec<_>>()
+            .windows(3)
+            .position(|window| window == [' ', '·', ' '])
+            .expect("caption separator") as u16;
+        assert_eq!(
+            buffer.cell((model_start, 3)).expect("model style").fg,
+            appearance::model_caption_style_for(ThemeKind::GrokNight)
+                .fg
+                .expect("model token")
+        );
+        assert_eq!(
+            buffer
+                .cell((separator_start, 3))
+                .expect("separator style")
+                .fg,
+            appearance::header_path_style_for(ThemeKind::GrokNight)
+                .fg
+                .expect("separator token")
+        );
+        assert_eq!(
+            buffer
+                .cell((separator_start + 3, 3))
+                .expect("approval style")
+                .fg,
+            appearance::muted_style_for(ThemeKind::GrokNight)
+                .fg
+                .expect("muted token")
+        );
     }
 
     #[test]

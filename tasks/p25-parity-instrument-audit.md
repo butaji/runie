@@ -746,6 +746,14 @@ the Opaline `text.model` token and renders the caption through the semantic
 theme adapter. The prompt widget no longer receives or owns a raw caption
 color; day/night theme resolution remains centralized.
 
+Caption-segment parity increment (2026-08-07): the settled capture also showed
+that Grok styles the model name, ` · ` separator, and approval/mode suffix as
+separate spans (`text.model`, header-path, and muted tokens). Runie now emits
+the same declarative span segmentation through the Opaline theme adapter, with
+a cell-level prompt regression covering all three roles. This closes the
+caption's style-boundary mismatch; dynamic header values and the remaining
+full-screen capture deltas stay separately tracked below.
+
 Capture provenance increment (2026-08-06): `tmux-asciinema-capture.sh` now
 writes `<capture>.grok-doctor.json` and references it from the capture manifest.
 Both paired reports must show an available color capability before a strict
