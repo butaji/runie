@@ -157,7 +157,7 @@ async fn pump_stream(
         // Errors from the broadcast are non-fatal (no current receivers).
         let _ = tx.send(event);
         if let Some(span) = &telemetry_span {
-            span.event("assistant.event").await;
+            span.event("assistant.event", Default::default()).await;
         }
     }
     if let Some(span) = telemetry_span {

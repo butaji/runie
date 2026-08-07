@@ -22,9 +22,15 @@ pub struct SpanSnapshot {
     pub parent_id: Option<u64>,
     pub name: String,
     pub attributes: HashMap<String, serde_json::Value>,
-    pub events: Vec<String>,
+    pub events: Vec<TelemetryEventSnapshot>,
     pub status: SpanStatus,
     pub ended: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TelemetryEventSnapshot {
+    pub name: String,
+    pub attributes: HashMap<String, serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -48,6 +54,12 @@ pub enum TelemetryAction {
     Event {
         id: u64,
         name: String,
+        #[serde(default)]
+        attributes: HashMap<String, serde_json::Value>,
+    },
+    SetAttributes {
+        id: u64,
+        attributes: HashMap<String, serde_json::Value>,
     },
     Status {
         id: u64,
@@ -75,6 +87,12 @@ enum TelemetryCommand {
     Event {
         id: u64,
         name: String,
+        attributes: HashMap<String, serde_json::Value>,
+        reply: oneshot::Sender<()>,
+    },
+    SetAttributes {
+        id: u64,
+        attributes: HashMap<String, serde_json::Value>,
         reply: oneshot::Sender<()>,
     },
     Status {
@@ -128,13 +146,34 @@ impl TelemetryActor {
                         let _ = snapshot_tx.send(state.clone());
                         let _ = reply.send(id);
                     }
-                    TelemetryCommand::Event { id, name, reply } => {
+                    TelemetryCommand::Event {
+                        id,
+                        name,
+                        attributes,
+                        reply,
+                    } => {
                         if let Some(span) = state
                             .spans
                             .iter_mut()
                             .find(|span| span.id == id && !span.ended)
                         {
-                            span.events.push(name);
+                            span.events
+                                .push(TelemetryEventSnapshot { name, attributes });
+                            let _ = snapshot_tx.send(state.clone());
+                        }
+                        let _ = reply.send(());
+                    }
+                    TelemetryCommand::SetAttributes {
+                        id,
+                        attributes,
+                        reply,
+                    } => {
+                        if let Some(span) = state
+                            .spans
+                            .iter_mut()
+                            .find(|span| span.id == id && !span.ended)
+                        {
+                            span.attributes.extend(attributes);
                             let _ = snapshot_tx.send(state.clone());
                         }
                         let _ = reply.send(());
@@ -176,6 +215,10 @@ impl TelemetryActor {
     }
 
     /// Apply one declarative replay action through the actor mailbox.
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the replay DSL maps each declared actor command explicitly"
+    )]
     pub async fn apply(&self, action: TelemetryAction) -> Option<u64> {
         match action {
             TelemetryAction::Start {
@@ -186,12 +229,25 @@ impl TelemetryActor {
                 .start_span(parent_id, name, attributes)
                 .await
                 .map(|span| span.id),
-            TelemetryAction::Event { id, name } => {
+            TelemetryAction::Event {
+                id,
+                name,
+                attributes,
+            } => {
                 TelemetrySpan {
                     actor: self.clone(),
                     id,
                 }
-                .event(name)
+                .event(name, attributes)
+                .await;
+                None
+            }
+            TelemetryAction::SetAttributes { id, attributes } => {
+                TelemetrySpan {
+                    actor: self.clone(),
+                    id,
+                }
+                .set_attributes(attributes)
                 .await;
                 None
             }
@@ -258,7 +314,11 @@ pub struct TelemetrySpan {
 }
 
 impl TelemetrySpan {
-    pub async fn event(&self, name: impl Into<String>) {
+    pub async fn event(
+        &self,
+        name: impl Into<String>,
+        attributes: HashMap<String, serde_json::Value>,
+    ) {
         let (reply, acknowledged) = oneshot::channel();
         let _ = self
             .actor
@@ -266,6 +326,21 @@ impl TelemetrySpan {
             .send(TelemetryCommand::Event {
                 id: self.id,
                 name: name.into(),
+                attributes,
+                reply,
+            })
+            .await;
+        let _ = acknowledged.await;
+    }
+
+    pub async fn set_attributes(&self, attributes: HashMap<String, serde_json::Value>) {
+        let (reply, acknowledged) = oneshot::channel();
+        let _ = self
+            .actor
+            .tx
+            .send(TelemetryCommand::SetAttributes {
+                id: self.id,
+                attributes,
                 reply,
             })
             .await;
@@ -314,12 +389,12 @@ mod tests {
         let actor = TelemetryActor::new();
         let root = actor.start_span(None, "run", HashMap::new()).await.unwrap();
         let child = root.child("request", HashMap::new()).await.unwrap();
-        child.event("headers").await;
+        child.event("headers", HashMap::new()).await;
         child.status(SpanStatus::Ok).await;
         child.end().await;
         let snapshot = actor.snapshot();
         assert_eq!(snapshot.spans[1].parent_id, Some(root.id));
-        assert_eq!(snapshot.spans[1].events, vec!["headers"]);
+        assert_eq!(snapshot.spans[1].events[0].name, "headers");
         assert_eq!(snapshot.spans[1].status, SpanStatus::Ok);
         assert!(snapshot.spans[1].ended);
     }
@@ -329,7 +404,7 @@ mod tests {
         let actor = TelemetryActor::new();
         let span = actor.start_span(None, "run", HashMap::new()).await.unwrap();
         span.end().await;
-        span.event("late").await;
+        span.event("late", HashMap::new()).await;
         assert!(actor.snapshot().spans[0].events.is_empty());
     }
 }

@@ -35,6 +35,7 @@ expected:
       name: pi.provider.stream
       attributes: {}
       events:
-        - assistant.event
+        - name: assistant.event
+          attributes: {}
       status: ok
       ended: true

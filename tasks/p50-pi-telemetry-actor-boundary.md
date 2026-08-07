@@ -1,7 +1,8 @@
 # p50 — Pi telemetry actor boundary
 
-Status: actor-owned lifecycle, provider projection, and YAML runtime replay
-implemented; full Pi telemetry conformance remains (2026-08-07)
+Status: actor-owned lifecycle, structured attributes/events, provider
+projection, and YAML runtime replay implemented; full Pi telemetry
+conformance remains (2026-08-07)
 
 ## Source-backed Pi contract
 
@@ -39,15 +40,18 @@ The renderer must never own spans or infer telemetry from status text.
    status, attributes, events, and deterministic completion ordering. **Done:**
    `crates/runie-core/src/telemetry.rs` provides acknowledged lifecycle
    commands, immutable watch snapshots, nested spans, and late-mutation
-   rejection tests.
+   rejection tests. Events retain structured attributes.
 2. Define a capability-oriented `TelemetryContext` adapter for provider
    actors; keep it separate from `HttpRequest` serialization. **Partial:**
    `SimpleStreamOptions.telemetry` carries a cloneable `TelemetryActor`, and
    `ProviderActor` opens `pi.provider.stream`, records one `assistant.event`
    per streamed event, and acknowledges terminal status/end. Startup failures
    close the span with `Error`; the capability is not serialized.
-3. Emit core lifecycle events for span start, event, exception, and end. All
-   mutable span state remains inside the telemetry actor.
+3. Emit core lifecycle events for span start, event, exception, and end. **In
+   progress:** event attributes and mutable span attributes now use
+   acknowledged actor commands; exception/error detail and callback-scoped
+   automatic status remain open. All mutable span state remains inside the
+   telemetry actor.
 4. Add a YAML runtime fixture with declared span commands and ordered snapshot
    assertions. **Done:** `TelemetryAction`, `TelemetryScenario`, and the
    runtime-discovered `tests/telemetry_replay.rs` execute YAML actions through
