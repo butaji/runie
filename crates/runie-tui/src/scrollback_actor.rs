@@ -10,7 +10,7 @@ use tokio::sync::{mpsc, oneshot, watch};
 use runie_core::types::AgentEvent;
 use runie_core::{mailbox_ack, spawn_actor_worker, spawn_owned_worker, task_owner::TaskOwner};
 
-use crate::widgets::{FeedSnapshot, LineKind, Scrollback, ScrollbackMsg};
+use crate::widgets::{FeedSnapshot, Line, LineKind, Scrollback, ScrollbackMsg};
 use runie_tui_model::FeedState;
 
 enum Command {
@@ -138,7 +138,23 @@ async fn run_bus_projection(
     loop {
         let event = match events.recv().await {
             Ok(event) => event,
-            Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
+            Err(tokio::sync::broadcast::error::RecvError::Lagged(count)) => {
+                let (reply, _ack) = oneshot::channel();
+                if tx
+                    .send(Command::ApplyBatch(
+                        vec![ScrollbackMsg::Append(Line::new(
+                            LineKind::System,
+                            format!("event stream lagged ({count} events)"),
+                        ))],
+                        reply,
+                    ))
+                    .await
+                    .is_err()
+                {
+                    break;
+                }
+                continue;
+            }
             Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
         };
         let (reply, _ack) = oneshot::channel();

@@ -8,7 +8,7 @@ use runie_core::{
 };
 use tokio::sync::{mpsc, oneshot, watch};
 
-use crate::widgets::{StatusBar, StatusMsg, StatusSnapshot};
+use crate::widgets::{Status, StatusBar, StatusMsg, StatusSnapshot};
 use runie_tui_model::status_messages_for_event;
 
 enum Command {
@@ -66,7 +66,17 @@ impl StatusActor {
             loop {
                 let event = match events.recv().await {
                     Ok(event) => event,
-                    Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(count)) => {
+                        let messages = vec![StatusMsg::Set(Status::Error(format!(
+                            "event stream lagged ({count} events)",
+                        )))];
+                        if !mailbox_batch_ack!(tx, messages, |messages, reply| {
+                            Command::ApplyBatch(messages, reply)
+                        }) {
+                            break;
+                        }
+                        continue;
+                    }
                     Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
                 };
                 let messages = status_messages_for_event(&event);

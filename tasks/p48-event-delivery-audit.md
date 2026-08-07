@@ -129,3 +129,12 @@ bridge now forwards `AgentEvent` values statelessly through the actor mailbox;
 the owning actor reduces those events and owns all projection maps and
 counters. Direct `ScrollbackMsg` batches and bus events therefore share one
 reducer boundary, with acknowledged delivery and no cross-worker state mirror.
+
+Lag visibility increment (2026-08-07): the status and scrollback bus bridges
+previously discarded `broadcast::RecvError::Lagged` and continued as if the
+event stream were complete. They now transfer an actor-owned diagnostic on
+that boundary: status becomes an explicit error and the feed appends a system
+row containing the skipped count. This keeps loss observable and prevents a
+silent false-parity snapshot; the renderer's existing lag diagnostic remains
+consistent with both actors. Recovery from a lagged broadcast still requires
+a source snapshot/replay contract and remains an open reliability refinement.
