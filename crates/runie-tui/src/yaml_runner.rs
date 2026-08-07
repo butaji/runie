@@ -1496,9 +1496,12 @@ async fn replay_scenario_events(
     }
     for window in declared_context_windows(scenario) {
         status_actor
-            .apply(crate::widgets::StatusMsg::SetContextWindow(
-                (window > 0).then_some(window),
-            ))
+            .apply_event(&runie_core::types::AgentEvent::ModelChanged {
+                model: runie_core::types::Model {
+                    context_window: window,
+                    ..runie_core::types::Model::default()
+                },
+            })
             .await;
     }
     for message in declared_navigation(scenario) {

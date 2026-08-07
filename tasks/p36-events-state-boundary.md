@@ -164,6 +164,10 @@ status, and prompt actors. The event is explicitly excluded from the Pi wire
 contract, while `App::refresh_model_caption` no longer mutates projections
 directly.
 
+YAML replay boundary (2026-08-06): declared context-window settings now enter
+the status projection through `ModelChanged`, eliminating the remaining direct
+status mutation in scenario replay.
+
 Provider cancellation consolidation (2026-08-06): cancellation acknowledgement
 now uses `mailbox_ack!`, retaining provider pump ownership and the settled
 abort boundary without duplicating oneshot plumbing.

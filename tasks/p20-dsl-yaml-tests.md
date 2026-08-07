@@ -322,3 +322,7 @@ unit acknowledgement.
 Model configuration remains replayable as an application event: the core
 state reducer test proves `ModelChanged` updates the owned model snapshot, and
 TUI projections consume the same event through their bus subscriptions.
+
+YAML `context_window` declarations now replay as `ModelChanged` events into
+the status actor instead of bypassing the event reducer with `StatusMsg`
+mutation. This keeps scenario setup and live model configuration aligned.
