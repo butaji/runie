@@ -1907,9 +1907,18 @@ fn styled_line_for(kind: LineKind, text: &str, theme: ThemeKind) -> RatLine<'sta
         }
         if let Some(sources) = text.strip_prefix("  Sources: ") {
             let label = "  Sources: ";
+            let primary = appearance::base_style_for(theme);
+            let muted = appearance::muted_style_for(theme);
+            if let Some((domains, suffix)) = sources.rsplit_once(" (+") {
+                return RatLine::from(vec![
+                    Span::styled(label.to_owned(), muted),
+                    Span::styled(domains.to_owned(), primary),
+                    Span::styled(format!(" (+{suffix}"), muted),
+                ]);
+            }
             return RatLine::from(vec![
-                Span::styled(label.to_owned(), appearance::muted_style_for(theme)),
-                Span::styled(sources.to_owned(), appearance::base_style_for(theme)),
+                Span::styled(label.to_owned(), muted),
+                Span::styled(sources.to_owned(), primary),
             ]);
         }
         let diff_style = if text.starts_with('+') && !text.starts_with("+++") {
@@ -2607,6 +2616,10 @@ mod tests {
         assert_eq!(
             rendered.spans[1].style.fg,
             appearance::base_style_for(ThemeKind::GrokDay).fg
+        );
+        assert_eq!(
+            rendered.spans[2].style.fg,
+            appearance::muted_style_for(ThemeKind::GrokDay).fg
         );
     }
 

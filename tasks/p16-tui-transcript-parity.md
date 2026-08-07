@@ -672,3 +672,7 @@ Memory-result typography (2026-08-06): Grok's memory card renders result
 metadata muted and the file/range operand as bold primary text. Runie now
 splits `Result N · score · source · path:range` into equivalent semantic spans,
 with a focused path-style assertion.
+
+Web-source truncation (2026-08-06): source-domain spans remain primary while
+the `(+N more)` overflow suffix resolves to the muted token, matching Grok's
+source summary row instead of treating the suffix as another domain.
