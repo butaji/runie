@@ -329,6 +329,12 @@ List-dir alias closure (2026-08-06): Grok maps the `ls` tool name to the
 semantic card classification, headers, and completion entry cardinality.
 `visual-list-dir-alias.yaml` exercises the full event/replay/screen path.
 
+Execute alias closure (2026-08-06): Grok maps `execute`,
+`run_terminal_command`, and `run_terminal_cmd` to Execute cards. Runie now
+preserves those aliases through default truncated mode, activity accounting,
+semantic headers, and YAML replay; `visual-execute-alias.yaml` explicitly
+drives the expand intent before asserting the settled card.
+
 Status chrome theme propagation (2026-08-06): `TurnStatus` and the status
 footer now resolve spinner, label, shortcut, and loading styles from the
 actor-selected theme. A GrokDay regression renders both the footer and active

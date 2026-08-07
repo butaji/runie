@@ -798,7 +798,16 @@ impl EventRenderer {
             self.activity_dirs += 1;
         } else if matches!(tool_name.as_str(), "read" | "read_file") {
             self.activity_files += 1;
-        } else if matches!(tool_name.as_str(), "bash" | "shell" | "exec" | "run") {
+        } else if matches!(
+            tool_name.as_str(),
+            "bash"
+                | "shell"
+                | "exec"
+                | "run"
+                | "execute"
+                | "run_terminal_command"
+                | "run_terminal_cmd"
+        ) {
             self.activity_commands += 1;
         } else if matches!(tool_name.as_str(), "subagent" | "agent" | "task") {
             self.activity_subagents += 1;
@@ -1386,7 +1395,13 @@ pub(crate) fn tool_header(tool_name: &str, args: &serde_json::Value) -> String {
                 .unwrap_or("");
             format!("Subagent started: {description:?}")
         }
-        "bash" | "shell" | "exec" | "run" => {
+        "bash"
+        | "shell"
+        | "exec"
+        | "run"
+        | "execute"
+        | "run_terminal_command"
+        | "run_terminal_cmd" => {
             let command = args
                 .get("command")
                 .or_else(|| args.get("cmd"))

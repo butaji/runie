@@ -238,7 +238,10 @@ pub enum ToolCardKind {
 /// Grok's source default: command execution starts truncated, while other
 /// tool cards start collapsed until an explicit UI intent expands them.
 pub fn default_tool_display_mode(tool_name: &str) -> ToolDisplayMode {
-    if matches!(tool_name, "bash" | "shell" | "exec" | "run") {
+    if matches!(
+        tool_name,
+        "bash" | "shell" | "exec" | "run" | "execute" | "run_terminal_command" | "run_terminal_cmd"
+    ) {
         ToolDisplayMode::Truncated
     } else {
         ToolDisplayMode::Collapsed
@@ -316,8 +319,16 @@ impl ToolCardKind {
     )]
     pub fn from_header(header: &str) -> Self {
         let lower = header.trim_start().to_ascii_lowercase();
-        if matches!(lower.as_str(), "bash" | "shell" | "exec" | "run")
-            || lower.starts_with("run ")
+        if matches!(
+            lower.as_str(),
+            "bash"
+                | "shell"
+                | "exec"
+                | "run"
+                | "execute"
+                | "run_terminal_command"
+                | "run_terminal_cmd"
+        ) || lower.starts_with("run ")
             || lower.starts_with("execute ")
         {
             Self::Execute
@@ -420,6 +431,17 @@ mod tests {
     fn ls_alias_matches_groks_list_dir_card_family() {
         assert_eq!(ToolCardKind::from_header("ls"), ToolCardKind::ListDir);
         assert_eq!(ToolCardKind::from_header("ls src"), ToolCardKind::ListDir);
+    }
+
+    #[test]
+    fn terminal_command_aliases_match_groks_execute_family() {
+        for header in ["execute", "run_terminal_command", "run_terminal_cmd"] {
+            assert_eq!(ToolCardKind::from_header(header), ToolCardKind::Execute);
+            assert_eq!(
+                default_tool_display_mode(header),
+                ToolDisplayMode::Truncated
+            );
+        }
     }
 
     #[test]

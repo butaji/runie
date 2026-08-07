@@ -1,0 +1,26 @@
+name: visual-execute-alias
+description: Grok maps the Pi terminal execute alias to an Execute card.
+initial_prompt: "Run the checks"
+tools:
+  - name: execute
+    kind: bash
+events:
+  - start
+  - tool_call:
+      name: execute
+      args: { cmd: "cargo test" }
+  - tool_mode:
+      tool_call_id: call-1
+      mode: expanded
+  - done: { stop_reason: tool_use }
+assertions:
+  state:
+    tool_blocks: 1
+    tool_kinds: [execute]
+    tool_modes: [expanded]
+    tool_headers: ["Run cargo test → ✓"]
+  visual:
+    cols: 80
+    rows: 24
+    screen_text:
+      - "Run cargo test"
