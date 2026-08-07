@@ -69,9 +69,8 @@ through a repository call site.
 `EventRenderer::apply_event` compatibility entry point and its legacy
 constructors. Lifecycle handlers that existed only for that synchronous path
 were deleted. Live delivery and replay now require the actor-backed
-`EventRenderer::run`/`apply_actor_event` paths; the remaining legacy projection
-variant is unreachable construction scaffolding and is not an event-transfer
-surface.
+`EventRenderer::run`/`apply_actor_event` paths; the projection type contains
+only an actor-backed marker and no mutex-owned variant.
 
 ## Why this task exists
 

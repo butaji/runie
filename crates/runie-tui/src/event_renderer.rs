@@ -3,12 +3,8 @@
 use std::time::Duration;
 
 #[cfg(test)]
-use parking_lot::Mutex;
-#[cfg(test)]
 use runie_core::types::AssistantContent;
 use runie_core::types::{AgentEvent, AssistantMessageEvent};
-#[cfg(test)]
-use std::sync::Arc;
 use tokio::sync::broadcast;
 
 use crate::widgets::{Line, LineKind, Scrollback, ScrollbackMsg, Status, StatusBar, StatusMsg};
@@ -238,32 +234,18 @@ fn format_error(is_error: bool, error: Option<&str>) -> String {
 
 #[derive(Clone)]
 enum Projection<T> {
-    #[cfg(test)]
-    #[allow(dead_code)]
-    Legacy(Arc<Mutex<T>>),
-    #[cfg(test)]
-    Actor,
-    #[cfg(not(test))]
     Actor(std::marker::PhantomData<T>),
 }
 
 impl<T> Projection<T> {
     fn actor() -> Self {
-        #[cfg(test)]
-        {
-            Self::Actor
-        }
-        #[cfg(not(test))]
-        {
-            Self::Actor(std::marker::PhantomData)
-        }
+        Self::Actor(std::marker::PhantomData)
     }
 
     #[cfg(test)]
     fn lock(&self) -> parking_lot::MutexGuard<'_, T> {
         match self {
-            Self::Legacy(value) => value.lock(),
-            Self::Actor => panic!("legacy projection accessed from actor renderer"),
+            Self::Actor(_) => panic!("legacy projection accessed from actor renderer"),
         }
     }
 
