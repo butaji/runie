@@ -853,3 +853,11 @@ Runie now exposes that distinction as the semantic Opaline token
 adapter. A fresh 62×32 strict comparison reduced the baseline from 138 to 128
 different cells (41 glyph, 87 attributes), removing ten header-meter color
 deltas without introducing a raw widget color.
+
+Clock-aligned recheck (2026-08-08): the previous 62×32 baseline also used an
+unrelated fixed Runie timestamp (`11:20 PM`) against Grok's captured `8:38
+AM`. Replaying Runie with the same local timestamp and measured `0.3s`
+thinking/`1.5s` worked durations reduced the strict result to 122 differing
+cells (29 glyph, 93 attributes). The visible timestamp and duration glyphs
+now match; remaining row deltas are primarily terminal-style encoding,
+user-panel blank-cell foreground, and Grok's `/doctor` diagnostic row.
