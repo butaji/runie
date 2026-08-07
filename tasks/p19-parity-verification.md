@@ -1478,8 +1478,9 @@ reactive TUI projections to consume model updates.
 **Current completion boundary (2026-08-06):** The event/state and symbol
 oracles are green, including the four-geometry replay matrix, but overall
 100% parity is not claimed. The remaining authoritative gaps are (1) retiring
-the compatibility renderer state mirror in favor of the already actor-owned
-snapshots, and (2) obtaining a clean Grok full-color capture for strict
+the synchronous compatibility renderer state mirror after all replay callers
+are actor-backed (the live app's tool and assistant projections are now
+actor-owned), and (2) obtaining a clean Grok full-color capture for strict
 foreground/background/modifier comparison. The existing `grok-rich.cast`
 cannot prove colors because its terminal stream contains default SGR; enabling
 `exact_attributes` against it correctly fails. Any future parity completion
