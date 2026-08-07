@@ -2358,6 +2358,7 @@ mod tests {
         let mut renderer = EventRenderer::with_actors(scrollback.clone(), status, false);
         renderer.apply_actor_event(AgentEvent::AgentStart).await;
         renderer.apply_actor_event(AgentEvent::TurnStart).await;
+        assert!(scrollback.model_snapshot().turn_started);
         renderer
             .apply_actor_event(AgentEvent::AgentEnd { messages: vec![] })
             .await;
