@@ -1462,12 +1462,7 @@ async fn replay_scenario_events(
             ))
             .await;
     }
-    for tool_call_id in declared_tool_folds(scenario) {
-        scrollback_actor
-            .apply(ScrollbackMsg::ToggleToolMode(tool_call_id))
-            .await;
-    }
-    for message in declared_tool_selections(scenario) {
+    for message in declared_navigation(scenario) {
         scrollback_actor.apply(message).await;
     }
     for message in declared_scrolls(scenario) {
@@ -1487,12 +1482,26 @@ fn declared_context_windows(scenario: &Scenario) -> Vec<u64> {
         .collect()
 }
 
-fn declared_tool_folds(scenario: &Scenario) -> Vec<String> {
+fn declared_navigation(scenario: &Scenario) -> Vec<ScrollbackMsg> {
     scenario
         .events
         .iter()
         .filter_map(|event| match event {
-            EventSpec::ToolFold { tool_fold } => Some(tool_fold.clone()),
+            EventSpec::ToolFold { tool_fold } => {
+                Some(ScrollbackMsg::ToggleToolMode(tool_fold.clone()))
+            }
+            EventSpec::ToolSelect { tool_select } if tool_select == "next" => {
+                Some(ScrollbackMsg::SelectNextTool)
+            }
+            EventSpec::ToolSelect { tool_select } if tool_select == "previous" => {
+                Some(ScrollbackMsg::SelectPreviousTool)
+            }
+            EventSpec::ToolSelect { tool_select } if tool_select == "entry_next" => {
+                Some(ScrollbackMsg::SelectNextEntry)
+            }
+            EventSpec::ToolSelect { tool_select } if tool_select == "entry_previous" => {
+                Some(ScrollbackMsg::SelectPreviousEntry)
+            }
             _ => None,
         })
         .collect()
@@ -1514,28 +1523,6 @@ fn declared_tool_seeds(scenario: &Scenario) -> Vec<ScrollbackMsg> {
                 )
                 .for_tool(tool_seed.tool_call_id.clone()),
             )),
-            _ => None,
-        })
-        .collect()
-}
-
-fn declared_tool_selections(scenario: &Scenario) -> Vec<ScrollbackMsg> {
-    scenario
-        .events
-        .iter()
-        .filter_map(|event| match event {
-            EventSpec::ToolSelect { tool_select } if tool_select == "next" => {
-                Some(ScrollbackMsg::SelectNextTool)
-            }
-            EventSpec::ToolSelect { tool_select } if tool_select == "previous" => {
-                Some(ScrollbackMsg::SelectPreviousTool)
-            }
-            EventSpec::ToolSelect { tool_select } if tool_select == "entry_next" => {
-                Some(ScrollbackMsg::SelectNextEntry)
-            }
-            EventSpec::ToolSelect { tool_select } if tool_select == "entry_previous" => {
-                Some(ScrollbackMsg::SelectPreviousEntry)
-            }
             _ => None,
         })
         .collect()

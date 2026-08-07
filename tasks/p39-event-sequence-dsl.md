@@ -18,3 +18,9 @@ The YAML runner now also exposes the effective steering and follow-up queue
 policies in `assertions.state`; `follow-up.yaml` verifies the `all` policy
 after actor construction. This makes queue configuration a state assertion,
 not merely a deserialization check.
+
+Navigation ordering (2026-08-06): fold and tool-selection declarations now
+reduce in their original YAML order through the scrollback actor. Previously
+the runner grouped folds before selections, which could hide ordering bugs in
+selection → fold sequences. This keeps YAML as the executable event sequence
+oracle while preserving the actor/reducer boundary.
