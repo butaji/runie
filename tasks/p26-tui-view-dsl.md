@@ -54,6 +54,10 @@ boundary rather than through renderer-only state or direct actor reads.
   function of view props rather than a fixed terminal layout list.
 - Added the thin `view!` macro for vertical/horizontal composition and slots;
   it expands directly to `Element` constructors and has expansion-level tests.
+- Added `layout_entries!` for mixed fixed/grow declarative stack entries; it
+  expands directly to `LayoutEntry` constructors and is used by the canonical
+  chat layout without hiding allocation behavior. A pure expansion test pins
+  the macro contract.
 - Connected the live `App` path through `view_tree()`: actor snapshots now
   produce one immutable `ChatViewProps` projection, and the terminal binary
   uses its overlay slots for doctor, shortcuts, and command-palette decisions.

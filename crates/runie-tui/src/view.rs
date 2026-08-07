@@ -223,6 +223,22 @@ macro_rules! view {
     };
 }
 
+/// Declarative layout-entry DSL. It expands directly to immutable
+/// `LayoutEntry` constructors; allocation and terminal rendering remain
+/// outside the macro.
+#[macro_export]
+macro_rules! layout_entries {
+    (@entry fixed($slot:expr, $size:expr)) => {
+        $crate::view::LayoutEntry::fixed($slot, $size)
+    };
+    (@entry grow($slot:expr, $min_size:expr)) => {
+        $crate::view::LayoutEntry::grow($slot, $min_size)
+    };
+    ( $( $kind:ident($slot:expr, $size:expr) ),+ $(,)? ) => {
+        [$( $crate::layout_entries!(@entry $kind($slot, $size)) ),+]
+    };
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Slot {
     Header,
@@ -640,5 +656,18 @@ mod tests {
         assert_eq!(stack.allocate(&[8, 8, 8], Some(20)), vec![1, 13, 4]);
         assert_eq!(stack.allocate(&[8, 8, 8], Some(8)), vec![1, 3, 2]);
         assert_eq!(stack.allocate(&[8, 8, 8], None), vec![1, 8, 4]);
+    }
+
+    #[test]
+    fn layout_entries_macro_expands_mixed_declarative_entries() {
+        let entries = crate::layout_entries! {
+            fixed(Slot::Header, 1),
+            grow(Slot::Scrollback, 2),
+            fixed(Slot::Status, 1),
+        };
+        assert_eq!(entries.len(), 3);
+        assert_eq!(entries[0].basis, LayoutSize::Fixed(1));
+        assert_eq!(entries[1].grow, 1);
+        assert_eq!(entries[1].min_size, 2);
     }
 }

@@ -1,6 +1,6 @@
 //! 3-region chat layout: scrollback (top, grows) + prompt (middle, fixed) + status (bottom, 1 row).
 
-use crate::view::{chat_view, LayoutDirection, LayoutEntry, LayoutSize, Slot, StackLayout};
+use crate::view::{chat_view, LayoutDirection, LayoutSize, Slot, StackLayout};
 use ratatui::layout::Rect;
 
 pub const STATUS_HEIGHT: u16 = 1;
@@ -123,26 +123,16 @@ pub fn chat_layout_with_prompt_height(area: Rect, prompt_height: u16) -> ChatLay
 }
 
 fn chat_region_heights(inner_height: u16, prompt_height: u16) -> [u16; 3] {
-    const ENTRIES: [LayoutEntry; 3] = [
-        LayoutEntry {
-            slot: Slot::Header,
-            basis: LayoutSize::Fixed(HEADER_HEIGHT),
-            grow: 0,
-            shrink: 0,
-            min_size: HEADER_HEIGHT,
-            max_size: Some(HEADER_HEIGHT),
-        },
-        LayoutEntry::grow(Slot::Scrollback, 0),
-        LayoutEntry {
-            slot: Slot::Prompt,
-            basis: LayoutSize::Fixed(PROMPT_HEIGHT),
-            grow: 0,
-            shrink: 0,
-            min_size: PROMPT_HEIGHT,
-            max_size: None,
-        },
-    ];
-    let mut entries = ENTRIES;
+    let mut entries = crate::layout_entries! {
+        fixed(Slot::Header, HEADER_HEIGHT),
+        grow(Slot::Scrollback, 0),
+        fixed(Slot::Prompt, PROMPT_HEIGHT),
+    };
+    entries[0].shrink = 0;
+    entries[0].min_size = HEADER_HEIGHT;
+    entries[0].max_size = Some(HEADER_HEIGHT);
+    entries[2].shrink = 0;
+    entries[2].min_size = PROMPT_HEIGHT;
     entries[2].basis = LayoutSize::Fixed(prompt_height.max(PROMPT_HEIGHT));
     let layout = StackLayout {
         direction: LayoutDirection::Vertical,
