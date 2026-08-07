@@ -43,3 +43,5 @@ The branch projection increment now exposes `branch_entry_ids_for_lane` and
 forks preserve `entry_lanes` for copied entries. Focused regressions verify a
 feature-lane branch path and the existing main-lane fork contract. YAML state
 assertions now cover lane-specific branch IDs for both main and feature lanes.
+`fork_at_lane_message` now reuses the validated branch reducer for Pi’s
+selected-lane fork scope and preserves copied entry-lane identity.

@@ -1614,10 +1614,19 @@ impl SessionSnapshot {
         reason = "fork validation and projection stay one pure operation"
     )]
     pub fn fork_at_message(&self, target_id: &str) -> Result<Self, String> {
+        self.fork_from_branch(target_id, self.branch_entry_ids())
+    }
+
+    /// Fork a validated message target from a named Pi session lane.
+    pub fn fork_at_lane_message(&self, lane: &str, target_id: &str) -> Result<Self, String> {
+        self.fork_from_branch(target_id, self.branch_entry_ids_for_lane(lane))
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn fork_from_branch(&self, target_id: &str, branch: Vec<String>) -> Result<Self, String> {
         if !self.entries.iter().any(|entry| entry.id == target_id) {
             return Err(format!("invalid fork target {target_id:?}"));
         }
-        let branch = self.branch_entry_ids();
         if !branch.iter().any(|id| id == target_id) {
             return Err(format!(
                 "fork target {target_id:?} is not on the selected branch"
@@ -3209,6 +3218,11 @@ mod tests {
             snapshot.lanes().get("feature"),
             Some(&Some("entry-2".into()))
         );
+        let lane_fork = snapshot
+            .fork_at_lane_message("feature", "entry-2")
+            .expect("feature lane fork");
+        assert_eq!(lane_fork.entries.len(), 2);
+        assert_eq!(lane_fork.entry_lane("entry-2"), Some("feature"));
         let (_, _, imported) = SessionSnapshot::from_jsonl(&snapshot.to_jsonl("s", 1, "/tmp"))
             .expect("lane append JSONL");
         assert_eq!(imported.entry_lane("entry-2"), Some("feature"));
