@@ -833,11 +833,12 @@ response-provider wording, and other dynamic values, so they are retained as
 separate evidence dimensions rather than conflated with this stable styling
 bug.
 
-Prompt injection reliability increment (2026-08-07): the capture driver now
-sends ordinary named tmux key events with a bounded per-key interval rather
-than literal-string injection. This follows the same input path as a user and
-prevents the PTY from accepting only the first character of `Hey`; the exact
-prompt visibility check remains the acceptance gate.
+Prompt injection reliability increment (superseded 2026-08-08): the earlier
+named-key, paced injection followed the intended user path but still exposed
+an input-loss race. After Runie changed its main-loop key slot to a FIFO, the
+capture driver moved to one literal prompt send followed by an exact visible
+prompt gate. The current helper is authoritative; this historical note is
+retained only to explain the rejected intermediate approach.
 
 YAML promotion increment (2026-08-07): the stable assistant-body foreground
 contract is now asserted by `visual-hey.yaml` at a concrete rendered cell
