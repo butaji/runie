@@ -146,6 +146,14 @@ round trips while Rust code cannot silently branch on an unknown family. The
 reducer uses this typed value for lifecycle matching, and unit coverage checks
 both family identity and payload preservation.
 
+## Completed slice (2026-08-07, YAML all-family replay)
+
+`visual-operation-lane-families.yaml` now drives all nine Pi lane families
+through the runtime event DSL. The YAML oracle verifies ordered retention and
+the terminal operation projection, so changing this scenario does not require
+recompiling Rust tests. The fixture is included in automatic discovery and
+passes the complete YAML replay suite.
+
 ## Current Runie mapping
 
 `runie-core/src/session.rs` owns parent-linked message/config entries and

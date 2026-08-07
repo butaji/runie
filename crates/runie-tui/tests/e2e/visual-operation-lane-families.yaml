@@ -1,0 +1,86 @@
+name: visual-operation-lane-families
+description: >-
+  Every Pi operation-lane family is delivered as an event, admitted by the
+  SessionActor, and retained in deterministic order for replay.
+events:
+  - operation_record:
+      record_type: operation_started
+      data:
+        runId: op-families
+        lane: main
+        seq: 1
+        timestamp: 1
+        intent:
+          kind: run
+  - operation_record:
+      record_type: step_attempt
+      data:
+        runId: op-families
+        lane: main
+        seq: 2
+        timestamp: 2
+  - operation_record:
+      record_type: tool_started
+      data:
+        runId: op-families
+        lane: main
+        seq: 3
+        timestamp: 3
+  - operation_record:
+      record_type: queue_enqueued
+      data:
+        runId: op-families
+        lane: main
+        seq: 4
+        timestamp: 4
+  - operation_record:
+      record_type: queue_cancelled
+      data:
+        id: op-families
+        lane: main
+        seq: 5
+        timestamp: 5
+  - operation_record:
+      record_type: write_deferred
+      data:
+        runId: op-families
+        lane: main
+        seq: 6
+        timestamp: 6
+  - operation_record:
+      record_type: usage
+      data:
+        entryId: op-families
+        lane: main
+        seq: 7
+        timestamp: 7
+  - operation_record:
+      record_type: abort_requested
+      data:
+        runId: op-families
+        lane: main
+        seq: 8
+        timestamp: 8
+  - operation_record:
+      record_type: operation_finished
+      data:
+        runId: op-families
+        lane: main
+        seq: 9
+        timestamp: 9
+        outcome: aborted
+assertions:
+  state:
+    session_lane_records:
+      - operation_started
+      - step_attempt
+      - tool_started
+      - queue_enqueued
+      - queue_cancelled
+      - write_deferred
+      - usage
+      - abort_requested
+      - operation_finished
+    active_operations: {}
+    operation_outcomes:
+      op-families: aborted
