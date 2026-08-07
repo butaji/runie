@@ -12,6 +12,8 @@ events:
 assertions:
   state:
     follow_up_mode: all
+    loop_running: false
+    abort_requested: false
   transcript_contains:
     - "first"
     - "first-reply"

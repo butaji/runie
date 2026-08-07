@@ -34,6 +34,10 @@ than by unrelated state projections. `control_snapshot()` is read-only and
 does not alter Pi's closed `AgentEvent` wire contract. The reducer has an
 event-sequence unit test covering all transitions.
 
+The runtime YAML state oracle now exposes `loop_running` and
+`abort_requested`; `follow-up.yaml` asserts the settled control snapshot,
+keeping the new projection in the no-recompile event-sequence test path.
+
 ## Remaining design
 
 Add a private `LoopCommand` mailbox and a loop-control reducer owned by

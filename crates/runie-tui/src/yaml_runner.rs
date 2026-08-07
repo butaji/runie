@@ -767,6 +767,8 @@ pub struct StateAssertions {
     /// Effective queue policies projected by the loop actor.
     pub steering_mode: Option<runie_core::types::QueueMode>,
     pub follow_up_mode: Option<runie_core::types::QueueMode>,
+    pub loop_running: Option<bool>,
+    pub abort_requested: Option<bool>,
     pub tool_execution: Option<ToolExecutionMode>,
     /// Exact actor-owned workflow projections keyed by their stable run id.
     /// YAML owns the expected state; the runner only performs generic field
@@ -1281,6 +1283,8 @@ pub struct ScenarioOutcome {
     pub provider_options: Vec<SimpleStreamOptions>,
     pub steering_mode: runie_core::types::QueueMode,
     pub follow_up_mode: runie_core::types::QueueMode,
+    pub loop_running: bool,
+    pub abort_requested: bool,
     pub tool_execution: ToolExecutionMode,
     pub listener_events: Vec<String>,
 }
@@ -1334,6 +1338,7 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
     let feed = scrollback.model_snapshot();
     let provider_options = options_seen.lock().clone();
     let listener_events = listener_events.lock().clone();
+    let control = actor_snapshot.control_snapshot();
     Ok(ScenarioOutcome {
         events: events_from_task,
         scrollback: feed.lines.clone(),
@@ -1347,6 +1352,8 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
         provider_options,
         steering_mode: actor_snapshot.steering_mode().await,
         follow_up_mode: actor_snapshot.follow_up_mode().await,
+        loop_running: control.running,
+        abort_requested: control.abort_requested,
         tool_execution: scenario.tool_execution.unwrap_or_default(),
         listener_events,
     })
@@ -1831,6 +1838,12 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         expected.follow_up_mode,
         outcome.follow_up_mode,
         "follow_up_mode"
+    );
+    assert_yaml_eq!(expected.loop_running, outcome.loop_running, "loop_running");
+    assert_yaml_eq!(
+        expected.abort_requested,
+        outcome.abort_requested,
+        "abort_requested"
     );
     assert_yaml_eq!(
         expected.tool_execution,
