@@ -34,7 +34,9 @@ events:
 assertions:
   state:
     session_lane_records:
+      - operation_started
       - usage
+      - operation_finished
       - queue_enqueued
       - queue_enqueued
       - queue_cancelled

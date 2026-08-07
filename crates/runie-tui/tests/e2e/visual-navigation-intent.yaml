@@ -15,8 +15,7 @@ events:
           summaryEntryId: summary-target
 assertions:
   state:
-    session_config_records:
-      - operation_started
+    session_config_records: []
     active_operations:
       navigation-1: started
     navigation:

@@ -1,6 +1,9 @@
 //! Public `LoopActor` API.
 
-use std::sync::Arc;
+use std::sync::{
+    atomic::{AtomicU64, Ordering},
+    Arc,
+};
 
 use tokio::sync::{mpsc, oneshot, watch, Mutex, OwnedSemaphorePermit, Semaphore};
 use tokio::task::JoinHandle;
@@ -106,8 +109,9 @@ pub struct LoopDeps {
 }
 
 impl LoopDeps {
-    pub fn as_run_loop_deps(&self) -> RunLoopDeps {
+    pub fn as_run_loop_deps(&self, run_id: String) -> RunLoopDeps {
         RunLoopDeps {
+            run_id,
             state: self.state.clone(),
             steering: self.steering.clone(),
             follow_up: self.follow_up.clone(),
@@ -137,6 +141,7 @@ pub struct LoopActor {
 struct Inner {
     deps: LoopDeps,
     current: Mutex<Option<JoinHandle<RunLoopOutcome>>>,
+    next_run_id: AtomicU64,
     /// True while a run is in flight; guards concurrent `prompt()` (pi's
     /// "Agent is already processing a prompt" rejection).
     running: Arc<Semaphore>,
@@ -190,6 +195,7 @@ impl LoopActor {
             inner: Arc::new(Inner {
                 deps,
                 current: Mutex::new(None),
+                next_run_id: AtomicU64::new(1),
                 running: Arc::new(Semaphore::new(1)),
                 control_commands,
                 control_rx,
@@ -219,7 +225,11 @@ impl LoopActor {
         skip_initial_steering_poll: bool,
     ) -> Result<Vec<AgentMessage>, LoopError> {
         self.sync_context_to_state(&context).await;
-        let mut deps = self.inner.deps.as_run_loop_deps();
+        let run_id = format!(
+            "run-{}",
+            self.inner.next_run_id.fetch_add(1, Ordering::Relaxed)
+        );
+        let mut deps = self.inner.deps.as_run_loop_deps(run_id);
         let control = self.inner.control_rx.borrow().clone();
         deps.steering_mode = control.steering_mode;
         deps.follow_up_mode = control.follow_up_mode;

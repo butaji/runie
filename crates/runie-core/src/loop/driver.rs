@@ -42,6 +42,8 @@ pub type ApiKeyResolver =
 /// Bag of dependencies the driver needs.
 #[derive(Clone)]
 pub struct RunLoopDeps {
+    /// Actor-issued identity for the current Pi operation.
+    pub run_id: String,
     pub state: AgentStateActor,
     pub steering: SteeringQueueActor,
     pub follow_up: FollowUpQueueActor,
@@ -87,6 +89,10 @@ pub async fn run_loop(
     skip_initial_steering_poll: bool,
 ) -> RunLoopOutcome {
     publish_pi_and_apply(&deps, PiAgentEvent::AgentStart).await;
+    deps.bus.publish(AgentEvent::OperationRecordCreated {
+        record_type: "operation_started".into(),
+        data: serde_json::json!({"id": deps.run_id, "intent": {"kind": "run"}}),
+    });
     publish_pi_and_apply(&deps, PiAgentEvent::TurnStart).await;
     let mut override_ctx = initial_context_override(context, &prompts);
     let mut all_new = initialize_run(prompts, &deps, skip_initial_steering_poll).await;
@@ -167,6 +173,10 @@ async fn continue_after_turn(
 }
 
 async fn end_run(all_new: Vec<AgentMessage>, deps: &RunLoopDeps) -> RunLoopOutcome {
+    deps.bus.publish(AgentEvent::OperationRecordCreated {
+        record_type: "operation_finished".into(),
+        data: serde_json::json!({"runId": deps.run_id, "outcome": "completed"}),
+    });
     publish_pi_and_apply(
         deps,
         PiAgentEvent::AgentEnd {

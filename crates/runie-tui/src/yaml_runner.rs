@@ -3402,7 +3402,11 @@ fn message_text(message: &runie_core::types::AgentMessage) -> String {
     reason = "event assertions remain one declarative YAML oracle"
 )]
 fn assert_event_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> Result<(), String> {
-    let kinds = outcome.events.iter().map(event_kind).collect::<Vec<_>>();
+    let lifecycle_events = outcome
+        .events
+        .iter()
+        .filter(|event| !matches!(event, AgentEvent::OperationRecordCreated { .. }));
+    let kinds = lifecycle_events.clone().map(event_kind).collect::<Vec<_>>();
     for expected in &scenario.assertions.events {
         if !kinds.contains(&expected.as_str()) {
             return Err(format!("expected event kind {expected:?} not in {kinds:?}"));
@@ -3417,9 +3421,7 @@ fn assert_event_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         }
     }
     if let Some(expected) = &scenario.assertions.pi_events {
-        let actual = outcome
-            .events
-            .iter()
+        let actual = lifecycle_events
             .map(|event| {
                 runie_core::PiAgentEvent::try_from(event.clone())
                     .map_err(|event| format!("non-Pi event: {}", event_kind(&event)))

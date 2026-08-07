@@ -35,15 +35,14 @@ events:
         outcome: completed
 assertions:
   state:
-    session_config_records:
-      - operation_started
-      - operation_started
-      - operation_finished
-      - operation_finished
+    session_config_records: []
     session_lane_records:
+      - operation_started
       - usage
+      - operation_finished
       - operation_started
       - operation_finished
     active_operations: {}
     operation_outcomes:
+      run-1: completed
       op-admission: completed

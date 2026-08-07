@@ -38,17 +38,14 @@ events:
           message: upstream unavailable
 assertions:
   state:
-    session_config_records:
-      - operation_started
-      - abort_requested
-      - operation_finished
-      - operation_started
-      - operation_finished
+    session_config_records: []
     active_operations: {}
     operation_outcomes:
+      run-1: completed
       op-yaml: aborted
       op-failed: failed
     operation_kinds:
+      run-1: run
       op-yaml: run
       op-failed: compaction
     operation_errors:

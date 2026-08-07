@@ -241,6 +241,23 @@ commands and handles, but no session mutation event at the persistence point.
 The provider/loop boundary must publish that typed fact before this family can
 be projected without inventing state.
 
+## Completed slice (2026-08-07, separated operation journal lane)
+
+`SessionActor` no longer inserts `OperationRecordCreated` facts into the
+parent-linked configuration entry lane. The mailbox reduces those facts
+directly into the actor-owned ordered `lane_records` projection, preserving
+message/config entry IDs and branch topology. This matches Pi's separate
+message and operation lanes and makes live lifecycle publication safe for
+existing message replay oracles.
+
+## Completed slice (2026-08-07, actor-owned run lifecycle identity)
+
+`LoopActor` now allocates monotonic run IDs inside its owning actor and passes
+the identity into the async loop. The loop publishes `operation_started` after
+the Pi agent-start event and `operation_finished` before agent-end, while YAML
+exact Pi/UI traces intentionally exclude application-owned lane facts and
+lane-specific assertions verify them separately.
+
 ## Implementation order
 
 1. Replace the generic Rust operation-record payload with a typed internal

@@ -14,8 +14,9 @@ use runie_core::{
     provider::stream_fn::StreamError,
     provider::{HttpActor, ReplayHttpActor, ReplayProvider, StreamFn},
     types::{
-        AgentContext, AgentMessage, AssistantContent, AssistantMessage, AssistantMessageEvent,
-        Model, SimpleStreamOptions, StopReason, Usage, UserContent, UserMessage,
+        AgentContext, AgentEvent, AgentMessage, AssistantContent, AssistantMessage,
+        AssistantMessageEvent, Model, SimpleStreamOptions, StopReason, Usage, UserContent,
+        UserMessage,
     },
 };
 
@@ -384,6 +385,7 @@ async fn every_trace_uses_its_yaml_expectations_and_runs_through_core() {
             let core_events = test.events.lock();
             let core_names: Vec<_> = core_events
                 .iter()
+                .filter(|event| !matches!(event, AgentEvent::OperationRecordCreated { .. }))
                 .map(|event| runie_core::agent_event_kind!(event))
                 .collect();
             let exact_events = expand_exact_events(&expectation.core.exact_events, &trace_path);
@@ -438,6 +440,7 @@ async fn every_trace_uses_its_yaml_expectations_and_runs_through_core() {
             let core_events = test.events.lock();
             let core_names: Vec<_> = core_events
                 .iter()
+                .filter(|event| !matches!(event, AgentEvent::OperationRecordCreated { .. }))
                 .map(|event| runie_core::agent_event_kind!(event))
                 .collect();
             let exact_events = expand_exact_events(&expectation.core.exact_events, &trace_path);
@@ -610,6 +613,7 @@ async fn every_trace_uses_its_yaml_expectations_and_runs_through_core() {
         let core_events = test.events.lock();
         let core_names: Vec<_> = core_events
             .iter()
+            .filter(|event| !matches!(event, AgentEvent::OperationRecordCreated { .. }))
             .map(|event| runie_core::agent_event_kind!(event))
             .collect();
         for expected in &expectation.core.required_events {

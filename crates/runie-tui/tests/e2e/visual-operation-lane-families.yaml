@@ -72,7 +72,9 @@ events:
 assertions:
   state:
     session_lane_records:
+      - operation_started
       - usage
+      - operation_finished
       - operation_started
       - step_attempt
       - tool_started
@@ -84,4 +86,5 @@ assertions:
       - operation_finished
     active_operations: {}
     operation_outcomes:
+      run-1: completed
       op-families: aborted

@@ -977,7 +977,12 @@ impl SessionSnapshot {
                 entry.to_string()
             })
             .collect::<Vec<_>>();
-        entry_lines.extend(self.config_records.iter().map(|session_entry| {
+        entry_lines.extend(self.config_records.iter().filter(|session_entry| {
+            !matches!(
+                session_entry.record,
+                SessionConfigRecord::OperationRecordCreated { .. }
+            )
+        }).map(|session_entry| {
             let (entry_type, mut entry) = match &session_entry.record {
                 SessionConfigRecord::ModelChanged { provider, model_id } => (
                     "model_change",
@@ -1055,6 +1060,36 @@ impl SessionSnapshot {
                 .map_or(serde_json::Value::Null, serde_json::Value::String);
             entry["seq"] = serde_json::Value::Number(session_entry.seq.into());
             entry["timestamp"] = serde_json::Value::Number(session_entry.timestamp.into());
+            entry.to_string()
+        }));
+        entry_lines.extend(self.lane_records.iter().enumerate().map(|(index, record)| {
+            let mut entry = record.data.clone();
+            let object = entry
+                .as_object_mut()
+                .expect("session lane record payload must be an object");
+            object.insert("kind".into(), serde_json::json!("entry"));
+            object.insert(
+                "lane".into(),
+                serde_json::json!(record.lane.as_deref().unwrap_or("main")),
+            );
+            object.insert("type".into(), serde_json::json!(record.record_type));
+            object.insert("id".into(), serde_json::json!(record.id));
+            object.insert(
+                "parentId".into(),
+                index
+                    .checked_sub(1)
+                    .and_then(|previous| self.lane_records.get(previous))
+                    .map(|previous| serde_json::json!(previous.id))
+                    .unwrap_or(serde_json::Value::Null),
+            );
+            object.insert(
+                "seq".into(),
+                serde_json::json!(record.seq.unwrap_or(index as u64 + 1)),
+            );
+            object.insert(
+                "timestamp".into(),
+                serde_json::json!(record.timestamp.unwrap_or(0)),
+            );
             entry.to_string()
         }));
         entry_lines.sort_by_key(|line| {
@@ -1307,6 +1342,14 @@ impl SessionActor {
                         let _ = reply.send(());
                     }
                     Command::Config(record, reply) => {
+                        if let SessionConfigRecord::OperationRecordCreated { record_type, data } =
+                            &record
+                        {
+                            reduce_operation_record(&mut state, record_type, data);
+                            let _ = snapshot_tx.send(state.clone());
+                            let _ = reply.send(());
+                            continue;
+                        }
                         state.sequence += 1;
                         let id = format!("entry-{}", next_id);
                         next_id += 1;
@@ -1322,16 +1365,6 @@ impl SessionActor {
                         };
                         state.leaf_id = Some(id);
                         state.config_records.push(entry);
-                        if let SessionConfigRecord::OperationRecordCreated { record_type, data } =
-                            state
-                                .config_records
-                                .last()
-                                .expect("record was just inserted")
-                                .record
-                                .clone()
-                        {
-                            reduce_operation_record(&mut state, &record_type, &data);
-                        }
                         let _ = snapshot_tx.send(state.clone());
                         let _ = reply.send(());
                     }
