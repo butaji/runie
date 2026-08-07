@@ -83,6 +83,10 @@ already reduced by `ScrollbackActor`; the renderer retains those buffers only
 for synchronous compatibility/replay adapters. A regression asserts that live
 assistant events leave the compatibility buffers empty.
 
+Reset invariant (2026-08-07): `FeedState::clear` now resets its actor-owned
+`turn_started` fact. This prevents a reset event from leaking a stale
+completion-summary eligibility bit into a subsequent replay or live session.
+
 ## Tool lifecycle increment (2026-08-06)
 
 The live `App` now constructs `ScrollbackActor::new_with_bus`. Its owned bus

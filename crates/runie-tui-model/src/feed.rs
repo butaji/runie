@@ -515,6 +515,15 @@ mod tests {
     use std::collections::HashMap;
 
     #[test]
+    fn clear_event_resets_turn_lifecycle_state() {
+        let mut state = FeedState::default();
+        state.reduce(super::ScrollbackMsg::TurnStart);
+        assert!(state.snapshot().turn_started);
+        state.reduce(super::ScrollbackMsg::Clear);
+        assert!(!state.snapshot().turn_started);
+    }
+
+    #[test]
     fn default_tool_modes_match_grok_families() {
         assert_eq!(
             default_tool_display_mode("bash"),
@@ -1383,6 +1392,7 @@ impl FeedState {
         self.navigation.selected_entry = None;
         self.navigation.scroll_offset = 0;
         self.navigation.follow_latest_user = false;
+        self.navigation.turn_started = false;
     }
 
     fn replace_tool(&mut self, id: &str, text: String) {
