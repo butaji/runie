@@ -135,6 +135,16 @@ request as SSE. A provider adapter can therefore be added behind the existing
 `StreamFn` boundary without changing the Pi event contract or creating a
 second state owner.
 
+Transport audit continuation (2026-08-07): the source-to-boundary comparison
+was rechecked against Pi's `processWebSocketStream`, continuation cache, and
+session cleanup helpers. The remaining implementation data is concrete and
+not present in Runie's generic model: a provider-scoped WebSocket constructor,
+Codex Responses envelope/decoder, session/account cache key, fallback decision
+events, and owned close/cleanup events. Until those facts are introduced as a
+provider adapter contract, the correct event behavior is the existing explicit
+`Invalid` result for WebSocket selection; routing it through HTTP would create
+false parity and violate the actor-owned transport boundary.
+
 Wire metadata preservation (2026-08-07): the generic `WireMessage::ToolResult`
 projection now carries Pi `details`, `usage`, and `added_tool_names` instead
 of dropping them during `default_convert_to_llm`. The reverse loop projection
