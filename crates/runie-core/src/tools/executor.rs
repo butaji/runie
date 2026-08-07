@@ -61,7 +61,10 @@ pub struct ToolExecContext {
     pub registry: Arc<ToolRegistry>,
     pub hooks: ToolExecHooks,
     pub bus: Option<crate::events::EventBus>,
-    pub updates: Arc<std::sync::Mutex<Vec<crate::types::AgentEvent>>>,
+    /// Compatibility-only collection used when no event bus is supplied.
+    /// Live execution publishes updates through `bus` and carries no mutable
+    /// side buffer.
+    pub updates: Option<Arc<std::sync::Mutex<Vec<crate::types::AgentEvent>>>>,
     /// Deterministic tool-result timestamp supplied by the owning actor.
     pub tool_result_timestamp: i64,
 }
@@ -566,7 +569,7 @@ async fn execute_tool(
         };
         if let Some(bus) = &bus {
             bus.publish(event);
-        } else {
+        } else if let Some(updates) = &updates {
             updates.lock().expect("tool update event lock").push(event);
         }
     });
@@ -606,7 +609,10 @@ async fn wait_for_tool_abort(mut abort: Option<tokio::sync::watch::Receiver<bool
 }
 
 fn take_updates(ctx: &ToolExecContext) -> Vec<crate::types::AgentEvent> {
-    std::mem::take(&mut *ctx.updates.lock().expect("tool update event lock"))
+    ctx.updates
+        .as_ref()
+        .map(|updates| std::mem::take(&mut *updates.lock().expect("tool update event lock")))
+        .unwrap_or_default()
 }
 
 async fn apply_after_tool_hook(
@@ -744,7 +750,7 @@ mod tests {
                 registry,
                 hooks: ToolExecHooks::default(),
                 bus: None,
-                updates: Arc::new(std::sync::Mutex::new(Vec::new())),
+                updates: Some(Arc::new(std::sync::Mutex::new(Vec::new()))),
                 tool_result_timestamp: 0,
             };
             let outcome = execute_sequential(vec![], ctx).await;
@@ -785,7 +791,7 @@ mod tests {
             },
             bus: None,
             tool_result_timestamp: 0,
-            updates: Arc::new(std::sync::Mutex::new(Vec::new())),
+            updates: Some(Arc::new(std::sync::Mutex::new(Vec::new()))),
         };
         let call = ToolCall {
             id: "abort-1".into(),
@@ -830,7 +836,7 @@ mod tests {
             },
             bus: None,
             tool_result_timestamp: 0,
-            updates: Arc::new(std::sync::Mutex::new(Vec::new())),
+            updates: Some(Arc::new(std::sync::Mutex::new(Vec::new()))),
         };
         let call = ToolCall {
             id: "abort-hook-1".into(),
@@ -880,7 +886,7 @@ mod tests {
                 })),
                 ..ToolExecHooks::default()
             },
-            updates: Arc::new(std::sync::Mutex::new(Vec::new())),
+            updates: Some(Arc::new(std::sync::Mutex::new(Vec::new()))),
         };
         let call = ToolCall {
             id: "cancel-1".into(),

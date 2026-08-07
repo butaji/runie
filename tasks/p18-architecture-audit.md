@@ -43,6 +43,13 @@ cannot create a second production source of truth.
 
 ## Progress
 
+- **Tool update side-buffer boundary (2026-08-08):** `ToolExecContext` now
+  carries the mutex-backed update collector only when no event bus is
+  supplied. Live actor execution sets it to `None` and publishes every update
+  through `EventBus`; direct deterministic executor tests retain the optional
+  compatibility collector. This removes production mutable shadow state
+  without changing the event sequence or replay behavior.
+
 - **Subscriber registry ownership (2026-08-08):** Replaced the registry's
   `Arc<Mutex<RegistryInner>>` with an owned mailbox worker. Registration,
   unregistration, ordered application/Pi dispatch, and size queries now cross

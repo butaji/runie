@@ -199,7 +199,7 @@ async fn run_tool_worker(
             bus,
             registry: registry.clone(),
             hooks,
-            updates: Arc::new(std::sync::Mutex::new(Vec::new())),
+            updates: None,
             tool_result_timestamp: tool_result_timestamp.unwrap_or_else(unix_timestamp_millis),
         };
 
