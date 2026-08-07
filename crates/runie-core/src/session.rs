@@ -1040,6 +1040,15 @@ enum StorageCommand {
         path: String,
         reply: oneshot::Sender<Result<(String, String, SessionSnapshot), String>>,
     },
+    Fork {
+        path: String,
+        snapshot: Box<SessionSnapshot>,
+        target_id: String,
+        session_id: String,
+        created_at: i64,
+        cwd: String,
+        reply: oneshot::Sender<Result<(), String>>,
+    },
 }
 
 /// Actor-owned atomic JSONL publication. Serialization stays outside this
@@ -1051,6 +1060,10 @@ pub struct SessionStorageActor {
 }
 
 impl SessionStorageActor {
+    #[allow(
+        clippy::too_many_lines,
+        reason = "storage mailbox keeps publication and recovery commands explicit"
+    )]
     pub fn new() -> Self {
         let (tx, owner) =
             spawn_actor_worker!(8, |mut rx: mpsc::Receiver<StorageCommand>| async move {
@@ -1082,6 +1095,33 @@ impl SessionStorageActor {
                                     .map_err(|error| format!("read session JSONL: {error}"))?;
                                 let repaired = SessionSnapshot::repair_jsonl_torn_tail(&contents)?;
                                 SessionSnapshot::from_jsonl(&repaired)
+                            }
+                            .await;
+                            let _ = reply.send(result);
+                        }
+                        StorageCommand::Fork {
+                            path,
+                            snapshot,
+                            target_id,
+                            session_id,
+                            created_at,
+                            cwd,
+                            reply,
+                        } => {
+                            let result = async {
+                                let fork = snapshot.fork_at_message(&target_id)?;
+                                let temporary = format!("{path}.tmp");
+                                tokio::fs::write(
+                                    &temporary,
+                                    fork.to_jsonl(&session_id, created_at, &cwd),
+                                )
+                                .await
+                                .map_err(|error| format!("stage forked session JSONL: {error}"))?;
+                                if let Err(error) = tokio::fs::rename(&temporary, &path).await {
+                                    let _ = tokio::fs::remove_file(&temporary).await;
+                                    return Err(format!("publish forked session JSONL: {error}"));
+                                }
+                                Ok(())
                             }
                             .await;
                             let _ = reply.send(result);
@@ -1122,6 +1162,33 @@ impl SessionStorageActor {
         self.tx
             .send(StorageCommand::Load {
                 path: path.into(),
+                reply: reply_tx,
+            })
+            .await
+            .map_err(|_| "session storage actor is closed".to_owned())?;
+        reply_rx
+            .await
+            .map_err(|_| "session storage response was dropped".to_owned())?
+    }
+
+    pub async fn fork_snapshot(
+        &self,
+        path: impl Into<String>,
+        snapshot: &SessionSnapshot,
+        target_id: &str,
+        session_id: &str,
+        created_at: i64,
+        cwd: &str,
+    ) -> Result<(), String> {
+        let (reply_tx, reply_rx) = oneshot::channel();
+        self.tx
+            .send(StorageCommand::Fork {
+                path: path.into(),
+                snapshot: Box::new(snapshot.clone()),
+                target_id: target_id.to_owned(),
+                session_id: session_id.to_owned(),
+                created_at,
+                cwd: cwd.to_owned(),
                 reply: reply_tx,
             })
             .await
@@ -1747,6 +1814,10 @@ mod tests {
         assert_eq!(actor.snapshot().entries.len(), 2);
     }
 
+    #[allow(
+        clippy::too_many_lines,
+        reason = "storage round-trip covers publish, load, and fork"
+    )]
     #[tokio::test]
     async fn storage_actor_publishes_a_complete_jsonl_file_atomically() {
         let path = std::env::temp_dir().join(format!(
@@ -1756,7 +1827,19 @@ mod tests {
         ));
         let path_string = path.to_string_lossy().into_owned();
         let storage = SessionStorageActor::new();
-        let snapshot = SessionSnapshot::default();
+        let snapshot = SessionSnapshot {
+            sequence: 1,
+            leaf_id: Some("entry-1".into()),
+            entries: vec![SessionEntry {
+                id: "entry-1".into(),
+                seq: 1,
+                parent_id: None,
+                timestamp: 0,
+                message: user("fork me"),
+                terminate: false,
+            }],
+            ..SessionSnapshot::default()
+        };
         storage
             .publish_snapshot(&path_string, &snapshot, "session-1", 1, "/tmp")
             .await
@@ -1771,10 +1854,19 @@ mod tests {
         assert_eq!(session_id, "session-1");
         assert_eq!(cwd, "/tmp");
         assert_eq!(loaded.sequence, snapshot.sequence);
+        let fork_path = format!("{path_string}.fork");
+        storage
+            .fork_snapshot(&fork_path, &snapshot, "entry-1", "fork-1", 2, "/tmp")
+            .await
+            .expect("fork publish");
+        let (_, _, forked) = storage.load_snapshot(&fork_path).await.expect("fork load");
+        assert_eq!(forked.sequence, 1);
+        assert_eq!(forked.leaf_id.as_deref(), Some("entry-1"));
         assert!(!tokio::fs::try_exists(format!("{path_string}.tmp"))
             .await
             .expect("temporary file check"));
         let _ = tokio::fs::remove_file(path).await;
+        let _ = tokio::fs::remove_file(fork_path).await;
     }
 
     #[test]

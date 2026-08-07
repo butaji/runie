@@ -117,6 +117,11 @@ torn-tail repair boundary, and returns validated `(session_id, cwd, snapshot)`
 data through its mailbox. Caller code does not perform filesystem reads or
 direct snapshot replacement.
 
+`SessionStorageActor::fork_snapshot` now applies the validated pure fork
+inside the storage mailbox and atomically publishes the re-sequenced fork to
+a separate path. The round-trip test publishes, forks, reloads, and checks the
+new leaf/sequence boundary.
+
 ## Current Runie mapping
 
 `runie-core/src/session.rs` owns parent-linked message/config entries and
