@@ -80,7 +80,7 @@ pub enum MappableBuiltinCommand {
     Hotkeys,
     Quit,
     Model { reference: String },
-    Compact,
+    Compact { instructions: Option<String> },
 }
 
 /// Parse an exact Pi built-in command that Runie can currently route through
@@ -91,7 +91,13 @@ pub fn parse_mappable_builtin_command(input: &str) -> Option<MappableBuiltinComm
         "/new" => Some(MappableBuiltinCommand::NewSession),
         "/hotkeys" => Some(MappableBuiltinCommand::Hotkeys),
         "/quit" => Some(MappableBuiltinCommand::Quit),
-        "/compact" => Some(MappableBuiltinCommand::Compact),
+        "/compact" => Some(MappableBuiltinCommand::Compact { instructions: None }),
+        value if value.starts_with("/compact ") => {
+            let instructions = value[9..].trim();
+            Some(MappableBuiltinCommand::Compact {
+                instructions: (!instructions.is_empty()).then(|| instructions.to_owned()),
+            })
+        }
         value if value.starts_with("/model ") => {
             let reference = value[7..].trim();
             reference
@@ -147,7 +153,13 @@ mod tests {
         );
         assert_eq!(
             parse_mappable_builtin_command("/compact"),
-            Some(MappableBuiltinCommand::Compact)
+            Some(MappableBuiltinCommand::Compact { instructions: None })
+        );
+        assert_eq!(
+            parse_mappable_builtin_command("/compact preserve the latest user intent"),
+            Some(MappableBuiltinCommand::Compact {
+                instructions: Some("preserve the latest user intent".into())
+            })
         );
         assert_eq!(parse_mappable_builtin_command("/quit now"), None);
         assert_eq!(

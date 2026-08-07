@@ -403,8 +403,8 @@ impl App {
                     .await;
                 true
             }
-            MappableBuiltinCommand::Compact => {
-                let _ = self.compact_session(None).await;
+            MappableBuiltinCommand::Compact { instructions } => {
+                let _ = self.compact_session(None, instructions).await;
                 true
             }
             MappableBuiltinCommand::Quit => false,
@@ -415,7 +415,11 @@ impl App {
     /// Preparation and journal publication belong to `SessionActor`; summary
     /// generation belongs to `ProviderActor`; the bus transfers the resulting
     /// fact to every interested projection.
-    pub async fn compact_session(&self, previous_summary: Option<String>) -> Result<(), String> {
+    pub async fn compact_session(
+        &self,
+        previous_summary: Option<String>,
+        custom_instructions: Option<String>,
+    ) -> Result<(), String> {
         const GROK_COMPACTION_KEEP_RECENT_TOKENS: u64 = 20_000;
         let snapshot = self.session_actor.snapshot();
         let token_estimates = compaction_token_estimates(&snapshot);
@@ -430,7 +434,8 @@ impl App {
             &preparation,
             &snapshot.entries,
             previous_summary,
-        )?;
+        )?
+        .with_custom_instructions(custom_instructions);
         let summary = self
             .loop_actor
             .summarize_compaction(request)

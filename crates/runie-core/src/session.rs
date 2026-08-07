@@ -337,6 +337,7 @@ pub struct CompactionSummaryRequest {
     pub retained_tail: Vec<AgentMessage>,
     pub tokens_before: u64,
     pub previous_summary: Option<String>,
+    pub custom_instructions: Option<String>,
 }
 
 impl CompactionSummaryRequest {
@@ -369,7 +370,13 @@ impl CompactionSummaryRequest {
             retained_tail: select(entries, &preparation.retained_indices)?,
             tokens_before: preparation.tokens_before,
             previous_summary,
+            custom_instructions: None,
         })
+    }
+
+    pub fn with_custom_instructions(mut self, instructions: Option<String>) -> Self {
+        self.custom_instructions = instructions;
+        self
     }
 }
 

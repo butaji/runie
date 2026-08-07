@@ -38,8 +38,8 @@ live binary and YAML runner: `/new` awaits the loop reset, `/hotkeys` sends a
 `ToggleShortcuts` mailbox message, `/model provider/model` publishes the
 actor-owned `ModelChanged` event, and `/quit` is consumed only by the live
 application exit boundary. Model catalog lookup/selector UI is still open;
-the current route accepts an explicit reference. `/compact` and other unsupported commands remain
-ordinary prompt text. `visual-slash-hotkeys.yaml` proves the route without a
+the current route accepts an explicit reference. Other unsupported commands
+remain ordinary prompt text. `visual-slash-hotkeys.yaml` proves the route without a
 provider submission; `visual-slash-new.yaml` proves reset clears the resulting
 actor-owned message/feed projection, and `visual-slash-model.yaml` proves the
 model caption projection.
@@ -51,6 +51,12 @@ The YAML ScenarioStream supplies deterministic summary capability data for
 provider replay tests; no summary text is fabricated by the TUI. A dedicated
 visual command fixture remains open because the current visual harness builds
 its render projection separately from the command execution phase.
+
+Custom `/compact <instructions>` text is preserved as
+`CompactionSummaryRequest::custom_instructions`. The parser, application route,
+loop actor, and provider actor pass it as typed request data; the YAML provider
+replay records it in structured summary details, so instruction loss cannot be
+hidden by a passing summary string.
 
 Routing consolidation (2026-08-08): `App::route_mappable_command` is now the
 single async dispatch boundary for live and YAML input. The binary owns only

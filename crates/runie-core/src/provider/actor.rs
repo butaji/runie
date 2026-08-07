@@ -661,6 +661,7 @@ mod tests {
                 retained_tail: vec![],
                 tokens_before: 42,
                 previous_summary: None,
+                custom_instructions: None,
             })
             .await
             .expect("summary capability");
