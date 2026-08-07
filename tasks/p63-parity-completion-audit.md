@@ -32,8 +32,9 @@ provider-specific contract”. The source of truth is the current Pi tree at
    Runie's replay adapter now also accepts Pi's OpenAI Responses text-delta and
    completion event names, plus function-call argument deltas keyed by
    `output_index`, and normalizes them to the ordinary assistant event
-   contract; this is replay-format coverage, not a claim of live Codex socket
-   parity.
+   contract. `response.failed` now preserves the provider error code/message
+   as a typed replay failure; this is replay-format coverage, not a claim of
+   live Codex socket parity.
 2. Provider-specific deferred-response polling/decoding and cancellation.
    Runie already exposes actor-owned `fetch_deferred` and `cancel_deferred`
    capability commands. An injected adapter contract now proves both commands

@@ -77,8 +77,11 @@ impl ReplayProvider {
             let Ok(value) = serde_json::from_str::<serde_json::Value>(raw) else {
                 continue;
             };
-            if value.get("type").and_then(|v| v.as_str()) == Some("error") {
-                return Err(StreamError::Api(value.to_string()));
+            match value.get("type").and_then(|v| v.as_str()) {
+                Some("error") | Some("response.failed") => {
+                    return Err(StreamError::Api(response_error_message(&value)));
+                }
+                _ => {}
             }
             finished |= append_text_events(&value, &mut events);
             collect_tool_calls(&value, &mut tool_calls);
@@ -92,6 +95,25 @@ impl ReplayProvider {
             events,
             calls: AtomicUsize::new(0),
         })
+    }
+}
+
+fn response_error_message(value: &serde_json::Value) -> String {
+    let response = value.get("response").unwrap_or(value);
+    let error = response.get("error");
+    let code = error.and_then(|v| v.get("code")).and_then(|v| v.as_str());
+    let message = error
+        .and_then(|v| v.get("message"))
+        .and_then(|v| v.as_str());
+    let reason = response
+        .get("incomplete_details")
+        .and_then(|v| v.get("reason"))
+        .and_then(|v| v.as_str());
+    match (code, message, reason) {
+        (Some(code), Some(message), _) => format!("{code}: {message}"),
+        (_, Some(message), _) => message.to_owned(),
+        (_, _, Some(reason)) => format!("incomplete: {reason}"),
+        _ => value.to_string(),
     }
 }
 
@@ -443,5 +465,20 @@ mod tests {
         assert_eq!(tool_call.id, "call-1");
         assert_eq!(tool_call.name, "echo");
         assert_eq!(tool_call.arguments, serde_json::json!({"x": 1}));
+    }
+
+    #[test]
+    fn responses_failed_trace_preserves_provider_code_and_message() {
+        let result = ReplayProvider::from_sse_body(
+            "data: {\"type\":\"response.failed\",\"response\":{\"error\":{\"code\":\"rate_limit\",\"message\":\"try later\"}}}\n",
+        );
+        let error = match result {
+            Ok(_) => panic!("failed Responses trace must be rejected"),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            error,
+            StreamError::Api(message) if message == "rate_limit: try later"
+        ));
     }
 }
