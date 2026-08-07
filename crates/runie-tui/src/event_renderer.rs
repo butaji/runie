@@ -2401,30 +2401,36 @@ mod tests {
             .is_some());
     }
 
-    #[test]
-    fn tool_execution_lifecycle() {
-        let (mut r, sb, _) = new_renderer();
-        r.apply_event(AgentEvent::AgentStart);
-        r.apply_event(AgentEvent::ToolExecutionStart {
-            tool_call_id: "1".into(),
-            tool_name: "bash".into(),
-            args: serde_json::json!({"cmd": "ls"}),
-        });
+    #[tokio::test]
+    async fn actor_tool_execution_lifecycle() {
+        let scrollback = ScrollbackActor::new();
+        let status = StatusActor::new();
+        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status, false);
+        renderer.apply_actor_event(AgentEvent::AgentStart).await;
+        renderer
+            .apply_actor_event(AgentEvent::ToolExecutionStart {
+                tool_call_id: "1".into(),
+                tool_name: "bash".into(),
+                args: serde_json::json!({"cmd": "ls"}),
+            })
+            .await;
         assert_eq!(
-            sb.lock().tool_blocks()[0].mode,
+            scrollback.snapshot().tool_blocks()[0].mode,
             runie_core::types::ToolDisplayMode::Truncated
         );
-        assert!(sb.lock().tool_blocks()[0].is_running);
-        r.apply_event(AgentEvent::ToolExecutionEnd {
-            tool_call_id: "1".into(),
-            tool_name: "bash".into(),
-            result: serde_json::json!({"ok": true}),
-            is_error: false,
-        });
-        let lines = sb.lock();
-        assert!(lines.find_first_containing("Run ls").is_some());
-        assert!(lines.find_first_containing("✓").is_some());
-        assert!(!lines.tool_blocks()[0].is_running);
+        assert!(scrollback.snapshot().tool_blocks()[0].is_running);
+        renderer
+            .apply_actor_event(AgentEvent::ToolExecutionEnd {
+                tool_call_id: "1".into(),
+                tool_name: "bash".into(),
+                result: serde_json::json!({"ok": true}),
+                is_error: false,
+            })
+            .await;
+        let snapshot = scrollback.snapshot();
+        assert!(snapshot.find_first_containing("Run ls").is_some());
+        assert!(snapshot.find_first_containing("✓").is_some());
+        assert!(!snapshot.tool_blocks()[0].is_running);
         let _ = (
             StopReason::Stop,
             Usage::default(),

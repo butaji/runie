@@ -121,6 +121,12 @@ the immutable status/feed snapshots. A prior apparent hang was traced to stale
 orphaned core test processes, not the actor reducer; the clean bounded replay
 passes without sleeps.
 
+**Sixth compatibility migration (2026-08-08):** Tool execution lifecycle
+coverage now uses actor-backed `AgentStart`, `ToolExecutionStart`, and
+`ToolExecutionEnd` delivery. The regression asserts the actor snapshot for
+default display mode, running state, command rendering, completion mark, and
+the cleared running flag; the lock-based compatibility test was removed.
+
 ## Verification
 
 - event sequences prove mode changes, busy rejection, abort, and completion
