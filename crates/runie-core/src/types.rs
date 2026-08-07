@@ -990,6 +990,11 @@ pub enum AgentEvent {
     SessionNameChanged {
         name: String,
     },
+    /// Pi session-tree lane mutation, separate from operation-lane records.
+    SessionLaneChanged {
+        lane: String,
+        leaf_id: Option<String>,
+    },
     /// Application-owned session branch summary; navigation identity is kept
     /// in the event so the journal cannot reduce an anonymous summary.
     BranchSummaryCreated {

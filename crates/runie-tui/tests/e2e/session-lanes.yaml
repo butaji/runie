@@ -1,0 +1,16 @@
+name: session-lanes
+description: >-
+  Replays Pi session-tree lane mutations through the SessionActor and asserts
+  the pure lane projection at runtime.
+initial_prompt: "seed the session"
+events:
+  - session_lane:
+      lane: feature
+      leaf_id: entry-1
+  - session_lane:
+      lane: feature
+      leaf_id: null
+assertions:
+  state:
+    session_lanes:
+      feature: null

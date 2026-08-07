@@ -333,6 +333,9 @@ pub enum EventSpec {
     SessionName {
         session_name: String,
     },
+    SessionLane {
+        session_lane: SessionLaneSpec,
+    },
     BranchSummary {
         branch_summary: BranchSummarySpec,
     },
@@ -483,6 +486,13 @@ pub struct SessionLabelSpec {
     pub target_id: String,
     #[serde(default)]
     pub label: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct SessionLaneSpec {
+    pub lane: String,
+    #[serde(default)]
+    pub leaf_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -730,6 +740,7 @@ impl EventSpec {
             Self::ActiveTools { .. } => None,
             Self::SessionLabel { .. } => None,
             Self::SessionName { .. } => None,
+            Self::SessionLane { .. } => None,
             Self::BranchSummary { .. } => None,
             Self::CustomEntry { .. } => None,
             Self::Compaction { .. } => None,
@@ -795,6 +806,10 @@ impl EventSpec {
             }),
             Self::SessionName { session_name } => Some(AgentEvent::SessionNameChanged {
                 name: session_name.clone(),
+            }),
+            Self::SessionLane { session_lane } => Some(AgentEvent::SessionLaneChanged {
+                lane: session_lane.lane.clone(),
+                leaf_id: session_lane.leaf_id.clone(),
             }),
             Self::BranchSummary { branch_summary } => Some(AgentEvent::BranchSummaryCreated {
                 from_id: branch_summary.from_id.clone(),
@@ -1022,6 +1037,7 @@ pub struct StateAssertions {
     /// Effective Pi labels after replaying ordered label facts.
     pub session_labels: Option<BTreeMap<String, String>>,
     pub session_name: Option<String>,
+    pub session_lanes: Option<BTreeMap<String, Option<String>>>,
     /// Ordered admitted Pi operation-lane record kinds.
     pub session_lane_records: Option<Vec<String>>,
     /// Ordered actor-owned assistant step operation IDs.
@@ -2895,6 +2911,11 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         outcome.session.name().unwrap_or_default(),
         "session_name"
     );
+    assert_yaml_eq!(
+        expected.session_lanes.clone(),
+        outcome.session.lanes(),
+        "session_lanes"
+    );
     if let Some(expected_records) = &expected.session_lane_records {
         let actual_records = outcome
             .session
@@ -3859,6 +3880,7 @@ fn event_kind(event: &runie_core::types::AgentEvent) -> &'static str {
         ActiveToolsChanged { .. } => "active_tools_changed",
         SessionLabelChanged { .. } => "session_label_changed",
         SessionNameChanged { .. } => "session_name_changed",
+        SessionLaneChanged { .. } => "session_lane_changed",
         BranchSummaryCreated { .. } => "branch_summary_created",
         CustomSessionEntryCreated { .. } => "custom_session_entry_created",
         CompactionCreated { .. } => "compaction_created",

@@ -136,6 +136,13 @@ pub struct SessionConfigEntry {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SessionLaneFact {
+    pub seq: u64,
+    pub lane: String,
+    pub leaf_id: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SessionEntry {
     pub id: String,
     pub seq: u64,
@@ -236,6 +243,8 @@ pub struct SessionSnapshot {
     /// Message `entries` remains the compatibility projection for existing
     /// callers; these records never become synthetic messages.
     pub config_records: Vec<SessionConfigEntry>,
+    /// Ordered Pi session-tree lane mutations, distinct from operation lanes.
+    pub lane_facts: Vec<SessionLaneFact>,
     /// Ordered, admitted Pi operation-lane records. Invalid or duplicate
     /// records never enter this projection.
     pub lane_records: Vec<SessionLaneRecordSnapshot>,
@@ -535,6 +544,15 @@ impl CompactionContextProjection {
 }
 
 impl SessionSnapshot {
+    /// Reduce ordered Pi lane mutations into the latest leaf per lane.
+    pub fn lanes(&self) -> BTreeMap<String, Option<String>> {
+        let mut lanes = BTreeMap::new();
+        for fact in &self.lane_facts {
+            lanes.insert(fact.lane.clone(), fact.leaf_id.clone());
+        }
+        lanes
+    }
+
     /// Reduce ordered Pi session-name facts to the latest name.
     pub fn name(&self) -> Option<String> {
         self.config_records.iter().rev().find_map(|entry| {
@@ -1660,6 +1678,46 @@ impl SessionSnapshot {
         for (line_index, line) in lines.enumerate() {
             let value: serde_json::Value = serde_json::from_str(line)
                 .map_err(|error| format!("invalid session entry {}: {error}", line_index + 2))?;
+            if value.get("kind").and_then(serde_json::Value::as_str) == Some("lane") {
+                let seq = value
+                    .get("seq")
+                    .and_then(serde_json::Value::as_u64)
+                    .ok_or_else(|| format!("session lane {} is missing seq", line_index + 2))?;
+                if seq != snapshot.sequence + 1 {
+                    return Err(format!(
+                        "session lane {} has non-consecutive seq",
+                        line_index + 2
+                    ));
+                }
+                let lane = value
+                    .get("lane")
+                    .and_then(serde_json::Value::as_str)
+                    .ok_or_else(|| format!("session lane {} is missing lane", line_index + 2))?
+                    .to_owned();
+                let leaf_id = value
+                    .get("leafId")
+                    .cloned()
+                    .filter(|value| !value.is_null())
+                    .map(|value| {
+                        value.as_str().map(str::to_owned).ok_or_else(|| {
+                            format!("session lane {} has invalid leafId", line_index + 2)
+                        })
+                    })
+                    .transpose()?;
+                if let Some(leaf_id) = &leaf_id {
+                    if !snapshot.entries.iter().any(|entry| entry.id == *leaf_id) {
+                        return Err(format!(
+                            "session lane {} has unknown leafId",
+                            line_index + 2
+                        ));
+                    }
+                }
+                snapshot.sequence = seq;
+                snapshot
+                    .lane_facts
+                    .push(SessionLaneFact { seq, lane, leaf_id });
+                continue;
+            }
             if value.get("kind").and_then(serde_json::Value::as_str) != Some("entry")
                 || value.get("lane").and_then(serde_json::Value::as_str) != Some("main")
             {
@@ -2060,6 +2118,15 @@ impl SessionSnapshot {
             entry["timestamp"] = serde_json::Value::Number(session_entry.timestamp.into());
             entry.to_string()
         }));
+        entry_lines.extend(self.lane_facts.iter().map(|fact| {
+            serde_json::json!({
+                "kind": "lane",
+                "lane": fact.lane,
+                "seq": fact.seq,
+                "leafId": fact.leaf_id,
+            })
+            .to_string()
+        }));
         entry_lines.extend(self.lane_records.iter().enumerate().map(|(index, record)| {
             let mut entry = record.data.clone();
             let object = entry
@@ -2110,6 +2177,11 @@ enum Command {
         reply: oneshot::Sender<()>,
     },
     Config(SessionConfigRecord, oneshot::Sender<Result<(), String>>),
+    Lane {
+        lane: String,
+        leaf_id: Option<String>,
+        reply: oneshot::Sender<Result<(), String>>,
+    },
     Import(SessionSnapshot, oneshot::Sender<()>),
     Reset(oneshot::Sender<()>),
     Flush(oneshot::Sender<()>),
@@ -2564,6 +2636,31 @@ impl SessionActor {
                         let _ = snapshot_tx.send(state.clone());
                         let _ = reply.send(Ok(()));
                     }
+                    Command::Lane {
+                        lane,
+                        leaf_id,
+                        reply,
+                    } => {
+                        if lane.is_empty() {
+                            let _ = reply.send(Err("session lane cannot be empty".into()));
+                            continue;
+                        }
+                        if let Some(leaf_id) = &leaf_id {
+                            if !state.entries.iter().any(|entry| entry.id == *leaf_id) {
+                                let _ =
+                                    reply.send(Err(format!("lane leaf does not exist: {leaf_id}")));
+                                continue;
+                            }
+                        }
+                        state.sequence += 1;
+                        state.lane_facts.push(SessionLaneFact {
+                            seq: state.sequence,
+                            lane,
+                            leaf_id,
+                        });
+                        let _ = snapshot_tx.send(state.clone());
+                        let _ = reply.send(Ok(()));
+                    }
                     Command::Import(imported, reply) => {
                         next_id = imported
                             .entries
@@ -2699,6 +2796,21 @@ impl SessionActor {
             .map_err(|_| "session actor response was dropped".to_owned())?
     }
 
+    pub async fn record_lane(&self, lane: String, leaf_id: Option<String>) -> Result<(), String> {
+        let (reply_tx, reply_rx) = oneshot::channel();
+        self.tx
+            .send(Command::Lane {
+                lane,
+                leaf_id,
+                reply: reply_tx,
+            })
+            .await
+            .map_err(|_| "session actor is closed".to_owned())?;
+        reply_rx
+            .await
+            .map_err(|_| "session actor response was dropped".to_owned())?
+    }
+
     /// Apply session-owned configuration facts from a replay event sequence.
     /// The reducer remains the actor boundary; callers do not mutate the
     /// snapshot or manufacture message entries.
@@ -2709,6 +2821,8 @@ impl SessionActor {
     pub async fn apply_event(&self, event: &AgentEvent) -> Result<(), String> {
         if let Some(record) = session_config_record!(event) {
             self.record_config(record).await
+        } else if let AgentEvent::SessionLaneChanged { lane, leaf_id } = event {
+            self.record_lane(lane.clone(), leaf_id.clone()).await
         } else if matches!(event, AgentEvent::Reset) {
             self.reset().await;
             Ok(())
@@ -2841,6 +2955,28 @@ mod tests {
             .await
             .expect_err("missing target must be rejected");
         assert!(error.contains("label target does not exist"));
+    }
+
+    #[tokio::test]
+    async fn lane_events_are_validated_projected_and_jsonl_round_tripped() {
+        let actor = SessionActor::new();
+        actor.append(user("one")).await;
+        actor
+            .record_lane("feature".into(), Some("entry-1".into()))
+            .await
+            .expect("lane admission");
+        assert_eq!(
+            actor.snapshot().lanes().get("feature"),
+            Some(&Some("entry-1".into()))
+        );
+        let jsonl = actor.snapshot().to_jsonl("s", 1, "/tmp");
+        let (_, _, imported) = SessionSnapshot::from_jsonl(&jsonl).expect("lane JSONL");
+        assert_eq!(imported.lanes(), actor.snapshot().lanes());
+        assert!(actor
+            .record_lane("feature".into(), Some("missing".into()))
+            .await
+            .is_err());
+        assert_eq!(actor.snapshot().lane_facts.len(), 1);
     }
 
     #[tokio::test]
@@ -4153,6 +4289,7 @@ mod tests {
                 terminate: true,
             }],
             config_records: Vec::new(),
+            lane_facts: Vec::new(),
             lane_records: Vec::new(),
             active_operations: BTreeMap::new(),
             operation_outcomes: BTreeMap::new(),
@@ -4192,6 +4329,7 @@ mod tests {
                     },
                 },
             ],
+            lane_facts: Vec::new(),
             lane_records: Vec::new(),
             active_operations: BTreeMap::new(),
             operation_outcomes: BTreeMap::new(),

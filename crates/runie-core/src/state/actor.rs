@@ -203,6 +203,9 @@ impl AgentStateActor {
             AgentEvent::SessionNameChanged { .. } => {
                 // SessionActor owns session metadata facts.
             }
+            AgentEvent::SessionLaneChanged { .. } => {
+                // SessionActor owns session-tree lane facts.
+            }
             AgentEvent::BranchSummaryCreated { .. } => {
                 // SessionActor owns branch-summary journal records.
             }
