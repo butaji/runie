@@ -171,6 +171,32 @@ reduces generic `OperationRecordCreated` facts into active operation,
 outcome, kind, error, and navigation projections. JSONL v4 export/import and
 terminated message metadata are covered by replay tests.
 
+### Pi compaction contract audit (2026-08-07)
+
+The upstream source audit covers both `packages/agent/src/harness/compaction`
+and `packages/agent/src/harness/session/context.ts`. A complete compaction is
+not only a cut-point calculation:
+
+- `defaultContextEntryTransform` keeps the newest `compaction` entry and the
+  path after it, dropping the compacted prefix from the next provider context;
+- `sessionEntryToContextMessages` materializes the compaction summary message
+  followed by `retainedTail`, skips deferred assistant messages, and projects
+  branch summaries and registered custom entries;
+- the generated result persists `summary`, `tokensBefore`, `retainedTail`,
+  optional model `usage`, and implementation `details` (file read/modified
+  sets in the built-in compactor);
+- the operation lane separately records admission, step attempt, result
+  entry, and completion outcome for a `compaction` operation kind, including
+  retry/abort/failure distinctions.
+
+Runie currently has the first pure index partition and lossless
+`CompactionCreated` journal payload, plus YAML assertions for the cut point.
+It does not yet expose a pure context builder that applies the latest
+compaction boundary, does not represent the summary as a provider-context
+message, and does not admit a compaction operation through the live loop.
+Those are the concrete next boundaries; the existing generic JSON payload
+must not be mistaken for full Pi compaction parity.
+
 The following are not yet exact Pi parity:
 
 - the public wire boundary still carries operation records as generic
