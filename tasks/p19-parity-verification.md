@@ -1527,3 +1527,9 @@ capture timed out and its private tmux session was terminated. This is a
 capture orchestration gap, not evidence for changing renderer colors. The next
 valid comparison must run Runie's deterministic YAML/mock scenario in a PTY,
 then compare both settled ANSI grids at the same geometry and event boundary.
+
+The helper now sends prompt characters as individual tmux key events and
+captures frames without asciinema input recording. This preserves crossterm
+character delivery in Runie while retaining full ANSI/style capture. A fresh
+Runie 80×24 capture now produces a settled frame; live Grok/Runie frames remain
+non-comparable until they share deterministic content and event timing.

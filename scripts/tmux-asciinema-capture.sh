@@ -55,8 +55,13 @@ fi
 record_command+=" $command_line"
 escaped_command=${record_command//\'/\'\\\'\'}
 quoted_command="'${escaped_command}'"
+# Input capture is intentionally disabled for parity recordings. With the
+# installed asciinema/tmux combination it forwards control keys but swallows
+# ordinary character events from crossterm applications such as Runie; frame
+# and ANSI capture remain unchanged, and the prompt/quit interaction is driven
+# by the private tmux PTY itself.
 tmux send-keys -t "$session" -l \
-  "asciinema rec --capture-input --window-size ${cols}x${rows} --overwrite --output-format asciicast-v2 --command ${quoted_command} '$cast'"
+  "asciinema rec --window-size ${cols}x${rows} --overwrite --output-format asciicast-v2 --command ${quoted_command} '$cast'"
 tmux send-keys -t "$session" Enter
 
 # Wait for the actual prompt, not merely alternate-screen initialization.
@@ -90,7 +95,13 @@ if (( ! ready )); then
     exit 1
 fi
 
-tmux send-keys -t "$session" -l "$prompt"
+# Send one ordinary tmux key event per character. A single multi-character
+# argument is interpreted as a tmux key name (`Hey`), while `-l` emits a
+# paste-like byte sequence that crossterm does not expose as ordinary
+# character events to Runie.
+while IFS= read -r -n 1 character; do
+    [[ -n "$character" ]] && tmux send-keys -t "$session" "$character"
+done <<< "$prompt"
 tmux send-keys -t "$session" Enter
 # Wait for both the completed-turn marker and the settled input footer so the
 # cast does not stop on the first feed update while the status actor is still
