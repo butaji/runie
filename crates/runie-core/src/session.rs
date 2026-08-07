@@ -190,6 +190,20 @@ pub struct SessionLaneRecordSnapshot {
     pub data: serde_json::Value,
 }
 
+/// Declarative read boundary matching Pi's durable operation-lane query.
+/// Filters are applied by the session owner to its immutable snapshot; the
+/// query does not expose mutable journal state to callers.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SessionLaneQuery {
+    pub lane: Option<String>,
+    pub record_type: Option<String>,
+    pub run_id: Option<String>,
+    pub operation_kind: Option<String>,
+    pub after_seq: Option<u64>,
+    pub newest_first: bool,
+    pub limit: Option<usize>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CompactionCutPoint {
     pub first_kept_entry_index: usize,
@@ -371,6 +385,46 @@ impl CompactionContextProjection {
 }
 
 impl SessionSnapshot {
+    /// Find admitted operation-lane records using Pi's ordered query rules.
+    pub fn find_lane_records(&self, query: &SessionLaneQuery) -> Vec<SessionLaneRecordSnapshot> {
+        let mut records = self
+            .lane_records
+            .iter()
+            .filter(|record| {
+                query
+                    .lane
+                    .as_deref()
+                    .is_none_or(|lane| record.lane.as_deref() == Some(lane))
+                    && query
+                        .record_type
+                        .as_deref()
+                        .is_none_or(|record_type| record.record_type == record_type)
+                    && query.run_id.as_deref().is_none_or(|run_id| {
+                        record.data.get("runId").and_then(serde_json::Value::as_str) == Some(run_id)
+                    })
+                    && query.operation_kind.as_deref().is_none_or(|kind| {
+                        record
+                            .data
+                            .get("intent")
+                            .and_then(|intent| intent.get("kind"))
+                            .and_then(serde_json::Value::as_str)
+                            == Some(kind)
+                    })
+                    && query
+                        .after_seq
+                        .is_none_or(|after| record.seq.is_some_and(|seq| seq > after))
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+        if query.newest_first {
+            records.reverse();
+        }
+        if let Some(limit) = query.limit {
+            records.truncate(limit);
+        }
+        records
+    }
+
     /// Build the latest-compaction context boundary without mutating the
     /// actor-owned journal. Deferred assistant results are excluded because
     /// Pi's context builder does not send them to the provider.
@@ -2457,6 +2511,62 @@ mod tests {
         .expect("queue cancellation");
         assert_eq!(queue.identity(), Some("entry-1"));
         assert_eq!(queue.run_id(), None);
+    }
+
+    #[test]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the query regression keeps Pi filter combinations explicit"
+    )]
+    fn lane_query_filters_pi_records_without_reordering_the_snapshot() {
+        let mut snapshot = SessionSnapshot::default();
+        for (record_type, id, seq, data) in [
+            (
+                "operation_started",
+                "run-1",
+                1,
+                serde_json::json!({"id":"run-1","intent":{"kind":"run"}}),
+            ),
+            (
+                "step_attempt",
+                "run-1",
+                2,
+                serde_json::json!({"runId":"run-1","step":"assistant","attempt":1,"resultEntryId":"entry-1"}),
+            ),
+            (
+                "operation_started",
+                "run-2",
+                3,
+                serde_json::json!({"id":"run-2","intent":{"kind":"compaction"}}),
+            ),
+        ] {
+            snapshot.lane_records.push(SessionLaneRecordSnapshot {
+                record_type: record_type.into(),
+                id: id.into(),
+                lane: Some("main".into()),
+                seq: Some(seq),
+                timestamp: Some(seq as i64),
+                data,
+            });
+        }
+
+        let records = snapshot.find_lane_records(&SessionLaneQuery {
+            run_id: Some("run-1".into()),
+            after_seq: Some(1),
+            newest_first: true,
+            limit: Some(1),
+            ..SessionLaneQuery::default()
+        });
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].record_type, "step_attempt");
+        assert_eq!(records[0].seq, Some(2));
+
+        let compactions = snapshot.find_lane_records(&SessionLaneQuery {
+            record_type: Some("operation_started".into()),
+            operation_kind: Some("compaction".into()),
+            ..SessionLaneQuery::default()
+        });
+        assert_eq!(compactions[0].id, "run-2");
     }
 
     #[test]

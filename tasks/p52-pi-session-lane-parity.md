@@ -2,6 +2,17 @@
 
 Status: in_progress
 
+## Completed slice (2026-08-08, declarative lane queries)
+
+`SessionSnapshot::find_lane_records` and `SessionLaneQuery` now provide the
+pure read boundary corresponding to Pi's `findRecords` contract. Lane, record
+family, run, operation-kind, sequence-cursor, order, and limit filters are
+applied to the actor-owned immutable projection without changing journal order
+or exposing mutable state. A regression covers newest-first cursor/limit
+behavior and operation-kind filtering. The actor mailbox remains the only
+mutation path; a future storage actor can use the same query value for
+filesystem-backed reads.
+
 ## Completed slice (2026-08-07)
 
 `runie-core` now classifies all nine Pi operation-lane record families with
