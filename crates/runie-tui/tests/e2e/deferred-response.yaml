@@ -51,5 +51,7 @@ assertions:
       - usage
       - write_deferred
       - operation_finished
+    session_step_run_ids: [run-1]
+    session_step_result_entry_ids: [entry-2]
   transcript_contains:
     - "defer this"

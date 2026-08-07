@@ -982,6 +982,10 @@ pub struct StateAssertions {
     pub session_config_records: Option<Vec<String>>,
     /// Ordered admitted Pi operation-lane record kinds.
     pub session_lane_records: Option<Vec<String>>,
+    /// Ordered actor-owned assistant step operation IDs.
+    pub session_step_run_ids: Option<Vec<String>>,
+    /// Ordered actor-owned assistant step result entry IDs.
+    pub session_step_result_entry_ids: Option<Vec<String>>,
     /// Message entry IDs selected after the newest compaction boundary.
     pub compaction_context_entry_ids: Option<Vec<String>>,
     /// Internal Pi context-message roles after compaction, before provider
@@ -2825,6 +2829,43 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
             return Err(format!(
                 "session lane records mismatch: expected {expected_records:?}, got {actual_records:?}"
             ));
+        }
+    }
+    if expected.session_step_run_ids.is_some() || expected.session_step_result_entry_ids.is_some() {
+        let steps = outcome
+            .session
+            .lane_records
+            .iter()
+            .filter(|record| record.record_type == "step_attempt")
+            .collect::<Vec<_>>();
+        if let Some(expected) = &expected.session_step_run_ids {
+            let actual = steps
+                .iter()
+                .filter_map(|record| record.data.get("runId").and_then(serde_json::Value::as_str))
+                .map(str::to_owned)
+                .collect::<Vec<_>>();
+            if &actual != expected {
+                return Err(format!(
+                    "session step run IDs mismatch: expected {expected:?}, got {actual:?}"
+                ));
+            }
+        }
+        if let Some(expected) = &expected.session_step_result_entry_ids {
+            let actual = steps
+                .iter()
+                .filter_map(|record| {
+                    record
+                        .data
+                        .get("resultEntryId")
+                        .and_then(serde_json::Value::as_str)
+                })
+                .map(str::to_owned)
+                .collect::<Vec<_>>();
+            if &actual != expected {
+                return Err(format!(
+                    "session step result IDs mismatch: expected {expected:?}, got {actual:?}"
+                ));
+            }
         }
     }
     if let Some(expected_ids) = &expected.compaction_context_entry_ids {

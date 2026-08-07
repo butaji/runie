@@ -261,6 +261,10 @@ UTF-8-byte-count drift from Pi.
 `hello-streaming.yaml` fixture exercises the Unicode path without compiling a
 new Rust scenario.
 
+`deferred-response.yaml` now also asserts the live step-attempt `runId` and
+actor-issued `resultEntryId`, keeping the ordering/identity contract in the
+runtime replay suite rather than only in unit tests.
+
 ### Completed slice (2026-08-07, compaction context boundary)
 
 `SessionSnapshot::compaction_context_projection` is now a pure projection of
