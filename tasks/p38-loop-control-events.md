@@ -38,6 +38,11 @@ The runtime YAML state oracle now exposes `loop_running` and
 `abort_requested`; `follow-up.yaml` asserts the settled control snapshot,
 keeping the new projection in the no-recompile event-sequence test path.
 
+**Single control SSOT (2026-08-06):** Removed the duplicate steering and
+follow-up mode watch channels. Setters emit `LoopControlEvent` values, and the
+loop, queue drainers, public readers, and YAML outcome all read the unified
+`LoopControlSnapshot` projection.
+
 ## Remaining design
 
 Add a private `LoopCommand` mailbox and a loop-control reducer owned by
