@@ -188,6 +188,15 @@ Pi's handle/poll/decoder contract; until then the unsupported capability
 result is the correct actor boundary and is covered by the provider actor unit
 test.
 
+Deferred capability scope re-audit (2026-08-08): Pi exposes these operations
+through its provider/models layer, while the agent loop consumes the resulting
+assistant event stream. Runie already preserves the same boundary with owned
+`ProviderActor::fetch_deferred`/`cancel_deferred` commands, explicit unsupported
+adapter errors, joined pumps, and YAML coverage for deferred handles and stop
+reasons. Adding a second `LoopActor` deferred state machine would create a
+parallel owner; the next valid increment remains a provider-specific adapter
+with its polling, decoding, cancellation, and lifecycle events.
+
 Provider lifecycle increment (2026-08-07): `ProviderActor` now aborts any
 previous owned pump before acknowledging a new `Start`. This matches the
 one-in-flight Pi turn contract and prevents superseded streams from publishing
