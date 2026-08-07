@@ -4,6 +4,8 @@ initial_prompt: "coerce arguments"
 tools:
   - name: echo
     kind: echo
+    output: "$args"
+    prepared_arguments: { count: 7, enabled: true }
     parameters:
       type: object
       properties:
@@ -25,9 +27,10 @@ assertions:
     is_streaming: false
     pending_tool_calls: 0
     messages: 4
+    tool_call_arguments: { count: "1", enabled: 0 }
   transcript_contains:
-    - '"count":1'
-    - '"enabled":false'
+    - '"count":7'
+    - '"enabled":true'
   exact_events:
     - agent_start
     - turn_start
@@ -37,6 +40,7 @@ assertions:
     - message_update
     - message_end
     - tool_execution_start
+    - tool_execution_update
     - tool_execution_end
     - message_start
     - message_end
@@ -55,6 +59,7 @@ assertions:
     - message_update
     - message_end
     - tool_execution_start
+    - tool_execution_update
     - tool_execution_end
     - message_start
     - message_end

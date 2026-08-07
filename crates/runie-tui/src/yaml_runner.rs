@@ -23,10 +23,10 @@ use runie_core::state::AgentStateActor;
 use runie_core::tools::executor::ToolExecHooks;
 use runie_core::tools::{ToolExecutorActor, ToolRegistry};
 use runie_core::types::{
-    AgentContext, AgentEvent, AgentMessage, AgentTool, AgentToolResult, AssistantMessage,
-    AssistantMessageEvent, CacheRetention, DeferredHandle, Model, SimpleStreamOptions, StopReason,
-    ThinkingLevel, ToolExecutionMode, ToolResultContent, Usage, UserContent, UserMessage,
-    WaitingReason,
+    AgentContext, AgentEvent, AgentMessage, AgentTool, AgentToolResult, AssistantContent,
+    AssistantMessage, AssistantMessageEvent, CacheRetention, DeferredHandle, Model,
+    SimpleStreamOptions, StopReason, ThinkingLevel, ToolExecutionMode, ToolResultContent, Usage,
+    UserContent, UserMessage, WaitingReason,
 };
 use serde::Deserialize;
 use tokio::sync::broadcast;
@@ -206,6 +206,9 @@ pub struct ToolSpec {
     /// Optional Pi-compatible JSON Schema used by deterministic replay tools.
     #[serde(default)]
     pub parameters: Option<serde_json::Value>,
+    /// Optional Pi `prepareArguments` replacement for deterministic replay.
+    #[serde(default)]
+    pub prepared_arguments: Option<serde_json::Value>,
     /// Optional deterministic result body/details for YAML-only replay cases.
     #[serde(default)]
     pub output: Option<String>,
@@ -824,6 +827,8 @@ pub struct StateAssertions {
     pub tool_result_usage: Option<Usage>,
     /// `isError` from the latest Pi tool result.
     pub tool_result_is_error: Option<bool>,
+    /// Arguments on the latest assistant tool call after preparation.
+    pub tool_call_arguments: Option<serde_json::Value>,
     pub session_entries: Option<usize>,
     pub tool_count: Option<usize>,
     pub streaming_contains: Option<String>,
@@ -1299,6 +1304,7 @@ pub struct ReplayTool {
     terminate: bool,
     added_tool_names: Vec<String>,
     execution_mode: Option<ToolExecutionMode>,
+    prepared_arguments: Option<serde_json::Value>,
 }
 
 impl ReplayTool {
@@ -1313,6 +1319,7 @@ impl ReplayTool {
             terminate: false,
             added_tool_names: Vec::new(),
             execution_mode: None,
+            prepared_arguments: None,
         }
     }
 
@@ -1327,6 +1334,7 @@ impl ReplayTool {
             terminate: false,
             added_tool_names: Vec::new(),
             execution_mode: None,
+            prepared_arguments: None,
         }
     }
 
@@ -1341,6 +1349,7 @@ impl ReplayTool {
             terminate: false,
             added_tool_names: Vec::new(),
             execution_mode: None,
+            prepared_arguments: None,
         }
     }
 
@@ -1358,6 +1367,7 @@ impl ReplayTool {
         terminate: bool,
         added_tool_names: Vec<String>,
         execution_mode: Option<ToolExecutionMode>,
+        prepared_arguments: Option<serde_json::Value>,
     ) -> Self {
         Self {
             name: name.into(),
@@ -1369,6 +1379,7 @@ impl ReplayTool {
             terminate,
             added_tool_names,
             execution_mode,
+            prepared_arguments,
         }
     }
 }
@@ -1387,25 +1398,31 @@ impl AgentTool for ReplayTool {
     fn execution_mode(&self) -> Option<ToolExecutionMode> {
         self.execution_mode
     }
+    fn prepare_arguments(&self, _args: &serde_json::Value) -> Option<serde_json::Value> {
+        self.prepared_arguments.clone()
+    }
     async fn execute(
         &self,
         _id: &str,
-        _args: serde_json::Value,
+        args: serde_json::Value,
         _signal: Option<tokio_util::sync::CancellationToken>,
         on_update: Option<Box<dyn Fn(serde_json::Value) + Send + Sync>>,
     ) -> Result<AgentToolResult, String> {
         if self.error {
             return Err(self.output.clone());
         }
+        let output = if self.output == "$args" {
+            args.to_string()
+        } else {
+            self.output.clone()
+        };
         if let Some(on_update) = on_update {
-            on_update(serde_json::json!({"output": self.output}));
+            on_update(serde_json::json!({"output": output}));
         }
-        let mut content = if self.output.is_empty() {
+        let mut content = if output.is_empty() {
             Vec::new()
         } else {
-            vec![ToolResultContent::Text {
-                text: self.output.clone(),
-            }]
+            vec![ToolResultContent::Text { text: output }]
         };
         if let Some(mime_type) = &self.media {
             content.push(ToolResultContent::Image {
@@ -1840,6 +1857,7 @@ fn register_scenario_tool(
         || tool.terminate
         || !tool.added_tool_names.is_empty()
         || tool.execution_mode.is_some()
+        || tool.prepared_arguments.is_some()
     {
         registry.register(Arc::new(ReplayTool::configured(
             &tool.name,
@@ -1851,6 +1869,7 @@ fn register_scenario_tool(
             tool.terminate,
             tool.added_tool_names.clone(),
             tool.execution_mode,
+            tool.prepared_arguments.clone(),
         )));
         return Ok(());
     }
@@ -2108,6 +2127,25 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
                 _ => None,
             })
     };
+    let latest_tool_call_arguments = || {
+        actual
+            .messages
+            .iter()
+            .rev()
+            .find_map(|message| match message {
+                AgentMessage::Assistant(assistant) => {
+                    assistant
+                        .content
+                        .iter()
+                        .rev()
+                        .find_map(|content| match content {
+                            AssistantContent::ToolCall(call) => Some(&call.arguments),
+                            _ => None,
+                        })
+                }
+                _ => None,
+            })
+    };
     if let Some(expected_names) = &expected.tool_result_added_tool_names {
         let actual_names = latest_tool_result()
             .map(|result| &result.added_tool_names)
@@ -2144,6 +2182,16 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
             .map(|result| result.is_error)
             .unwrap_or(false);
         assert_yaml_eq!(Some(expected_error), actual_error, "tool_result_is_error");
+    }
+    if let Some(expected_arguments) = &expected.tool_call_arguments {
+        let actual_arguments = latest_tool_call_arguments()
+            .cloned()
+            .unwrap_or(serde_json::Value::Null);
+        assert_yaml_eq!(
+            Some(expected_arguments.clone()),
+            actual_arguments,
+            "tool_call_arguments"
+        );
     }
     assert_yaml_eq!(
         expected
