@@ -198,3 +198,20 @@ and YAML replay remain green.
 This task is intentionally separate from the strict color oracle gap in p19/p25:
 state ownership can be completed independently, while color parity requires a
 clean paired Grok capture.
+
+## Compatibility-state audit (2026-08-07)
+
+The live `EventRenderer::with_live_actors` path was re-audited after the
+animation/event work. Its mutable-looking helpers derive from actor snapshots
+and emit acknowledged `ScrollbackMsg`/`StatusMsg` messages; the legacy
+`Projection<Scrollback>` and `Projection<StatusBar>` variants are compiled only
+for synchronous compatibility tests. No live renderer field remains a second
+state owner. The remaining cleanup is test/replay adapter retirement, not a
+production SSOT violation.
+
+The same audit compared dense-group truncation with Grok's renderer source.
+Runie's plain `N more` fallback deliberately uses `hidden - 1`, because Grok's
+synthetic header consumes the first hidden slot; this is source-aligned and is
+covered by the dense-group YAML oracle. The next TUI-only gap is Grok's
+mouse/text-selection box and per-member selection surface, which requires an
+explicit interaction event contract before implementation.
