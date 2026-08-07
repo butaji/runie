@@ -63,6 +63,8 @@ The renderer must never own spans or infer telemetry from status text.
    the YAML fixtures assert the resulting parent links.
    Active spans default to `ok` at creation, matching Pi's in-memory span
    recorder rather than exposing an intermediate unset status.
+   Callback failures now preserve a structured `Error` name/message in the
+   actor snapshot instead of discarding the callback error payload.
 4. Add a YAML runtime fixture with declared span commands and ordered snapshot
    assertions. **Done:** `TelemetryAction`, `TelemetryScenario`, and the
    runtime-discovered `tests/telemetry_replay.rs` execute YAML actions through

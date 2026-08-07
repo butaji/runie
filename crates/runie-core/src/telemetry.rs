@@ -350,12 +350,22 @@ impl TelemetryActor {
     where
         F: FnOnce(TelemetrySpan) -> Fut,
         Fut: Future<Output = Result<T, E>>,
+        E: std::fmt::Display,
     {
         let span = self.start_span(parent_id, name, attributes).await?;
         let result = callback(span.clone()).await;
         match &result {
             Ok(_) => span.status(SpanStatus::Ok).await,
-            Err(_) => span.status(SpanStatus::Error).await,
+            Err(error) => {
+                span.status_with_error(
+                    SpanStatus::Error,
+                    Some(SpanError {
+                        name: "Error".to_owned(),
+                        message: error.to_string(),
+                    }),
+                )
+                .await;
+            }
         }
         span.end().await;
         Some(result)
@@ -455,6 +465,7 @@ impl TelemetrySpan {
     where
         F: FnOnce(TelemetrySpan) -> Fut,
         Fut: Future<Output = Result<T, E>>,
+        E: std::fmt::Display,
     {
         self.actor
             .with_span(Some(self.id), name, attributes, callback)
@@ -519,6 +530,13 @@ mod tests {
         let snapshot = actor.snapshot();
         assert_eq!(snapshot.spans[0].status, SpanStatus::Ok);
         assert_eq!(snapshot.spans[1].status, SpanStatus::Error);
+        assert_eq!(
+            snapshot.spans[1].error,
+            Some(SpanError {
+                name: "Error".into(),
+                message: "failed".into(),
+            })
+        );
         assert!(snapshot.spans.iter().all(|span| span.ended));
     }
 
