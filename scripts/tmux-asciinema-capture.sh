@@ -193,8 +193,17 @@ for _ in $(seq 1 "$probe_iterations"); do
     if printf '%s' "$screen" | grep -Fq 'Help improve Grok'; then
         reject_capture "grok_consent_surface"
     fi
+    # Grok changes its compact footer vocabulary at narrow/resized widths.
+    # `Worked for` is present in full mode, while compact mode may expose only
+    # the send/help footer. All accepted alternatives are settled-only markers
+    # and the active-turn cancellation affordance remains a hard exclusion.
+    has_settled_footer=0
     if printf '%s' "$screen" | grep -Fq 'Worked for' \
-        && printf '%s' "$screen" | grep -Fq 'Shift+Tab' \
+        || printf '%s' "$screen" | grep -Fq 'Enter:send' \
+        || printf '%s' "$screen" | grep -Fq 'Type your message'; then
+        has_settled_footer=1
+    fi
+    if (( has_settled_footer )) \
         && ! printf '%s' "$screen" | grep -Fq 'Esc:cancel'; then
         settled=1
         break

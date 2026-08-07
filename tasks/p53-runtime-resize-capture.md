@@ -67,6 +67,11 @@ The private session produced valid cast/raw/settled/manifest artifacts and
 paired Grok-vs-Runie cell comparisons during the same schedule remain the
 final parity evidence.
 
+The settled probe now accepts Grok's compact-width `Enter:send` and
+`Type your message` footer variants in addition to the full-mode `Worked for`
+marker, while retaining the `Esc:cancel` active-turn exclusion. This removes a
+false timeout source when a resize changes footer vocabulary.
+
 Paired schedule probe (2026-08-08): both Runie and Grok independently recorded
 the same two observed geometries. Runie reached its settled frame; Grok's
 settled-response probe timed out after the resize, so its cast is marked
