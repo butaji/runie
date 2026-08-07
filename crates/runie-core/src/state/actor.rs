@@ -206,6 +206,9 @@ impl AgentStateActor {
             AgentEvent::CompactionCreated { .. } => {
                 // Compaction journal facts belong to SessionActor.
             }
+            AgentEvent::OperationRecordCreated { .. } => {
+                // Operation-lane journal facts belong to SessionActor.
+            }
             AgentEvent::MessageStart { message } if is_assistant(&message) => {
                 state.is_streaming = true;
                 state.streaming_message = Some(message);

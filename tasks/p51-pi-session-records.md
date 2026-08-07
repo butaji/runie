@@ -84,3 +84,9 @@ context trimming, and operation lifecycle remain outside this slice.
 Full branch navigation and operation-lane records
 remain separate follow-up work until their Pi source semantics, storage
 lifecycle, and actor events are mapped in detail.
+
+The generic operation-lane increment now preserves declared operation record
+kinds and payloads through `OperationRecordCreated`, the actor journal, JSONL,
+and YAML replay. It is deliberately lossless transport, not an implementation
+of Pi's operation admission/reducer policy; those semantics remain the next
+operation-lane task.

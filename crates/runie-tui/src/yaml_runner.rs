@@ -319,6 +319,9 @@ pub enum EventSpec {
     Compaction {
         compaction: CompactionSpec,
     },
+    OperationRecord {
+        operation_record: OperationRecordSpec,
+    },
     ToolMode {
         tool_mode: ToolModeSpec,
     },
@@ -456,6 +459,13 @@ pub struct CompactionSpec {
     pub details: Option<serde_json::Value>,
     #[serde(default)]
     pub usage: Option<Usage>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct OperationRecordSpec {
+    pub record_type: String,
+    #[serde(default)]
+    pub data: serde_json::Value,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -678,6 +688,7 @@ impl EventSpec {
             Self::BranchSummary { .. } => None,
             Self::CustomEntry { .. } => None,
             Self::Compaction { .. } => None,
+            Self::OperationRecord { .. } => None,
             Self::ToolMode { .. } => None,
             Self::ToolFold { .. } => None,
             Self::ToolSelect { .. } => None,
@@ -734,6 +745,12 @@ impl EventSpec {
                 details: compaction.details.clone(),
                 usage: compaction.usage.clone(),
             }),
+            Self::OperationRecord { operation_record } => {
+                Some(AgentEvent::OperationRecordCreated {
+                    record_type: operation_record.record_type.clone(),
+                    data: operation_record.data.clone(),
+                })
+            }
             Self::ToolMode { tool_mode } => Some(AgentEvent::ToolDisplayModeChanged {
                 tool_call_id: tool_mode.tool_call_id.clone(),
                 mode: tool_mode.mode,
@@ -2498,6 +2515,10 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
                 runie_core::session::SessionConfigRecord::CompactionCreated { .. } => {
                     "compaction".to_owned()
                 }
+                runie_core::session::SessionConfigRecord::OperationRecordCreated {
+                    record_type,
+                    ..
+                } => record_type.clone(),
             })
             .collect::<Vec<_>>();
         if actual_records.as_slice() != expected_records.as_slice() {
@@ -3096,6 +3117,7 @@ fn event_kind(event: &runie_core::types::AgentEvent) -> &'static str {
         BranchSummaryCreated { .. } => "branch_summary_created",
         CustomSessionEntryCreated { .. } => "custom_session_entry_created",
         CompactionCreated { .. } => "compaction_created",
+        OperationRecordCreated { .. } => "operation_record_created",
         ToolDisplayModeChanged { .. } => "tool_display_mode_changed",
         TurnEnd { .. } => "turn_end",
         MessageStart { .. } => "message_start",

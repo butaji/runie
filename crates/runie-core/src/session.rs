@@ -44,6 +44,10 @@ pub enum SessionConfigRecord {
         details: Option<serde_json::Value>,
         usage: Option<crate::types::Usage>,
     },
+    OperationRecordCreated {
+        record_type: String,
+        data: serde_json::Value,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -267,6 +271,12 @@ impl SessionSnapshot {
                             .transpose()
                             .map_err(|error| format!("invalid usage: {error}"))?,
                     },
+                    "operation_started" | "operation_finished" | "abort_requested" => {
+                        SessionConfigRecord::OperationRecordCreated {
+                            record_type: entry_type.to_owned(),
+                            data: value.clone(),
+                        }
+                    }
                     _ => {
                         return Err(format!(
                             "unsupported session mutation at line {}",
@@ -397,6 +407,10 @@ impl SessionSnapshot {
                         "details": details,
                         "usage": usage,
                     }),
+                ),
+                SessionConfigRecord::OperationRecordCreated { record_type, data } => (
+                    record_type.as_str(),
+                    data.clone(),
                 ),
             };
             entry["kind"] = serde_json::Value::String("entry".into());
@@ -631,6 +645,16 @@ impl SessionActor {
                             break;
                         }
                     }
+                    AgentEvent::OperationRecordCreated { record_type, data } => {
+                        if !mailbox_ack!(tx, |reply| {
+                            Command::Config(
+                                SessionConfigRecord::OperationRecordCreated { record_type, data },
+                                reply,
+                            )
+                        }) {
+                            break;
+                        }
+                    }
                     AgentEvent::ToolExecutionEnd {
                         tool_call_id,
                         result,
@@ -720,6 +744,13 @@ impl SessionActor {
                     tokens_before: *tokens_before,
                     details: details.clone(),
                     usage: usage.clone(),
+                })
+                .await;
+            }
+            AgentEvent::OperationRecordCreated { record_type, data } => {
+                self.record_config(SessionConfigRecord::OperationRecordCreated {
+                    record_type: record_type.clone(),
+                    data: data.clone(),
                 })
                 .await;
             }

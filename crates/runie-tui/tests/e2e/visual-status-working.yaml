@@ -18,6 +18,13 @@ events:
   - compaction:
       summary: "Compacted earlier context"
       tokens_before: 2048
+  - operation_record:
+      record_type: operation_started
+      data:
+        id: op-1
+        lane: main
+        intent:
+          kind: run
   - text_delta: "working"
 assertions:
   state:
@@ -31,6 +38,7 @@ assertions:
       - branch_summary
       - custom
       - compaction
+      - operation_started
   visual:
     cols: 80
     rows: 24

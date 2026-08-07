@@ -93,6 +93,7 @@ pub fn status_messages_for_event(event: &AgentEvent) -> Vec<StatusMsg> {
         | AgentEvent::BranchSummaryCreated { .. }
         | AgentEvent::CustomSessionEntryCreated { .. }
         | AgentEvent::CompactionCreated { .. }
+        | AgentEvent::OperationRecordCreated { .. }
         | AgentEvent::ToolDisplayModeChanged { .. }
         | AgentEvent::MessageStart { .. }
         | AgentEvent::MessageEnd { .. }

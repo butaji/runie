@@ -23,6 +23,7 @@ macro_rules! agent_event_kind {
                 "CustomSessionEntryCreated"
             }
             $crate::types::AgentEvent::CompactionCreated { .. } => "CompactionCreated",
+            $crate::types::AgentEvent::OperationRecordCreated { .. } => "OperationRecordCreated",
             $crate::types::AgentEvent::ToolDisplayModeChanged { .. } => "ToolDisplayModeChanged",
             $crate::types::AgentEvent::TurnEnd { .. } => "TurnEnd",
             $crate::types::AgentEvent::MessageStart { .. } => "MessageStart",

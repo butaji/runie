@@ -986,6 +986,12 @@ pub enum AgentEvent {
         details: Option<serde_json::Value>,
         usage: Option<Usage>,
     },
+    /// Lossless Pi harness operation-lane record. Admission and lifecycle
+    /// policy remain owned by the loop/harness; the session actor stores data.
+    OperationRecordCreated {
+        record_type: String,
+        data: serde_json::Value,
+    },
     ToolDisplayModeChanged {
         tool_call_id: String,
         mode: ToolDisplayMode,
