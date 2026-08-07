@@ -498,3 +498,12 @@ fallback branch and then its obsolete `Projection` access, with a YAML event
 sequence and actor snapshot assertion for each family. Removing the entire
 mirror in one edit would either discard replay coverage or create a second
 mutable feed model, both of which violate the SSOT boundary.
+
+**Tool-start helper migration (2026-08-08):** The tool-start reducer now has
+no compatibility writes. It derives Grok activity/header data from the
+actor-owned snapshot and returns `ToolStartRunning`; the `ScrollbackActor`
+mailbox applies that message. The actor-backed regression remains green, and
+existing YAML tool/activity fixtures continue to exercise the full event →
+actor → snapshot path. Tool update/completion helpers remain the next grouped
+migration because their legacy branches still contain specialized output
+construction that must be moved without changing card payloads.

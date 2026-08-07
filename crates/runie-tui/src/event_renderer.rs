@@ -716,21 +716,13 @@ impl EventRenderer {
         tool_name: String,
         args: serde_json::Value,
     ) -> ScrollbackMsg {
+        debug_assert!(
+            self.scrollback_actor.is_some(),
+            "tool-start reduction requires the actor-backed feed"
+        );
         let starts_new_activity_group =
             self.active_tool_count() == 0 && !self.activity_group_exists_since_latest_user();
-        if starts_new_activity_group && self.scrollback_actor.is_none() {
-            self.scrollback.lock().apply(ScrollbackMsg::ActivityReset);
-        }
-        if self.scrollback_actor.is_none() {
-            self.scrollback
-                .lock()
-                .apply(ScrollbackMsg::ActivityToolStart(tool_name.clone()));
-        }
-        let counts = if self.scrollback_actor.is_none() {
-            self.activity_counts()
-        } else {
-            self.activity_counts_with_start(&tool_name, starts_new_activity_group)
-        };
+        let counts = self.activity_counts_with_start(&tool_name, starts_new_activity_group);
         let (
             activity_dirs,
             activity_files,
@@ -752,30 +744,6 @@ impl EventRenderer {
             } else {
                 None
             };
-        if self.scrollback_actor.is_none() {
-            if let Some(activity) = &activity {
-                let mut scrollback = self.scrollback.lock();
-                if !starts_new_activity_group {
-                    if let Some(line) = scrollback.last_mut_by_kind(LineKind::Activity) {
-                        line.text = activity.clone();
-                    } else {
-                        scrollback.append(Line::new(LineKind::Activity, activity.clone()));
-                    }
-                } else {
-                    scrollback.append(Line::new(LineKind::Activity, activity.clone()));
-                }
-            }
-        }
-        if self.scrollback_actor.is_none() {
-            self.scrollback.lock().append(
-                Line::new(LineKind::ToolRunning, tool_buffer.clone()).for_tool(&tool_call_id),
-            );
-        }
-        if self.scrollback_actor.is_none() {
-            self.scrollback
-                .lock()
-                .apply(ScrollbackMsg::SetToolArgs(tool_call_id.clone(), args));
-        }
         ScrollbackMsg::ToolStartRunning {
             tool_call_id,
             header: tool_buffer,
