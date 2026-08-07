@@ -1575,3 +1575,12 @@ cell, including 1-based coordinates, glyphs, foreground/background/style
 tuples, and separate glyph/style difference flags. Aggregate counts and exit
 semantics are unchanged; this makes full-color capture mismatches directly
 actionable without manually scanning the dumps.
+
+**Checked-in cast validity audit (2026-08-08):** Running the VT-aware
+`cast_compare` against `artifacts/grok-full.cast` and
+`artifacts/runie-full.cast` reports 1,640 differing cells, but the Runie cast
+contains historical `[renderer] rx:` debug lines on rows 11–21 that are absent
+from the current source. Its timestamp predates the current actor boundary
+work, so this pair is invalid evidence for renderer parity. Fresh paired PTY
+captures must be produced before promoting any resulting glyph/style delta to
+an implementation change.
