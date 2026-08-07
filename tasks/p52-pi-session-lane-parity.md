@@ -463,7 +463,9 @@ reduction still occurs through the event bus and `SessionActor`.
 
 `visual-operation-queue-lifecycle.yaml` now provides the no-recompile replay
 oracle for both `steer` and `followUp` enqueue/cancel pairs, asserting stable
-identity-bearing records in order.
+identity-bearing records in order. It also places an explicit
+`session_flush: true` barrier between enqueue and cancellation, exercising the
+runtime-editable actor-ack contract.
 
 ## Completed slice (2026-08-07, assistant usage emission)
 
