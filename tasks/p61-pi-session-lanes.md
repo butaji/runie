@@ -32,7 +32,9 @@ sequence before writing; an interleaved lane/configuration regression pins
 that ordering and round-trip behavior. `fork_at_message` now follows Pi’s
 fork mutation contract by publishing a fresh `main` lane pointer after the
 copied branch prefix; the branch regression asserts the new lane head and
-sequence.
+sequence. Fork metadata now also re-emits the effective session name and
+labels for retained entries, matching Pi’s `createForkMutations` behavior
+even when those facts were recorded after the branch point.
 
 The lane projection must remain separate from `operation_kinds` and
 `active_operations`; those are Pi operation records, not session tree facts.

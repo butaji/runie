@@ -1599,7 +1599,13 @@ impl SessionSnapshot {
             fork.entries.push(copy);
         }
         for entry in &self.config_records {
-            if !retained.contains(&entry.id) {
+            if !retained.contains(&entry.id)
+                || matches!(
+                    entry.record,
+                    SessionConfigRecord::NameChanged { .. }
+                        | SessionConfigRecord::LabelChanged { .. }
+                )
+            {
                 continue;
             }
             sequence += 1;
@@ -1620,6 +1626,33 @@ impl SessionSnapshot {
             lane: "main".into(),
             leaf_id: Some(target_id.to_owned()),
         });
+        if let Some(name) = self.name() {
+            sequence += 1;
+            fork.config_records.push(SessionConfigEntry {
+                id: format!("fork-fact-{sequence}"),
+                seq: sequence,
+                parent_id: Some(target_id.to_owned()),
+                timestamp: 0,
+                record: SessionConfigRecord::NameChanged { name },
+            });
+        }
+        for (label_target, label) in self
+            .labels()
+            .into_iter()
+            .filter(|(id, _)| retained.contains(id))
+        {
+            sequence += 1;
+            fork.config_records.push(SessionConfigEntry {
+                id: format!("fork-fact-{sequence}"),
+                seq: sequence,
+                parent_id: Some(target_id.to_owned()),
+                timestamp: 0,
+                record: SessionConfigRecord::LabelChanged {
+                    target_id: label_target,
+                    label: Some(label),
+                },
+            });
+        }
         fork.sequence = sequence;
         Ok(fork)
     }
@@ -2926,6 +2959,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::too_many_lines)]
     async fn labels_are_event_reduced_validated_and_removed_by_fact() {
         let actor = SessionActor::new();
         actor.append(user("one")).await;
@@ -2964,6 +2998,19 @@ mod tests {
             .await
             .expect_err("missing target must be rejected");
         assert!(error.contains("label target does not exist"));
+        actor
+            .apply_event(&AgentEvent::SessionLabelChanged {
+                target_id: "entry-1".into(),
+                label: Some("important".into()),
+            })
+            .await
+            .expect("label before fork");
+        let fork = actor
+            .snapshot()
+            .fork_at_message("entry-1")
+            .expect("fork facts");
+        assert_eq!(fork.name().as_deref(), Some("demo"));
+        assert_eq!(fork.labels().get("entry-1"), Some(&"important".to_owned()));
     }
 
     #[tokio::test]
