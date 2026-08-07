@@ -538,8 +538,8 @@ into score/source/file-range/snippet rows. The current implementation has the
 required pure parser and shared `memory_display_lines` projection in
 `runie-tui-model`; both live event rendering and deterministic replay consume
 that contract, and `visual-specialized-tools.yaml` asserts the two-result
-header/output behavior. The remaining gap is rich Grok snippet-panel styling
-and metadata spans, not parsing or event ownership.
+header/output behavior. Snippet rows now use the muted panel-background
+semantic style; exact metadata spans, full row fill, and reflow remain open.
 
 Non-tool selection YAML oracle (2026-08-06): `visual-hey.yaml` now performs
 `tool_select: entry_next` against a tool-free conversation and asserts the

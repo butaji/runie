@@ -1953,6 +1953,12 @@ fn styled_line_for(kind: LineKind, text: &str, theme: ThemeKind) -> RatLine<'sta
         return styled_activity_line(text, style);
     }
     if matches!(kind, LineKind::ToolOutput | LineKind::ToolResult) {
+        if text.starts_with("    ") {
+            return RatLine::from(text.to_owned()).style(
+                appearance::muted_style_for(theme)
+                    .patch(appearance::panel_background_style_for(theme)),
+            );
+        }
         if let Some(memory) = text.strip_prefix("Result ") {
             let mut parts = memory.split(" · ");
             let number = parts.next().unwrap_or_default();
