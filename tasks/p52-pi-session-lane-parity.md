@@ -166,6 +166,17 @@ result asynchronously. The actor remains the sole reader of live session
 state; no caller mutates or races a snapshot. Summary generation and the
 event-owned `CompactionCreated` journal mutation remain the next boundary.
 
+## Compaction publication boundary audit (2026-08-08)
+
+The publication half of that boundary is now source-verified: a
+`CompactionCreated` event enters `SessionActor::apply_event`, is reduced by
+the actor-owned configuration mailbox, publishes the immutable session
+snapshot, and is replayable from YAML (`visual-status-working.yaml`). The
+remaining Pi gap is specifically provider-backed summary generation and its
+usage/error lifecycle. It must enter through an injected summarization
+capability that returns typed events; a generic local summary or renderer-side
+mutation would not be Pi parity and is intentionally not introduced here.
+
 ## Completed slice (2026-08-07, atomic storage actor)
 
 `SessionStorageActor` now stages serialized JSONL at a sibling `.tmp` path and
