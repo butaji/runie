@@ -451,6 +451,26 @@ impl App {
             .await;
     }
 
+    pub async fn mouse_selection_start(&self, position: crate::widgets::CellPosition) {
+        self.scrollback_actor
+            .apply(crate::widgets::ScrollbackMsg::MouseSelectionStart(position))
+            .await;
+    }
+
+    pub async fn mouse_selection_extend(&self, position: crate::widgets::CellPosition) {
+        self.scrollback_actor
+            .apply(crate::widgets::ScrollbackMsg::MouseSelectionExtend(
+                position,
+            ))
+            .await;
+    }
+
+    pub async fn mouse_selection_commit(&self) {
+        self.scrollback_actor
+            .apply(crate::widgets::ScrollbackMsg::MouseSelectionCommit)
+            .await;
+    }
+
     /// Apply a feed update through the actor that owns the rendered snapshot.
     /// The mutex is a compatibility fallback for apps whose renderer is not
     /// running yet.

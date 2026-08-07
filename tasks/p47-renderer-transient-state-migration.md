@@ -419,3 +419,12 @@ backlog, and dropped amount. `visual-scroll-flush.yaml` therefore proves the
 two capped cadence flushes (`6/5` lines with backlog `5/0`) and the zero-burst
 finalization path. This closes the previous evidence gap without making the
 feed actor own duplicate scroll state.
+
+Live cell-coordinate input slice (2026-08-07): the interactive input worker
+now translates left-button down/drag/up events into
+`MouseSelectionStart`/`MouseSelectionExtend`/`MouseSelectionCommit`. The
+render/layout boundary transfers the scrollback origin through its input
+configuration mailbox; the worker emits viewport-relative coordinates, and
+the main loop delivers them to `ScrollbackActor`. Clipboard/copy and view
+effects remain intentionally unimplemented until their effect protocol is
+modeled.

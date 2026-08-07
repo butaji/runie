@@ -10,7 +10,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::Result;
 use crossterm::event::{
-    Event, EventStream, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEventKind,
+    Event, EventStream, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseButton, MouseEventKind,
 };
 use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
@@ -48,10 +48,14 @@ struct PlaceholderStream;
 enum InputEvent {
     Key(KeyEvent),
     Mouse(i32),
+    MouseSelectionStart(u16, u16),
+    MouseSelectionExtend(u16, u16),
+    MouseSelectionCommit,
 }
 
 enum InputConfig {
     ScrollViewport(u16),
+    SelectionOrigin { row: u16, column: u16 },
 }
 
 fn render_command_palette(
@@ -420,6 +424,7 @@ async fn run_app(
         const INPUT_SCROLL_VIEWPORT_ROWS: u16 = 24;
         let mut scroll_flush =
             runie_tui_model::ScrollFlushState::new(scroll_normalizer, INPUT_SCROLL_VIEWPORT_ROWS);
+        let mut selection_origin = (0_u16, 0_u16);
         let scroll_epoch = Instant::now();
         let mut cadence = tokio::time::interval(Duration::from_millis(
             runie_tui_model::DEFAULT_SCROLL_FLUSH_CADENCE_MS,
@@ -435,6 +440,25 @@ async fn run_app(
                             if input_tx.send(InputEvent::Key(key)).await.is_err() { break; }
                         }
                         Event::Mouse(mouse) => {
+                            match mouse.kind {
+                                MouseEventKind::Down(MouseButton::Left) => {
+                                    if input_tx.send(InputEvent::MouseSelectionStart(
+                                        mouse.row.saturating_sub(selection_origin.0),
+                                        mouse.column.saturating_sub(selection_origin.1),
+                                    )).await.is_err() { break; }
+                                }
+                                MouseEventKind::Drag(MouseButton::Left) => {
+                                    if input_tx.send(InputEvent::MouseSelectionExtend(
+                                        mouse.row.saturating_sub(selection_origin.0),
+                                        mouse.column.saturating_sub(selection_origin.1),
+                                    )).await.is_err() { break; }
+                                }
+                                MouseEventKind::Up(MouseButton::Left) => {
+                                    if input_tx.send(InputEvent::MouseSelectionCommit).await.is_err() { break; }
+                                }
+                                MouseEventKind::ScrollUp | MouseEventKind::ScrollDown => {}
+                                _ => continue,
+                            }
                             let direction = match mouse.kind {
                                 MouseEventKind::ScrollUp => runie_tui_model::ScrollDirection::Up,
                                 MouseEventKind::ScrollDown => runie_tui_model::ScrollDirection::Down,
@@ -448,8 +472,15 @@ async fn run_app(
                     }
                 }
                 config = input_config_rx.recv() => {
-                    let Some(InputConfig::ScrollViewport(rows)) = config else { break; };
-                    scroll_flush = scroll_flush.with_viewport_rows(rows);
+                    let Some(config) = config else { break; };
+                    match config {
+                        InputConfig::ScrollViewport(rows) => {
+                            scroll_flush = scroll_flush.with_viewport_rows(rows);
+                        }
+                        InputConfig::SelectionOrigin { row, column } => {
+                            selection_origin = (row, column);
+                        }
+                    }
                 }
                 _ = cadence.tick() => {
                     let at_ms = scroll_epoch.elapsed().as_millis() as u64;
@@ -476,6 +507,13 @@ async fn run_app(
                 match input {
                     InputEvent::Key(key) => pending_key = Some(key),
                     InputEvent::Mouse(delta) => app.scroll_scrollback_by(delta).await,
+                    InputEvent::MouseSelectionStart(row, column) => {
+                        app.mouse_selection_start(runie_tui::widgets::CellPosition { row, column }).await;
+                    }
+                    InputEvent::MouseSelectionExtend(row, column) => {
+                        app.mouse_selection_extend(runie_tui::widgets::CellPosition { row, column }).await;
+                    }
+                    InputEvent::MouseSelectionCommit => app.mouse_selection_commit().await,
                 }
                 continue;
             }
@@ -668,6 +706,10 @@ async fn run_app(
                     let _ = input_config_tx.try_send(InputConfig::ScrollViewport(
                         layout.scrollback.height,
                     ));
+                    let _ = input_config_tx.try_send(InputConfig::SelectionOrigin {
+                        row: layout.scrollback.y,
+                        column: layout.scrollback.x,
+                    });
                     // Wrap each render in catch_unwind so a widget bug
                     // doesn't kill the binary — log + continue.
                     let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
