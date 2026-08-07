@@ -678,6 +678,11 @@ pub struct SimpleStreamOptions {
     pub websocket_connect_timeout_ms: Option<u64>,
     pub signal: Option<tokio::sync::watch::Receiver<bool>>,
     pub thinking_budgets: Option<ThinkingBudgets>,
+    /// Pi `SimpleStreamOptions.reasoning` override for provider adapters.
+    pub reasoning: Option<ThinkingLevel>,
+    /// Pi deferred-response request mode. Providers may ignore it when
+    /// unsupported, but the typed boundary must not discard it.
+    pub deferred: Option<DeferredRequest>,
     /// Explicit Pi stream temperature, kept separate from arbitrary sampling
     /// parameters because providers may map the two contracts differently.
     pub temperature: Option<f64>,
@@ -703,6 +708,24 @@ pub struct SimpleStreamOptions {
     pub retry_delay: Option<RetryDelayHook>,
     /// Injectable `Math.random` equivalent for Pi's exponential retry jitter.
     pub retry_jitter: Option<RetryJitterHook>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum DeferredRequest {
+    Enabled(bool),
+    Window { window: DeferredWindow },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum DeferredWindow {
+    #[serde(rename = "15m")]
+    FifteenMinutes,
+    #[serde(rename = "1h")]
+    OneHour,
+    #[serde(rename = "24h")]
+    OneDay,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -734,6 +757,8 @@ impl std::fmt::Debug for SimpleStreamOptions {
             .field("cache_retention", &self.cache_retention)
             .field("signal", &self.signal.is_some())
             .field("thinking_budgets", &self.thinking_budgets)
+            .field("reasoning", &self.reasoning)
+            .field("deferred", &self.deferred)
             .field("temperature", &self.temperature)
             .field("timeout_ms", &self.timeout_ms)
             .field("max_retries", &self.max_retries)

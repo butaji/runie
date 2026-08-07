@@ -96,6 +96,10 @@ pub struct ProviderOptionsSpec {
     #[serde(default)]
     pub thinking_budgets: Option<runie_core::types::ThinkingBudgets>,
     #[serde(default)]
+    pub reasoning: Option<ThinkingLevel>,
+    #[serde(default)]
+    pub deferred: Option<runie_core::types::DeferredRequest>,
+    #[serde(default)]
     pub temperature: Option<f64>,
     #[serde(default)]
     pub max_tokens: Option<u64>,
@@ -121,6 +125,8 @@ impl ProviderOptionsSpec {
             cache_retention: self.cache_retention.as_deref().map(parse_cache_retention),
             websocket_connect_timeout_ms: self.websocket_connect_timeout_ms,
             thinking_budgets: self.thinking_budgets.clone(),
+            reasoning: self.reasoning,
+            deferred: self.deferred.clone(),
             temperature: self.temperature,
             max_tokens: self.max_tokens,
             timeout_ms: self.timeout_ms,
@@ -793,6 +799,8 @@ pub struct ProviderOptionsAssertions {
     pub cache_retention: Option<String>,
     pub websocket_connect_timeout_ms: Option<u64>,
     pub thinking_budgets: Option<runie_core::types::ThinkingBudgets>,
+    pub reasoning: Option<ThinkingLevel>,
+    pub deferred: Option<runie_core::types::DeferredRequest>,
     pub temperature: Option<f64>,
     pub max_tokens: Option<u64>,
     pub timeout_ms: Option<u64>,
@@ -2117,6 +2125,22 @@ fn assert_provider_options(outcome: &ScenarioOutcome, scenario: &Scenario) -> Re
             return Err(format!(
                 "provider thinking budgets mismatch: expected {value:?}, got {:?}",
                 actual.thinking_budgets
+            ));
+        }
+    }
+    if let Some(value) = expected.reasoning {
+        if actual.reasoning != Some(value) {
+            return Err(format!(
+                "provider reasoning mismatch: expected {value:?}, got {:?}",
+                actual.reasoning
+            ));
+        }
+    }
+    if let Some(value) = &expected.deferred {
+        if actual.deferred.as_ref() != Some(value) {
+            return Err(format!(
+                "provider deferred mode mismatch: expected {value:?}, got {:?}",
+                actual.deferred
             ));
         }
     }

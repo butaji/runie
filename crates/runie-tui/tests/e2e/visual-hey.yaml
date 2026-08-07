@@ -18,6 +18,8 @@ provider_options:
   websocket_connect_timeout_ms: 2500
   thinking_budgets:
     high: 512
+  reasoning: high
+  deferred: { window: 1h }
   sampling_params:
     temperature: 0.2
   session_id: parity-hey
@@ -49,6 +51,8 @@ assertions:
     websocket_connect_timeout_ms: 2500
     thinking_budgets:
       high: 512
+    reasoning: high
+    deferred: { window: 1h }
     sampling_params:
       temperature: 0.2
   exact_events:

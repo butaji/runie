@@ -142,6 +142,12 @@ restores the same fields, and the core round-trip test asserts all three. This
 keeps provider-specific deferred-tool encoding possible without coupling the
 generic converter to one provider protocol.
 
+Simple-stream option parity (2026-08-07): `SimpleStreamOptions` now retains
+Pi's optional `reasoning` override and deferred-response request mode,
+including the `15m`/`1h`/`24h` windows. YAML provider options deserialize and
+carry both values through the owned provider request snapshot; unsupported
+provider behavior remains explicitly adapter-owned.
+
 Provider lifecycle increment (2026-08-07): `ProviderActor` now aborts any
 previous owned pump before acknowledging a new `Start`. This matches the
 one-in-flight Pi turn contract and prevents superseded streams from publishing
