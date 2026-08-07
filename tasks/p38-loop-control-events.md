@@ -88,6 +88,19 @@ The remaining `apply_event` calls are confined to `event_renderer` unit tests
 that exercise the quarantined compatibility widgets. Retirement can therefore
 be staged as test migration, with no live delivery-path change.
 
+## Prompt admission remains reactive (2026-08-08)
+
+The TUI submission actor now acknowledges admission and starts each
+`LoopActor::prompt` call in an owned `tokio::task::JoinSet`. Previously the
+actor acknowledged the first request but then awaited that provider-backed run
+inside its mailbox worker; a second submitted prompt could consequently stall
+behind a slow provider. The task set is owned by the actor worker, so dropping
+the actor cancels its in-flight runs rather than orphaning them.
+
+`crates/runie-tui/tests/e2e_test.rs::prompt_submission_ack_does_not_wait_for_provider`
+uses a never-resolving provider and submits two prompts, proving both
+admissions complete without sleeps or provider completion.
+
 **First compatibility migration (2026-08-08):** The welcome/agent-start
 regression now uses `with_actors` and `apply_actor_event`, asserting immutable
 feed/status snapshots. Its legacy lock-based setup was removed, and the

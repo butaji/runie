@@ -164,6 +164,17 @@ async fn prompt_submission_ack_does_not_wait_for_provider() {
     .await
     .expect("submission mailbox acceptance must not await provider work");
     assert_eq!(accepted.as_deref(), Some("pending"));
+
+    // A provider run already in progress must not block admission of the
+    // next prompt. This is the regression that a single sequential mailbox
+    // worker would miss.
+    let second = tokio::time::timeout(
+        std::time::Duration::from_millis(100),
+        app.handle_prompt_outcome(PromptOutcome::Submitted("second".into())),
+    )
+    .await
+    .expect("submission mailbox must remain reactive while a run is pending");
+    assert_eq!(second.as_deref(), Some("second"));
 }
 
 #[tokio::test]

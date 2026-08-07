@@ -311,11 +311,18 @@ fn submission_actor(
     std::sync::Arc<runie_core::task_owner::TaskOwner>,
 ) {
     runie_core::spawn_actor_worker!(32, |mut rx: mpsc::Receiver<Submission>| async move {
+        // The mailbox owns the task set: prompt runs must not occupy the
+        // submission reducer, and they are cancelled together with the actor.
+        let mut runs = tokio::task::JoinSet::new();
         while let Some((messages, accepted)) = rx.recv().await {
+            while runs.try_join_next().is_some() {}
             let _ = accepted.send(());
-            let _ = loop_actor
-                .prompt(messages, runie_core::types::AgentContext::default())
-                .await;
+            let loop_actor = loop_actor.clone();
+            runs.spawn(async move {
+                let _ = loop_actor
+                    .prompt(messages, runie_core::types::AgentContext::default())
+                    .await;
+            });
         }
     })
 }
