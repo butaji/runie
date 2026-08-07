@@ -43,6 +43,14 @@ follow-up mode watch channels. Setters emit `LoopControlEvent` values, and the
 loop, queue drainers, public readers, and YAML outcome all read the unified
 `LoopControlSnapshot` projection.
 
+**Reducer-owned snapshot publication (2026-08-07):** The control mailbox now
+keeps the mutable `LoopControlSnapshot` inside its worker, applies each
+`LoopControlEvent` there, and publishes a cloned immutable snapshot through
+`watch::Sender::send`. No public method or sibling actor mutates the control
+projection, and the reducer no longer uses `send_modify` as a second mutation
+surface. This preserves the event → actor → snapshot sequence required by the
+SSOT rule.
+
 ## Control mailbox closure (2026-08-06)
 
 The unified control snapshot is now reduced by an owned

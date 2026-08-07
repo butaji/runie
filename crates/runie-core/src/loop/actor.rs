@@ -140,6 +140,10 @@ struct Inner {
 }
 
 impl LoopActor {
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the actor constructor keeps mailbox, abort, and snapshot ownership together"
+    )]
     pub fn new(mut deps: LoopDeps) -> Self {
         let (abort_tx, abort_rx) = tokio::sync::watch::channel(false);
         deps.abort = Some(abort_rx);
@@ -150,9 +154,16 @@ impl LoopActor {
             follow_up_mode: deps.follow_up_mode,
         });
         let abort_tx_for_control = abort_tx.clone();
+        let control_snapshot = LoopControlSnapshot {
+            running: false,
+            abort_requested: false,
+            steering_mode: deps.steering_mode,
+            follow_up_mode: deps.follow_up_mode,
+        };
         let (control_commands, control_owner) = spawn_actor_worker!(
             32,
             |mut commands: mpsc::Receiver<LoopControlCommand>| async move {
+                let mut snapshot = control_snapshot;
                 while let Some(LoopControlCommand::Reduce(event, reply)) = commands.recv().await {
                     if matches!(
                         event,
@@ -162,7 +173,8 @@ impl LoopActor {
                     } else if matches!(event, LoopControlEvent::AbortRequested) {
                         let _ = abort_tx_for_control.send(true);
                     }
-                    control_tx.send_modify(|snapshot| reduce_control(snapshot, event));
+                    reduce_control(&mut snapshot, event);
+                    let _ = control_tx.send(snapshot.clone());
                     let _ = reply.send(());
                 }
             }
