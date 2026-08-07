@@ -2,6 +2,20 @@
 
 Status: in_progress
 
+## Completed slice (2026-08-07)
+
+`runie-core` now classifies all nine Pi operation-lane record families with
+`SessionLaneRecordKind`. A pure validator checks the known record type and
+record identity (`id`, `runId`, or `entryId`) and rejects duplicate open
+operations before they can change the actor-owned operation projection.
+Malformed or duplicate generic wire events remain journal facts for forward
+compatibility, but the reducer ignores them rather than corrupting state.
+Unit tests cover family classification, usage identity, malformed records,
+duplicate admission, and the existing lifecycle replay.
+
+This is intentionally only the first admission boundary. Typed event
+variants, sequence/lane validation, durable storage, and recovery remain open.
+
 ## Source contract
 
 The authoritative upstream files are:

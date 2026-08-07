@@ -176,6 +176,69 @@ pub struct OperationErrorSnapshot {
     pub message: String,
 }
 
+/// Pi's durable operation-lane record families. The payload remains JSON at
+/// the wire boundary, but classification is typed before the actor reducer
+/// changes its owned projection.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SessionLaneRecordKind {
+    OperationStarted,
+    AbortRequested,
+    OperationFinished,
+    StepAttempt,
+    ToolStarted,
+    QueueEnqueued,
+    QueueCancelled,
+    WriteDeferred,
+    Usage,
+}
+
+pub fn session_lane_record_kind(record_type: &str) -> Option<SessionLaneRecordKind> {
+    Some(match record_type {
+        "operation_started" => SessionLaneRecordKind::OperationStarted,
+        "abort_requested" => SessionLaneRecordKind::AbortRequested,
+        "operation_finished" => SessionLaneRecordKind::OperationFinished,
+        "step_attempt" => SessionLaneRecordKind::StepAttempt,
+        "tool_started" => SessionLaneRecordKind::ToolStarted,
+        "queue_enqueued" => SessionLaneRecordKind::QueueEnqueued,
+        "queue_cancelled" => SessionLaneRecordKind::QueueCancelled,
+        "write_deferred" => SessionLaneRecordKind::WriteDeferred,
+        "usage" => SessionLaneRecordKind::Usage,
+        _ => return None,
+    })
+}
+
+/// Validate the identity/admission rules that can be checked without IO.
+/// Storage-specific sequence and lane checks remain owned by the future
+/// durable storage actor.
+pub fn validate_session_lane_record(
+    snapshot: &SessionSnapshot,
+    record_type: &str,
+    data: &serde_json::Value,
+) -> Result<SessionLaneRecordKind, String> {
+    let kind = session_lane_record_kind(record_type)
+        .ok_or_else(|| format!("unknown session lane record type {record_type:?}"))?;
+    let operation_id = data
+        .get("runId")
+        .or_else(|| data.get("id"))
+        .or_else(|| data.get("entryId"))
+        .and_then(serde_json::Value::as_str)
+        .filter(|value| !value.is_empty());
+    if operation_id.is_none() {
+        return Err(format!(
+            "session lane record {record_type:?} is missing id/runId"
+        ));
+    }
+    if kind == SessionLaneRecordKind::OperationStarted
+        && operation_id.is_some_and(|id| snapshot.active_operations.contains_key(id))
+    {
+        return Err(format!(
+            "session operation {:?} is already open",
+            operation_id.expect("checked above")
+        ));
+    }
+    Ok(kind)
+}
+
 /// Reduce one Pi operation record into the session-owned lifecycle projection.
 /// Live event delivery and JSONL replay must use this same pure mapping so the
 /// two paths cannot drift.
@@ -188,6 +251,9 @@ fn reduce_operation_record(
     record_type: &str,
     data: &serde_json::Value,
 ) {
+    if validate_session_lane_record(snapshot, record_type, data).is_err() {
+        return;
+    }
     if record_type == "operation_started"
         && data
             .get("intent")
@@ -996,6 +1062,54 @@ mod tests {
         let (_, _, imported) = SessionSnapshot::from_jsonl(&jsonl).expect("operation JSONL");
         assert_eq!(imported.active_operations, original.active_operations);
         assert_eq!(imported.operation_outcomes, original.operation_outcomes);
+    }
+
+    #[test]
+    fn session_lane_record_validation_classifies_pi_families() {
+        assert_eq!(
+            session_lane_record_kind("tool_started"),
+            Some(SessionLaneRecordKind::ToolStarted)
+        );
+        assert_eq!(
+            validate_session_lane_record(
+                &SessionSnapshot::default(),
+                "usage",
+                &serde_json::json!({"entryId": "entry-1"})
+            ),
+            Ok(SessionLaneRecordKind::Usage)
+        );
+        assert!(validate_session_lane_record(
+            &SessionSnapshot::default(),
+            "unknown",
+            &serde_json::json!({"id": "record-1"})
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn duplicate_or_malformed_lane_records_are_rejected_purely() {
+        let mut snapshot = SessionSnapshot::default();
+        assert!(validate_session_lane_record(
+            &snapshot,
+            "operation_started",
+            &serde_json::json!({"id": "op-1"})
+        )
+        .is_ok());
+        snapshot
+            .active_operations
+            .insert("op-1".into(), "started".into());
+        assert!(validate_session_lane_record(
+            &snapshot,
+            "operation_started",
+            &serde_json::json!({"id": "op-1"})
+        )
+        .is_err());
+        assert!(validate_session_lane_record(
+            &snapshot,
+            "operation_finished",
+            &serde_json::json!({"outcome": "completed"})
+        )
+        .is_err());
     }
 
     #[tokio::test]
