@@ -725,7 +725,11 @@ impl EventSpec {
             Self::Bare(other)
                 if matches!(
                     other.as_str(),
-                    "scroll_finalize" | "mouse_selection_commit" | "clear_cell_selection"
+                    "scroll_finalize"
+                        | "mouse_selection_commit"
+                        | "clear_cell_selection"
+                        | "copy_selection"
+                        | "clear_copy_request"
                 ) =>
             {
                 None
@@ -1024,6 +1028,7 @@ pub struct StateAssertions {
     pub selection_anchor: Option<usize>,
     pub selection_head: Option<usize>,
     pub cell_selection: Option<CellSelectionAssertion>,
+    pub copy_selection_requested: Option<bool>,
     pub autoscroll: Option<bool>,
     pub scroll_offset: Option<usize>,
     /// Ordered cadence flush/finalize records from declarative scroll input.
@@ -1925,6 +1930,12 @@ fn declared_navigation(scenario: &Scenario) -> Vec<ScrollbackMsg> {
             }
             EventSpec::Bare(step) if step == "clear_cell_selection" => {
                 Some(ScrollbackMsg::ClearCellSelection)
+            }
+            EventSpec::Bare(step) if step == "copy_selection" => {
+                Some(ScrollbackMsg::RequestCopySelection)
+            }
+            EventSpec::Bare(step) if step == "clear_copy_request" => {
+                Some(ScrollbackMsg::ClearCopyRequest)
             }
             _ => None,
         })
@@ -3044,6 +3055,14 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
             (expected.head.row, expected.head.column),
         ));
         assert_yaml_eq!(Some(expected), actual, "cell_selection");
+    }
+    if let Some(expected) = expected.copy_selection_requested {
+        let actual = outcome.feed.copy_selection.is_some();
+        if actual != expected {
+            return Err(format!(
+                "state copy_selection_requested mismatch: expected {expected:?}, got {actual:?}"
+            ));
+        }
     }
     if let Some(expected) = expected.scroll_offset {
         if outcome.feed.scroll_offset != expected {

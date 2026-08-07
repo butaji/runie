@@ -429,6 +429,13 @@ the main loop delivers them to `ScrollbackActor`. Clipboard/copy and view
 effects remain intentionally unimplemented until their effect protocol is
 modeled.
 
+Copy-intent slice (2026-08-07): `RequestCopySelection` and
+`ClearCopyRequest` now form an actor-owned effect boundary. The feed snapshot
+exposes the selected cell range as a pending request, and YAML
+`copy_selection`/`clear_copy_request` steps verify request and acknowledgement
+without invoking a clipboard. A future platform consumer can subscribe to
+this projection without adding side effects to the reducer.
+
 The mouse-event classification itself is a pure tested function: terminal
 coordinates are translated against the actor-delivered scrollback origin, and
 only selection intents cross into the main mailbox. This keeps async input

@@ -215,6 +215,7 @@ mod tests {
             selection_anchor: None,
             selection_head: None,
             cell_selection: None,
+            copy_selection: None,
             selected_member_index: None,
             theme: ThemeKind::GrokNight,
             animation_frame: 0,

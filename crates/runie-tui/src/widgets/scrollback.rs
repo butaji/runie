@@ -227,6 +227,7 @@ impl Scrollback {
         scrollback.navigation.selection_anchor = snapshot.selection_anchor;
         scrollback.navigation.selection_head = snapshot.selection_head;
         scrollback.navigation.cell_selection = snapshot.cell_selection;
+        scrollback.navigation.copy_selection = snapshot.copy_selection;
         scrollback.navigation.tool_modes = snapshot.tool_modes;
         scrollback.navigation.revealed_dense_groups = snapshot.revealed_dense_groups;
         scrollback.navigation.center_revealed_entry = snapshot.center_revealed_entry;
@@ -371,6 +372,12 @@ impl Scrollback {
             }
             ScrollbackMsg::ClearCellSelection => {
                 self.reduce_model(ScrollbackMsg::ClearCellSelection);
+            }
+            ScrollbackMsg::RequestCopySelection => {
+                self.reduce_model(ScrollbackMsg::RequestCopySelection);
+            }
+            ScrollbackMsg::ClearCopyRequest => {
+                self.reduce_model(ScrollbackMsg::ClearCopyRequest);
             }
             ScrollbackMsg::SelectNextTool => self.reduce_model(ScrollbackMsg::SelectNextTool),
             ScrollbackMsg::SelectPreviousTool => {
@@ -765,6 +772,7 @@ impl Scrollback {
             selection_anchor: self.navigation.selection_anchor,
             selection_head: self.navigation.selection_head,
             cell_selection: self.navigation.cell_selection,
+            copy_selection: self.navigation.copy_selection,
             theme: self.navigation.theme,
             animation_frame: self.navigation.animation_frame,
             tool_modes: self.navigation.tool_modes.clone(),

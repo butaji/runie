@@ -471,6 +471,18 @@ impl App {
             .await;
     }
 
+    pub async fn request_copy_selection(&self) {
+        self.scrollback_actor
+            .apply(crate::widgets::ScrollbackMsg::RequestCopySelection)
+            .await;
+    }
+
+    pub async fn clear_copy_request(&self) {
+        self.scrollback_actor
+            .apply(crate::widgets::ScrollbackMsg::ClearCopyRequest)
+            .await;
+    }
+
     /// Apply a feed update through the actor that owns the rendered snapshot.
     /// The mutex is a compatibility fallback for apps whose renderer is not
     /// running yet.

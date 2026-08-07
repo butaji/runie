@@ -107,6 +107,7 @@ pub struct FeedSnapshot {
     pub selection_anchor: Option<usize>,
     pub selection_head: Option<usize>,
     pub cell_selection: Option<CellSelection>,
+    pub copy_selection: Option<CellSelection>,
     pub theme: ThemeKind,
     pub animation_frame: usize,
     pub tool_modes: HashMap<String, ToolDisplayMode>,
@@ -129,6 +130,7 @@ pub struct FeedNavigation {
     pub selection_anchor: Option<usize>,
     pub selection_head: Option<usize>,
     pub cell_selection: Option<CellSelection>,
+    pub copy_selection: Option<CellSelection>,
     pub cell_selection_anchor: Option<CellPosition>,
     pub animation_frame: usize,
     pub reasoning_expanded: bool,
@@ -168,6 +170,7 @@ impl Default for FeedNavigation {
             selection_anchor: None,
             selection_head: None,
             cell_selection: None,
+            copy_selection: None,
             cell_selection_anchor: None,
             animation_frame: 0,
             reasoning_expanded: false,
@@ -625,6 +628,10 @@ mod tests {
         );
         state.reduce(super::ScrollbackMsg::MouseSelectionCommit);
         assert!(state.snapshot().cell_selection.is_some());
+        state.reduce(super::ScrollbackMsg::RequestCopySelection);
+        assert!(state.snapshot().copy_selection.is_some());
+        state.reduce(super::ScrollbackMsg::ClearCopyRequest);
+        assert!(state.snapshot().copy_selection.is_none());
         state.reduce(super::ScrollbackMsg::ClearCellSelection);
         assert!(state.snapshot().cell_selection.is_none());
     }
@@ -1071,6 +1078,8 @@ pub enum ScrollbackMsg {
     MouseSelectionExtend(CellPosition),
     MouseSelectionCommit,
     ClearCellSelection,
+    RequestCopySelection,
+    ClearCopyRequest,
     SelectNextTool,
     SelectPreviousTool,
     SelectNextEntry,
@@ -1186,6 +1195,7 @@ impl FeedState {
             selection_anchor: self.navigation.selection_anchor,
             selection_head: self.navigation.selection_head,
             cell_selection: self.navigation.cell_selection,
+            copy_selection: self.navigation.copy_selection,
             selected_member_index,
             theme: self.navigation.theme,
             animation_frame: self.navigation.animation_frame,
@@ -1328,6 +1338,12 @@ impl FeedState {
             ScrollbackMsg::ClearCellSelection => {
                 self.navigation.cell_selection_anchor = None;
                 self.navigation.cell_selection = None;
+            }
+            ScrollbackMsg::RequestCopySelection => {
+                self.navigation.copy_selection = self.navigation.cell_selection;
+            }
+            ScrollbackMsg::ClearCopyRequest => {
+                self.navigation.copy_selection = None;
             }
             ScrollbackMsg::SelectNextTool => self.select_tool(1),
             ScrollbackMsg::SelectPreviousTool => self.select_tool(-1),
