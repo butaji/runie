@@ -92,10 +92,15 @@ identity contract already covered by the renderer tests. The live path remains
 fully actor-owned.
 
 Pending-tool ownership increment (2026-08-07): the compatibility
-`active_tool_count` counter is now derived from the pending `tool_buffers` map
+`active_tool_count` counter is now derived from the pending tool map
 keyed by tool-call ID. This removes another mutable count that could diverge
 from lifecycle events; start/update/end behavior remains identity-based and
 parallel-tool coverage passes.
+
+Pending-tool map increment (2026-08-07): the compatibility header and argument
+maps are now one typed `PendingTool` map keyed by tool-call ID. This makes the
+identity, mutable header, and completion arguments one reducer-local value;
+there is no opportunity for the two former maps to diverge.
 
 Assistant metadata ownership increment (2026-08-07): the live
 `with_live_actors` path no longer runs `handle_message_start/update/end` through

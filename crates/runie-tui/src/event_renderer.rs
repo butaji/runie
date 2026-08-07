@@ -260,6 +260,12 @@ impl<T> Projection<T> {
     }
 }
 
+#[derive(Debug)]
+struct PendingTool {
+    header: String,
+    args: serde_json::Value,
+}
+
 pub struct EventRenderer {
     scrollback: Projection<Scrollback>,
     scrollback_actor: Option<ScrollbackActor>,
@@ -272,8 +278,7 @@ pub struct EventRenderer {
     /// Tool rows are keyed by the core tool-call id because parallel tools may
     /// update and finish in a different order than they started.
     tool_rows: HashMap<String, usize>,
-    tool_buffers: HashMap<String, String>,
-    tool_args: HashMap<String, serde_json::Value>,
+    pending_tools: HashMap<String, PendingTool>,
     /// True between MessageStart(assistant) and MessageEnd(assistant).
     in_assistant_stream: bool,
     in_reasoning: bool,
@@ -330,8 +335,7 @@ impl EventRenderer {
             status_actor,
             streaming_buffer: String::new(),
             tool_rows: HashMap::new(),
-            tool_buffers: HashMap::new(),
-            tool_args: HashMap::new(),
+            pending_tools: HashMap::new(),
             in_assistant_stream: false,
             in_reasoning: false,
             reasoning_buffer: String::new(),
@@ -872,7 +876,7 @@ impl EventRenderer {
         tool_name: String,
         args: serde_json::Value,
     ) -> ScrollbackMsg {
-        let starts_new_activity_group = self.tool_buffers.is_empty() && !self.activity_group_open;
+        let starts_new_activity_group = self.pending_tools.is_empty() && !self.activity_group_open;
         if starts_new_activity_group {
             self.activity_dirs = 0;
             self.activity_files = 0;
@@ -899,7 +903,6 @@ impl EventRenderer {
         } else if matches!(tool_name.as_str(), "subagent" | "agent" | "task") {
             self.activity_subagents += 1;
         }
-        self.tool_args.insert(tool_call_id.clone(), args.clone());
         let tool_buffer = tool_header(&tool_name, &args);
         let activity = if self.activity_dirs
             + self.activity_files
@@ -938,8 +941,13 @@ impl EventRenderer {
             );
             self.tool_rows.insert(tool_call_id.clone(), row);
         }
-        self.tool_buffers
-            .insert(tool_call_id.clone(), tool_buffer.clone());
+        self.pending_tools.insert(
+            tool_call_id.clone(),
+            PendingTool {
+                header: tool_buffer.clone(),
+                args,
+            },
+        );
         ScrollbackMsg::ToolStartRunning {
             tool_call_id,
             header: tool_buffer,
@@ -964,7 +972,7 @@ impl EventRenderer {
         {
             return None;
         }
-        if self.tool_buffers.contains_key(&tool_call_id) {
+        if self.pending_tools.contains_key(&tool_call_id) {
             if let Some(output) = structured_update_text(&partial_result) {
                 let output_lines = structured_memory_lines(&output);
                 if self.scrollback_actor.is_none() {
@@ -980,14 +988,14 @@ impl EventRenderer {
                     output: output_lines,
                 });
             }
-            let Some(buffer) = self.tool_buffers.get_mut(&tool_call_id) else {
+            let Some(pending) = self.pending_tools.get_mut(&tool_call_id) else {
                 return None;
             };
-            buffer.push_str(&format!(
+            pending.header.push_str(&format!(
                 " | update: {}",
                 serde_json::to_string(&partial_result).unwrap_or_default()
             ));
-            let updated = buffer.clone();
+            let updated = pending.header.clone();
             if self.scrollback_actor.is_none() {
                 if let Some(row) = self.tool_rows.get(&tool_call_id).copied() {
                     self.replace_tool_line(row, &updated);
@@ -1019,8 +1027,16 @@ impl EventRenderer {
         if is_error {
             self.activity_failures += 1;
         }
-        let tool_buffer = self.tool_buffers.remove(&tool_call_id).unwrap_or_default();
-        let tool_args = self.tool_args.remove(&tool_call_id).unwrap_or_default();
+        let PendingTool {
+            header: tool_buffer,
+            args: tool_args,
+        } = self
+            .pending_tools
+            .remove(&tool_call_id)
+            .unwrap_or_else(|| PendingTool {
+                header: String::new(),
+                args: serde_json::Value::Null,
+            });
         let tool_buffer = if is_error {
             tool_buffer
         } else {
@@ -1032,7 +1048,7 @@ impl EventRenderer {
                 self.replace_tool_line(row, &tool_buffer);
             }
         }
-        let activity = if self.tool_buffers.is_empty()
+        let activity = if self.pending_tools.is_empty()
             && self.activity_dirs
                 + self.activity_files
                 + self.activity_commands
@@ -1133,7 +1149,7 @@ impl EventRenderer {
         }
         self.streaming_buffer.clear();
         self.tool_rows.clear();
-        self.tool_buffers.clear();
+        self.pending_tools.clear();
         self.in_assistant_stream = false;
         self.in_reasoning = false;
         self.reasoning_buffer.clear();
