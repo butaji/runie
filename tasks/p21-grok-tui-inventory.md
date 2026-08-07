@@ -106,8 +106,10 @@ oracle.
 2. Add typed waiting reasons and animation demand/frame events to the event bus.
 3. Add theme/config and terminal capability projections with canonical truecolor
    comparison.
-4. Model tool groups/member visibility as foldable blocks with exact gap
-   geometry.
+4. Complete the typed tool/member-card model: per-member identity, fold and
+   navigation semantics, and exact card geometry. Keep the existing
+   actor-owned keyboard selection box separate from Grok's cell-range
+   selection surface.
 5. Add YAML event/state scenarios and full PTY captures for every state and
    animation variant; keep TestBackend as the fast deterministic path.
 
@@ -180,8 +182,8 @@ The reference feed component matrix is now recorded explicitly:
 |---|---|---|
 | User/assistant | prompt, markdown, tables, code, links, streaming | YAML + snapshots |
 | Thinking | running spinner, collapsed `Thought`, expanded reasoning | YAML + renderer tests |
-| Tool cards | execute, read, edit, list-dir, search, web, lifecycle, generic | partial; typed core events, line projection |
-| Tool display | collapsed, truncated, expanded, running/finished/error | collapsed/expanded activity fixtures; block model open |
+| Tool cards | execute, read, edit, list-dir, search, web, lifecycle, generic | partial; typed core events and line projection; full member-card geometry open |
+| Tool display | collapsed, truncated, expanded, running/finished/error | collapsed/expanded activity fixtures; typed fold state and keyboard selection; full member navigation open |
 | Verb groups | Read, Listed, Searched, Ran, subagent counts; running/past verbs | activity summary projection |
 | Background work | subagent, workflow, task output, waiting reasons | waiting reasons; block rendering open |
 | Chrome | header meter, status telemetry, prompt/footer, doctor hint | strict feed/waiting frames |
@@ -448,14 +450,17 @@ bridge until Grok-equivalent cursor navigation selects arbitrary entries.
 Tool selection navigation (2026-08-06): empty-prompt Up/Down actions now
 publish actor-owned previous/next selection messages over projected tool IDs;
 selection wraps in transcript order and `e` folds the selected ID. Prompt
-history remains unchanged when the prompt contains text. Full viewport-aware
-selection boxes and non-tool block entries remain open.
+history remains unchanged when the prompt contains text. Viewport-aware
+keyboard selection boxes and non-tool block entries are implemented; Grok's
+cell-range mouse selection remains open.
 
 Non-tool entry replay coverage (2026-08-06): `visual-activity-mixed.yaml`
 now drives `entry_next`/`entry_previous` through the scrollback actor after
 tool-ID selection and asserts the resulting logical selected-entry index and
 cleared tool ID. This pins the reducer boundary for Grok's mixed transcript
-navigation; pixel-perfect selection-box styling remains open.
+navigation; the keyboard selection box is implemented and covered by the
+scrollback projection tests. The remaining selection work is Grok's separate
+mouse/text range model, not another keyboard box implementation.
 
 Selection-surface source audit (2026-08-06): Grok's selected row uses the
 semantic `bg_visual` elevated surface across the row and `selection_border` at
