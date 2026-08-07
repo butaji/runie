@@ -19,14 +19,14 @@ Source: `crates/runie-tui/src/event_renderer.rs`, `EventRenderer` fields and
 
 | Current renderer field | State represented | Target actor-owned projection |
 |---|---|---|
-| `tool_rows` | live row identity for compatibility updates | `FeedState` tool row identity (already modeled by `tool_row_id`) |
-| `tool_buffers` | accumulated tool header/update text | `FeedState` live tool block/header |
-| `tool_args` | arguments needed to settle a tool card | `FeedState` pending tool metadata |
-| `in_assistant_stream` | assistant stream lifecycle | `FeedState` or core `AgentStateSnapshot` projection |
-| `in_reasoning`, `reasoning_buffer` | thinking section lifecycle/body | `FeedState` reasoning projection |
-| `thinking_elapsed_ms` | terminal thinking duration | `StatusState`/core assistant terminal event |
-| activity counters and `activity_group_open` | Grok activity-group aggregation | `FeedState` activity aggregate |
-| `active_tool_count`, `in_tool_exec` | pending tool lifecycle | core state pending-tool projection / feed reducer |
+| `tool_rows` | compatibility row identity | `FeedState` tool row identity (already modeled by `tool_row_id`) |
+| `tool_buffers` | compatibility header/update accumulation | `FeedState` live tool block/header |
+| `tool_args` | compatibility tool-card metadata | `FeedState` pending tool metadata |
+| `in_assistant_stream` | compatibility stream lifecycle | `FeedState` / core projection (live migrated) |
+| `in_reasoning`, `reasoning_buffer` | compatibility thinking body | `FeedState` reasoning projection (live migrated) |
+| `thinking_elapsed_ms` | compatibility test fallback | `StatusState`/core assistant terminal event (live migrated) |
+| activity counters and `activity_group_open` | compatibility activity aggregation | `ScrollbackActor` feed activity aggregate (live migrated) |
+| `active_tool_count`, `in_tool_exec` | compatibility pending-tool lifecycle | core state pending-tool projection / feed reducer (live migrated) |
 | `turn_started` | whether terminal summary is due | `FeedState` / `FeedSnapshot` (migrated) |
 
 The legacy synchronous constructors may retain a compatibility adapter during
