@@ -133,3 +133,11 @@ style-intent coverage, not an active duplicate state or measurement path.
 
 The DSL is intentionally small: it describes structure and ownership without
 hiding behavior in macros or introducing a second mutable state store.
+
+DSL audit (2026-08-06): rechecked all declarative call sites and macro
+expansions. `view!` owns element composition/slots and `layout_entries!` owns
+fixed/grow entry declaration; both expand directly to renderer-independent
+constructors and are used by the live chat layout. No repeated declarative
+pattern currently justifies another macro without hiding allocation or state
+ownership. The remaining DSL-adjacent work is terminal-independent reflow and
+style-intent coverage, not additional syntax.
