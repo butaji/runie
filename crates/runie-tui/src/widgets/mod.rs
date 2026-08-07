@@ -1,6 +1,7 @@
 //! Widgets: scrollback transcript, prompt input, status bar.
 
 pub mod command_palette;
+pub mod model_selector;
 pub mod prompt;
 pub mod scrollback;
 pub mod shortcuts;
@@ -8,6 +9,7 @@ pub mod status;
 pub mod welcome;
 
 pub use command_palette::CommandPaletteWidget;
+pub use model_selector::ModelSelectorWidget;
 pub use prompt::{InputMode, PromptOutcome, PromptSnapshot, PromptWidget};
 pub use runie_tui_model::PaletteAction;
 pub use runie_tui_model::TuiSnapshot;

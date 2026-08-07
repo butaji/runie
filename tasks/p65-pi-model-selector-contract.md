@@ -1,6 +1,6 @@
 # P65 — Pi model selector and scoped-model contract
 
-Status: catalog semantics, provider discovery seam, and renderer-neutral async selector projection implemented; concrete selector renderer/hotkeys remain (2026-08-08)
+Status: catalog semantics, provider discovery seam, async selector projection, renderer overlay, and Ctrl-L routing implemented; catalog row labels/selection commit remain (2026-08-08)
 
 ## Source contract
 
@@ -40,8 +40,10 @@ The UI actor now owns selector query, index, scope, open/close, escape, and
 result-count transitions through `UiMsg`; `App::toggle_model_selector` admits
 the catalog snapshot count through that mailbox before opening the selector.
 The declarative view tree exposes `ModelSelectorOverlay` with `UiActor`
-ownership. The renderer and production key routing remain open, so this slice
-does not claim complete selector parity.
+ownership. The terminal adapter renders it through theme tokens, and Pi's
+Ctrl-L binding routes to it. Remaining work is to admit concrete catalog row
+labels into the UI snapshot, commit the selected row through the catalog and
+loop actors, and cover the interaction through YAML replay.
 
 ## Required implementation
 

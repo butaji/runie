@@ -100,6 +100,25 @@ fn render_command_palette(
     );
 }
 
+fn render_model_selector(
+    area: Rect,
+    buf: &mut Buffer,
+    ui: &runie_tui::app::UiState,
+    theme: runie_core::types::ThemeKind,
+) {
+    ratatui::widgets::Widget::render(
+        runie_tui::widgets::ModelSelectorWidget::new(
+            &ui.model_selector_query,
+            ui.model_selector_index,
+            ui.model_selector_scoped_only,
+            ui.model_selector_result_count,
+        )
+        .with_theme(theme),
+        area,
+        buf,
+    );
+}
+
 fn render_compact_hint(area: Rect, buf: &mut Buffer, theme: runie_core::types::ThemeKind) {
     let line = ratatui::text::Line::from(vec![
         ratatui::text::Span::styled(
@@ -554,6 +573,18 @@ async fn run_app(
                 // next terminal frame observes the complete reduced state.
                 while let Some(key) = pending_keys.pop_front() {
                         if key.kind == KeyEventKind::Press {
+                            if app.ui.snapshot().model_selector_open {
+                                match key.code {
+                                    KeyCode::Esc => app.model_selector_key(runie_tui::app::UiMsg::ModelSelectorEscape).await,
+                                    KeyCode::Backspace => app.model_selector_key(runie_tui::app::UiMsg::ModelSelectorBackspace).await,
+                                    KeyCode::Up => app.model_selector_key(runie_tui::app::UiMsg::ModelSelectorMove(-1)).await,
+                                    KeyCode::Down => app.model_selector_key(runie_tui::app::UiMsg::ModelSelectorMove(1)).await,
+                                    KeyCode::Tab => app.model_selector_key(runie_tui::app::UiMsg::ModelSelectorToggleScope).await,
+                                    KeyCode::Char(ch) if key.modifiers.is_empty() => app.model_selector_key(runie_tui::app::UiMsg::ModelSelectorChar(ch)).await,
+                                    _ => {}
+                                }
+                                continue;
+                            }
                             if app.ui.snapshot().command_palette_open
                                 && key.code == KeyCode::Esc
                             {
@@ -632,6 +663,10 @@ async fn run_app(
                                 }
                                 Action::OpenCommandPalette => {
                                     app.toggle_command_palette().await;
+                                    continue;
+                                }
+                                Action::OpenModelSelector => {
+                                    app.toggle_model_selector().await;
                                     continue;
                                 }
                                 Action::OpenFileSearch => {
@@ -807,6 +842,9 @@ async fn run_app(
                                 document.props.ui.command_palette_index,
                                 status.theme(),
                             );
+                        }
+                        if view.slots().any(|slot| slot == runie_tui::view::Slot::ModelSelectorOverlay) {
+                            render_model_selector(frame_area, buf, &document.props.ui, status.theme());
                         }
                         let header = &document.props.header;
                         render_header(layout.header, buf, &header.meter, header.theme);

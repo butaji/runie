@@ -14,7 +14,9 @@ pub enum Action {
     /// Open the shortcut help (grok Ctrl+x).
     OpenShortcuts,
     OpenCommandPalette,
-    /// Enter the file-search prompt (grok Ctrl+l).
+    /// Open Pi's model selector (Ctrl+l).
+    OpenModelSelector,
+    /// Enter the file-search prompt.
     OpenFileSearch,
     /// Toggle the selected scrollback fold (Grok's scrollback `e` action).
     ToggleFold,
@@ -51,10 +53,7 @@ pub fn map_key(key: KeyEvent, prompt_non_empty: bool, streaming: bool) -> Action
         return match key.code {
             KeyCode::Char('c') => ctrl_c_action(prompt_non_empty, streaming),
             KeyCode::Char('d' | 'q') => Action::Quit,
-            // Reserved for Grok's file-search line viewer. The minimal TUI
-            // has no file-search target yet, so do not repurpose it as a
-            // destructive scrollback action.
-            KeyCode::Char('l') => Action::OpenFileSearch,
+            KeyCode::Char('l') => Action::OpenModelSelector,
             KeyCode::Char('x') => Action::OpenShortcuts,
             KeyCode::Char('p') => Action::OpenCommandPalette,
             KeyCode::Char('k') => Action::ScrollUp,
@@ -178,10 +177,10 @@ mod tests {
     }
 
     #[test]
-    fn ctrl_l_is_reserved_for_file_search() {
+    fn ctrl_l_opens_pi_model_selector() {
         assert_eq!(
             map_key(k(KeyCode::Char('l'), KeyModifiers::CONTROL), false, false),
-            Action::OpenFileSearch
+            Action::OpenModelSelector
         );
     }
 
