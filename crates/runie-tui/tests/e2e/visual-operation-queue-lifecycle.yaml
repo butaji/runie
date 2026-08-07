@@ -1,0 +1,40 @@
+name: visual-operation-queue-lifecycle
+description: >-
+  Pi queue lifecycle facts replay through the session event boundary with
+  stable provisioned identities and deterministic cancellation order.
+events:
+  - operation_record:
+      record_type: queue_enqueued
+      data:
+        id: steer-1
+        queue: steer
+        target:
+          id: steer-1
+          role: user
+          content: steer this turn
+  - operation_record:
+      record_type: queue_enqueued
+      data:
+        id: follow-up-1
+        queue: followUp
+        target:
+          id: follow-up-1
+          role: user
+          content: follow up next
+  - operation_record:
+      record_type: queue_cancelled
+      data:
+        id: steer-1
+        entryId: steer-1
+  - operation_record:
+      record_type: queue_cancelled
+      data:
+        id: follow-up-1
+        entryId: follow-up-1
+assertions:
+  state:
+    session_lane_records:
+      - queue_enqueued
+      - queue_enqueued
+      - queue_cancelled
+      - queue_cancelled

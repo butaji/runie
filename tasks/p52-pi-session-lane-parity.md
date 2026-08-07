@@ -212,6 +212,10 @@ publishes `OperationRecordCreated` facts with `queue_enqueued` or
 The queue actors remain the sole owners of identity allocation; session
 reduction still occurs through the event bus and `SessionActor`.
 
+`visual-operation-queue-lifecycle.yaml` now provides the no-recompile replay
+oracle for both `steer` and `followUp` enqueue/cancel pairs, asserting stable
+identity-bearing records in order.
+
 ## Implementation order
 
 1. Replace the generic Rust operation-record payload with a typed internal
