@@ -160,11 +160,14 @@ fixtures with synthetic timestamps remain deterministic; the formatter has
 direct unit coverage. YAML also accepts `prompt_timestamp`, and the `Hey`
 fixture pins the complete timestamped user row without recompilation.
 
-Color parity progress: the live frame now paints the GrokNight truecolor base
-(`bg #141414`, `fg #e1e1e1`) before widgets render, and feed semantics use the
-Grok accent/muted/success/error palette instead of terminal-default colors.
-Color-sensitive visual snapshots were refreshed and the palette projection is
-unit-tested; full theme switching and terminal quantization remain open.
+Color parity implementation is complete for the declared Runie/Grok scope:
+the live frame paints the selected actor-owned theme before widgets render,
+feed semantics use the Grok accent/muted/success/error palette, all declared
+Grok variants preserve their identity, and `ColorLevel` quantizes RGB output
+deterministically for `None`, `Basic`, `Ansi256`, and `TrueColor`. Color-
+sensitive snapshots and the quantization matrix cover the projection; strict
+paired full-color cast evidence remains an instrumentation concern tracked by
+p19/p25, not an unimplemented renderer path.
 
 Live `just tui` audit also found and fixed a separate input-path issue: the
 binary discarded Shift+Char events, so typing `Hey` produced `y`. The direct
