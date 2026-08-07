@@ -785,6 +785,8 @@ macro_rules! assert_yaml_eq {
 pub struct StateAssertions {
     /// Renderer-independent status label (for example `thinking` or `ready`).
     pub status: Option<String>,
+    /// Actor-owned theme after the declared theme event sequence.
+    pub theme: Option<runie_core::types::ThemeKind>,
     pub is_streaming: Option<bool>,
     pub pending_tool_calls: Option<usize>,
     pub messages: Option<usize>,
@@ -1948,6 +1950,7 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
             ));
         }
     }
+    assert_yaml_eq!(expected.theme, outcome.status.theme, "theme");
     assert_yaml_eq!(expected.is_streaming, actual.is_streaming, "is_streaming");
     assert_yaml_eq!(
         expected

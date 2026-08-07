@@ -7,6 +7,8 @@ events:
   - text_delta: "Hello from the day theme"
   - done: { stop_reason: stop }
 assertions:
+  state:
+    theme: grok_day
   events:
     - theme_changed
     - agent_start

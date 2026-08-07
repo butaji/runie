@@ -75,6 +75,12 @@ All production task creation is owned:
 This audit preserves the invariant that dropping an actor or scenario cannot
 leave an orphaned task mutating shared state.
 
+## Theme state assertion (2026-08-06)
+
+The YAML state DSL now accepts `state.theme`, and `visual-theme-day.yaml`
+verifies the actor-owned theme after the `ThemeChanged` event. Theme parity is
+therefore observable as state as well as through rendered color cells.
+
 ## Pi model contract increment (2026-08-06)
 
 Pi's `Model` exposes optional `samplingParams?: Record<string, unknown>`.
