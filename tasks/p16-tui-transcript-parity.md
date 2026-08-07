@@ -676,3 +676,7 @@ with a focused path-style assertion.
 Web-source truncation (2026-08-06): source-domain spans remain primary while
 the `(+N more)` overflow suffix resolves to the muted token, matching Grok's
 source summary row instead of treating the suffix as another domain.
+
+Memory-snippet semantics (2026-08-06): memory-card content rows now project
+the muted paint intent from the model-owned `MemorySearch` card kind, matching
+Grok's muted snippet preview while ordinary tool output remains primary.

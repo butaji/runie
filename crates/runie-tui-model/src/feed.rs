@@ -193,6 +193,9 @@ impl ToolCardRow {
     pub fn paint_intent(&self) -> ToolCardPaintIntent {
         match self.row_kind {
             ToolCardRowKind::Header => ToolCardPaintIntent::Header,
+            ToolCardRowKind::Content if self.card_kind == ToolCardKind::MemorySearch => {
+                ToolCardPaintIntent::Muted
+            }
             ToolCardRowKind::Content => ToolCardPaintIntent::Content,
             ToolCardRowKind::Status if self.is_error => ToolCardPaintIntent::Error,
             ToolCardRowKind::Status => ToolCardPaintIntent::Success,
@@ -523,9 +526,15 @@ mod tests {
             is_error: true,
             ..header.clone()
         };
+        let memory = ToolCardRow {
+            card_kind: ToolCardKind::MemorySearch,
+            row_kind: ToolCardRowKind::Content,
+            ..header.clone()
+        };
         assert_eq!(header.paint_intent(), ToolCardPaintIntent::Header);
         assert_eq!(output.paint_intent(), ToolCardPaintIntent::Content);
         assert_eq!(error.paint_intent(), ToolCardPaintIntent::Error);
+        assert_eq!(memory.paint_intent(), ToolCardPaintIntent::Muted);
     }
 
     #[test]
