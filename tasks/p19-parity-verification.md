@@ -43,6 +43,18 @@ divergence is at frame 1, cell `(69,1)` (`9` versus `5`). This is a real
 capture-phase/content mismatch and is preserved in `/tmp/runie-parity-current/`;
 the oracle remains strict and was not weakened.
 
+**Fresh 62×32 capture recheck (2026-08-06):** Re-recorded both applications
+with `just tmux-cast 62 32 ...` and the same `Hey` probe. The truecolor
+comparator reports 1,984 cells compared, 142 differing cells (13 glyph,
+129 color, 5 style). The first actionable geometry deltas are Grok's settled
+thought row using five leading spaces while Runie's row still emits the
+`❙  ` rail, and the settled response timestamp is shifted by two cells.
+Dynamic telemetry also differs (`Thought for 0.4s` vs `0.2s`, `Worked for 1.8s`
+vs `0.0s`). This is stronger current evidence than the legacy cast: the
+capture instrument is producing RGB backgrounds on both sides, while exact
+parity remains open pending deterministic clock/usage inputs and a
+width-specific decision for the thought-summary rail.
+
 **Latest parity note (2026-08-05):** `LoopActor::continue_run` now drains
 queued steering before follow-up messages when the context ends in an
 assistant, matching pi's continuation behavior; `LastIsAssistant` remains the
