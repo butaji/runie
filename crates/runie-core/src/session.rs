@@ -53,6 +53,63 @@ pub enum SessionConfigRecord {
     },
 }
 
+/// Pure declarative mapping from application events to session-journal facts.
+/// Both the bus bridge and replay path use this one table before sending the
+/// fact through `SessionActor`'s mailbox.
+macro_rules! session_config_record {
+    ($event:expr) => {{
+        match $event {
+            AgentEvent::ModelChanged { model } => Some(SessionConfigRecord::ModelChanged {
+                provider: model.provider.clone(),
+                model_id: model.id.clone(),
+            }),
+            AgentEvent::ThinkingLevelChanged { level } => {
+                Some(SessionConfigRecord::ThinkingLevelChanged { level: *level })
+            }
+            AgentEvent::ActiveToolsChanged { tool_names } => {
+                Some(SessionConfigRecord::ActiveToolsChanged {
+                    tool_names: tool_names.clone(),
+                })
+            }
+            AgentEvent::BranchSummaryCreated {
+                from_id,
+                summary,
+                details,
+            } => Some(SessionConfigRecord::BranchSummaryCreated {
+                from_id: from_id.clone(),
+                summary: summary.clone(),
+                details: details.clone(),
+            }),
+            AgentEvent::CustomSessionEntryCreated { custom_type, data } => {
+                Some(SessionConfigRecord::CustomSessionEntryCreated {
+                    custom_type: custom_type.clone(),
+                    data: data.clone(),
+                })
+            }
+            AgentEvent::CompactionCreated {
+                summary,
+                retained_tail,
+                tokens_before,
+                details,
+                usage,
+            } => Some(SessionConfigRecord::CompactionCreated {
+                summary: summary.clone(),
+                retained_tail: retained_tail.clone(),
+                tokens_before: *tokens_before,
+                details: details.clone(),
+                usage: usage.clone(),
+            }),
+            AgentEvent::OperationRecordCreated { record_type, data } => {
+                Some(SessionConfigRecord::OperationRecordCreated {
+                    record_type: record_type.clone(),
+                    data: data.clone(),
+                })
+            }
+            _ => None,
+        }
+    }};
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SessionConfigEntry {
     pub id: String,
@@ -655,102 +712,6 @@ impl SessionActor {
                             break;
                         }
                     }
-                    AgentEvent::ModelChanged { model } => {
-                        if !mailbox_ack!(tx, |reply| {
-                            Command::Config(
-                                SessionConfigRecord::ModelChanged {
-                                    provider: model.provider,
-                                    model_id: model.id,
-                                },
-                                reply,
-                            )
-                        }) {
-                            break;
-                        }
-                    }
-                    AgentEvent::ThinkingLevelChanged { level } => {
-                        if !mailbox_ack!(tx, |reply| {
-                            Command::Config(
-                                SessionConfigRecord::ThinkingLevelChanged { level },
-                                reply,
-                            )
-                        }) {
-                            break;
-                        }
-                    }
-                    AgentEvent::ActiveToolsChanged { tool_names } => {
-                        if !mailbox_ack!(tx, |reply| {
-                            Command::Config(
-                                SessionConfigRecord::ActiveToolsChanged { tool_names },
-                                reply,
-                            )
-                        }) {
-                            break;
-                        }
-                    }
-                    AgentEvent::BranchSummaryCreated {
-                        from_id,
-                        summary,
-                        details,
-                    } => {
-                        if !mailbox_ack!(tx, |reply| {
-                            Command::Config(
-                                SessionConfigRecord::BranchSummaryCreated {
-                                    from_id,
-                                    summary,
-                                    details,
-                                },
-                                reply,
-                            )
-                        }) {
-                            break;
-                        }
-                    }
-                    AgentEvent::CustomSessionEntryCreated { custom_type, data } => {
-                        if !mailbox_ack!(tx, |reply| {
-                            Command::Config(
-                                SessionConfigRecord::CustomSessionEntryCreated {
-                                    custom_type,
-                                    data,
-                                },
-                                reply,
-                            )
-                        }) {
-                            break;
-                        }
-                    }
-                    AgentEvent::CompactionCreated {
-                        summary,
-                        retained_tail,
-                        tokens_before,
-                        details,
-                        usage,
-                    } => {
-                        if !mailbox_ack!(tx, |reply| {
-                            Command::Config(
-                                SessionConfigRecord::CompactionCreated {
-                                    summary,
-                                    retained_tail,
-                                    tokens_before,
-                                    details,
-                                    usage,
-                                },
-                                reply,
-                            )
-                        }) {
-                            break;
-                        }
-                    }
-                    AgentEvent::OperationRecordCreated { record_type, data } => {
-                        if !mailbox_ack!(tx, |reply| {
-                            Command::Config(
-                                SessionConfigRecord::OperationRecordCreated { record_type, data },
-                                reply,
-                            )
-                        }) {
-                            break;
-                        }
-                    }
                     AgentEvent::ToolExecutionEnd {
                         tool_call_id,
                         result,
@@ -764,7 +725,13 @@ impl SessionActor {
                     }
                     AgentEvent::Reset if !mailbox_ack!(tx, Command::Reset) => break,
                     AgentEvent::Reset => {}
-                    _ => {}
+                    _ => {
+                        if let Some(record) = session_config_record!(&event) {
+                            if !mailbox_ack!(tx, |reply| Command::Config(record, reply)) {
+                                break;
+                            }
+                        }
+                    }
                 }
             }
         }));
@@ -790,68 +757,10 @@ impl SessionActor {
         reason = "session event dispatch keeps each journal variant explicit"
     )]
     pub async fn apply_event(&self, event: &AgentEvent) {
-        match event {
-            AgentEvent::ModelChanged { model } => {
-                self.record_config(SessionConfigRecord::ModelChanged {
-                    provider: model.provider.clone(),
-                    model_id: model.id.clone(),
-                })
-                .await;
-            }
-            AgentEvent::ThinkingLevelChanged { level } => {
-                self.record_config(SessionConfigRecord::ThinkingLevelChanged { level: *level })
-                    .await;
-            }
-            AgentEvent::ActiveToolsChanged { tool_names } => {
-                self.record_config(SessionConfigRecord::ActiveToolsChanged {
-                    tool_names: tool_names.clone(),
-                })
-                .await;
-            }
-            AgentEvent::BranchSummaryCreated {
-                from_id,
-                summary,
-                details,
-            } => {
-                self.record_config(SessionConfigRecord::BranchSummaryCreated {
-                    from_id: from_id.clone(),
-                    summary: summary.clone(),
-                    details: details.clone(),
-                })
-                .await;
-            }
-            AgentEvent::CustomSessionEntryCreated { custom_type, data } => {
-                self.record_config(SessionConfigRecord::CustomSessionEntryCreated {
-                    custom_type: custom_type.clone(),
-                    data: data.clone(),
-                })
-                .await;
-            }
-            AgentEvent::CompactionCreated {
-                summary,
-                retained_tail,
-                tokens_before,
-                details,
-                usage,
-            } => {
-                self.record_config(SessionConfigRecord::CompactionCreated {
-                    summary: summary.clone(),
-                    retained_tail: retained_tail.clone(),
-                    tokens_before: *tokens_before,
-                    details: details.clone(),
-                    usage: usage.clone(),
-                })
-                .await;
-            }
-            AgentEvent::OperationRecordCreated { record_type, data } => {
-                self.record_config(SessionConfigRecord::OperationRecordCreated {
-                    record_type: record_type.clone(),
-                    data: data.clone(),
-                })
-                .await;
-            }
-            AgentEvent::Reset => self.reset().await,
-            _ => {}
+        if let Some(record) = session_config_record!(event) {
+            self.record_config(record).await;
+        } else if matches!(event, AgentEvent::Reset) {
+            self.reset().await;
         }
     }
 

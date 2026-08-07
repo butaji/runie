@@ -18,3 +18,12 @@ Completion evidence: the macro has focused unit coverage, the YAML runner
 discovers and executes the runtime fixtures without recompilation, and the
 canonical `visual-hey.yaml` scenario asserts ordered Runie, Pi, and awaited
 listener event traces before its state and visual assertions.
+
+## Session mapping DSL increment (2026-08-07)
+
+The session actor now has one pure `session_config_record!` mapping table for
+all application events that become journal facts. Both the live bus bridge and
+the replay `apply_event` path use it before sending a record through the actor
+mailbox. This removes duplicated event classification while keeping YAML as
+the runtime-editable behavioral surface and preserving exhaustive no-op
+classification for non-session events.
