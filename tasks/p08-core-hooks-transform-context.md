@@ -11,9 +11,11 @@
 ## Current runie state
 
 `~/Code/GitHub/runie-tests/runie/crates/runie-core/src/loop/driver.rs`
-- `run_loop` builds `wire` via `default_convert_to_llm(&ctx.messages)` (driver.rs ~line 78) with no transform step.
+- `run_loop` applies the async loop-owned `transform_context` callback to
+  agent messages before the async `convert_to_llm` callback, falling back to
+  `default_convert_to_llm` when no converter is supplied.
 
-## Adapt to runie
+## Historical implementation plan
 
 1. Add optional `transform_context: Option<Arc<dyn Fn(Vec<AgentMessage>) -> Vec<AgentMessage> + Send + Sync>>` to `RunLoopDeps` (or the `TurnHooks`/`LoopHooks` struct from p07).
 2. In `run_loop`, before `default_convert_to_llm`, apply: `let effective = transform_context.map(|f| f(ctx.messages.clone())).unwrap_or(ctx.messages.clone()); let wire = default_convert_to_llm(&effective);`.
@@ -23,7 +25,7 @@
 
 Pure transform, no state machine. Variants the transform may return: any subset/reordering of the input `AgentMessage` list. The converted `wire` must be a valid mix of `WireMessage::User|Assistant|ToolResult`.
 
-## Acceptance
+## Acceptance evidence
 
 - Integration test: a `transform_context` that drops a user message → assert the provider receives a wire context without it; a transform that injects a message → assert it appears.
 - `cargo test -p runie-core` green.
@@ -33,3 +35,10 @@ Pure transform, no state machine. Variants the transform may return: any subset/
   `convert_to_llm` callback after `transform_context`, with the existing
   converter as the default. Integration coverage proves the callback can
   replace the wire message sent to the provider.
+
+- **Current-state reconciliation (2026-08-08):** the original “no transform”
+  statement and three-step adaptation list are historical. `turn_hooks.rs`
+  covers both filtering/injection before conversion and converter replacement
+  after transformation; `RunLoopDeps` and `LoopDeps` carry both callbacks
+  through the actor-owned loop boundary. No implementation work remains in
+  this task.
