@@ -17,6 +17,26 @@ command -v asciinema >/dev/null || { echo "asciinema is required" >&2; exit 1; }
 cleanup() { tmux kill-session -t "$session" 2>/dev/null || true; }
 trap cleanup EXIT INT TERM
 
+invalid_report="${cast%.cast}.invalid.json"
+reject_capture() {
+    reason=$1
+    pane_dump="${cast%.cast}.invalid.ansi"
+    tmux capture-pane -e -p -t "$session" -S 0 -E "$((rows - 1))" > "$pane_dump" 2>/dev/null || true
+    jq -n \
+      --arg reason "$reason" \
+      --arg cast "$cast" \
+      --arg pane_dump "$pane_dump" \
+      --arg command "$command_line" \
+      --arg prompt "$prompt" \
+      --argjson cols "$cols" \
+      --argjson rows "$rows" \
+      '{valid:false, reason:$reason, command:$command, probe:$prompt,
+        terminal:{cols:$cols, rows:$rows}, artifacts:{cast:$cast, pane_dump:$pane_dump}}' \
+      > "$invalid_report"
+    echo "invalid parity capture: $reason (see $invalid_report)" >&2
+    exit 1
+}
+
 # Start with a shell hold so the PTY is resized before asciinema allocates its
 # recording child. Launching asciinema in the initial command can make it
 # inherit tmux's default 80×24 size before `resize-window` takes effect.
@@ -71,8 +91,7 @@ welcome_advanced=0
 for _ in $(seq 1 "$probe_iterations"); do
     screen=$(tmux capture-pane -p -t "$session" 2>/dev/null || true)
     if printf '%s' "$screen" | grep -Fq 'Help improve Grok'; then
-        echo "blocked by Grok consent surface; complete consent setup before capturing parity" >&2
-        exit 1
+        reject_capture "grok_consent_surface"
     fi
     # The welcome surface also contains `❯` and `Grok 4.5`; those are not an
     # editable working prompt. Grok advances from that surface with Enter.
@@ -97,8 +116,7 @@ done
 if (( ! ready )); then
     tmux capture-pane -e -p -t "$session" -S 0 -E "$((rows - 1))" \
         > "${cast%.cast}.timeout.ansi" 2>/dev/null || true
-    echo "timed out waiting for input prompt in ${cols}x${rows}: ${cast}" >&2
-    exit 1
+    reject_capture "input_prompt_timeout"
 fi
 
 # The wide layout can finish its first full paint after the prompt marker is
@@ -128,8 +146,7 @@ settled=0
 for _ in $(seq 1 "$probe_iterations"); do
     screen=$(tmux capture-pane -p -t "$session" 2>/dev/null || true)
     if printf '%s' "$screen" | grep -Fq 'Help improve Grok'; then
-        echo "blocked by Grok consent surface; refusing invalid settled capture" >&2
-        exit 1
+        reject_capture "grok_consent_surface"
     fi
     if printf '%s' "$screen" | grep -Fq 'Worked for' \
         && printf '%s' "$screen" | grep -Fq 'Shift+Tab' \
@@ -142,8 +159,7 @@ done
 if (( ! settled )); then
     tmux capture-pane -e -p -t "$session" -S 0 -E "$((rows - 1))" \
         > "${cast%.cast}.timeout.ansi" 2>/dev/null || true
-    echo "timed out waiting for completed turn in ${cols}x${rows}: ${cast}" >&2
-    exit 1
+    reject_capture "settled_turn_timeout"
 fi
 # Preserve the exact settled application frame before the quit key restores
 # the shell. The asciinema stream remains useful for animation replay, but its

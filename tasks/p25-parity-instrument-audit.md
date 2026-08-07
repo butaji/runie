@@ -779,3 +779,9 @@ that the first-run “Help improve Grok” consent surface can still contain the
 normal footer/settled markers. The capture helper now rejects that surface
 during both prompt readiness and settled-state probing, preventing consent or
 other onboarding overlays from being recorded as scenario parity references.
+
+Invalid-capture artifact increment (2026-08-07): rejected readiness and
+settling paths now emit `<cast>.invalid.json` plus an ANSI pane dump with a
+machine-readable reason (`grok_consent_surface`, `input_prompt_timeout`, or
+`settled_turn_timeout`). Matrix tooling can therefore distinguish missing
+reference evidence from a genuine cell mismatch without parsing shell logs.
