@@ -1,6 +1,6 @@
 # p47 — Migrate renderer transient state into actor reducers
 
-Status: planned / next architecture increment (2026-08-06)
+Status: in progress — live tool/assistant ownership migrated; compatibility cleanup remains (2026-08-06)
 
 ## Why this task exists
 
