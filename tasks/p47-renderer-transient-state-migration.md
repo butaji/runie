@@ -384,3 +384,11 @@ accepts `scroll_raw_input`, `scroll_flush`, and `scroll_finalize`; the
 recompilation or sleeps. The interactive worker still uses the legacy direct
 raw-event path, and its 16 ms timer/backlog integration remains the next
 production step; this increment does not claim complete scroll parity.
+
+Interactive ownership slice (2026-08-07): the owned crossterm input worker
+now feeds raw mouse events into `ScrollFlushState` and emits `InputEvent::Mouse`
+only from its owned 16 ms cadence. Keyboard events remain on the same bounded
+input mailbox, and worker shutdown finalizes the stream without an uncapped
+catch-up event. The worker currently uses the fixed initial 24-row viewport;
+delivering live layout measurements to this worker and modeling the source's
+post-gap backlog drain are the remaining production refinements.

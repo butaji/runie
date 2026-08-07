@@ -24,6 +24,7 @@ pub use memory::{memory_display_lines, parse_memory_results, MemoryResult};
 pub use prompt::{InputMode, PromptOutcome, PromptSnapshot};
 pub use scroll::{
     ScrollDirection, ScrollFinalize, ScrollFlush, ScrollFlushState, ScrollMode, ScrollNormalizer,
+    DEFAULT_SCROLL_FLUSH_CADENCE_MS, MIN_SCROLL_FLUSH_LINES,
 };
 pub use status::{Status, StatusMsg, StatusSnapshot};
 pub use theme::ThemeToken;

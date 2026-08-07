@@ -407,35 +407,54 @@ async fn run_app(
             Some("trackpad") => runie_tui_model::ScrollMode::Trackpad,
             _ => runie_tui_model::ScrollMode::Auto,
         };
-        let mut scroll_normalizer =
+        let scroll_normalizer =
             runie_tui_model::ScrollNormalizer::for_terminal_context(&terminal_brand, remuxed)
                 .with_speed(scroll_speed)
                 .with_inversion(inverted)
                 .with_mode(scroll_mode);
+        const INPUT_SCROLL_VIEWPORT_ROWS: u16 = 24;
+        let mut scroll_flush =
+            runie_tui_model::ScrollFlushState::new(scroll_normalizer, INPUT_SCROLL_VIEWPORT_ROWS);
         let scroll_epoch = Instant::now();
-        while let Some(result) = input.next().await {
-            let event = match result {
-                Ok(Event::Key(key)) => InputEvent::Key(key),
-                Ok(Event::Mouse(mouse)) => {
-                    let direction = match mouse.kind {
-                        MouseEventKind::ScrollUp => runie_tui_model::ScrollDirection::Up,
-                        MouseEventKind::ScrollDown => runie_tui_model::ScrollDirection::Down,
-                        _ => continue,
-                    };
-                    let at_ms = scroll_epoch.elapsed().as_millis() as u64;
-                    let (next, delta) = scroll_normalizer.push_at(at_ms, direction);
-                    scroll_normalizer = next;
-                    if delta == 0 {
-                        continue;
+        let mut cadence = tokio::time::interval(Duration::from_millis(
+            runie_tui_model::DEFAULT_SCROLL_FLUSH_CADENCE_MS,
+        ));
+        cadence.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        loop {
+            tokio::select! {
+                result = input.next() => {
+                    let Some(result) = result else { break };
+                    let Ok(event) = result else { continue };
+                    match event {
+                        Event::Key(key) => {
+                            if input_tx.send(InputEvent::Key(key)).await.is_err() { break; }
+                        }
+                        Event::Mouse(mouse) => {
+                            let direction = match mouse.kind {
+                                MouseEventKind::ScrollUp => runie_tui_model::ScrollDirection::Up,
+                                MouseEventKind::ScrollDown => runie_tui_model::ScrollDirection::Down,
+                                _ => continue,
+                            };
+                            let at_ms = scroll_epoch.elapsed().as_millis() as u64;
+                            let (next, _) = scroll_flush.input_at(at_ms, direction);
+                            scroll_flush = next;
+                        }
+                        _ => {}
                     }
-                    InputEvent::Mouse(delta)
                 }
-                _ => continue,
-            };
-            if input_tx.send(event).await.is_err() {
-                break;
+                _ = cadence.tick() => {
+                    let at_ms = scroll_epoch.elapsed().as_millis() as u64;
+                    if scroll_flush.flush_due(at_ms) {
+                        let (next, flush) = scroll_flush.flush_at(at_ms);
+                        scroll_flush = next;
+                        if flush.lines != 0 && input_tx.send(InputEvent::Mouse(flush.lines)).await.is_err() {
+                            break;
+                        }
+                    }
+                }
             }
         }
+        let (_, _) = scroll_flush.finalize();
     });
 
     let mut tick = tokio::time::interval(Duration::from_millis(50));
