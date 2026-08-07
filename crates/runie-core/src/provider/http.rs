@@ -70,11 +70,13 @@ pub trait HttpActor: Send + Sync + 'static {
                             options.as_ref().and_then(|o| o.max_retry_delay_ms),
                         ) {
                             let delay = decision?;
-                            abortable_retry_delay(
-                                delay,
-                                options.as_ref().and_then(|o| o.signal.clone()),
-                            )
-                            .await?;
+                            let signal = options.as_ref().and_then(|o| o.signal.clone());
+                            if let Some(hook) = options.as_ref().and_then(|o| o.retry_delay.clone())
+                            {
+                                hook(delay, signal).await?;
+                            } else {
+                                abortable_retry_delay(delay, signal).await?;
+                            }
                         }
                     }
                     last_error = Some(error);
@@ -204,11 +206,7 @@ pub fn provider_retry_delay_ms(
     let delay = header_value(headers, "retry-after-ms")
         .and_then(|value| value.parse::<f64>().ok())
         .map(|value| value.max(0.0).ceil() as u64)
-        .or_else(|| {
-            header_value(headers, "retry-after")
-                .and_then(|value| value.parse::<f64>().ok())
-                .map(|seconds| (seconds.max(0.0) * 1000.0).ceil() as u64)
-        })
+        .or_else(|| header_value(headers, "retry-after").and_then(retry_after_delay_ms))
         .unwrap_or_else(|| (500_u64.saturating_mul(1_u64 << retry_index.min(4))).min(8_000));
     let cap = max_retry_delay_ms.unwrap_or(DEFAULT_MAX_RETRY_DELAY_MS);
     if cap > 0 && delay > cap {
@@ -219,6 +217,21 @@ pub fn provider_retry_delay_ms(
         }));
     }
     Some(Ok(delay))
+}
+
+fn retry_after_delay_ms(value: &str) -> Option<u64> {
+    retry_after_delay_ms_at(value, std::time::SystemTime::now())
+}
+
+fn retry_after_delay_ms_at(value: &str, now: std::time::SystemTime) -> Option<u64> {
+    if let Ok(seconds) = value.parse::<f64>() {
+        return Some((seconds.max(0.0) * 1000.0).ceil() as u64);
+    }
+    let target = httpdate::parse_http_date(value).ok()?;
+    target
+        .duration_since(now)
+        .ok()
+        .map(|duration| duration.as_millis().min(u64::MAX as u128) as u64)
 }
 
 fn header_value<'a>(
@@ -238,6 +251,9 @@ mod tests {
 
     const SERVER_RETRY_AFTER_MS: &str = "1250.2";
     const EXPECTED_RETRY_AFTER_MS: u64 = 1251;
+    const HTTP_DATE_DELAY_SECONDS: u64 = 2;
+    const NUMERIC_DELAY_MS: u64 = 250;
+    const MILLIS_PER_SECOND: u64 = 1_000;
 
     struct CapturingHttp {
         body: Arc<Mutex<Option<String>>>,
@@ -387,6 +403,18 @@ mod tests {
             abortable_retry_delay(0, Some(receiver)).await,
             Err(StreamError::Aborted)
         ));
+    }
+
+    #[test]
+    fn retry_after_accepts_http_dates_and_numeric_seconds() {
+        let now = httpdate::parse_http_date("Wed, 21 Oct 2015 07:28:00 GMT").unwrap();
+        let target =
+            httpdate::fmt_http_date(now + std::time::Duration::from_secs(HTTP_DATE_DELAY_SECONDS));
+        assert_eq!(
+            retry_after_delay_ms_at(&target, now),
+            Some(HTTP_DATE_DELAY_SECONDS * MILLIS_PER_SECOND)
+        );
+        assert_eq!(retry_after_delay_ms("0.25"), Some(NUMERIC_DELAY_MS));
     }
 
     #[test]

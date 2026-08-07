@@ -594,6 +594,15 @@ pub type ResponseHook = std::sync::Arc<
     dyn Fn(ProviderResponse, Model) -> futures::future::BoxFuture<'static, ()> + Send + Sync,
 >;
 
+pub type RetryDelayHook = std::sync::Arc<
+    dyn Fn(
+            u64,
+            Option<tokio::sync::watch::Receiver<bool>>,
+        ) -> futures::future::BoxFuture<'static, Result<(), crate::provider::StreamError>>
+        + Send
+        + Sync,
+>;
+
 /// Options passed to a `StreamFn::stream` call.
 #[derive(Clone, Default)]
 pub struct SimpleStreamOptions {
@@ -616,6 +625,9 @@ pub struct SimpleStreamOptions {
     pub on_payload: Option<PayloadHook>,
     /// pi `onResponse`: provider adapters may observe response metadata.
     pub on_response: Option<ResponseHook>,
+    /// Injectable scheduler for provider retry delays. Production uses an
+    /// abortable Tokio timer; replay tests can record decisions without time.
+    pub retry_delay: Option<RetryDelayHook>,
 }
 
 impl std::fmt::Debug for SimpleStreamOptions {
@@ -632,6 +644,7 @@ impl std::fmt::Debug for SimpleStreamOptions {
             .field("sampling_params", &self.sampling_params)
             .field("on_payload", &self.on_payload.is_some())
             .field("on_response", &self.on_response.is_some())
+            .field("retry_delay", &self.retry_delay.is_some())
             .finish()
     }
 }

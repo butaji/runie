@@ -35,6 +35,8 @@ abortable delay is now wired into the retry loop. `SimpleStreamOptions` exposes
 `max_retry_delay_ms`, YAML fixtures can declare and assert it, and the delay
 observes the actor-owned abort watch. Provider errors are retried only when the
 typed status/header policy allows it; legacy network errors retain the existing
-immediate retry behavior. The next slice is deterministic delay injection and
-date-form `Retry-After` parsing, which are still needed for complete Pi policy
-coverage without timer-dependent tests.
+immediate retry behavior. HTTP-date `Retry-After` values are now parsed, and
+`SimpleStreamOptions::retry_delay` allows replay tests to record delay decisions
+without sleeping. The remaining exactness gap is Pi's bounded random jitter on
+exponential fallback delays; it needs an injected randomness source so tests
+can assert the policy without nondeterminism.
