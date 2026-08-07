@@ -31,7 +31,7 @@
     {
       "id": "p39",
       "file": "p39-event-sequence-dsl.md",
-      "status": "in_progress",
+      "status": "done",
       "title": "Provide a side-effect-free typed event-sequence DSL beneath YAML fixtures"
     },
     {
@@ -271,7 +271,7 @@
     {
       "id": "p51",
       "file": "p51-pi-session-records.md",
-      "status": "planned",
+      "status": "in_progress",
       "title": "Core: Pi session configuration records through actor-owned events"
     }
   ]
