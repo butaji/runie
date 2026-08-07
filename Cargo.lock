@@ -792,6 +792,7 @@ version = "0.1.0"
 dependencies = [
  "runie-core",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
