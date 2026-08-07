@@ -68,3 +68,10 @@ All production task creation is owned:
 
 This audit preserves the invariant that dropping an actor or scenario cannot
 leave an orphaned task mutating shared state.
+
+## Pi model contract increment (2026-08-06)
+
+Pi's `Model` exposes optional `samplingParams?: Record<string, unknown>`.
+Runie now preserves this as `Model::sampling_params` at the serde boundary,
+with a round-trip test proving the camelCase wire key and arbitrary JSON value
+shape. Provider adapters can now receive the same model defaults as Pi.

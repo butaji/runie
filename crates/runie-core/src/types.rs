@@ -561,6 +561,11 @@ pub struct Model {
     pub context_window: u64,
     #[serde(default)]
     pub max_tokens: u64,
+    /// Default sampling parameters merged into provider requests (pi:
+    /// `samplingParams`). Values remain provider-neutral JSON so adapters can
+    /// preserve the configured shape exactly.
+    #[serde(default)]
+    pub sampling_params: Option<std::collections::HashMap<String, serde_json::Value>>,
     /// Extra HTTP headers for provider requests (pi: `headers?`).
     #[serde(default)]
     pub headers: std::collections::HashMap<String, String>,
@@ -1202,6 +1207,11 @@ mod tests {
             },
             context_window: 128,
             max_tokens: 64,
+            sampling_params: Some(
+                [("temperature".to_string(), serde_json::json!(0.2))]
+                    .into_iter()
+                    .collect(),
+            ),
             headers: [("X-Test".to_string(), "1".to_string())]
                 .into_iter()
                 .collect(),
@@ -1214,6 +1224,10 @@ mod tests {
         assert_eq!(json["compat"]["supports_reasoning"], true);
         assert_eq!(json["thinkingLevelMap"]["high"], "extended");
         assert_eq!(json["thinkingLevelMap"]["max"], "maximum");
+        assert_eq!(
+            json["samplingParams"]["temperature"],
+            serde_json::json!(0.2)
+        );
         for key in [
             "id",
             "name",
@@ -1226,6 +1240,7 @@ mod tests {
             "cost",
             "contextWindow",
             "maxTokens",
+            "samplingParams",
             "headers",
         ] {
             assert!(json.get(key).is_some(), "Model missing {key}");
