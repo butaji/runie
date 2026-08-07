@@ -7,6 +7,6 @@ pub mod stream_fn;
 
 pub use crate::types::{Model, SimpleStreamOptions};
 pub use actor::{ProviderActor, ProviderCommand};
-pub use http::{HttpActor, HttpResponse, ReplayHttpActor};
+pub use http::{provider_retry_delay_ms, HttpActor, HttpResponse, ReplayHttpActor};
 pub use replay::ReplayProvider;
 pub use stream_fn::{AssistantMessageEventStream, StreamError, StreamFn};

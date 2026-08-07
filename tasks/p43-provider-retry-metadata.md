@@ -1,6 +1,6 @@
 # p43 — Preserve provider retry metadata before `maxRetryDelayMs`
 
-Status: planned
+Status: in progress
 
 Pi's retry helper derives a delay from provider error metadata and clamps it
 with `maxRetryDelayMs` (defaulting to Pi's provider retry policy). Runie's
@@ -21,3 +21,16 @@ tests.
 
 This task is deliberately separate from p37's already-supported timeout and
 retry-count options; it prevents a false 100% parity claim for retry timing.
+
+## First implementation slice (2026-08-06)
+
+`StreamError::Provider` now preserves the optional HTTP status and all response
+headers through the transport boundary. Replay HTTP failures use this typed
+error instead of flattening metadata into `StreamError::Api(String)`.
+
+`provider_retry_delay_ms` is a pure policy function covering Pi's status/header
+override rules, `retry-after-ms`, numeric `retry-after`, exponential fallback,
+and the default/caller retry-delay cap. Its tests use no timers. The actual
+abortable delay and injection into the retry loop remain the next slice; this
+keeps the current implementation honest rather than silently retrying with a
+different timing policy.

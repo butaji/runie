@@ -93,12 +93,18 @@ fn finish_streaming_fragment(mut out: String, in_string: bool, mut stack: Vec<ch
     out
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, Clone, thiserror::Error)]
 pub enum StreamError {
     #[error("network: {0}")]
     Network(String),
     #[error("api: {0}")]
     Api(String),
+    #[error("provider ({status:?}): {message}")]
+    Provider {
+        message: String,
+        status: Option<u16>,
+        headers: std::collections::HashMap<String, String>,
+    },
     #[error("aborted")]
     Aborted,
     #[error("invalid: {0}")]

@@ -5,6 +5,8 @@ use std::{fs, path::Path};
 use super::stream_fn::StreamError;
 use crate::types::{Model, ProviderResponse, SimpleStreamOptions};
 
+const DEFAULT_MAX_RETRY_DELAY_MS: u64 = 60_000;
+
 #[derive(Debug, Clone)]
 pub struct HttpResponse {
     pub status: u16,
@@ -122,10 +124,72 @@ impl ReplayHttpActor {
 impl HttpActor for ReplayHttpActor {
     async fn post(&self, _body: String) -> Result<HttpResponse, StreamError> {
         if self.response.status >= 400 {
-            return Err(StreamError::Api(format!("HTTP {}", self.response.status)));
+            return Err(StreamError::Provider {
+                message: format!("HTTP {}", self.response.status),
+                status: Some(self.response.status),
+                headers: self.response.headers.clone(),
+            });
         }
         Ok(self.response.clone())
     }
+}
+
+/// The metadata-only part of Pi's provider retry policy. Keeping this pure
+/// makes retry decisions replayable without timers or a live transport.
+pub fn provider_retry_delay_ms(
+    error: &StreamError,
+    retry_index: u32,
+    max_retry_delay_ms: Option<u64>,
+) -> Option<Result<u64, StreamError>> {
+    let StreamError::Provider {
+        message,
+        status,
+        headers,
+    } = error
+    else {
+        return None;
+    };
+    let should_retry = headers
+        .iter()
+        .find(|(key, _)| key.eq_ignore_ascii_case("x-should-retry"))
+        .map(|(_, value)| value.as_str());
+    let retryable = match should_retry {
+        Some("true") => true,
+        Some("false") => false,
+        _ => {
+            status.is_none_or(|value| value == 408 || value == 409 || value == 429 || value >= 500)
+        }
+    };
+    if !retryable {
+        return Some(Err(error.clone()));
+    }
+    let delay = header_value(headers, "retry-after-ms")
+        .and_then(|value| value.parse::<f64>().ok())
+        .map(|value| value.max(0.0).ceil() as u64)
+        .or_else(|| {
+            header_value(headers, "retry-after")
+                .and_then(|value| value.parse::<f64>().ok())
+                .map(|seconds| (seconds.max(0.0) * 1000.0).ceil() as u64)
+        })
+        .unwrap_or_else(|| (500_u64.saturating_mul(1_u64 << retry_index.min(4))).min(8_000));
+    let cap = max_retry_delay_ms.unwrap_or(DEFAULT_MAX_RETRY_DELAY_MS);
+    if cap > 0 && delay > cap {
+        return Some(Err(StreamError::Provider {
+            message: format!("server requested {delay}ms retry delay (max: {cap}ms): {message}"),
+            status: *status,
+            headers: headers.clone(),
+        }));
+    }
+    Some(Ok(delay))
+}
+
+fn header_value<'a>(
+    headers: &'a std::collections::HashMap<String, String>,
+    name: &str,
+) -> Option<&'a str> {
+    headers
+        .iter()
+        .find_map(|(key, value)| key.eq_ignore_ascii_case(name).then_some(value.as_str()))
 }
 
 #[cfg(test)]
@@ -133,6 +197,9 @@ mod tests {
     use super::*;
     use futures::FutureExt;
     use std::sync::{Arc, Mutex};
+
+    const SERVER_RETRY_AFTER_MS: &str = "1250.2";
+    const EXPECTED_RETRY_AFTER_MS: u64 = 1251;
 
     struct CapturingHttp {
         body: Arc<Mutex<Option<String>>>,
@@ -272,5 +339,48 @@ mod tests {
         .expect("third attempt succeeds");
         assert_eq!(response.status, 200);
         assert_eq!(attempts.load(std::sync::atomic::Ordering::SeqCst), 3);
+    }
+
+    #[test]
+    fn provider_retry_policy_preserves_headers_and_honors_overrides() {
+        let error = StreamError::Provider {
+            message: "rate limited".into(),
+            status: Some(429),
+            headers: [
+                ("Retry-After-Ms".into(), SERVER_RETRY_AFTER_MS.into()),
+                ("X-Should-Retry".into(), "true".into()),
+            ]
+            .into_iter()
+            .collect(),
+        };
+        assert!(matches!(
+            provider_retry_delay_ms(&error, 0, None),
+            Some(Ok(EXPECTED_RETRY_AFTER_MS))
+        ));
+        assert!(matches!(
+            provider_retry_delay_ms(&error, 0, Some(1000)),
+            Some(Err(StreamError::Provider {
+                status: Some(429),
+                ..
+            }))
+        ));
+    }
+
+    #[test]
+    fn provider_retry_policy_respects_explicit_no_retry() {
+        let error = StreamError::Provider {
+            message: "temporary".into(),
+            status: Some(500),
+            headers: [("x-should-retry".into(), "false".into())]
+                .into_iter()
+                .collect(),
+        };
+        assert!(matches!(
+            provider_retry_delay_ms(&error, 0, None),
+            Some(Err(StreamError::Provider {
+                status: Some(500),
+                ..
+            }))
+        ));
     }
 }
