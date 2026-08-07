@@ -361,14 +361,27 @@ pub fn project_tool_blocks(
                 |name| ToolCardKind::from_header(name),
             )
         };
-        let Some(index) = blocks
-            .iter()
-            .position(|block: &ToolBlock| block.tool_call_id == id)
-        else {
-            if matches!(
-                line.kind,
-                LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
-            ) {
+        let is_header = matches!(
+            line.kind,
+            LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
+        );
+        let existing_index = if is_header {
+            if let Some(row_id) = line.tool_row_id {
+                blocks
+                    .iter()
+                    .position(|block: &ToolBlock| block.tool_row_id == Some(row_id))
+            } else {
+                blocks
+                    .iter()
+                    .position(|block: &ToolBlock| block.tool_call_id == id)
+            }
+        } else {
+            blocks
+                .iter()
+                .rposition(|block: &ToolBlock| block.tool_call_id == id)
+        };
+        let Some(index) = existing_index else {
+            if is_header {
                 blocks.push(ToolBlock {
                     tool_call_id: id.to_owned(),
                     header: line.text.clone(),

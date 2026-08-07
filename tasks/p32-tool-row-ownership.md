@@ -10,8 +10,17 @@ However, card grouping still exposes external `tool_call_id` as its grouping
 key. Display-mode events now retain an opaque `#row:<id>` projection key, and
 existing typed blocks refresh their mode from current event state; the
 compatibility widget uses the same projection helper. Legacy ID fallback is
-intentional for replayed rows, but independent duplicate-ID semantics through
-every dense-group transition and full renderer capture remain unproven.
+intentional for replayed rows. The duplicate-ID YAML fixture now proves
+independent typed blocks and modes for the compatibility seed and live row;
+dense-group transitions and full renderer capture remain unproven.
+
+## Opaque grouping checkpoint (2026-08-06)
+
+`project_tool_blocks` now uses `Line::tool_row_id` when a semantic header owns
+one, and attaches output rows to the newest matching lifecycle block. A
+compatibility header without an opaque token continues to use its external
+call ID. This keeps the declarative projection pure while preventing a live
+duplicate provider ID from being merged into its compatibility seed.
 
 ## Fresh replay audit (2026-08-06)
 

@@ -15,7 +15,8 @@ events:
   - tool_select: next
 assertions:
   state:
-    tool_blocks: 1
+    tool_blocks: 2
+    tool_modes: [collapsed, collapsed]
     tool_header_row_ids: [null, 0]
     tool_header_row_active: [false, false]
     selected_tool_id: call-2
