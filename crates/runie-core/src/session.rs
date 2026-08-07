@@ -2569,6 +2569,56 @@ mod tests {
         .is_err());
     }
 
+    #[tokio::test]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "integration fixture spells out the complete Pi record"
+    )]
+    async fn actor_reduces_complete_tool_started_identity() {
+        let actor = SessionActor::new();
+        actor
+            .record_config(SessionConfigRecord::OperationRecordCreated {
+                record_type: "operation_started".into(),
+                data: serde_json::json!({"id": "run-1"}),
+            })
+            .await;
+        actor
+            .append(AgentMessage::Assistant(AssistantMessage {
+                content: vec![AssistantContent::ToolCall(ToolCall {
+                    id: "call-1".into(),
+                    name: "read".into(),
+                    arguments: serde_json::json!({"path": "Cargo.toml"}),
+                    thought_signature: None,
+                })],
+                ..Default::default()
+            }))
+            .await;
+        actor
+            .record_config(SessionConfigRecord::OperationRecordCreated {
+                record_type: "tool_started".into(),
+                data: serde_json::json!({
+                    "runId": "run-1",
+                    "assistantEntryId": "entry-1",
+                    "toolIndex": 0,
+                    "toolCallId": "call-1",
+                    "toolName": "read",
+                    "effectiveArgs": {"path": "Cargo.toml"},
+                    "resultEntryId": "entry-2",
+                    "replay": "never"
+                }),
+            })
+            .await;
+        let snapshot = actor.snapshot();
+        let record = snapshot
+            .lane_records
+            .iter()
+            .find(|record| record.record_type == "tool_started")
+            .expect("complete tool-start record");
+        assert_eq!(record.data["assistantEntryId"], "entry-1");
+        assert_eq!(record.data["resultEntryId"], "entry-2");
+        assert_eq!(record.data["replay"], "never");
+    }
+
     #[test]
     fn queue_lane_records_require_a_linked_provisioned_target() {
         let mut snapshot = SessionSnapshot::default();
