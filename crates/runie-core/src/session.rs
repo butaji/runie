@@ -170,6 +170,95 @@ pub struct OperationErrorSnapshot {
     pub message: String,
 }
 
+/// Reduce one Pi operation record into the session-owned lifecycle projection.
+/// Live event delivery and JSONL replay must use this same pure mapping so the
+/// two paths cannot drift.
+#[allow(
+    clippy::too_many_lines,
+    reason = "the Pi operation record table keeps live and replay projection rules together"
+)]
+fn reduce_operation_record(
+    snapshot: &mut SessionSnapshot,
+    record_type: &str,
+    data: &serde_json::Value,
+) {
+    if record_type == "operation_started"
+        && data
+            .get("intent")
+            .and_then(|intent| intent.get("kind"))
+            .and_then(serde_json::Value::as_str)
+            == Some("navigation")
+    {
+        if let Some(intent) = data.get("intent") {
+            snapshot.navigation = Some(NavigationSnapshot {
+                target_id: intent
+                    .get("targetId")
+                    .and_then(|value| value.as_str())
+                    .map(str::to_owned),
+                summarize: intent
+                    .get("summarize")
+                    .and_then(serde_json::Value::as_bool)
+                    .unwrap_or(false),
+                summary_entry_id: intent
+                    .get("summaryEntryId")
+                    .and_then(|value| value.as_str())
+                    .map(str::to_owned),
+            });
+        }
+    }
+    let Some(operation_id) = data
+        .get("runId")
+        .or_else(|| data.get("id"))
+        .and_then(serde_json::Value::as_str)
+    else {
+        return;
+    };
+    match record_type {
+        "operation_started" => {
+            if let Some(kind) = data
+                .get("intent")
+                .and_then(|intent| intent.get("kind"))
+                .and_then(serde_json::Value::as_str)
+            {
+                snapshot
+                    .operation_kinds
+                    .insert(operation_id.to_owned(), kind.to_owned());
+            }
+            snapshot
+                .active_operations
+                .insert(operation_id.to_owned(), "started".into());
+        }
+        "abort_requested" => {
+            snapshot
+                .active_operations
+                .insert(operation_id.to_owned(), "aborted".into());
+        }
+        "operation_finished" => {
+            snapshot.active_operations.remove(operation_id);
+            if let Some(outcome) = data.get("outcome").and_then(serde_json::Value::as_str) {
+                snapshot
+                    .operation_outcomes
+                    .insert(operation_id.to_owned(), outcome.to_owned());
+                if let Some(error) = data.get("error") {
+                    if let (Some(code), Some(message)) = (
+                        error.get("code").and_then(serde_json::Value::as_str),
+                        error.get("message").and_then(serde_json::Value::as_str),
+                    ) {
+                        snapshot.operation_errors.insert(
+                            operation_id.to_owned(),
+                            OperationErrorSnapshot {
+                                code: code.to_owned(),
+                                message: message.to_owned(),
+                            },
+                        );
+                    }
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
 impl SessionSnapshot {
     /// Parse the message-only subset emitted by [`Self::to_jsonl`].
     /// Validation follows Pi's v4 invariants for header, sequence, and parent
@@ -374,95 +463,7 @@ impl SessionSnapshot {
                 };
                 snapshot.sequence = seq;
                 snapshot.leaf_id = Some(id.clone());
-                if entry_type == "operation_started"
-                    && value
-                        .get("intent")
-                        .and_then(|intent| intent.get("kind"))
-                        .and_then(serde_json::Value::as_str)
-                        == Some("navigation")
-                {
-                    if let Some(intent) = value.get("intent") {
-                        snapshot.navigation = Some(NavigationSnapshot {
-                            target_id: intent
-                                .get("targetId")
-                                .and_then(|value| value.as_str())
-                                .map(str::to_owned),
-                            summarize: intent
-                                .get("summarize")
-                                .and_then(serde_json::Value::as_bool)
-                                .unwrap_or(false),
-                            summary_entry_id: intent
-                                .get("summaryEntryId")
-                                .and_then(|value| value.as_str())
-                                .map(str::to_owned),
-                        });
-                    }
-                }
-                if entry_type == "operation_started" {
-                    if let (Some(operation_id), Some(kind)) = (
-                        value
-                            .get("runId")
-                            .or_else(|| value.get("id"))
-                            .and_then(serde_json::Value::as_str),
-                        value
-                            .get("intent")
-                            .and_then(|intent| intent.get("kind"))
-                            .and_then(serde_json::Value::as_str),
-                    ) {
-                        snapshot
-                            .operation_kinds
-                            .insert(operation_id.to_owned(), kind.to_owned());
-                    }
-                }
-                if entry_type == "operation_finished" {
-                    if let (Some(operation_id), Some(outcome)) = (
-                        value
-                            .get("runId")
-                            .or_else(|| value.get("id"))
-                            .and_then(serde_json::Value::as_str),
-                        value.get("outcome").and_then(serde_json::Value::as_str),
-                    ) {
-                        snapshot
-                            .operation_outcomes
-                            .insert(operation_id.to_owned(), outcome.to_owned());
-                        if let Some(error) = value.get("error") {
-                            if let (Some(code), Some(message)) = (
-                                error.get("code").and_then(serde_json::Value::as_str),
-                                error.get("message").and_then(serde_json::Value::as_str),
-                            ) {
-                                snapshot.operation_errors.insert(
-                                    operation_id.to_owned(),
-                                    OperationErrorSnapshot {
-                                        code: code.to_owned(),
-                                        message: message.to_owned(),
-                                    },
-                                );
-                            }
-                        }
-                    }
-                }
-                if let Some(operation_id) = value
-                    .get("runId")
-                    .or_else(|| value.get("id"))
-                    .and_then(serde_json::Value::as_str)
-                {
-                    match entry_type {
-                        "operation_started" => {
-                            snapshot
-                                .active_operations
-                                .insert(operation_id.to_owned(), "started".into());
-                        }
-                        "abort_requested" => {
-                            snapshot
-                                .active_operations
-                                .insert(operation_id.to_owned(), "aborted".into());
-                        }
-                        "operation_finished" => {
-                            snapshot.active_operations.remove(operation_id);
-                        }
-                        _ => {}
-                    }
-                }
+                reduce_operation_record(&mut snapshot, entry_type, &value);
                 snapshot.config_records.push(SessionConfigEntry {
                     id,
                     seq,
@@ -698,87 +699,7 @@ impl SessionActor {
                                 .record
                                 .clone()
                         {
-                            if record_type == "operation_started"
-                                && data
-                                    .get("intent")
-                                    .and_then(|intent| intent.get("kind"))
-                                    .and_then(serde_json::Value::as_str)
-                                    == Some("navigation")
-                            {
-                                if let Some(intent) = data.get("intent") {
-                                    state.navigation = Some(NavigationSnapshot {
-                                        target_id: intent
-                                            .get("targetId")
-                                            .and_then(|value| value.as_str())
-                                            .map(str::to_owned),
-                                        summarize: intent
-                                            .get("summarize")
-                                            .and_then(serde_json::Value::as_bool)
-                                            .unwrap_or(false),
-                                        summary_entry_id: intent
-                                            .get("summaryEntryId")
-                                            .and_then(|value| value.as_str())
-                                            .map(str::to_owned),
-                                    });
-                                }
-                            }
-                            let operation_id = data
-                                .get("runId")
-                                .or_else(|| data.get("id"))
-                                .and_then(serde_json::Value::as_str)
-                                .map(str::to_owned);
-                            if let Some(operation_id) = operation_id {
-                                match record_type.as_str() {
-                                    "operation_started" => {
-                                        if let Some(kind) = data
-                                            .get("intent")
-                                            .and_then(|intent| intent.get("kind"))
-                                            .and_then(serde_json::Value::as_str)
-                                        {
-                                            state
-                                                .operation_kinds
-                                                .insert(operation_id.clone(), kind.to_owned());
-                                        }
-                                        state
-                                            .active_operations
-                                            .insert(operation_id, "started".into());
-                                    }
-                                    "abort_requested" => {
-                                        state
-                                            .active_operations
-                                            .insert(operation_id, "aborted".into());
-                                    }
-                                    "operation_finished" => {
-                                        state.active_operations.remove(&operation_id);
-                                        if let Some(outcome) =
-                                            data.get("outcome").and_then(serde_json::Value::as_str)
-                                        {
-                                            state
-                                                .operation_outcomes
-                                                .insert(operation_id.clone(), outcome.to_owned());
-                                        }
-                                        if let Some(error) = data.get("error") {
-                                            if let (Some(code), Some(message)) = (
-                                                error
-                                                    .get("code")
-                                                    .and_then(serde_json::Value::as_str),
-                                                error
-                                                    .get("message")
-                                                    .and_then(serde_json::Value::as_str),
-                                            ) {
-                                                state.operation_errors.insert(
-                                                    operation_id,
-                                                    OperationErrorSnapshot {
-                                                        code: code.to_owned(),
-                                                        message: message.to_owned(),
-                                                    },
-                                                );
-                                            }
-                                        }
-                                    }
-                                    _ => {}
-                                }
-                            }
+                            reduce_operation_record(&mut state, &record_type, &data);
                         }
                         let _ = snapshot_tx.send(state.clone());
                         let _ = reply.send(());

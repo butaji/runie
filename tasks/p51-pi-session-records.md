@@ -116,6 +116,11 @@ unknown-operation rejection, and terminal ordering remain explicit follow-up
 policy work; they must be implemented as actor events/results rather than
 direct mutation by callers.
 
+The operation projection is now one pure reducer shared by live
+`SessionActor` delivery and validated JSONL import. Navigation intent, active
+state, typed kind, terminal outcome, and failure metadata therefore have one
+source of mapping truth; replay cannot silently diverge from live events.
+
 ## Navigation intent projection (2026-08-07)
 
 Pi's `operation_started` record can carry a `navigation` intent with
