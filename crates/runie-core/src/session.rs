@@ -436,6 +436,30 @@ impl CompactionContextProjection {
 }
 
 impl SessionSnapshot {
+    /// Return unfinished operation starts newest-first, matching Pi's
+    /// recovery query. The limit is applied after ordering.
+    pub fn find_open_operations(
+        &self,
+        lane: &str,
+        limit: Option<usize>,
+    ) -> Vec<SessionLaneRecordSnapshot> {
+        let mut records = self
+            .lane_records
+            .iter()
+            .filter(|record| {
+                record.record_type == "operation_started"
+                    && record.lane.as_deref() == Some(lane)
+                    && self.active_operations.contains_key(&record.id)
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+        records.reverse();
+        if let Some(limit) = limit {
+            records.truncate(limit);
+        }
+        records
+    }
+
     /// Recompute Pi's session statistics from the immutable journal.
     pub fn stats(&self) -> SessionStats {
         let mut stats = SessionStats {
@@ -2700,6 +2724,33 @@ mod tests {
             ..SessionLaneQuery::default()
         });
         assert_eq!(compactions[0].id, "run-2");
+    }
+
+    #[test]
+    fn open_operation_query_returns_active_starts_newest_first() {
+        let mut snapshot = SessionSnapshot::default();
+        for (id, seq) in [("run-1", 1), ("run-2", 2)] {
+            snapshot.lane_records.push(SessionLaneRecordSnapshot {
+                record_type: "operation_started".into(),
+                id: id.into(),
+                lane: Some("main".into()),
+                seq: Some(seq),
+                timestamp: Some(seq as i64),
+                data: serde_json::json!({"id": id}),
+            });
+            snapshot
+                .active_operations
+                .insert(id.into(), "started".into());
+        }
+        snapshot.active_operations.remove("run-1");
+        let records = snapshot.find_open_operations("main", Some(2));
+        assert_eq!(
+            records
+                .iter()
+                .map(|record| record.id.as_str())
+                .collect::<Vec<_>>(),
+            ["run-2"]
+        );
     }
 
     #[test]

@@ -30,6 +30,15 @@ cost total are recomputed from actor-owned message and usage-lane facts. The
 projection is pure and replay-stable, including missing optional usage fields.
 Regression coverage pins Pi's token accounting and decimal cost behavior.
 
+## Completed slice (2026-08-08, open-operation recovery query)
+
+`SessionSnapshot::find_open_operations` now mirrors Pi's recovery read: it
+filters operation starts by lane, retains only actor-projected active
+operations, orders newest-first, and applies the recovery limit after
+ordering. The method is pure over immutable state and does not infer or
+mutate lifecycle status. Regression coverage verifies finished operations are
+excluded and active starts are ordered for recovery.
+
 ## Completed slice (2026-08-07)
 
 `runie-core` now classifies all nine Pi operation-lane record families with
