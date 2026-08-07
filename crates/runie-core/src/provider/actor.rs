@@ -8,7 +8,7 @@ use tokio::task::JoinSet;
 use crate::types::{AgentContext, Model, SimpleStreamOptions};
 
 use super::stream_fn::{AssistantMessageEventStream, StreamFn};
-use crate::task_owner::{spawn_actor_worker, TaskOwner};
+use crate::task_owner::{mailbox_ack, spawn_actor_worker, TaskOwner};
 
 /// Broadcast capacity for stream events. Sized to absorb a burst of
 /// `message_update` events without dropping.
@@ -67,15 +67,7 @@ impl ProviderActor {
     }
 
     pub async fn cancel(&self) {
-        let (reply, done) = oneshot::channel();
-        if self
-            .tx
-            .send(ProviderCommand::Cancel { reply })
-            .await
-            .is_ok()
-        {
-            let _ = done.await;
-        }
+        let _ = mailbox_ack!(self.tx, |reply| ProviderCommand::Cancel { reply });
     }
 }
 

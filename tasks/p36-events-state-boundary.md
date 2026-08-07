@@ -157,3 +157,7 @@ actor boundary directly.
 Loop control consolidation (2026-08-06): steering/follow-up mode and run
 lifecycle commands share the acknowledgement DSL, preserving the loop actor
 as the sole owner of control state and keeping event reduction observable.
+
+Provider cancellation consolidation (2026-08-06): cancellation acknowledgement
+now uses `mailbox_ack!`, retaining provider pump ownership and the settled
+abort boundary without duplicating oneshot plumbing.

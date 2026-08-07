@@ -314,3 +314,7 @@ mailbox path because it returns `PromptOutcome` rather than a unit ack.
 `LoopActor::reduce_control` now uses `mailbox_ack!` for mode, lifecycle, and
 abort control events; acknowledgement settles after the control snapshot is
 reduced.
+
+`ProviderActor::cancel` uses the same DSL; stream startup keeps its typed
+broadcast-receiver reply explicit because it returns a value rather than a
+unit acknowledgement.
