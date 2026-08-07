@@ -87,6 +87,11 @@ cast-dump LEFT RIGHT:
 capture-matrix DIR COMMAND QUIT_KEY ENV="":
     scripts/capture-matrix.sh {{DIR}} {{COMMAND}} {{QUIT_KEY}} {{ENV}}
 
+# Capture Runie's deterministic Hey matrix with the parity clock used by the
+# frozen Grok reference. Override CLOCK when recording a new reference pair.
+capture-hey-runie DIR="/tmp/runie-hey-matrix" CLOCK="1785990000,38":
+    scripts/capture-matrix.sh {{DIR}} target/debug/runie C-q "RUNIE_PARITY_CLOCK={{CLOCK}}"
+
 # Compare Grok and Runie casts at every supported geometry.
 compare-matrix GROK_DIR RUNIE_DIR:
     scripts/compare-matrix.sh {{GROK_DIR}} {{RUNIE_DIR}}

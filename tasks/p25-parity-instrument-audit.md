@@ -366,6 +366,14 @@ four-size capture, so only the 62×32 pair is accepted as a strict Grok match;
 the other three Runie casts remain artifacts awaiting paired Grok captures.
 The YAML `visual-hey` matrix continues to exercise all four geometries.
 
+**Canonical deterministic Runie capture (2026-08-06):** Added
+`just capture-hey-runie`, which invokes the existing four-size matrix with the
+atomic `RUNIE_PARITY_CLOCK` input and a fixed Runie quit chord. This keeps the
+capture setup declarative at the command boundary and avoids hand-written
+environment strings. It is a Runie-side reproducibility instrument only: a
+live Grok cast still requires the same geometry and a frozen transcript/usage
+oracle before full-cell equality is meaningful.
+
 **Grok matrix capture boundary (2026-08-06):** The private capture script now
 uses a 60-second readiness/settled window, shell-quotes the complete command as
 one asciinema argument, and bounds post-quit shutdown before killing only its
