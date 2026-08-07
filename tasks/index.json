@@ -279,6 +279,18 @@
       "file": "p52-pi-session-lane-parity.md",
       "status": "in_progress",
       "title": "Core: Pi typed session lanes, durable JSONL, and compaction parity"
+    },
+    {
+      "id": "p54",
+      "file": "p54-state-change-event-audit.md",
+      "status": "in_progress",
+      "title": "Architecture: audit every state change through owned actor events"
+    },
+    {
+      "id": "p55",
+      "file": "p55-tool-start-identity-boundary.md",
+      "status": "in_progress",
+      "title": "Core: Pi tool-start identity, reservations, and replay parity"
     }
   ]
 }
