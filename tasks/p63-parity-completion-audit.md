@@ -61,3 +61,9 @@ all four capture sizes. Unsupported behavior must remain an explicit typed
 capability result until its source-backed adapter data exists.
 
 This audit prevents green generic tests from being mistaken for 100% parity.
+
+Response failure evidence (2026-08-08): the replay parser now rejects Pi
+`response.failed` frames with a typed `StreamError::Api`, preserving
+`error.code` plus `error.message` (or `incomplete_details.reason`). The
+regression runs through the provider replay boundary and the full `just ci`
+matrix; live provider transport behavior remains a separate open contract.
