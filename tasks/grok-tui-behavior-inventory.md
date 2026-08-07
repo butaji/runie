@@ -2,7 +2,7 @@
 
 Status: active (2026-08-07)
 
-## Current source audit (2026-08-06)
+## Current source audit (2026-08-07)
 
 `scripts/source-inventory.sh` currently reports 48 Pi agent files, 174 Pi AI
 files, 496 Grok pager files, and 68 Grok pager-render files. The inventory is

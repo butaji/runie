@@ -176,7 +176,7 @@ tool-update fixture is intentionally not tightened.
 ## Current audit checkpoint (2026-08-06)
 
 The source inventory was rerun against the authoritative Pi and Grok
-checkouts; it produced the expected 774 classified entries. The local gate is
+checkouts; it produced the expected 790 classified entries. The local gate is
 green, but this proves only the modeled event/replay contracts. The remaining
 high-value evidence gap is a single actor-owned identity across
 `ToolExecutionStart → ToolExecutionUpdate → ToolExecutionEnd` when a feed row
