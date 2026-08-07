@@ -326,3 +326,7 @@ TUI projections consume the same event through their bus subscriptions.
 YAML `context_window` declarations now replay as `ModelChanged` events into
 the status actor instead of bypassing the event reducer with `StatusMsg`
 mutation. This keeps scenario setup and live model configuration aligned.
+
+`AgentStateActor::apply_event` now shares the same acknowledgement helper as
+direct state commands, keeping replayed event reduction and ordinary state
+updates on one mailbox DSL path.

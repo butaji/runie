@@ -153,15 +153,8 @@ impl AgentStateActor {
     /// This is the single event-to-state boundary used by the loop driver;
     /// callers do not mutate projection fields directly.
     pub async fn apply_event(&self, event: &AgentEvent) {
-        let (ack_tx, ack_rx) = oneshot::channel();
-        if self
-            .tx
-            .send(StateCommand::ApplyEvent(Box::new(event.clone()), ack_tx))
-            .await
-            .is_ok()
-        {
-            let _ = ack_rx.await;
-        }
+        self.acknowledge(|reply| StateCommand::ApplyEvent(Box::new(event.clone()), reply))
+            .await;
     }
 
     /// Publish an event and apply the same event to this actor-owned state

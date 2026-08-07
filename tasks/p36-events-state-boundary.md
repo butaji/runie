@@ -168,6 +168,10 @@ YAML replay boundary (2026-08-06): declared context-window settings now enter
 the status projection through `ModelChanged`, eliminating the remaining direct
 status mutation in scenario replay.
 
+State event application consolidation (2026-08-06): `AgentStateActor` now
+acknowledges `ApplyEvent` through its shared mailbox DSL, preserving the
+single actor-owned event-to-state boundary.
+
 Provider cancellation consolidation (2026-08-06): cancellation acknowledgement
 now uses `mailbox_ack!`, retaining provider pump ownership and the settled
 abort boundary without duplicating oneshot plumbing.
