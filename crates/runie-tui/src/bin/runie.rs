@@ -6,7 +6,7 @@
 
 use std::io::{self, Stdout};
 use std::sync::OnceLock;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use anyhow::Result;
 use crossterm::event::{
@@ -390,6 +390,7 @@ async fn run_app(
     let _input_owner = runie_core::spawn_owned_worker!(async move {
         let mut input = EventStream::new();
         let mut scroll_normalizer = runie_tui_model::ScrollNormalizer::default();
+        let scroll_epoch = Instant::now();
         while let Some(result) = input.next().await {
             let event = match result {
                 Ok(Event::Key(key)) => InputEvent::Key(key),
@@ -399,7 +400,8 @@ async fn run_app(
                         MouseEventKind::ScrollDown => runie_tui_model::ScrollDirection::Down,
                         _ => continue,
                     };
-                    let (next, delta) = scroll_normalizer.push(direction);
+                    let at_ms = scroll_epoch.elapsed().as_millis() as u64;
+                    let (next, delta) = scroll_normalizer.push_at(at_ms, direction);
                     scroll_normalizer = next;
                     if delta == 0 {
                         continue;

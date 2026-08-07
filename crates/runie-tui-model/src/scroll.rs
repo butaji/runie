@@ -14,6 +14,8 @@ pub enum ScrollDirection {
 pub struct ScrollNormalizer {
     events_per_tick: i32,
     lines_per_tick: i32,
+    stream_gap_ms: u64,
+    last_event_ms: Option<u64>,
     pending_units: i32,
 }
 
@@ -36,6 +38,8 @@ impl ScrollNormalizer {
             } else {
                 1
             },
+            stream_gap_ms: 80,
+            last_event_ms: None,
             pending_units: 0,
         }
     }
@@ -49,6 +53,19 @@ impl ScrollNormalizer {
         let delta = self.pending_units / self.events_per_tick;
         self.pending_units %= self.events_per_tick;
         (self, delta)
+    }
+
+    /// Push an event at an injected monotonic millisecond timestamp. A gap
+    /// larger than Grok's stream boundary starts a fresh gesture; replay can
+    /// exercise this without wall-clock access or test sleeps.
+    pub const fn push_at(mut self, at_ms: u64, direction: ScrollDirection) -> (Self, i32) {
+        if let Some(last) = self.last_event_ms {
+            if at_ms.saturating_sub(last) > self.stream_gap_ms {
+                self.pending_units = 0;
+            }
+        }
+        self.last_event_ms = Some(at_ms);
+        self.push(direction)
     }
 }
 
@@ -79,5 +96,15 @@ mod tests {
         normalizer = next;
         assert_eq!([first, second, third], [1, 2, 2]);
         assert_eq!(normalizer.pending_units, 0);
+    }
+
+    #[test]
+    fn stream_gap_resets_fractional_carry_without_sleeping() {
+        let normalizer = ScrollNormalizer::new(3, 5);
+        let (normalizer, _) = normalizer.push_at(0, ScrollDirection::Down);
+        let (normalizer, _) = normalizer.push_at(20, ScrollDirection::Down);
+        let (normalizer, after_gap) = normalizer.push_at(101, ScrollDirection::Down);
+        assert_eq!(after_gap, 1);
+        assert_eq!(normalizer.last_event_ms, Some(101));
     }
 }
