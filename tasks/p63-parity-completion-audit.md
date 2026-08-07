@@ -1,6 +1,6 @@
 # P63 — Pi/Grok parity completion audit
 
-Status: active; source-backed gap matrix (2026-08-08, refreshed after `/name` routing)
+Status: active; source-backed gap matrix (2026-08-08, refreshed after model-selector activation)
 
 This task is the authoritative checklist for the remaining 100% parity work.
 It keeps “implemented and replay-verified” separate from “typed but awaiting a
@@ -55,8 +55,10 @@ provider-specific contract”. The source of truth is the current Pi tree at
    async route through their owning actor/event boundaries, with YAML action or
    post-state coverage. Model catalog selection and the remaining commands
    remain open.
-   The exact missing selector contract and actor/YAML design are captured in
-   P65; an explicit `/model provider/model` route is not selector parity.
+   The model selector contract is now implemented through catalog/UI/loop
+   actors, including async search, scoped rows, Ctrl-L routing, selection
+   commit, and YAML state/render coverage. Remaining command gaps are the
+   other Pi commands not yet backed by an executable Runie capability.
 3. Cast-wide zero-diff coverage for every Pi lifecycle/error/abort family,
    including terminal capability variants and dynamic timing metadata.
 
