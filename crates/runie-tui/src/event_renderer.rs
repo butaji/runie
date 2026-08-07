@@ -278,8 +278,6 @@ pub struct EventRenderer {
     in_assistant_stream: bool,
     in_reasoning: bool,
     reasoning_buffer: String,
-    /// True between ToolExecutionStart and ToolExecutionEnd.
-    in_tool_exec: bool,
     activity_dirs: usize,
     activity_files: usize,
     activity_commands: usize,
@@ -338,7 +336,6 @@ impl EventRenderer {
             in_assistant_stream: false,
             in_reasoning: false,
             reasoning_buffer: String::new(),
-            in_tool_exec: false,
             activity_dirs: 0,
             activity_files: 0,
             activity_commands: 0,
@@ -886,7 +883,6 @@ impl EventRenderer {
             self.activity_failures = 0;
             self.activity_group_open = true;
         }
-        self.in_tool_exec = true;
         if matches!(tool_name.as_str(), "list_dir" | "list_files" | "ls") {
             self.activity_dirs += 1;
         } else if matches!(tool_name.as_str(), "read" | "read_file") {
@@ -971,7 +967,7 @@ impl EventRenderer {
         {
             return None;
         }
-        if self.in_tool_exec {
+        if self.active_tool_count > 0 && self.tool_buffers.contains_key(&tool_call_id) {
             if let Some(output) = structured_update_text(&partial_result) {
                 let output_lines = structured_memory_lines(&output);
                 if self.scrollback_actor.is_none() {
@@ -1023,7 +1019,6 @@ impl EventRenderer {
         result: serde_json::Value,
         is_error: bool,
     ) -> ScrollbackMsg {
-        self.in_tool_exec = false;
         self.active_tool_count = self.active_tool_count.saturating_sub(1);
         if is_error {
             self.activity_failures += 1;
@@ -1146,7 +1141,6 @@ impl EventRenderer {
         self.in_assistant_stream = false;
         self.in_reasoning = false;
         self.reasoning_buffer.clear();
-        self.in_tool_exec = false;
         self.activity_dirs = 0;
         self.activity_files = 0;
         self.activity_commands = 0;

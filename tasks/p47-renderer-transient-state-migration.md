@@ -83,6 +83,14 @@ existing `StatusMsg::SetThinkingElapsed` projection is authoritative for both
 live and synchronous replay paths. This removes one renderer-side mirror
 without changing the YAML `visual-thinking-duration` contract.
 
+Tool lifecycle cleanup increment (2026-08-07): removed the compatibility
+`in_tool_exec` boolean. It could become false when one of several parallel
+tool calls completed, causing updates for still-running siblings to be
+dropped. Compatibility updates now use the owned pending-tool count plus the
+tool-id buffer as their event-derived predicate, matching the parallel-tool
+identity contract already covered by the renderer tests. The live path remains
+fully actor-owned.
+
 Assistant metadata ownership increment (2026-08-07): the live
 `with_live_actors` path no longer runs `handle_message_start/update/end` through
 the compatibility metadata reducer. Assistant text/reasoning lifecycle is
