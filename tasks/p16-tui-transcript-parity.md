@@ -657,3 +657,8 @@ Path-span typography (2026-08-06): Grok's file-oriented cards use the
 dedicated path token for `Read`, `List`, and `Edit` header operands. Runie now
 splits those headers into bold action, separator, and theme-resolved path
 spans, with a GrokDay token assertion; no RGB values are owned by the widget.
+
+Search-scope typography (2026-08-06): search headers now split the bold
+`Search` action, query, `in` separator, and scope path; the scope resolves
+through the same semantic path token as file cards. A focused GrokNight span
+assertion pins the separation.

@@ -1845,6 +1845,18 @@ fn styled_line_for(kind: LineKind, text: &str, theme: ThemeKind) -> RatLine<'sta
                 Span::styled(path.to_owned(), appearance::header_path_style_for(theme)),
             ]);
         }
+        if let Some(search_body) = body.strip_prefix("Search ") {
+            if let Some((query, path)) = search_body.rsplit_once(" in ") {
+                return RatLine::from(vec![
+                    Span::styled(prefix.to_owned(), style),
+                    Span::styled("Search".to_owned(), style.add_modifier(Modifier::BOLD)),
+                    Span::styled(" ".to_owned(), style),
+                    Span::styled(query.to_owned(), style),
+                    Span::styled(" in ".to_owned(), style),
+                    Span::styled(path.to_owned(), appearance::header_path_style_for(theme)),
+                ]);
+            }
+        }
         let name_end = body.find(|c: char| c.is_whitespace()).unwrap_or(body.len());
         let name = &body[..name_end];
         let rest = &body[name_end..];
@@ -2531,6 +2543,24 @@ mod tests {
             appearance::header_path_style_for(ThemeKind::GrokDay).fg
         );
         assert!(rendered.spans[1]
+            .style
+            .add_modifier
+            .contains(Modifier::BOLD));
+    }
+
+    #[test]
+    fn search_headers_resolve_scope_paths_separately() {
+        let rendered = styled_line_for(
+            LineKind::Tool,
+            "   ◆ Search \"TODO\" in src",
+            ThemeKind::GrokNight,
+        );
+        assert_eq!(rendered.spans[5].content.as_ref(), "src");
+        assert_eq!(
+            rendered.spans[5].style.fg,
+            appearance::header_path_style_for(ThemeKind::GrokNight).fg
+        );
+        assert!(!rendered.spans[3]
             .style
             .add_modifier
             .contains(Modifier::BOLD));
