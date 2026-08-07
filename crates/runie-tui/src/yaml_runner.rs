@@ -23,8 +23,9 @@ use runie_core::tools::executor::ToolExecHooks;
 use runie_core::tools::{ToolExecutorActor, ToolRegistry};
 use runie_core::types::{
     AgentContext, AgentEvent, AgentMessage, AgentTool, AgentToolResult, AssistantMessage,
-    AssistantMessageEvent, CacheRetention, Model, SimpleStreamOptions, StopReason, ThinkingLevel,
-    ToolExecutionMode, ToolResultContent, Usage, UserContent, UserMessage, WaitingReason,
+    AssistantMessageEvent, CacheRetention, DeferredHandle, Model, SimpleStreamOptions, StopReason,
+    ThinkingLevel, ToolExecutionMode, ToolResultContent, Usage, UserContent, UserMessage,
+    WaitingReason,
 };
 use serde::Deserialize;
 use tokio::sync::broadcast;
@@ -443,6 +444,8 @@ pub struct DoneSpec {
     /// for deterministic footer parity; omitted usage keeps the zero default.
     #[serde(default)]
     pub usage: Usage,
+    #[serde(default)]
+    pub deferred: Option<DeferredHandle>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -571,7 +574,12 @@ impl EventSpec {
             Self::Done { done } => Some(AssistantMessageEvent::Done {
                 stop_reason: StopReason::from(&done.stop_reason),
                 usage: done.usage.clone(),
-                message: None,
+                message: done.deferred.clone().map(|deferred| AssistantMessage {
+                    stop_reason: Some(StopReason::Deferred),
+                    deferred: Some(deferred),
+                    usage: done.usage.clone(),
+                    ..AssistantMessage::default()
+                }),
             }),
             Self::Error { error } => Some(AssistantMessageEvent::Error {
                 reason: StopReason::Error,

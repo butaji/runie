@@ -84,7 +84,7 @@ pub enum StopReason {
 
 #[cfg(test)]
 mod stop_reason_tests {
-    use super::StopReason;
+    use super::{AssistantMessage, DeferredHandle, StopReason};
 
     #[test]
     fn serializes_pi_wire_values() {
@@ -106,6 +106,30 @@ mod stop_reason_tests {
                 reason
             );
         }
+    }
+
+    #[test]
+    fn deferred_handle_round_trips_pi_fields() {
+        let message = AssistantMessage {
+            stop_reason: Some(StopReason::Deferred),
+            deferred: Some(DeferredHandle {
+                provider: "replay".into(),
+                model_id: "model-1".into(),
+                api: "replay-api".into(),
+                id: "deferred-1".into(),
+                expires_at: Some(42),
+                poll_after_ms: Some(250),
+                data: Some(serde_json::json!({"batch": "deferred-1"})),
+            }),
+            ..AssistantMessage::default()
+        };
+        let value = serde_json::to_value(&message).expect("deferred message serializes");
+        assert_eq!(value["stopReason"], "deferred");
+        assert_eq!(value["deferred"]["modelId"], "model-1");
+        assert_eq!(value["deferred"]["pollAfterMs"], 250);
+        assert!(value["deferred"].get("model_id").is_none());
+        let round_trip: AssistantMessage = serde_json::from_value(value).expect("round trip");
+        assert_eq!(round_trip, message);
     }
 }
 
@@ -216,12 +240,30 @@ pub enum AssistantContent {
     ToolCall(ToolCall),
 }
 
+/// Provider handle returned when Pi defers completion to a later fetch.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeferredHandle {
+    pub provider: String,
+    pub model_id: String,
+    pub api: String,
+    pub id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expires_at: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub poll_after_ms: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub data: Option<serde_json::Value>,
+}
+
 /// A (possibly partial) assistant message.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct AssistantMessage {
     pub content: Vec<AssistantContent>,
     pub stop_reason: Option<StopReason>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deferred: Option<DeferredHandle>,
     pub model: String,
     /// Provider id (pi: `api`). Mirrors `AssistantMessage.api` + `.provider`.
     #[serde(default)]
@@ -404,6 +446,10 @@ pub trait AgentMessageExt: Send + Sync + 'static {
 /// not (de)serializable without an explicit converter. Persisting custom
 /// messages is the app's responsibility (use the role + timestamp).
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(
+    clippy::large_enum_variant,
+    reason = "AgentMessage preserves Pi's inline assistant payload"
+)]
 pub enum AgentMessage {
     User(UserMessage),
     Assistant(AssistantMessage),
@@ -1146,6 +1192,7 @@ mod tests {
                 details: None,
             }],
             usage: usage.clone(),
+            deferred: None,
             thinking_elapsed_ms: None,
             error_message: Some("boom".into()),
             raw_stop_reason: Some("max_tokens".into()),

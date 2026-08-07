@@ -7,10 +7,11 @@ deferred response handle. Runie previously covered `stop`, `length`,
 `toolUse`, `error`, and `aborted`, but rejected this valid Pi value at the
 serde/type boundary.
 
-The `StopReason::Deferred` variant now survives core serialization and status
-projection. `StopReasonSpec::Deferred` exposes the same value in the runtime
-YAML event DSL, and `deferred-response.yaml` drives it through the real loop,
-event bus, actor state projection, and Pi event oracle without recompilation.
+The `StopReason::Deferred` variant and typed `DeferredHandle` now survive core
+serialization and status projection. `StopReasonSpec::Deferred` plus the
+optional handle expose the same value in the runtime YAML event DSL, and
+`deferred-response.yaml` drives it through the real loop, event bus, actor
+state projection, and Pi event oracle without recompilation.
 
 This slice preserves the event payload rather than inventing deferred-fetch
 behavior; actual provider deferred-handle APIs remain a separate adapter

@@ -4,7 +4,15 @@ initial_prompt: "defer this"
 tools: []
 events:
   - start
-  - done: { stop_reason: deferred }
+  - done:
+      stop_reason: deferred
+      deferred:
+        provider: replay
+        modelId: model-1
+        api: replay-api
+        id: deferred-1
+        pollAfterMs: 250
+        data: { batch: deferred-1 }
 assertions:
   exact_events:
     - agent_start

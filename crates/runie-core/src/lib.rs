@@ -42,7 +42,7 @@ pub use pi_event::PiAgentEvent;
 pub use types::{
     AfterToolCallContext, AfterToolCallResult, AgentContext, AgentEvent, AgentMessage,
     AgentMessageExt, AgentState, AgentTool, AgentToolResult, AssistantMessage,
-    AssistantMessageEvent, BeforeToolCallContext, BeforeToolCallResult, ImageContent, Model,
-    QueueMode, SimpleStreamOptions, StopReason, TextContent, ThinkingLevel, ToolExecutionMode,
-    ToolResultMessage, Usage, UserMessage,
+    AssistantMessageEvent, BeforeToolCallContext, BeforeToolCallResult, DeferredHandle,
+    ImageContent, Model, QueueMode, SimpleStreamOptions, StopReason, TextContent, ThinkingLevel,
+    ToolExecutionMode, ToolResultMessage, Usage, UserMessage,
 };
