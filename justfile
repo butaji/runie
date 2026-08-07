@@ -87,6 +87,10 @@ cast-dump LEFT RIGHT:
 capture-matrix DIR COMMAND QUIT_KEY PROMPT="Hey" ENV="":
     scripts/capture-matrix.sh {{DIR}} {{COMMAND}} {{QUIT_KEY}} {{PROMPT}} {{ENV}}
 
+# Capture a YAML-declared scenario without recompiling the replay runner.
+capture-scenario FIXTURE DIR COMMAND ENV="":
+    scripts/capture-scenario.sh {{FIXTURE}} {{DIR}} {{COMMAND}} {{ENV}}
+
 # Capture Runie's deterministic Hey matrix with the parity clock used by the
 # frozen Grok reference. Override CLOCK when recording a new reference pair.
 capture-hey-runie DIR="/tmp/runie-hey-matrix" CLOCK="1785990000,38":

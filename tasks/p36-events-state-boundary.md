@@ -24,9 +24,9 @@ snapshots only and never mutate another actor's state.
    variant, including scroll, selection, palette, and prompt actions.
 2. Add event-trace assertions to replay fixtures so ordering is tested before
    snapshots are compared.
-3. Keep capture inputs declarative: the matrix now accepts a scenario prompt
-   instead of hardcoding `Hey`; next, bind prompt and settled markers to the
-   YAML scenario without recompilation.
+3. Keep capture inputs declarative: the matrix accepts a scenario prompt, and
+   `capture-scenario.sh` reads prompt/quit settings from the YAML fixture at
+   runtime without recompilation.
 
 The capture helper remains an external instrument, not production state. Its
 bounded polling is intentionally limited to detecting terminal readiness and
