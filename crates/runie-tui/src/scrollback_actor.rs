@@ -68,6 +68,16 @@ impl ScrollbackActor {
         let _ = mailbox_ack!(self.tx, |reply| Command::ApplyBatch(messages, reply));
     }
 
+    /// Non-blocking render-time delivery for measurements. Rendering must not
+    /// await an actor, but the measurement still crosses the same mailbox
+    /// boundary instead of mutating a widget-owned model.
+    pub fn try_apply(&self, message: ScrollbackMsg) -> bool {
+        let (reply, _receiver) = oneshot::channel();
+        self.tx
+            .try_send(Command::ApplyBatch(vec![message], reply))
+            .is_ok()
+    }
+
     pub async fn apply_event(&self, event: &AgentEvent) {
         let messages = bus_messages_for_event(event.clone());
         if !messages.is_empty() {

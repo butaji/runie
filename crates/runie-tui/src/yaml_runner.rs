@@ -821,6 +821,9 @@ pub struct StateAssertions {
     pub selected_member_index: Option<usize>,
     pub autoscroll: Option<bool>,
     pub scroll_offset: Option<usize>,
+    pub measured_content_rows: Option<usize>,
+    pub measured_viewport_rows: Option<usize>,
+    pub measured_anchor_row: Option<usize>,
     pub thinking_level: Option<ThinkingLevel>,
     pub thinking_elapsed_ms: Option<u64>,
     pub reasoning_expanded: Option<bool>,
@@ -2064,6 +2067,30 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
             return Err(format!(
                 "state scroll_offset mismatch: expected {expected}, got {}",
                 outcome.feed.scroll_offset
+            ));
+        }
+    }
+    if let Some(expected) = expected.measured_content_rows {
+        if outcome.feed.measured_content_rows != expected {
+            return Err(format!(
+                "state measured_content_rows mismatch: expected {expected}, got {}",
+                outcome.feed.measured_content_rows
+            ));
+        }
+    }
+    if let Some(expected) = expected.measured_viewport_rows {
+        if outcome.feed.measured_viewport_rows != expected {
+            return Err(format!(
+                "state measured_viewport_rows mismatch: expected {expected}, got {}",
+                outcome.feed.measured_viewport_rows
+            ));
+        }
+    }
+    if let Some(expected) = expected.measured_anchor_row {
+        if outcome.feed.measured_anchor_row != Some(expected) {
+            return Err(format!(
+                "state measured_anchor_row mismatch: expected {expected}, got {:?}",
+                outcome.feed.measured_anchor_row
             ));
         }
     }

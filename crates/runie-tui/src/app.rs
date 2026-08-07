@@ -570,6 +570,17 @@ impl App {
         let model = self.model_snapshot();
         let layout = chat_layout_with_prompt_height(area, model.prompt.render_height());
         let sb = Scrollback::from_model_snapshot(model.feed);
+        let content_rows = sb.measured_content_rows(layout.scrollback, area.height);
+        let anchor_row = sb
+            .selected_entry()
+            .map(|row| row.min(content_rows.saturating_sub(1)));
+        let _ = self
+            .scrollback_actor
+            .try_apply(crate::widgets::ScrollbackMsg::LayoutMeasured {
+                content_rows,
+                viewport_rows: layout.scrollback.height as usize,
+                anchor_row,
+            });
         let mut buf = Buffer::empty(area);
         sb.render_with_terminal_height(layout.scrollback, area.height, &mut buf);
         f(layout.prompt, &mut buf);

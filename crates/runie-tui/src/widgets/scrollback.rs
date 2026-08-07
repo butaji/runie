@@ -1327,6 +1327,14 @@ impl Scrollback {
         }
     }
 
+    /// Measure the same physical rows used by rendering, without producing
+    /// terminal output. The result is suitable for `LayoutMeasured` delivery.
+    pub fn measured_content_rows(&self, area: Rect, terminal_rows: u16) -> usize {
+        let compact = crate::layout::grok_effective_compact(false, terminal_rows);
+        self.physical_rows(area.width as usize, compact, area.height)
+            .len()
+    }
+
     #[allow(
         clippy::too_many_lines,
         reason = "semantic paint lookup keeps source identity and theme intent together"
