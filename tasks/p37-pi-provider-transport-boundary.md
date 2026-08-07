@@ -127,6 +127,14 @@ provider/session/status/feed actors.
 Socket lifecycle, fallback state, and debug counters belong to the transport
 actor; no renderer, loop driver, or sibling actor may mutate them directly.
 
+The current `ProviderActor` remains intentionally transport-neutral: it owns
+one `StreamFn`, exposes only acknowledged `Start`/`Cancel` commands, and
+publishes assistant events from an owned pump. It must not infer a WebSocket
+wire protocol from `ProviderTransport` or silently reinterpret a WebSocket
+request as SSE. A provider adapter can therefore be added behind the existing
+`StreamFn` boundary without changing the Pi event contract or creating a
+second state owner.
+
 ## Typed request promotion (2026-08-06)
 
 The owned `HttpRequest` now receives the effective `session_id`, API key,
