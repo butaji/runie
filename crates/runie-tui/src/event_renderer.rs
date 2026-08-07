@@ -289,7 +289,6 @@ pub struct EventRenderer {
     activity_failures: usize,
     active_tool_count: usize,
     activity_group_open: bool,
-    turn_started: bool,
     /// If true, the next AgentStart emits the welcome modal lines
     /// (matching grok's minimal-mode chrome) and then clears this flag.
     emit_welcome: bool,
@@ -351,7 +350,6 @@ impl EventRenderer {
             activity_failures: 0,
             active_tool_count: 0,
             activity_group_open: false,
-            turn_started: false,
             emit_welcome,
             live_grok_layout: false,
             live_tool_events_owned: false,
@@ -715,7 +713,9 @@ impl EventRenderer {
             AgentEvent::ThinkingLevelChanged { .. } => {}
             AgentEvent::Reset => self.handle_reset(),
             AgentEvent::TurnStart => {
-                self.turn_started = true;
+                if self.scrollback_actor.is_none() {
+                    self.scrollback.lock().apply(ScrollbackMsg::TurnStart);
+                }
             }
             AgentEvent::Waiting { reason } => {
                 let _ = reason;
@@ -789,23 +789,16 @@ impl EventRenderer {
             AgentEvent::AgentStart => {
                 self.emit_welcome = false;
             }
-            AgentEvent::AgentEnd { .. } => {
-                if self.scrollback_actor.is_none() {
-                    self.turn_started = false;
-                }
-            }
+            AgentEvent::AgentEnd { .. } => {}
             AgentEvent::TurnStart => {
                 if self.scrollback_actor.is_none() {
-                    self.turn_started = true;
+                    self.scrollback.lock().apply(ScrollbackMsg::TurnStart);
                 }
             }
             AgentEvent::Reset => {
                 #[cfg(test)]
                 {
                     self.thinking_elapsed_ms = None;
-                }
-                if self.scrollback_actor.is_none() {
-                    self.turn_started = false;
                 }
                 self.in_assistant_stream = false;
                 self.in_reasoning = false;
@@ -885,7 +878,12 @@ impl EventRenderer {
     }
 
     fn handle_agent_end(&mut self) {
-        if self.turn_started && self.scrollback_actor.is_none() {
+        let turn_started = self
+            .scrollback_actor
+            .as_ref()
+            .map(|actor| actor.model_snapshot().turn_started)
+            .unwrap_or_else(|| self.scrollback.lock().model_snapshot().turn_started);
+        if turn_started && self.scrollback_actor.is_none() {
             let worked_for = self
                 .status_actor
                 .as_ref()
@@ -895,7 +893,9 @@ impl EventRenderer {
             scrollback.append(Line::new(LineKind::Separator, ""));
             scrollback.append(Line::new(LineKind::TurnSummary, worked_for));
         }
-        self.turn_started = false;
+        if self.scrollback_actor.is_none() {
+            self.scrollback.lock().apply(ScrollbackMsg::TurnEnd);
+        }
         if self.status_actor.is_none() {
             self.status.lock().set(Status::Ready);
         }
@@ -1189,7 +1189,9 @@ impl EventRenderer {
         self.activity_failures = 0;
         self.active_tool_count = 0;
         self.activity_group_open = false;
-        self.turn_started = false;
+        if self.scrollback_actor.is_none() {
+            self.scrollback.lock().apply(ScrollbackMsg::TurnEnd);
+        }
     }
 
     fn handle_message_start(&mut self, message: runie_core::types::AgentMessage) {
@@ -2109,7 +2111,14 @@ mod tests {
         let mut renderer = renderer;
         renderer.apply_actor_metadata(AgentEvent::TurnStart);
         renderer.apply_actor_metadata(AgentEvent::AgentEnd { messages: vec![] });
-        assert!(!renderer.turn_started);
+        assert!(
+            !renderer
+                .scrollback_actor
+                .as_ref()
+                .expect("live feed actor")
+                .model_snapshot()
+                .turn_started
+        );
         assert!(renderer.scrollback_actor.is_some());
     }
 
@@ -2204,6 +2213,7 @@ mod tests {
         let (mut r, sb, _) = new_renderer();
         r.apply_event(AgentEvent::AgentStart);
         r.apply_event(AgentEvent::TurnStart);
+        assert!(sb.lock().model_snapshot().turn_started);
         r.apply_event(AgentEvent::AgentEnd { messages: vec![] });
         let scrollback = sb.lock();
         let summary = scrollback

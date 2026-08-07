@@ -70,6 +70,12 @@ field at all when actors are attached. A regression test proves that the live
 renderer remains stateless for this lifecycle fact; the field is retained only
 for synchronous compatibility reducers.
 
+Turn lifecycle ownership increment (2026-08-07): the compatibility renderer no
+longer keeps a duplicate `turn_started` field. `TurnStart`/`TurnEnd` reduce the
+compatibility `Scrollback` model through `ScrollbackMsg`, and finalization
+reads the same model snapshot used by the actor path. This removes one
+renderer-side lifecycle mirror while preserving replay behavior.
+
 ## Tool lifecycle increment (2026-08-06)
 
 The live `App` now constructs `ScrollbackActor::new_with_bus`. Its owned bus

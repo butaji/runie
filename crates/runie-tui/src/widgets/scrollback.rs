@@ -733,7 +733,7 @@ impl Scrollback {
             settled_no_tool_phase: self.navigation.settled_no_tool_phase,
             live_grok_layout: self.navigation.live_grok_layout,
             next_tool_row_id: self.navigation.next_tool_row_id,
-            turn_started: false,
+            turn_started: self.navigation.turn_started,
             measured_content_rows: self.navigation.measured_content_rows,
             measured_viewport_rows: self.navigation.measured_viewport_rows,
             measured_anchor_row: self.navigation.measured_anchor_row,
