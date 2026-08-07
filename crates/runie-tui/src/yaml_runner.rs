@@ -711,6 +711,10 @@ pub struct VisualAssertions {
     pub palette_query: Option<String>,
     #[serde(default)]
     pub palette_index: Option<usize>,
+    /// Generic actor-owned UI projection assertions. These are evaluated
+    /// after declarative key steps have gone through the UiActor mailbox.
+    #[serde(default)]
+    pub ui: Option<UiAssertions>,
     /// Steps the TUI should perform before snapshotting the screen.
     /// Each step is a key event (e.g. "hello", "Enter", "Ctrl+C").
     #[serde(default)]
@@ -754,6 +758,15 @@ pub struct VisualAssertions {
     /// supplies the generic dump decoder.
     #[serde(default)]
     pub reference: Option<DumpReference>,
+}
+
+#[derive(Debug, Deserialize, Default, Clone)]
+pub struct UiAssertions {
+    pub show_welcome: Option<bool>,
+    pub shortcuts_open: Option<bool>,
+    pub command_palette_open: Option<bool>,
+    pub command_palette_query: Option<String>,
+    pub command_palette_index: Option<usize>,
 }
 
 #[derive(Debug, Deserialize, Default, Clone, Copy)]
@@ -2554,7 +2567,10 @@ pub async fn render_visual_buffer(
                     crate::app::PaletteAction::NewSession,
                 ))
             ) {
-                app.bus.publish(runie_core::types::AgentEvent::Reset);
+                // Route the reset through the core actor's event boundary and
+                // await its acknowledgement so YAML observes the reduced UI
+                // state rather than racing the broadcast subscriber.
+                app.reset_session().await;
             }
             continue;
         }
@@ -2639,6 +2655,48 @@ pub async fn render_visual_buffer(
     }
 
     let palette = app.ui.snapshot();
+    if let Some(expected) = &vis.ui {
+        if let Some(value) = expected.show_welcome {
+            if palette.show_welcome != value {
+                return Err(format!(
+                    "ui.show_welcome mismatch: expected {value}, got {}",
+                    palette.show_welcome
+                ));
+            }
+        }
+        if let Some(value) = expected.shortcuts_open {
+            if palette.shortcuts_open != value {
+                return Err(format!(
+                    "ui.shortcuts_open mismatch: expected {value}, got {}",
+                    palette.shortcuts_open
+                ));
+            }
+        }
+        if let Some(value) = expected.command_palette_open {
+            if palette.command_palette_open != value {
+                return Err(format!(
+                    "ui.command_palette_open mismatch: expected {value}, got {}",
+                    palette.command_palette_open
+                ));
+            }
+        }
+        if let Some(value) = &expected.command_palette_query {
+            if palette.command_palette_query != *value {
+                return Err(format!(
+                    "ui.command_palette_query mismatch: expected {value:?}, got {:?}",
+                    palette.command_palette_query
+                ));
+            }
+        }
+        if let Some(value) = expected.command_palette_index {
+            if palette.command_palette_index != value {
+                return Err(format!(
+                    "ui.command_palette_index mismatch: expected {value}, got {}",
+                    palette.command_palette_index
+                ));
+            }
+        }
+    }
     if let Some(expected) = vis.palette_open {
         if palette.command_palette_open != expected {
             return Err(format!(

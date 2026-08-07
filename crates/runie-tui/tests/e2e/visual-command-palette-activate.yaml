@@ -9,6 +9,12 @@ assertions:
       - Ctrl+P
       - "new"
       - PaletteEnter
+    ui:
+      show_welcome: false
+      shortcuts_open: false
+      command_palette_open: false
+      command_palette_query: ""
+      command_palette_index: 0
     screen_excludes:
       - "Command Palette"
       - "Commands"

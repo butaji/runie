@@ -169,6 +169,12 @@ actor; `visual-activity-mixed.yaml` asserts the resulting visible `⌄` marker f
   palette visibility/query/index) and construct that projection through the
   same event sequence; no fixture-specific Rust test should be added.
 
+- **UI projection DSL (2026-08-06):** Added a nested `visual.ui` YAML
+  assertion block for welcome, shortcuts, and command-palette state. The
+  palette New Session fixture now verifies the actor-owned reset projection
+  after `Ctrl+P → new → PaletteEnter`, exercising the pure core-event mapping
+  through the live mailbox without recompilation.
+
 - **Actor workflow state oracle (2026-08-06):** YAML `state.workflows` now
   compares the complete actor-owned workflow projection (identity, objective,
   phase/state, active-agent count, terminal status, and elapsed time) by stable
