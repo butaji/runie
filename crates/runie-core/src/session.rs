@@ -214,6 +214,105 @@ pub struct CompactionSettings {
     pub keep_recent_tokens: u64,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ContextUsageEstimate {
+    pub tokens: u64,
+    pub usage_tokens: u64,
+    pub trailing_tokens: u64,
+    pub last_usage_index: Option<usize>,
+}
+
+/// Pi's conservative four-characters-per-token message estimate.
+pub fn estimate_message_tokens(message: &AgentMessage) -> u64 {
+    const ESTIMATED_IMAGE_CHARS: u64 = 4_800;
+    let chars = match message {
+        AgentMessage::User(message) => message
+            .content
+            .iter()
+            .map(|content| match content {
+                crate::types::UserContent::Text { text } => text.len() as u64,
+                crate::types::UserContent::Image { .. } => ESTIMATED_IMAGE_CHARS,
+            })
+            .sum(),
+        AgentMessage::Assistant(message) => message
+            .content
+            .iter()
+            .map(|content| match content {
+                crate::types::AssistantContent::Text { text }
+                | crate::types::AssistantContent::Thinking { text } => text.len() as u64,
+                crate::types::AssistantContent::ToolCall(call) => {
+                    call.name.len() as u64
+                        + serde_json::to_string(&call.arguments)
+                            .map(|value| value.len() as u64)
+                            .unwrap_or_default()
+                }
+            })
+            .sum(),
+        AgentMessage::ToolResult(message) => message
+            .content
+            .iter()
+            .map(|content| match content {
+                crate::types::ToolResultContent::Text { text } => text.len() as u64,
+                crate::types::ToolResultContent::Image { .. } => ESTIMATED_IMAGE_CHARS,
+            })
+            .sum(),
+        AgentMessage::CompactionSummary(message) => message.summary.len() as u64,
+        AgentMessage::Custom(_) => 0,
+    };
+    chars.saturating_add(3) / 4
+}
+
+/// Estimate context tokens using the latest valid assistant usage and the
+/// conservative estimate for messages after it, matching Pi's harness.
+pub fn estimate_context_tokens(messages: &[AgentMessage]) -> ContextUsageEstimate {
+    let last_usage_index = messages
+        .iter()
+        .enumerate()
+        .rev()
+        .find_map(|(index, message)| {
+            let AgentMessage::Assistant(assistant) = message else {
+                return None;
+            };
+            let usage_tokens = assistant_usage_tokens(assistant);
+            (assistant.stop_reason != Some(StopReason::Aborted)
+                && assistant.stop_reason != Some(StopReason::Error)
+                && usage_tokens > 0)
+                .then_some(index)
+        });
+    let Some(index) = last_usage_index else {
+        let trailing_tokens = messages.iter().map(estimate_message_tokens).sum();
+        return ContextUsageEstimate {
+            tokens: trailing_tokens,
+            usage_tokens: 0,
+            trailing_tokens,
+            last_usage_index: None,
+        };
+    };
+    let usage_tokens = match &messages[index] {
+        AgentMessage::Assistant(assistant) => assistant_usage_tokens(assistant),
+        _ => 0,
+    };
+    let trailing_tokens = messages[index + 1..]
+        .iter()
+        .map(estimate_message_tokens)
+        .sum();
+    ContextUsageEstimate {
+        tokens: usage_tokens + trailing_tokens,
+        usage_tokens,
+        trailing_tokens,
+        last_usage_index: Some(index),
+    }
+}
+
+fn assistant_usage_tokens(message: &crate::types::AssistantMessage) -> u64 {
+    let usage = &message.usage;
+    if usage.total_tokens > 0 {
+        usage.total_tokens
+    } else {
+        usage.input + usage.output + usage.cache_read + usage.cache_write
+    }
+}
+
 /// Return whether Pi's harness should begin automatic compaction.
 ///
 /// The summarizer and publication remain asynchronous actor-owned operations;
@@ -2094,6 +2193,57 @@ mod tests {
                 ..settings
             }
         ));
+    }
+
+    #[test]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the context usage vector keeps all Pi edge cases together"
+    )]
+    fn context_usage_prefers_latest_valid_assistant_usage_and_estimates_tail() {
+        const EIGHT_TOKENS_OF_TEXT: &str = "12345678";
+        const ONE_TOKEN_OF_TEXT: &str = "1234";
+        let messages = vec![
+            user(EIGHT_TOKENS_OF_TEXT),
+            AgentMessage::Assistant(crate::types::AssistantMessage {
+                usage: crate::types::Usage {
+                    input: 10,
+                    output: 5,
+                    total_tokens: 0,
+                    ..Default::default()
+                },
+                stop_reason: Some(StopReason::Stop),
+                ..Default::default()
+            }),
+            user(ONE_TOKEN_OF_TEXT),
+        ];
+        assert_eq!(estimate_message_tokens(&messages[0]), 2);
+        assert_eq!(
+            estimate_context_tokens(&messages),
+            ContextUsageEstimate {
+                tokens: 16,
+                usage_tokens: 15,
+                trailing_tokens: 1,
+                last_usage_index: Some(1),
+            }
+        );
+        let aborted = AgentMessage::Assistant(crate::types::AssistantMessage {
+            usage: crate::types::Usage {
+                total_tokens: 100,
+                ..Default::default()
+            },
+            stop_reason: Some(StopReason::Aborted),
+            ..Default::default()
+        });
+        assert_eq!(
+            estimate_context_tokens(&[aborted]),
+            ContextUsageEstimate {
+                tokens: 0,
+                usage_tokens: 0,
+                trailing_tokens: 0,
+                last_usage_index: None,
+            }
+        );
     }
 
     #[test]

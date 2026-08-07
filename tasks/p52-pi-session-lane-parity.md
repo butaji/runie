@@ -240,6 +240,18 @@ runtime-declared context tokens, reserve, enabled flag, and expected result;
 the working-state fixture exercises the over-threshold path. Boundary tests
 cover equality, disabled settings, and oversized reserves.
 
+### Completed context-usage increment (2026-08-08)
+
+Runie now exposes pure `estimate_message_tokens` and
+`estimate_context_tokens` functions matching Pi's conservative
+four-characters-per-token heuristic, fixed image estimate, latest valid
+assistant usage preference, and trailing-message accounting. Aborted/error
+assistant usage is ignored; `Usage.totalTokens` is preferred and the component
+sum is the fallback. Core tests cover latest-usage selection, tail estimates,
+and invalid terminal usage. The summarization actor still owns when this
+estimate is requested and published as an event; these functions do not mutate
+session or provider state.
+
 ### Completed slice (2026-08-07, compaction context boundary)
 
 `SessionSnapshot::compaction_context_projection` is now a pure projection of
