@@ -79,6 +79,13 @@ assistant row's timestamp spacing matching Grok; response text and elapsed
 telemetry still vary between live captures and require deterministic provider
 and clock inputs before a cast-wide exact comparison can be promoted.
 
+**Runie matrix determinism (2026-08-06):** The canonical
+`just capture-hey-runie` matrix now executes successfully at all four default
+geometries. Repeating the settled 62×32 capture with the same atomic clock
+produced an exact ANSI-cell comparison (`0` differing cells, glyphs, and
+styles). This is evidence that the Runie event/reducer/render path is stable;
+it is not evidence that a live Grok response is stable or content-equivalent.
+
 **Latest parity note (2026-08-05):** `LoopActor::continue_run` now drains
 queued steering before follow-up messages when the context ends in an
 assistant, matching pi's continuation behavior; `LastIsAssistant` remains the

@@ -374,6 +374,14 @@ environment strings. It is a Runie-side reproducibility instrument only: a
 live Grok cast still requires the same geometry and a frozen transcript/usage
 oracle before full-cell equality is meaningful.
 
+**Executed deterministic matrix (2026-08-06):** Ran the canonical recipe at
+`62x32`, `80x24`, `100x30`, and `120x36`; each cast has the requested v2
+geometry and a row-complete settled ANSI artifact. A repeated `62x32` capture
+with the same atomic clock compared through `compare-ansi-frames.py` at
+`different_cells: 0`, `different_glyphs: 0`, and `different_styles_only: 0`.
+This closes the Runie-side determinism check while keeping live Grok content
+differences explicitly outside a strict equality claim.
+
 **Grok matrix capture boundary (2026-08-06):** The private capture script now
 uses a 60-second readiness/settled window, shell-quotes the complete command as
 one asciinema argument, and bounds post-quit shutdown before killing only its
