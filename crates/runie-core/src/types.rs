@@ -606,6 +606,9 @@ pub struct SimpleStreamOptions {
     /// Maximum additional attempts after the initial provider request (pi:
     /// `maxRetries`).
     pub max_retries: Option<u32>,
+    /// Maximum provider-requested retry delay (pi: `maxRetryDelayMs`). A
+    /// value of zero disables the cap.
+    pub max_retry_delay_ms: Option<u64>,
     /// Per-request sampling overrides. The loop merges these over
     /// `Model::sampling_params`, matching Pi's `StreamOptions` contract.
     pub sampling_params: Option<std::collections::HashMap<String, serde_json::Value>>,
@@ -625,6 +628,7 @@ impl std::fmt::Debug for SimpleStreamOptions {
             .field("thinking_budgets", &self.thinking_budgets)
             .field("timeout_ms", &self.timeout_ms)
             .field("max_retries", &self.max_retries)
+            .field("max_retry_delay_ms", &self.max_retry_delay_ms)
             .field("sampling_params", &self.sampling_params)
             .field("on_payload", &self.on_payload.is_some())
             .field("on_response", &self.on_response.is_some())

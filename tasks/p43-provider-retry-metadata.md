@@ -31,6 +31,10 @@ error instead of flattening metadata into `StreamError::Api(String)`.
 `provider_retry_delay_ms` is a pure policy function covering Pi's status/header
 override rules, `retry-after-ms`, numeric `retry-after`, exponential fallback,
 and the default/caller retry-delay cap. Its tests use no timers. The actual
-abortable delay and injection into the retry loop remain the next slice; this
-keeps the current implementation honest rather than silently retrying with a
-different timing policy.
+abortable delay is now wired into the retry loop. `SimpleStreamOptions` exposes
+`max_retry_delay_ms`, YAML fixtures can declare and assert it, and the delay
+observes the actor-owned abort watch. Provider errors are retried only when the
+typed status/header policy allows it; legacy network errors retain the existing
+immediate retry behavior. The next slice is deterministic delay injection and
+date-form `Retry-After` parsing, which are still needed for complete Pi policy
+coverage without timer-dependent tests.

@@ -73,6 +73,8 @@ pub struct ProviderOptionsSpec {
     #[serde(default)]
     pub max_retries: Option<u32>,
     #[serde(default)]
+    pub max_retry_delay_ms: Option<u64>,
+    #[serde(default)]
     pub sampling_params: Option<std::collections::HashMap<String, serde_json::Value>>,
 }
 
@@ -83,6 +85,7 @@ impl ProviderOptionsSpec {
             thinking_budgets: self.thinking_budgets.clone(),
             timeout_ms: self.timeout_ms,
             max_retries: self.max_retries,
+            max_retry_delay_ms: self.max_retry_delay_ms,
             sampling_params: self.sampling_params.clone(),
             ..Default::default()
         }
@@ -666,6 +669,7 @@ pub struct ProviderOptionsAssertions {
     pub thinking_budgets: Option<runie_core::types::ThinkingBudgets>,
     pub timeout_ms: Option<u64>,
     pub max_retries: Option<u32>,
+    pub max_retry_delay_ms: Option<u64>,
     pub sampling_params: Option<std::collections::HashMap<String, serde_json::Value>>,
 }
 
@@ -1665,6 +1669,14 @@ fn assert_provider_options(outcome: &ScenarioOutcome, scenario: &Scenario) -> Re
             return Err(format!(
                 "provider retries mismatch: expected {value}, got {:?}",
                 actual.max_retries
+            ));
+        }
+    }
+    if let Some(value) = expected.max_retry_delay_ms {
+        if actual.max_retry_delay_ms != Some(value) {
+            return Err(format!(
+                "provider max retry delay mismatch: expected {value}, got {:?}",
+                actual.max_retry_delay_ms
             ));
         }
     }

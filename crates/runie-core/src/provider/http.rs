@@ -50,7 +50,7 @@ pub trait HttpActor: Send + Sync + 'static {
         let retries = options.as_ref().and_then(|o| o.max_retries).unwrap_or(0);
         let mut response = None;
         let mut last_error = None;
-        for _ in 0..=retries {
+        for retry_index in 0..=retries {
             match post_once(
                 self,
                 request_body.clone(),
@@ -62,7 +62,23 @@ pub trait HttpActor: Send + Sync + 'static {
                     response = Some(value);
                     break;
                 }
-                Err(error) => last_error = Some(error),
+                Err(error) => {
+                    if retry_index < retries {
+                        if let Some(decision) = provider_retry_delay_ms(
+                            &error,
+                            retry_index,
+                            options.as_ref().and_then(|o| o.max_retry_delay_ms),
+                        ) {
+                            let delay = decision?;
+                            abortable_retry_delay(
+                                delay,
+                                options.as_ref().and_then(|o| o.signal.clone()),
+                            )
+                            .await?;
+                        }
+                    }
+                    last_error = Some(error);
+                }
             }
         }
         let response = response.ok_or_else(|| {
@@ -82,6 +98,28 @@ pub trait HttpActor: Send + Sync + 'static {
             .await;
         }
         Ok(response)
+    }
+}
+
+async fn abortable_retry_delay(
+    delay_ms: u64,
+    mut signal: Option<tokio::sync::watch::Receiver<bool>>,
+) -> Result<(), StreamError> {
+    let duration = tokio::time::sleep(std::time::Duration::from_millis(delay_ms));
+    tokio::pin!(duration);
+    if signal.as_ref().is_some_and(|signal| *signal.borrow()) {
+        return Err(StreamError::Aborted);
+    }
+    if let Some(signal) = signal.as_mut() {
+        tokio::select! {
+            _ = &mut duration => Ok(()),
+            changed = signal.changed() => {
+                if changed.is_ok() && *signal.borrow() { Err(StreamError::Aborted) } else { Ok(()) }
+            }
+        }
+    } else {
+        duration.await;
+        Ok(())
     }
 }
 
@@ -339,6 +377,16 @@ mod tests {
         .expect("third attempt succeeds");
         assert_eq!(response.status, 200);
         assert_eq!(attempts.load(std::sync::atomic::Ordering::SeqCst), 3);
+    }
+
+    #[tokio::test]
+    async fn provider_retry_delay_is_abortable() {
+        let (sender, receiver) = tokio::sync::watch::channel(true);
+        drop(sender);
+        assert!(matches!(
+            abortable_retry_delay(0, Some(receiver)).await,
+            Err(StreamError::Aborted)
+        ));
     }
 
     #[test]
