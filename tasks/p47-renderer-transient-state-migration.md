@@ -2,6 +2,20 @@
 
 Status: in progress — live tool/assistant/turn ownership migrated; compatibility cleanup remains (2026-08-07)
 
+## Production call-site audit (2026-08-07)
+
+An exhaustive search of `EventRenderer` mutation call sites confirms that the
+remaining `Arc<Mutex<Scrollback>>`/`Arc<Mutex<StatusBar>>` writes occur only in
+the compatibility projection branches (`scrollback_actor.is_none()` or
+`status_actor.is_none()`) and in synchronous renderer tests. Actor-backed
+production construction uses acknowledged `ScrollbackMsg`/`StatusMsg`
+delivery and reads snapshots; it does not mutate sibling actor state through
+the renderer.
+
+This is an architecture evidence checkpoint, not closure: the compatibility
+adapter still exists and must be retired after its callers are migrated. The
+source boundary validator continues to enforce the live feed ownership rule.
+
 ## Why this task exists
 
 The production `EventRenderer` no longer owns the durable feed snapshot: it
