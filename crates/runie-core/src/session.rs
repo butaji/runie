@@ -309,6 +309,40 @@ pub struct CompactionSummaryRequest {
     pub previous_summary: Option<String>,
 }
 
+impl CompactionSummaryRequest {
+    /// Materialize provider input from one actor-owned preparation and the
+    /// immutable journal entries it indexes. Invalid indices are rejected
+    /// before any provider capability is invoked.
+    pub fn from_preparation(
+        preparation: &CompactionPreparation,
+        entries: &[SessionEntry],
+        previous_summary: Option<String>,
+    ) -> Result<Self, String> {
+        fn select(
+            entries: &[SessionEntry],
+            indices: &[usize],
+        ) -> Result<Vec<AgentMessage>, String> {
+            indices
+                .iter()
+                .map(|index| {
+                    entries
+                        .get(*index)
+                        .map(|entry| entry.message.clone())
+                        .ok_or_else(|| format!("compaction index {index} is out of bounds"))
+                })
+                .collect()
+        }
+
+        Ok(Self {
+            history: select(entries, &preparation.history_indices)?,
+            turn_prefix: select(entries, &preparation.turn_prefix_indices)?,
+            retained_tail: select(entries, &preparation.retained_indices)?,
+            tokens_before: preparation.tokens_before,
+            previous_summary,
+        })
+    }
+}
+
 /// Provider result consumed by the session/loop coordinator before it emits
 /// the actor-owned `CompactionCreated` event.
 #[derive(Debug, Clone, PartialEq, Eq)]

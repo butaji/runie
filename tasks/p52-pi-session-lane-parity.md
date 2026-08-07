@@ -186,6 +186,10 @@ through its owned mailbox with an explicit unsupported-capability default.
 Session preparation and `CompactionCreated` publication remain separate actor
 responsibilities; no generic provider behavior is fabricated.
 
+The pure `CompactionSummaryRequest::from_preparation` builder now materializes
+history, split-turn prefix, and retained-tail messages from validated actor
+indices, rejecting invalid journal indices before provider invocation.
+
 ## Compaction publication boundary audit (2026-08-08)
 
 The publication half of that boundary is now source-verified: a
