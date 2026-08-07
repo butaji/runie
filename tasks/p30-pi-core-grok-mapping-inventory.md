@@ -165,6 +165,20 @@ keys (`toolCallId`, `toolName`) and absence of snake_case aliases. No missing
 field was invented at the event boundary; the remaining lifecycle work is
 downstream projection and YAML behavior coverage.
 
+Agent API audit (2026-08-06): rechecked Pi `Agent` public state and control
+surface against `LoopActor`, `AgentStateActor`, and the queue actors. The
+Runie mapping covers model/tools/messages/system prompt/thinking level,
+streaming and pending-tool projections, steering/follow-up modes and clear
+operations, reset/busy/abort/wait-for-idle, awaited subscribers, and
+termination-aware tool batches. These transitions enter actor mailboxes or
+the typed event bus; no compatibility widget is used as core state.
+
+The remaining inventory-only boundary is Pi's session/harness persistence
+package (`agent/src/harness/session/**`, compaction, and telemetry). It is not
+part of the current `runie-core` feature target; promoting it would require a
+separate durable-session actor and storage contract rather than silently
+claiming parity from the existing in-memory loop.
+
 Async ownership audit (2026-08-06): every production `tokio::spawn` is owned
 by a returned/stored `JoinHandle` or an enclosing actor owner. `App` returns
 the renderer handle, `LoopActor` stores and awaits the current run, and
