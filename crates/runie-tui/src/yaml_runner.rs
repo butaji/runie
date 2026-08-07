@@ -792,6 +792,7 @@ pub struct StateAssertions {
     pub tool_outputs: Option<Vec<Vec<String>>>,
     /// Ordered semantic card-row roles across the transcript.
     pub tool_row_kinds: Option<Vec<runie_tui_model::ToolCardRowKind>>,
+    pub tool_row_member_indices: Option<Vec<usize>>,
     pub tool_kinds: Option<Vec<crate::widgets::ToolCardKind>>,
     pub selected_tool_id: Option<String>,
     pub selected_entry: Option<usize>,
@@ -2313,6 +2314,22 @@ fn assert_tool_block_expectations(
         .map(|row| row.row_kind)
         .collect::<Vec<_>>();
         assert_vec_equal(value, &actual, "tool_row_kinds")?;
+    }
+    if let Some(value) = &expected.tool_row_member_indices {
+        let actual = runie_tui_model::project_tool_card_rows(
+            &outcome.feed.lines,
+            &outcome.feed.tool_names,
+            &outcome
+                .feed
+                .tool_blocks
+                .iter()
+                .map(|block| (block.tool_call_id.clone(), block.mode))
+                .collect(),
+        )
+        .into_iter()
+        .map(|row| row.member_index)
+        .collect::<Vec<_>>();
+        assert_vec_equal(value, &actual, "tool_row_member_indices")?;
     }
     if let Some(value) = &expected.tool_kinds {
         assert_vec_equal(

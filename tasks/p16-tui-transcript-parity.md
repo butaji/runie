@@ -705,3 +705,11 @@ active, error, and pending markers resolve through Opaline theme tokens while
 the phase names, delimiters, objective, and agent-count suffix stay in the
 event-derived muted body style. The focused workflow tests verify both marker
 selection and token roles; exact Grok spacing remains open.
+
+Typed member identity (2026-08-06): `ToolCardRow` now carries a pure
+per-card `member_index` assigned during model projection, so duplicate text
+and dense-group members remain distinguishable without renderer string
+matching. The mixed-activity YAML fixture asserts the ordered member indices
+through the same actor snapshot path. This is the first slice of the remaining
+typed block/member model; fold range semantics and full cast reconciliation
+remain open.

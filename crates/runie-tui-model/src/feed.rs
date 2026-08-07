@@ -181,6 +181,8 @@ pub enum ToolCardPaintIntent {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ToolCardRow {
     pub tool_call_id: String,
+    /// Stable ordinal within the projected card, independent of row text.
+    pub member_index: usize,
     pub card_kind: ToolCardKind,
     pub row_kind: ToolCardRowKind,
     pub text: String,
@@ -210,6 +212,7 @@ pub fn project_tool_card_rows(
     tool_modes: &HashMap<String, ToolDisplayMode>,
 ) -> Vec<ToolCardRow> {
     let mut rows = Vec::new();
+    let mut member_indices: HashMap<String, usize> = HashMap::new();
     for line in lines {
         let Some(tool_call_id) = line.tool_call_id.as_deref() else {
             continue;
@@ -226,8 +229,12 @@ pub fn project_tool_card_rows(
             LineKind::ToolOutput | LineKind::ToolResult => ToolCardRowKind::Content,
             _ => continue,
         };
+        let member_index = member_indices.entry(tool_call_id.to_owned()).or_default();
+        let row_member_index = *member_index;
+        *member_index += 1;
         rows.push(ToolCardRow {
             tool_call_id: tool_call_id.to_owned(),
+            member_index: row_member_index,
             card_kind: ToolCardKind::from_header(header),
             row_kind,
             text: line.text.clone(),
@@ -509,6 +516,7 @@ mod tests {
     fn typed_card_rows_expose_semantic_paint_intents() {
         let header = ToolCardRow {
             tool_call_id: "read-1".into(),
+            member_index: 0,
             card_kind: ToolCardKind::Read,
             row_kind: ToolCardRowKind::Header,
             text: "Read file".into(),

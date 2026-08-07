@@ -39,6 +39,7 @@ assertions:
     tool_headers: ["List . (3 entries)", "Run cargo test → ✓"]
     tool_outputs: [["Cargo.toml", "src", "crates"], ["cargo test completed"]]
     tool_row_kinds: [header, header, content, content, content, content]
+    tool_row_member_indices: [0, 0, 1, 2, 3, 1]
   visual:
     cols: 80
     rows: 24
