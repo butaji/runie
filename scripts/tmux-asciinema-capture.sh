@@ -85,37 +85,9 @@ tmux send-keys -t "$session" -l \
   "asciinema rec --window-size ${cols}x${rows} --overwrite --output-format asciicast-v2 --command ${quoted_command} '$cast'"
 tmux send-keys -t "$session" Enter
 
-# Optional YAML-driven mid-capture resize schedule. The schedule is validated
-# by capture-scenario.sh and scoped to this private tmux session. Relative
-# delays are converted to absolute sleeps so each resize is measured from the
-# recording start without touching the user's terminal multiplexer.
 resize_pid=""
 resize_report="${cast%.cast}.resize.json"
 printf '%s\n' '{"valid":true,"observed":[]}' > "$resize_report"
-if [[ -n "$resize_schedule" ]]; then
-    (
-        previous_ms=0
-        observed='[]'
-        IFS=';' read -ra entries <<< "$resize_schedule"
-        for entry in "${entries[@]}"; do
-            IFS=',' read -r at_ms resize_cols resize_rows <<< "$entry"
-            delay_ms=$((at_ms - previous_ms))
-            (( delay_ms > 0 )) && sleep "0.$(printf '%03d' "$delay_ms")"
-            tmux resize-window -t "$session" -x "$resize_cols" -y "$resize_rows" 2>/dev/null || exit 0
-            actual=$(tmux display-message -p -t "$session" '#{window_width},#{window_height}' 2>/dev/null || printf '')
-            if [[ "$actual" != "$resize_cols,$resize_rows" ]]; then
-                jq -n --arg expected "$resize_cols,$resize_rows" --arg actual "$actual" \
-                    '{valid:false,expected:$expected,actual:$actual}' > "$resize_report"
-                exit 1
-            fi
-            observed=$(jq --arg at "$at_ms" --arg geometry "$actual" \
-                '. + [{at_ms:($at|tonumber),geometry:$geometry}]' <<< "$observed")
-            previous_ms=$at_ms
-        done
-        jq -n --argjson observed "$observed" '{valid:true,observed:$observed}' > "$resize_report"
-    ) &
-    resize_pid=$!
-fi
 
 # Wait for the actual prompt, not merely alternate-screen initialization.
 # Grok may spend several seconds rendering its welcome surface first.
@@ -183,6 +155,35 @@ if ! printf '%s' "$injected_screen" | grep -Fq "$prompt"; then
     reject_capture "prompt_injection_mismatch"
 fi
 tmux send-keys -t "$session" Enter
+
+# Optional YAML-driven mid-capture resize schedule. Its clock starts after the
+# submitted prompt so startup/welcome layout cannot consume a feed scenario's
+# resize budget. The schedule is validated by capture-scenario.sh and scoped
+# to this private tmux session.
+if [[ -n "$resize_schedule" ]]; then
+    (
+        previous_ms=0
+        observed='[]'
+        IFS=';' read -ra entries <<< "$resize_schedule"
+        for entry in "${entries[@]}"; do
+            IFS=',' read -r at_ms resize_cols resize_rows <<< "$entry"
+            delay_ms=$((at_ms - previous_ms))
+            (( delay_ms > 0 )) && sleep "0.$(printf '%03d' "$delay_ms")"
+            tmux resize-window -t "$session" -x "$resize_cols" -y "$resize_rows" 2>/dev/null || exit 0
+            actual=$(tmux display-message -p -t "$session" '#{window_width},#{window_height}' 2>/dev/null || printf '')
+            if [[ "$actual" != "$resize_cols,$resize_rows" ]]; then
+                jq -n --arg expected "$resize_cols,$resize_rows" --arg actual "$actual" \
+                    '{valid:false,expected:$expected,actual:$actual}' > "$resize_report"
+                exit 1
+            fi
+            observed=$(jq --arg at "$at_ms" --arg geometry "$actual" \
+                '. + [{at_ms:($at|tonumber),geometry:$geometry}]' <<< "$observed")
+            previous_ms=$at_ms
+        done
+        jq -n --argjson observed "$observed" '{valid:true,observed:$observed}' > "$resize_report"
+    ) &
+    resize_pid=$!
+fi
 # Wait for both the completed-turn marker and the settled input footer so the
 # cast does not stop on the first feed update while the status actor is still
 # rendering its active phase. This is a bounded external-process probe.
