@@ -757,6 +757,10 @@ impl EventRenderer {
         tool_call_id: String,
         partial_result: serde_json::Value,
     ) -> Option<ScrollbackMsg> {
+        debug_assert!(
+            self.scrollback_actor.is_some(),
+            "tool-update reduction requires the actor-backed feed"
+        );
         // Grok treats transport-only lifecycle updates (for example
         // `{status: "running"}`) as block state, not transcript text. Do not
         // leak those envelopes into a specialized card header.
@@ -768,24 +772,15 @@ impl EventRenderer {
         {
             return None;
         }
-        if self.tool_row_index(&tool_call_id).is_some()
-            || self.scrollback_actor.as_ref().is_some_and(|actor| {
-                actor
-                    .model_snapshot()
-                    .tool_blocks
-                    .iter()
-                    .any(|block| block.tool_call_id == tool_call_id && block.is_running)
-            })
-        {
+        if self.scrollback_actor.as_ref().is_some_and(|actor| {
+            actor
+                .model_snapshot()
+                .tool_blocks
+                .iter()
+                .any(|block| block.tool_call_id == tool_call_id && block.is_running)
+        }) {
             if let Some(output) = structured_update_text(&partial_result) {
                 let output_lines = structured_memory_lines(&output);
-                if self.scrollback_actor.is_none() {
-                    for line in &output_lines {
-                        self.scrollback
-                            .lock()
-                            .append(Line::new(LineKind::ToolOutput, line).for_tool(&tool_call_id));
-                    }
-                }
                 return Some(ScrollbackMsg::ToolUpdate {
                     tool_call_id,
                     header: None,
@@ -800,18 +795,11 @@ impl EventRenderer {
                 current_header,
                 serde_json::to_string(&partial_result).unwrap_or_default()
             );
-            if self.scrollback_actor.is_none() {
-                if let Some(row) = self.tool_row_index(&tool_call_id) {
-                    self.replace_tool_line(row, &updated);
-                }
-            }
-            if self.scrollback_actor.is_some() || self.tool_row_index(&tool_call_id).is_some() {
-                return Some(ScrollbackMsg::ToolUpdate {
-                    tool_call_id,
-                    header: Some(updated),
-                    output: Vec::new(),
-                });
-            }
+            return Some(ScrollbackMsg::ToolUpdate {
+                tool_call_id,
+                header: Some(updated),
+                output: Vec::new(),
+            });
         }
         None
     }

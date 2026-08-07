@@ -507,3 +507,10 @@ existing YAML tool/activity fixtures continue to exercise the full event →
 actor → snapshot path. Tool update/completion helpers remain the next grouped
 migration because their legacy branches still contain specialized output
 construction that must be moved without changing card payloads.
+
+**Tool-update helper migration (2026-08-08):** Tool updates now require the
+actor-backed feed, read the running block from its snapshot, and return the
+single `ScrollbackMsg::ToolUpdate` applied by `ScrollbackActor`. Structured
+output and serialized status updates no longer append or replace compatibility
+rows directly. `visual-tool-update.yaml`, the complete YAML fixture sweep,
+and the tool visual snapshot continue to pass.
