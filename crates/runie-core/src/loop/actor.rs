@@ -351,6 +351,11 @@ impl LoopActor {
         self.inner.deps.state.apply_event(event).await;
     }
 
+    /// Set model configuration through the state actor's mailbox.
+    pub async fn set_model(&self, model: crate::types::Model) {
+        self.inner.deps.state.set_model(model).await;
+    }
+
     /// Controls how steering messages are drained on subsequent turns.
     pub async fn set_steering_mode(&self, mode: QueueMode) {
         let _ = self.inner.steering_mode_tx.send(mode);

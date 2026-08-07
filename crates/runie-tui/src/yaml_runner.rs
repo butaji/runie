@@ -65,6 +65,8 @@ pub struct Scenario {
 #[derive(Debug, Deserialize, Default, Clone)]
 pub struct ProviderOptionsSpec {
     #[serde(default)]
+    pub model_headers: Option<std::collections::HashMap<String, String>>,
+    #[serde(default)]
     pub session_id: Option<String>,
     #[serde(default)]
     pub headers: Option<std::collections::HashMap<String, String>>,
@@ -1320,6 +1322,14 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
             events: listener_events.clone(),
         }))
         .await;
+    if let Some(headers) = &scenario.provider_options.model_headers {
+        actor
+            .set_model(Model {
+                headers: headers.clone(),
+                ..Model::default()
+            })
+            .await;
+    }
 
     let actor_snapshot = actor.clone();
     let mut events_from_task = record_and_run_scenario(actor, bus, scenario).await;

@@ -5,6 +5,12 @@ description: >-
 initial_prompt: "Hey"
 prompt_timestamp: "9:27 PM"
 provider_options:
+  model_headers:
+    x-model-default: model
+    x-shared: model
+  headers:
+    x-request: request
+    x-shared: request
   thinking_budgets:
     high: 512
   sampling_params:
@@ -26,6 +32,10 @@ events:
 assertions:
   provider_options:
     session_id: parity-hey
+    headers:
+      x-model-default: model
+      x-request: request
+      x-shared: request
     thinking_budgets:
       high: 512
     sampling_params:

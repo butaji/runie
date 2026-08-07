@@ -43,10 +43,9 @@ The YAML runner exposes these effective options at runtime; `visual-hey.yaml`
 now declares and asserts `session_id`, thinking budgets, and sampling
 parameters.
 
-The model/request header merge is a pure core option reducer with focused
-coverage; promoting a fixture that supplies model headers still requires a
-YAML model-description field rather than silently treating request headers as
-model defaults.
+`visual-hey.yaml` now declares model defaults and request overrides, and its
+provider assertion verifies the effective merged header map at runtime without
+recompilation.
 
 Not yet implemented behaviorally:
 
