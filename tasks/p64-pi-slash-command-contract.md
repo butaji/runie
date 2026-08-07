@@ -44,6 +44,11 @@ provider submission; `visual-slash-new.yaml` proves reset clears the resulting
 actor-owned message/feed projection, and `visual-slash-model.yaml` proves the
 model caption projection.
 
+Routing consolidation (2026-08-08): `App::route_mappable_command` is now the
+single async dispatch boundary for live and YAML input. The binary owns only
+process exit for `/quit`; stateful commands cannot acquire a second reducer by
+being replayed through a different harness.
+
 Required next evidence:
 
 - map each command to the Pi source handler and owning Runie actor;

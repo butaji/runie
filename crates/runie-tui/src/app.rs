@@ -3,9 +3,10 @@
 use crossterm::event::KeyEvent;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
+use runie_core::commands::MappableBuiltinCommand;
 use runie_core::events::EventBus;
 use runie_core::r#loop::LoopActor;
-use runie_core::types::{AgentEvent, AgentMessage};
+use runie_core::types::{AgentEvent, AgentMessage, Model};
 use tokio::sync::{broadcast, mpsc, watch};
 
 use crate::event_renderer::EventRenderer;
@@ -372,6 +373,38 @@ impl App {
 
     pub async fn toggle_shortcuts(&self) {
         self.ui.send(UiMsg::ToggleShortcuts).await;
+    }
+
+    /// Route a parsed Pi command through the owning actor boundary shared by
+    /// live input and YAML replay. Process termination is deliberately left to
+    /// the binary; every stateful command is reduced here through an event or
+    /// mailbox and acknowledged before returning.
+    pub async fn route_mappable_command(&self, command: MappableBuiltinCommand) -> bool {
+        match command {
+            MappableBuiltinCommand::NewSession => {
+                let _ = self.reset_session().await;
+                true
+            }
+            MappableBuiltinCommand::Hotkeys => {
+                self.toggle_shortcuts().await;
+                true
+            }
+            MappableBuiltinCommand::Model { reference } => {
+                let Some((provider, model)) = reference.split_once('/') else {
+                    return false;
+                };
+                self.loop_actor
+                    .set_model(Model {
+                        id: model.to_owned(),
+                        name: model.to_owned(),
+                        provider: provider.to_owned(),
+                        ..Model::default()
+                    })
+                    .await;
+                true
+            }
+            MappableBuiltinCommand::Quit => false,
+        }
     }
 
     /// Reset the core and every event-driven TUI projection through the loop

@@ -13,7 +13,7 @@ use crate::event_renderer::EventRenderer;
 use crate::widgets::{FeedSnapshot, Line, LineKind, Scrollback, ScrollbackMsg, ToolBlock};
 use parking_lot::Mutex;
 use ratatui::buffer::Buffer;
-use runie_core::commands::{parse_mappable_builtin_command, MappableBuiltinCommand};
+use runie_core::commands::parse_mappable_builtin_command;
 use runie_core::events::{EventBus, Subscriber};
 use runie_core::provider::stream_fn::{
     AssistantMessageEventStream, StreamError, StreamFn, WebSocketAdapter,
@@ -4714,31 +4714,9 @@ pub async fn render_visual_buffer(
                 .await;
             if let PromptOutcome::Submitted(text) = outcome {
                 if let Some(command) = parse_mappable_builtin_command(&text) {
-                    match command {
-                        MappableBuiltinCommand::NewSession => {
-                            let _ = app.reset_session().await;
-                        }
-                        MappableBuiltinCommand::Hotkeys => {
-                            app.toggle_shortcuts().await;
-                        }
-                        MappableBuiltinCommand::Model { reference } => {
-                            let (provider, model) = reference
-                                .split_once('/')
-                                .expect("mappable model was validated");
-                            app.loop_actor
-                                .set_model(runie_core::types::Model {
-                                    id: model.to_owned(),
-                                    name: model.to_owned(),
-                                    provider: provider.to_owned(),
-                                    ..runie_core::types::Model::default()
-                                })
-                                .await;
-                        }
-                        // The offline runner cannot terminate its test task;
-                        // consuming the typed command still proves it crossed
-                        // the same parser boundary as the live binary.
-                        MappableBuiltinCommand::Quit => {}
-                    }
+                    // The offline runner cannot terminate its test task;
+                    // routing still crosses the same App boundary as live input.
+                    let _ = app.route_mappable_command(command).await;
                     continue;
                 }
                 let user_msg = AgentMessage::User(UserMessage {

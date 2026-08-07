@@ -695,30 +695,10 @@ async fn run_app(
                                             if let Some(command) =
                                                 parse_mappable_builtin_command(&text)
                                             {
-                                                match command {
-                                                    MappableBuiltinCommand::NewSession => {
-                                                        let _ = app.reset_session().await;
-                                                    }
-                                                    MappableBuiltinCommand::Hotkeys => {
-                                                        app.toggle_shortcuts().await;
-                                                    }
-                                                    MappableBuiltinCommand::Model { reference } => {
-                                                        let (provider, model) = reference
-                                                            .split_once('/')
-                                                            .expect("mappable model was validated");
-                                                        app.loop_actor
-                                                            .set_model(Model {
-                                                                id: model.to_owned(),
-                                                                name: model.to_owned(),
-                                                                provider: provider.to_owned(),
-                                                                ..Model::default()
-                                                            })
-                                                            .await;
-                                                    }
-                                                    MappableBuiltinCommand::Quit => {
-                                                        return Ok(AppExit::Quit);
-                                                    }
+                                                if matches!(command, MappableBuiltinCommand::Quit) {
+                                                    return Ok(AppExit::Quit);
                                                 }
+                                                let _ = app.route_mappable_command(command).await;
                                                 continue;
                                             }
                                             if is_quit_command(&text) {
