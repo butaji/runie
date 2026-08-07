@@ -421,6 +421,24 @@ impl App {
             .await;
     }
 
+    pub async fn extend_selection(&self, delta: i32) {
+        let snapshot = self.scrollback_actor.model_snapshot();
+        let Some(current) = snapshot.selected_entry else {
+            return;
+        };
+        let next = if delta < 0 {
+            current.saturating_sub(delta.unsigned_abs() as usize)
+        } else {
+            current
+                .saturating_add(delta as usize)
+                .min(snapshot.lines.len().saturating_sub(1))
+        };
+        let anchor = snapshot.selection_anchor.unwrap_or(current);
+        self.scrollback_actor
+            .apply(crate::widgets::ScrollbackMsg::SelectRange { anchor, head: next })
+            .await;
+    }
+
     pub async fn scroll_scrollback_by(&self, lines: i32) {
         self.scrollback_actor
             .apply(crate::widgets::ScrollbackMsg::ScrollBy(lines))

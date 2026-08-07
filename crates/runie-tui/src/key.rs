@@ -22,6 +22,8 @@ pub enum Action {
     SelectPreviousTool,
     SelectNextEntry,
     SelectPreviousEntry,
+    ExtendSelectionNext,
+    ExtendSelectionPrevious,
     ScrollUp,
     ScrollDown,
     Noop,
@@ -41,6 +43,7 @@ pub fn is_quit_command(text: &str) -> bool {
 /// tells us whether the loop is currently processing.
 #[allow(
     clippy::cognitive_complexity,
+    clippy::too_many_lines,
     reason = "the key map keeps the declarative normal-mode bindings together"
 )]
 pub fn map_key(key: KeyEvent, prompt_non_empty: bool, streaming: bool) -> Action {
@@ -60,6 +63,12 @@ pub fn map_key(key: KeyEvent, prompt_non_empty: bool, streaming: bool) -> Action
         };
     }
     match key.code {
+        KeyCode::Up if !prompt_non_empty && key.modifiers.contains(KeyModifiers::SHIFT) => {
+            Action::ExtendSelectionPrevious
+        }
+        KeyCode::Down if !prompt_non_empty && key.modifiers.contains(KeyModifiers::SHIFT) => {
+            Action::ExtendSelectionNext
+        }
         KeyCode::Up if !prompt_non_empty => Action::SelectPreviousTool,
         KeyCode::Down if !prompt_non_empty => Action::SelectNextTool,
         KeyCode::Char('j') if !prompt_non_empty => Action::SelectNextEntry,
@@ -248,6 +257,22 @@ mod tests {
         );
         assert_eq!(
             map_key(k(KeyCode::Up, KeyModifiers::NONE), true, false),
+            Action::Noop
+        );
+    }
+
+    #[test]
+    fn shifted_arrows_extend_transcript_selection_only_when_prompt_is_empty() {
+        assert_eq!(
+            map_key(k(KeyCode::Up, KeyModifiers::SHIFT), false, false),
+            Action::ExtendSelectionPrevious
+        );
+        assert_eq!(
+            map_key(k(KeyCode::Down, KeyModifiers::SHIFT), false, false),
+            Action::ExtendSelectionNext
+        );
+        assert_eq!(
+            map_key(k(KeyCode::Down, KeyModifiers::SHIFT), true, false),
             Action::Noop
         );
     }

@@ -225,3 +225,9 @@ the values after the real actor replay and after model-to-widget snapshot
 rehydration. This is the state boundary needed before mapping crossterm mouse
 coordinates; cell-range painting and clipboard actions remain separate
 renderer/input work and are not claimed complete here.
+
+Keyboard intent slice (2026-08-07): Shift+Up/Down now maps to explicit
+`ExtendSelectionPrevious`/`ExtendSelectionNext` actions when the prompt is
+empty. The application converts that intent into an acknowledged
+`SelectRange` message; typed prompt editing remains isolated from transcript
+selection. Mouse coordinate mapping and clipboard integration remain open.
