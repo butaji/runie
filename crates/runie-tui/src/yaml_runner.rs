@@ -223,6 +223,9 @@ pub struct ToolSpec {
     pub terminate: bool,
     #[serde(default)]
     pub added_tool_names: Vec<String>,
+    /// Optional Pi per-tool execution-mode override.
+    #[serde(default)]
+    pub execution_mode: Option<ToolExecutionMode>,
 }
 
 fn default_tool_kind() -> String {
@@ -1295,6 +1298,7 @@ pub struct ReplayTool {
     media: Option<String>,
     terminate: bool,
     added_tool_names: Vec<String>,
+    execution_mode: Option<ToolExecutionMode>,
 }
 
 impl ReplayTool {
@@ -1308,6 +1312,7 @@ impl ReplayTool {
             media: None,
             terminate: false,
             added_tool_names: Vec::new(),
+            execution_mode: None,
         }
     }
 
@@ -1321,6 +1326,7 @@ impl ReplayTool {
             media: None,
             terminate: false,
             added_tool_names: Vec::new(),
+            execution_mode: None,
         }
     }
 
@@ -1334,6 +1340,7 @@ impl ReplayTool {
             media: None,
             terminate: false,
             added_tool_names: Vec::new(),
+            execution_mode: None,
         }
     }
 
@@ -1350,6 +1357,7 @@ impl ReplayTool {
         media: Option<String>,
         terminate: bool,
         added_tool_names: Vec<String>,
+        execution_mode: Option<ToolExecutionMode>,
     ) -> Self {
         Self {
             name: name.into(),
@@ -1360,6 +1368,7 @@ impl ReplayTool {
             media,
             terminate,
             added_tool_names,
+            execution_mode,
         }
     }
 }
@@ -1374,6 +1383,9 @@ impl AgentTool for ReplayTool {
     }
     fn description(&self) -> &str {
         "Deterministic visual replay tool."
+    }
+    fn execution_mode(&self) -> Option<ToolExecutionMode> {
+        self.execution_mode
     }
     async fn execute(
         &self,
@@ -1827,6 +1839,7 @@ fn register_scenario_tool(
         || tool.media.is_some()
         || tool.terminate
         || !tool.added_tool_names.is_empty()
+        || tool.execution_mode.is_some()
     {
         registry.register(Arc::new(ReplayTool::configured(
             &tool.name,
@@ -1837,6 +1850,7 @@ fn register_scenario_tool(
             tool.media.clone(),
             tool.terminate,
             tool.added_tool_names.clone(),
+            tool.execution_mode,
         )));
         return Ok(());
     }

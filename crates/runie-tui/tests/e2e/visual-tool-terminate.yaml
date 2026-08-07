@@ -8,6 +8,7 @@ tools:
     usage: { input: 3, output: 2, totalTokens: 5 }
     terminate: true
     added_tool_names: ["runtime_tool"]
+    execution_mode: sequential
 events:
   - start
   - tool_call: { name: echo, args: { value: "stop" } }

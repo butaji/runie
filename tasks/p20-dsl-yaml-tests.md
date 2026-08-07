@@ -365,3 +365,7 @@ Projection DSL cleanup (2026-08-07): centralized latest-tool-result lookup in
 one pure YAML-oracle projection. All four Pi metadata assertions now consume
 the same actor snapshot helper, reducing duplicated test plumbing while
 keeping fixtures declarative and runtime-editable.
+
+Per-tool execution mode (2026-08-07): `ToolSpec.execution_mode` now maps Pi's
+per-tool `executionMode` override onto the owned `AgentTool` registry path;
+the termination replay fixture exercises the declarative `sequential` value.
