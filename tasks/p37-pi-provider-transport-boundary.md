@@ -92,6 +92,20 @@ classified until that boundary exists.
 The YAML fixture asserts `websocket_connect_timeout_ms: 2500`, preserving this
 Pi option for a future WebSocket adapter without claiming behavioral support.
 
+## Typed request promotion (2026-08-06)
+
+The owned `HttpRequest` now receives the effective `session_id`, explicit
+`temperature`, `max_tokens`, and merged `sampling_params` as typed fields.
+This closes a real loss-of-information boundary: concrete adapters no longer
+need to recover Pi options from serialized payloads or opaque metadata. The
+merge remains pure at request construction time (model defaults followed by
+request overrides), and the transport test captures the resulting request
+without timers or sleeps.
+
+Provider-specific payload encoding is still intentionally adapter-owned; this
+change transports the facts needed by an adapter and does not invent a generic
+wire format.
+
 ## Verification contract
 
 Each promoted option requires a pure option reducer/merge test, a transport

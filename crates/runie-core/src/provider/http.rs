@@ -19,6 +19,10 @@ pub struct HttpResponse {
 #[derive(Debug, Clone)]
 pub struct HttpRequest {
     pub body: String,
+    pub session_id: Option<String>,
+    pub temperature: Option<f64>,
+    pub max_tokens: Option<u64>,
+    pub sampling_params: std::collections::HashMap<String, serde_json::Value>,
     pub headers: std::collections::HashMap<String, String>,
     pub env: std::collections::HashMap<String, String>,
     pub metadata: std::collections::HashMap<String, serde_json::Value>,
@@ -84,6 +88,12 @@ pub trait HttpActor: Send + Sync + 'static {
                 self,
                 HttpRequest {
                     body: request_body.clone(),
+                    session_id: options
+                        .as_ref()
+                        .and_then(|options| options.session_id.clone()),
+                    temperature: options.as_ref().and_then(|options| options.temperature),
+                    max_tokens: options.as_ref().and_then(|options| options.max_tokens),
+                    sampling_params: merged_sampling_params(&model, options.as_ref()),
                     headers: headers.clone(),
                     env: env.clone(),
                     metadata: metadata.clone(),
@@ -144,6 +154,17 @@ pub trait HttpActor: Send + Sync + 'static {
         }
         Ok(response)
     }
+}
+
+fn merged_sampling_params(
+    model: &Model,
+    options: Option<&SimpleStreamOptions>,
+) -> std::collections::HashMap<String, serde_json::Value> {
+    let mut params = model.sampling_params.clone().unwrap_or_default();
+    if let Some(overrides) = options.and_then(|options| options.sampling_params.as_ref()) {
+        params.extend(overrides.clone());
+    }
+    params
 }
 
 async fn abortable_retry_delay(
@@ -311,6 +332,13 @@ mod tests {
     const NUMERIC_DELAY_MS: u64 = 250;
     const MILLIS_PER_SECOND: u64 = 1_000;
 
+    type CapturedRequestOptions = (
+        Option<String>,
+        Option<f64>,
+        Option<u64>,
+        std::collections::HashMap<String, serde_json::Value>,
+    );
+
     struct CapturingHttp {
         body: Arc<Mutex<Option<String>>>,
     }
@@ -320,6 +348,7 @@ mod tests {
     struct HeaderCapturingHttp {
         headers: Arc<Mutex<Option<std::collections::HashMap<String, String>>>>,
         transport: Arc<Mutex<Option<ProviderTransport>>>,
+        request_options: Arc<Mutex<Option<CapturedRequestOptions>>>,
     }
 
     #[async_trait::async_trait]
@@ -338,6 +367,12 @@ mod tests {
         async fn post_request(&self, request: HttpRequest) -> Result<HttpResponse, StreamError> {
             *self.headers.lock().expect("headers lock") = Some(request.headers);
             *self.transport.lock().expect("transport lock") = request.transport;
+            *self.request_options.lock().expect("request options lock") = Some((
+                request.session_id,
+                request.temperature,
+                request.max_tokens,
+                request.sampling_params,
+            ));
             Ok(HttpResponse {
                 status: 200,
                 headers: Default::default(),
@@ -438,12 +473,15 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::too_many_lines)]
     async fn post_with_options_forwards_request_headers_to_transport() {
         let headers = Arc::new(Mutex::new(None));
         let transport = Arc::new(Mutex::new(None));
+        let request_options = Arc::new(Mutex::new(None));
         HeaderCapturingHttp {
             headers: headers.clone(),
             transport: transport.clone(),
+            request_options: request_options.clone(),
         }
         .post_with_options(
             "{}".into(),
@@ -451,6 +489,10 @@ mod tests {
             Some(SimpleStreamOptions {
                 headers: Some([(String::from("x-trace"), String::from("replay-1"))].into()),
                 transport: Some(ProviderTransport::Sse),
+                session_id: Some("session-1".into()),
+                temperature: Some(0.6),
+                max_tokens: Some(64),
+                sampling_params: Some([(String::from("top_p"), serde_json::json!(0.9))].into()),
                 ..Default::default()
             }),
         )
@@ -468,6 +510,13 @@ mod tests {
             *transport.lock().expect("transport lock"),
             Some(ProviderTransport::Sse)
         );
+        let options = request_options.lock().expect("request options lock");
+        let (session_id, temperature, max_tokens, sampling_params) =
+            options.as_ref().expect("typed request options");
+        assert_eq!(session_id.as_deref(), Some("session-1"));
+        assert_eq!(*temperature, Some(0.6));
+        assert_eq!(*max_tokens, Some(64));
+        assert_eq!(sampling_params.get("top_p"), Some(&serde_json::json!(0.9)));
     }
 
     #[tokio::test]
