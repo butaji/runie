@@ -8,7 +8,7 @@ use tokio::task::JoinSet;
 use crate::telemetry::{SpanError, SpanStatus, TelemetrySpan};
 use crate::types::{AgentContext, Model, SimpleStreamOptions};
 
-use super::stream_fn::{AssistantMessageEventStream, StreamFn};
+use super::stream_fn::{AssistantMessageEventStream, StreamFn, WebSocketAdapter};
 use crate::task_owner::{mailbox_ack, spawn_actor_worker, TaskOwner};
 
 /// Broadcast capacity for stream events. Sized to absorb a burst of
@@ -52,11 +52,18 @@ pub struct ProviderActor {
 
 impl ProviderActor {
     pub fn new(stream_fn: Arc<dyn StreamFn>) -> Self {
+        Self::new_with_websocket(stream_fn, None)
+    }
+
+    pub fn new_with_websocket(
+        stream_fn: Arc<dyn StreamFn>,
+        websocket: Option<Arc<dyn WebSocketAdapter>>,
+    ) -> Self {
         let sf = stream_fn.clone();
 
         // OWNER: ProviderActor
         let (tx, worker) = spawn_actor_worker!(8, move |rx| async move {
-            run_provider_worker(rx, sf).await;
+            run_provider_worker(rx, sf, websocket).await;
         });
 
         Self {
@@ -146,6 +153,7 @@ impl ProviderActor {
 async fn run_provider_worker(
     mut rx: mpsc::Receiver<ProviderCommand>,
     stream_fn: Arc<dyn StreamFn>,
+    websocket: Option<Arc<dyn WebSocketAdapter>>,
 ) {
     let mut pumps = JoinSet::new();
     while let Some(cmd) = rx.recv().await {
@@ -173,7 +181,25 @@ async fn run_provider_worker(
                 } else {
                     None
                 };
-                match stream_fn.stream(&model, &context, *options).await {
+                let stream_result = match options
+                    .as_ref()
+                    .as_ref()
+                    .and_then(|options| options.transport)
+                {
+                    Some(crate::types::ProviderTransport::Websocket)
+                    | Some(crate::types::ProviderTransport::WebsocketCached) => {
+                        match websocket.as_ref() {
+                            Some(adapter) => adapter
+                                .stream_websocket(&model, &context, *options)
+                                .await,
+                            None => Err(crate::provider::stream_fn::StreamError::Invalid(
+                                "websocket transport requires a provider-specific websocket adapter".into(),
+                            )),
+                        }
+                    }
+                    _ => stream_fn.stream(&model, &context, *options).await,
+                };
+                match stream_result {
                     Ok(stream) => {
                         // Subscribe before starting the pump. Otherwise a
                         // fast replay stream can publish Start/tool events
@@ -305,6 +331,23 @@ mod tests {
         }
     }
 
+    struct WebsocketFn;
+    #[async_trait::async_trait]
+    impl WebSocketAdapter for WebsocketFn {
+        async fn stream_websocket(
+            &self,
+            _model: &Model,
+            _context: &AgentContext,
+            _options: Option<SimpleStreamOptions>,
+        ) -> Result<AssistantMessageEventStream, StreamError> {
+            Ok(Box::pin(stream::iter(vec![AssistantMessageEvent::Done {
+                stop_reason: StopReason::Stop,
+                usage: Usage::default(),
+                message: None,
+            }])))
+        }
+    }
+
     struct PendingFn;
     #[async_trait::async_trait]
     impl StreamFn for PendingFn {
@@ -329,6 +372,27 @@ mod tests {
         ) -> Result<AssistantMessageEventStream, StreamError> {
             Err(StreamError::Api("bad request".into()))
         }
+    }
+
+    #[tokio::test]
+    async fn websocket_transport_uses_only_the_injected_provider_adapter() {
+        let provider =
+            ProviderActor::new_with_websocket(Arc::new(ErrorFn), Some(Arc::new(WebsocketFn)));
+        let mut events = provider
+            .start(
+                Model::default(),
+                AgentContext::default(),
+                Some(SimpleStreamOptions {
+                    transport: Some(crate::types::ProviderTransport::Websocket),
+                    ..Default::default()
+                }),
+            )
+            .await
+            .expect("provider reply");
+        assert!(matches!(
+            events.recv().await.expect("websocket event"),
+            AssistantMessageEvent::Done { .. }
+        ));
     }
 
     #[tokio::test]

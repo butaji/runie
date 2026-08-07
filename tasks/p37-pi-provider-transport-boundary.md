@@ -251,3 +251,14 @@ Codex Responses envelope/decoder, continuation-cache key, fallback decision,
 and close/cleanup events. Until those provider-specific facts are implemented,
 the explicit unsupported result is the truthful behavior and is covered by
 `default_http_boundary_rejects_unsupported_websocket_transport`.
+
+## Provider-scoped capability slice (2026-08-08)
+
+`runie-core` now exposes `WebSocketAdapter` beside `StreamFn` and
+`ProviderActor::new_with_websocket` as the owned injection boundary. A
+WebSocket request is routed to the injected adapter only; absent an adapter it
+still returns the explicit unsupported error, and the generic HTTP actor never
+interprets the request. `websocket_transport_uses_only_the_injected_provider_adapter`
+proves this with a provider stream that deliberately errors on ordinary SSE.
+The Codex adapter's actual socket/envelope/decoder/fallback implementation
+remains provider-specific work behind this seam.

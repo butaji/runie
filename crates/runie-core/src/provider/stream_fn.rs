@@ -13,6 +13,19 @@ use crate::types::{AssistantMessageEvent, Model, SimpleStreamOptions};
 
 pub type AssistantMessageEventStream = Pin<Box<dyn Stream<Item = AssistantMessageEvent> + Send>>;
 
+/// Provider-scoped WebSocket capability. The generic HTTP actor must not
+/// infer a WebSocket wire protocol; a concrete adapter owns the socket,
+/// envelope, decoder, fallback policy, and cleanup lifecycle.
+#[async_trait::async_trait]
+pub trait WebSocketAdapter: Send + Sync + 'static {
+    async fn stream_websocket(
+        &self,
+        model: &Model,
+        context: &crate::types::AgentContext,
+        options: Option<SimpleStreamOptions>,
+    ) -> Result<AssistantMessageEventStream, StreamError>;
+}
+
 /// Module-level default stream fn singleton (pi `stream-fn.ts:15`).
 static DEFAULT_STREAM_FN: OnceLock<Arc<dyn StreamFn>> = OnceLock::new();
 
