@@ -322,6 +322,9 @@ pub enum EventSpec {
     Scroll {
         scroll: i32,
     },
+    ScrollInput {
+        scroll_input: ScrollInputSpec,
+    },
     AnimationTicks {
         animation_ticks: usize,
     },
@@ -637,6 +640,7 @@ impl EventSpec {
             Self::ToolSelect { .. } => None,
             Self::SelectRange { .. } => None,
             Self::Scroll { .. } => None,
+            Self::ScrollInput { .. } => None,
             Self::AnimationTicks { .. } => None,
             Self::LayoutMeasured { .. } => None,
             Self::RevealLatest { .. } => None,
@@ -1740,6 +1744,12 @@ pub struct SelectionRangeSpec {
     pub head: usize,
 }
 
+#[derive(Debug, Deserialize, Clone)]
+pub struct ScrollInputSpec {
+    pub at_ms: u64,
+    pub direction: String,
+}
+
 fn declared_tool_seeds(scenario: &Scenario) -> Vec<ScrollbackMsg> {
     scenario
         .events
@@ -1762,20 +1772,33 @@ fn declared_tool_seeds(scenario: &Scenario) -> Vec<ScrollbackMsg> {
 }
 
 fn declared_scrolls(scenario: &Scenario) -> Vec<ScrollbackMsg> {
-    scenario
-        .events
-        .iter()
-        .filter_map(|event| match event {
-            EventSpec::Scroll { scroll } => Some(ScrollbackMsg::ScrollBy(*scroll)),
+    let mut normalizer = runie_tui_model::ScrollNormalizer::default();
+    let mut messages = Vec::new();
+    for event in &scenario.events {
+        match event {
+            EventSpec::Scroll { scroll } => messages.push(ScrollbackMsg::ScrollBy(*scroll)),
+            EventSpec::ScrollInput { scroll_input } => {
+                let direction = match scroll_input.direction.as_str() {
+                    "up" => runie_tui_model::ScrollDirection::Up,
+                    "down" => runie_tui_model::ScrollDirection::Down,
+                    _ => continue,
+                };
+                let (next, delta) = normalizer.push_at(scroll_input.at_ms, direction);
+                normalizer = next;
+                if delta != 0 {
+                    messages.push(ScrollbackMsg::ScrollBy(delta));
+                }
+            }
             EventSpec::RevealLatest { reveal_latest } if *reveal_latest => {
-                Some(ScrollbackMsg::RevealLatest)
+                messages.push(ScrollbackMsg::RevealLatest)
             }
             EventSpec::FollowLatest { follow_latest } => {
-                Some(ScrollbackMsg::SetFollowLatestUser(*follow_latest))
+                messages.push(ScrollbackMsg::SetFollowLatestUser(*follow_latest))
             }
-            _ => None,
-        })
-        .collect()
+            _ => {}
+        }
+    }
+    messages
 }
 
 async fn record_and_run_scenario(

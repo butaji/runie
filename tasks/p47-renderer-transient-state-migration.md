@@ -300,6 +300,11 @@ typed model input. `RUNIE_SCROLL_MODE` selects it in the owned input worker;
 explicit trackpad mode suppresses wheel acceleration while the dedicated
 fractional trackpad detector/accumulator remains to be implemented.
 
+YAML replay slice (2026-08-07): `EventSpec::ScrollInput { at_ms, direction }`
+now feeds the same pure normalizer used by the interactive input worker.
+`visual-scroll.yaml` exercises this event-to-scrollback-actor path without
+compilation or wall-clock timing.
+
 Mouse capture lifecycle closure (2026-08-07): the interactive terminal now
 enables crossterm mouse capture together with the alternate screen and disables
 it during restoration. This makes the already-owned mouse event path reachable

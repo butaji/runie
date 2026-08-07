@@ -5,7 +5,7 @@ events:
   - start
   - text_delta: "line one\nline two\nline three\nline four\nline five\nline six\nline seven\nline eight\nline nine\nline ten\nline eleven\nline twelve\nline thirteen"
   - done: { stop_reason: stop }
-  - scroll: -1
+  - scroll_input: { at_ms: 0, direction: up }
 assertions:
   state:
     scroll_offset: 8
