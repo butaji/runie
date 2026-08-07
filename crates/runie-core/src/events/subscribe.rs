@@ -6,7 +6,7 @@
 
 use std::sync::Arc;
 
-use tokio::sync::Mutex;
+use tokio::sync::{watch, Mutex};
 
 use crate::{pi_event::PiAgentEvent, types::AgentEvent};
 
@@ -18,6 +18,17 @@ pub struct SubId(pub usize);
 #[async_trait::async_trait]
 pub trait Subscriber: Send + Sync + 'static {
     async fn handle(&mut self, event: &AgentEvent);
+
+    /// Pi supplies the active abort signal to lifecycle listeners. The
+    /// default keeps existing subscribers source-compatible while allowing
+    /// async listeners to observe actor-owned cancellation state.
+    async fn handle_with_abort(
+        &mut self,
+        event: &AgentEvent,
+        _abort: Option<&watch::Receiver<bool>>,
+    ) {
+        self.handle(event).await;
+    }
 }
 
 /// Pi-closed subscriber contract. Application-only events are filtered by
@@ -74,10 +85,19 @@ impl SubscriberRegistry {
     /// Dispatch `event` to every subscriber in registration order, awaiting
     /// each before starting the next. This enforces the README barrier.
     pub async fn dispatch(&self, event: &AgentEvent) {
+        self.dispatch_with_abort(event, None).await;
+    }
+
+    /// Dispatch with the current actor-owned abort projection.
+    pub async fn dispatch_with_abort(
+        &self,
+        event: &AgentEvent,
+        abort: Option<&watch::Receiver<bool>>,
+    ) {
         let mut g = self.inner.lock().await;
         for (_, sub) in &mut g.subs {
             if let SubscriberEntry::Application(sub) = sub {
-                sub.handle(event).await;
+                sub.handle_with_abort(event, abort).await;
             }
         }
     }
@@ -155,5 +175,34 @@ mod tests {
         .await;
         reg.dispatch_pi(&PiAgentEvent::TurnStart).await;
         assert_eq!(calls.load(Ordering::SeqCst), 1);
+    }
+
+    struct AbortAwareSub(Arc<AtomicUsize>);
+
+    #[async_trait::async_trait]
+    impl Subscriber for AbortAwareSub {
+        async fn handle(&mut self, _event: &AgentEvent) {}
+
+        async fn handle_with_abort(
+            &mut self,
+            _event: &AgentEvent,
+            abort: Option<&watch::Receiver<bool>>,
+        ) {
+            if abort.is_some_and(|signal| *signal.borrow()) {
+                self.0.fetch_add(1, Ordering::SeqCst);
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn awaited_subscriber_observes_actor_abort_projection() {
+        let reg = SubscriberRegistry::new();
+        let seen = Arc::new(AtomicUsize::new(0));
+        reg.register(Box::new(AbortAwareSub(seen.clone()))).await;
+        let (tx, rx) = watch::channel(true);
+        reg.dispatch_with_abort(&AgentEvent::AgentEnd { messages: vec![] }, Some(&rx))
+            .await;
+        assert_eq!(seen.load(Ordering::SeqCst), 1);
+        drop(tx);
     }
 }

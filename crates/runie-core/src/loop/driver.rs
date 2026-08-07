@@ -196,13 +196,17 @@ async fn publish_error(deps: &RunLoopDeps, message: &str) {
 
 async fn publish_and_apply(deps: &RunLoopDeps, event: AgentEvent) {
     deps.state.publish_event(&deps.bus, event.clone()).await;
-    deps.subscribers.dispatch(&event).await;
+    deps.subscribers
+        .dispatch_with_abort(&event, deps.abort.as_ref())
+        .await;
 }
 
 async fn publish_pi_and_apply(deps: &RunLoopDeps, event: PiAgentEvent) {
     let application_event = event.clone().try_into_agent_event();
     deps.state.publish_pi_event(&deps.bus, event.clone()).await;
-    deps.subscribers.dispatch(&application_event).await;
+    deps.subscribers
+        .dispatch_with_abort(&application_event, deps.abort.as_ref())
+        .await;
     deps.subscribers.dispatch_pi(&event).await;
 }
 

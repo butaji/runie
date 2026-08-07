@@ -26,6 +26,8 @@ The common `Subscriber` contract receives the converted Pi event and is the
 awaited lifecycle listener surface; `PiSubscriber` remains an additional
 closed-wire adapter and is dispatched separately. `loop_entry.rs` proves an
 `AgentEnd` listener can hold prompt settlement until a watch-channel release.
+The common listener hook also receives the actor-owned abort projection, with
+direct registry coverage proving an already-aborted signal is observable.
 
 ## Required implementation
 
