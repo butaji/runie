@@ -37,18 +37,15 @@ hiding the reducer or delivery boundary.
 
 ## Required follow-up slices
 
-1. Retire the synchronous `EventRenderer` compatibility reducer after all
-   replay callers use actor snapshots; retain only pure event-to-message
-   helpers where they are still useful.
-2. Give rejected session-lane admissions an explicit actor-owned outcome/event
+1. Give rejected session-lane admissions an explicit actor-owned outcome/event
    if Pi's adapter exposes that fact, rather than relying only on silent
    projection omission.
-3. Replace generic `(record_type, data)` operation transport with a typed
+2. Replace generic `(record_type, data)` operation transport with a typed
    internal union while preserving Pi JSONL compatibility at the wire edge.
-4. Implement provider-specific transport adapters only where the Pi source
+3. Implement provider-specific transport adapters only where the Pi source
    contract supplies their envelope, lifecycle, cancellation, and error
    events; generic HTTP must not emulate unsupported transports.
-5. Add YAML assertions for every new rejection, admission, and snapshot
+4. Add YAML assertions for every new rejection, admission, and snapshot
    transition before changing production behavior.
 
 ## Non-negotiable checks

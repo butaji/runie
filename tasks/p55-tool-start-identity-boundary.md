@@ -2,7 +2,7 @@
 
 Status: in progress — actor-owned identity, pending ordering, YAML oracle, and
 restored-result reservation implemented; persisted pending replay remains open
-(2026-08-08)
+(reconciled 2026-08-08)
 
 ## First implementation slice (2026-08-08)
 
@@ -45,14 +45,19 @@ toolIndex)` invocation is not duplicated.
 
 ## Current Runie gap
 
-The `new_with_bus` bridge currently turns `ToolExecutionStart` into a generic
-`OperationRecordCreated` payload before the session actor sees it. That event
-contains only `id`, `toolCallId`, `toolName`, and `args`; it has no actor-owned
-assistant identity, tool index, operation ID, result-entry reservation, or
-replay policy. Strict validation would therefore drop a live tool event, while
-fabricating those fields in the bridge would violate SSOT ownership.
+The live and replay paths now use the actor-owned boundary described above:
+`SessionActor` receives `ToolExecutionStart`, derives the assistant/tool
+identity, reserves the result entry, and emits the complete `tool_started`
+record. `visual-tool.yaml` proves this through runtime YAML assertions, and
+the session tests cover restore of an unsettled reservation.
 
-## Required event-driven implementation
+The remaining gap is narrower: a pending start that has not yet acquired an
+assistant context is intentionally operational state and is not persisted as
+an incomplete Pi lane record. Closing that gap requires a Pi-backed persistence
+contract for pending provider facts; inventing a durable record would violate
+the current JSONL shape.
+
+## Completed event-driven implementation
 
 1. Add a `Command::ToolStarted` mailbox command carrying only the provider
    event facts (`toolCallId`, `toolName`, `args`) and an acknowledgement.
