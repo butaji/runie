@@ -102,7 +102,13 @@ fi
 # paste-like byte sequence that crossterm does not expose as ordinary
 # character events to Runie.
 while IFS= read -r -n 1 character; do
-    [[ -n "$character" ]] && tmux send-keys -t "$session" "$character"
+    if [[ -n "$character" ]]; then
+        # Literal mode is required per character: plain tmux arguments can be
+        # interpreted as key names, while a burst of crossterm events can be
+        # coalesced/dropped before Runie's bounded input worker receives it.
+        tmux send-keys -t "$session" -l "$character"
+        sleep 0.03
+    fi
 done <<< "$prompt"
 tmux send-keys -t "$session" Enter
 # Wait for both the completed-turn marker and the settled input footer so the

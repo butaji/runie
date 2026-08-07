@@ -1399,11 +1399,14 @@ those differences are not promoted into the deterministic Pi-core oracle.
 - **Matrix failure diagnostics (2026-08-07):** The capture matrix now attempts
   every geometry even when one size fails, returns a nonzero aggregate status,
   and preserves `${size}.timeout.ansi` for readiness/completion failures.
-  A fresh run captured both `62×32` and `80×24`; Runie timed out at `100×30`.
-  The completed settled-frame comparisons reported 404 differing cells at
-  `62×32` and 788 at `80×24` (mostly style-only at 80×24). These are valid
-  evidence of non-equivalent live states, not a 100% parity claim; the timeout
-  frame is retained for diagnosing the responsive runtime boundary.
+  The first fresh run captured only `62×32` and `80×24`; its Runie `100×30`
+  timeout was caused by bursty prompt injection dropping `He` and leaving only
+  `y` in the feed. Per-character literal injection with a 30ms interval fixes
+  that instrumentation defect: a rerun settles at `62×32`, `80×24`, and
+  `100×30`; `120×36` still times out and retains its timeout frame. The fixed
+  settled comparisons report 401, 787, and 448 differing cells respectively,
+  mostly style-only at the wider geometries. These are valid evidence of
+  non-equivalent live states, not a 100% parity claim.
 - **Settled chrome correction (2026-08-05):** A valid 62×32 cast comparison
   isolated an extra header space and the completed footer shortcut mismatch;
   both live projections are now corrected. Feed wrapping, timing text, and
