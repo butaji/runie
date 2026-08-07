@@ -87,6 +87,16 @@ pub struct SessionSnapshot {
     /// Reducer-owned operation lifecycle projection keyed by Pi operation ID.
     /// Values are `started` or `aborted`; finished operations are removed.
     pub active_operations: BTreeMap<String, String>,
+    /// Last admitted Pi navigation intent. This is deliberately a projection
+    /// only; branch context reconstruction remains owned by the session tree.
+    pub navigation: Option<NavigationSnapshot>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NavigationSnapshot {
+    pub target_id: Option<String>,
+    pub summarize: bool,
+    pub summary_entry_id: Option<String>,
 }
 
 impl SessionSnapshot {
@@ -292,6 +302,30 @@ impl SessionSnapshot {
                 };
                 snapshot.sequence = seq;
                 snapshot.leaf_id = Some(id.clone());
+                if entry_type == "operation_started"
+                    && value
+                        .get("intent")
+                        .and_then(|intent| intent.get("kind"))
+                        .and_then(serde_json::Value::as_str)
+                        == Some("navigation")
+                {
+                    if let Some(intent) = value.get("intent") {
+                        snapshot.navigation = Some(NavigationSnapshot {
+                            target_id: intent
+                                .get("targetId")
+                                .and_then(|value| value.as_str())
+                                .map(str::to_owned),
+                            summarize: intent
+                                .get("summarize")
+                                .and_then(serde_json::Value::as_bool)
+                                .unwrap_or(false),
+                            summary_entry_id: intent
+                                .get("summaryEntryId")
+                                .and_then(|value| value.as_str())
+                                .map(str::to_owned),
+                        });
+                    }
+                }
                 snapshot.config_records.push(SessionConfigEntry {
                     id,
                     seq,
@@ -511,6 +545,30 @@ impl SessionActor {
                                 .record
                                 .clone()
                         {
+                            if record_type == "operation_started"
+                                && data
+                                    .get("intent")
+                                    .and_then(|intent| intent.get("kind"))
+                                    .and_then(serde_json::Value::as_str)
+                                    == Some("navigation")
+                            {
+                                if let Some(intent) = data.get("intent") {
+                                    state.navigation = Some(NavigationSnapshot {
+                                        target_id: intent
+                                            .get("targetId")
+                                            .and_then(|value| value.as_str())
+                                            .map(str::to_owned),
+                                        summarize: intent
+                                            .get("summarize")
+                                            .and_then(serde_json::Value::as_bool)
+                                            .unwrap_or(false),
+                                        summary_entry_id: intent
+                                            .get("summaryEntryId")
+                                            .and_then(|value| value.as_str())
+                                            .map(str::to_owned),
+                                    });
+                                }
+                            }
                             let operation_id = data
                                 .get("id")
                                 .or_else(|| data.get("runId"))
@@ -923,6 +981,33 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn navigation_operation_reduces_to_owned_intent_projection() {
+        let bus = EventBus::new();
+        let actor = SessionActor::new_with_bus(&bus);
+        bus.publish(AgentEvent::OperationRecordCreated {
+            record_type: "operation_started".into(),
+            data: serde_json::json!({
+                "id": "navigation-1",
+                "intent": {
+                    "kind": "navigation",
+                    "targetId": "entry-target",
+                    "summarize": true,
+                    "summaryEntryId": "summary-target"
+                }
+            }),
+        });
+        actor.flush().await;
+        assert_eq!(
+            actor.snapshot().navigation,
+            Some(NavigationSnapshot {
+                target_id: Some("entry-target".into()),
+                summarize: true,
+                summary_entry_id: Some("summary-target".into()),
+            })
+        );
+    }
+
+    #[tokio::test]
     async fn bus_tool_termination_is_attached_to_the_owned_session_entry() {
         let bus = EventBus::new();
         let actor = SessionActor::new_with_bus(&bus);
@@ -979,6 +1064,7 @@ mod tests {
             }],
             config_records: Vec::new(),
             active_operations: BTreeMap::new(),
+            navigation: None,
         };
         let jsonl = snapshot.to_jsonl("session-1", 5, "/workspace");
         assert!(jsonl.contains("\"terminate\":true"));
@@ -1013,6 +1099,7 @@ mod tests {
                 },
             ],
             active_operations: BTreeMap::new(),
+            navigation: None,
         };
         let jsonl = snapshot.to_jsonl("session-1", 5, "/workspace");
         assert!(jsonl.contains("\"type\":\"thinking_level_change\""));

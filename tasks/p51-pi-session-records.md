@@ -93,3 +93,14 @@ operation-lane task.
 
 `visual-operation-lifecycle.yaml` now exercises start → abort → finish and
 asserts the final empty `active_operations` projection entirely at runtime.
+
+## Navigation intent projection (2026-08-07)
+
+Pi's `operation_started` record can carry a `navigation` intent with
+`targetId`, `summarize`, and an optional `summaryEntryId`. `SessionActor` now
+reduces that intent into the actor-owned `SessionSnapshot::navigation` field;
+the JSONL importer reconstructs the same projection from the lossless
+operation record. `visual-navigation-intent.yaml` exercises and asserts the
+projection without compiled scenario code. This is intentionally the intent
+projection only: Pi's full branch tree/context reconstruction, target
+validation, and navigation admission/outcome policy remain open.

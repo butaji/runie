@@ -936,6 +936,8 @@ pub struct StateAssertions {
     pub tool_call_arguments: Option<serde_json::Value>,
     pub session_entries: Option<usize>,
     pub active_operations: Option<BTreeMap<String, String>>,
+    /// Last Pi navigation intent reduced by the session actor.
+    pub navigation: Option<NavigationAssertion>,
     /// Ordered Pi session configuration-record kinds from the actor journal.
     pub session_config_records: Option<Vec<String>>,
     /// Termination metadata on the latest actor-owned session entry.
@@ -1006,6 +1008,14 @@ pub struct StateAssertions {
     pub workflows: Option<BTreeMap<String, WorkflowStateAssertion>>,
     /// Exact actor-owned background-work projections keyed by work ID.
     pub background_work: Option<BTreeMap<String, BackgroundWorkStateAssertion>>,
+}
+
+#[derive(Debug, Deserialize, Default, Clone, PartialEq, Eq)]
+pub struct NavigationAssertion {
+    pub target_id: Option<String>,
+    #[serde(default)]
+    pub summarize: bool,
+    pub summary_entry_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Default, Clone)]
@@ -2533,6 +2543,23 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         &outcome.session.active_operations,
         "active_operations"
     );
+    if let Some(expected_navigation) = &expected.navigation {
+        let actual_navigation =
+            outcome
+                .session
+                .navigation
+                .as_ref()
+                .map(|navigation| NavigationAssertion {
+                    target_id: navigation.target_id.clone(),
+                    summarize: navigation.summarize,
+                    summary_entry_id: navigation.summary_entry_id.clone(),
+                });
+        assert_yaml_eq!(
+            Some(expected_navigation.clone()),
+            actual_navigation.unwrap_or_default(),
+            "navigation"
+        );
+    }
     if let Some(expected_terminate) = expected.session_last_terminate {
         let actual_terminate = outcome
             .session

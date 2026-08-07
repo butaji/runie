@@ -1,0 +1,25 @@
+name: visual-navigation-intent
+description: >-
+  Pi navigation intent is reduced as an actor-owned session projection while
+  the operation record remains in the ordered journal.
+events:
+  - operation_record:
+      record_type: operation_started
+      data:
+        id: navigation-1
+        lane: main
+        intent:
+          kind: navigation
+          targetId: entry-target
+          summarize: true
+          summaryEntryId: summary-target
+assertions:
+  state:
+    session_config_records:
+      - operation_started
+    active_operations:
+      navigation-1: started
+    navigation:
+      target_id: entry-target
+      summarize: true
+      summary_entry_id: summary-target
