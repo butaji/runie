@@ -138,3 +138,17 @@ row containing the skipped count. This keeps loss observable and prevents a
 silent false-parity snapshot; the renderer's existing lag diagnostic remains
 consistent with both actors. Recovery from a lagged broadcast still requires
 a source snapshot/replay contract and remains an open reliability refinement.
+
+- Closure evidence (2026-08-07): `StatusActor::new_with_bus` is now
+  regression-tested by `bus_owned_actor_surfaces_lag_as_error_status` in
+  `crates/runie-tui/src/status_actor.rs`, which keeps a `subscribe()`d
+  receiver attached while publishing `BUS_CAPACITY + 1` events on the bus
+  and asserts the first post-publish snapshot reports `Status::Error`
+  containing `event stream lagged`. The mirror projection is covered by
+  `bus_owned_actor_appends_system_row_on_lag` in
+  `crates/runie-tui/src/scrollback_actor.rs`, which uses the same
+  keepalive-plus-overflow pattern and asserts the first post-publish
+  `FeedSnapshot` contains a `LineKind::System` row whose text contains
+  `event stream lagged`. Both tests assert through the actor's
+  `subscribe()`d snapshot, so the lag diagnostic is the property of the
+  bus bridge, not the test setup.

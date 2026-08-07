@@ -806,6 +806,37 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn bus_owned_actor_appends_system_row_on_lag() {
+        use runie_core::events::bus::{EventBus, BUS_CAPACITY};
+
+        let bus = EventBus::new();
+        // The keepalive subscriber keeps at least one receiver attached so
+        // `publish` cannot drop events with no receivers and the actor's
+        // subscription is forced to lag behind the broadcast tail.
+        let _keepalive = bus.subscribe();
+        let actor = ScrollbackActor::new_with_bus(&bus);
+        let mut snapshot = actor.subscribe();
+
+        // Overflow the broadcast ring buffer so the actor's bus bridge sees
+        // `RecvError::Lagged` on its next `recv`.
+        for _ in 0..BUS_CAPACITY + 1 {
+            bus.publish(AgentEvent::TurnStart);
+        }
+
+        // The bus bridge forwards the lag as a `LineKind::System` row before
+        // it processes any post-lag tail event, so the first snapshot change
+        // after `publish` carries the lag diagnostic row.
+        snapshot.changed().await.expect("scrollback actor alive");
+        let lines = actor.snapshot();
+        assert!(
+            lines.lines().iter().any(|line| {
+                line.kind == LineKind::System && line.text.contains("event stream lagged")
+            }),
+            "expected a LineKind::System row containing 'event stream lagged', got {lines:?}"
+        );
+    }
+
+    #[tokio::test]
     #[allow(clippy::too_many_lines)]
     async fn actor_reduces_parallel_tool_rows_by_tool_id() {
         let actor = ScrollbackActor::new();

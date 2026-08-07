@@ -166,4 +166,37 @@ mod tests {
         snapshot.changed().await.expect("status bus projection");
         assert_eq!(actor.snapshot().current(), &Status::Thinking);
     }
+
+    #[tokio::test]
+    async fn bus_owned_actor_surfaces_lag_as_error_status() {
+        use runie_core::events::bus::{EventBus, BUS_CAPACITY};
+
+        let bus = EventBus::new();
+        // The keepalive subscriber keeps at least one receiver attached so
+        // `publish` cannot drop events with no receivers and forces the
+        // actor's subscription to lag behind the broadcast tail.
+        let _keepalive = bus.subscribe();
+        let actor = StatusActor::new_with_bus(&bus);
+        let mut snapshot = actor.subscribe();
+
+        // Publish enough events to overflow the broadcast ring buffer so the
+        // actor's next `recv` observes `RecvError::Lagged`. Each event maps
+        // to an empty `StatusMsg` batch, so the only state transition the
+        // actor will publish is the explicit `Status::Error` from the lag.
+        for _ in 0..BUS_CAPACITY + 1 {
+            bus.publish(AgentEvent::ActiveToolsChanged { tool_names: vec![] });
+        }
+
+        // The bus bridge forwards the lag as an explicit `Status::Error`
+        // before draining any post-lag tail event, so the first snapshot
+        // change after `publish` is the lag diagnostic.
+        snapshot.changed().await.expect("status actor alive");
+        match &actor.model_snapshot().state {
+            Status::Error(text) => assert!(
+                text.contains("event stream lagged"),
+                "expected lag diagnostic, got {text:?}"
+            ),
+            other => panic!("expected Status::Error from lag, got {other:?}"),
+        }
+    }
 }
