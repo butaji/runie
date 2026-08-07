@@ -21,6 +21,7 @@ provider_options:
   sampling_params:
     temperature: 0.2
   session_id: parity-hey
+  api_key: parity-secret
 capture:
   prompt: "Hey"
   quit_key: C-q
@@ -37,6 +38,7 @@ events:
 assertions:
   provider_options:
     session_id: parity-hey
+    api_key: parity-secret
     headers:
       x-model-default: model
       x-request: request

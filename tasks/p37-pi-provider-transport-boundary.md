@@ -108,6 +108,11 @@ change transports the facts needed by an adapter and does not invent a generic
 wire format. The API key remains an owned request field and is not copied into
 the body or implicitly converted into a header by the generic actor.
 
+YAML closure (2026-08-06): `visual-hey.yaml` now declares `api_key` and asserts
+the effective option through the real loop/provider recorder. The assertion
+never prints the secret, and the fixture remains runtime-discovered, so option
+changes do not require recompilation.
+
 ## Verification contract
 
 Each promoted option requires a pure option reducer/merge test, a transport

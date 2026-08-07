@@ -71,6 +71,8 @@ pub struct ProviderOptionsSpec {
     #[serde(default)]
     pub session_id: Option<String>,
     #[serde(default)]
+    pub api_key: Option<String>,
+    #[serde(default)]
     pub headers: Option<std::collections::HashMap<String, String>>,
     #[serde(default)]
     pub env: Option<std::collections::HashMap<String, String>>,
@@ -102,6 +104,7 @@ impl ProviderOptionsSpec {
     fn stream_options(&self) -> runie_core::types::SimpleStreamOptions {
         runie_core::types::SimpleStreamOptions {
             session_id: self.session_id.clone(),
+            api_key: self.api_key.clone(),
             headers: self.headers.clone(),
             env: self.env.clone(),
             metadata: self.metadata.clone(),
@@ -730,6 +733,7 @@ pub struct Assertions {
 #[derive(Debug, Deserialize, Default, Clone)]
 pub struct ProviderOptionsAssertions {
     pub session_id: Option<String>,
+    pub api_key: Option<String>,
     pub headers: Option<std::collections::HashMap<String, String>>,
     pub env: Option<std::collections::HashMap<String, String>>,
     pub metadata: Option<std::collections::HashMap<String, serde_json::Value>>,
@@ -1770,6 +1774,14 @@ fn assert_provider_options(outcome: &ScenarioOutcome, scenario: &Scenario) -> Re
             return Err(format!(
                 "provider session id mismatch: expected {value:?}, got {:?}",
                 actual.session_id
+            ));
+        }
+    }
+    if let Some(value) = &expected.api_key {
+        if actual.api_key.as_ref() != Some(value) {
+            return Err(format!(
+                "provider api key mismatch: expected <fixture value>, got {:?}",
+                actual.api_key.as_ref().map(|_| "<present>")
             ));
         }
     }
