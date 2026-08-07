@@ -135,6 +135,12 @@ request as SSE. A provider adapter can therefore be added behind the existing
 `StreamFn` boundary without changing the Pi event contract or creating a
 second state owner.
 
+Provider lifecycle increment (2026-08-07): `ProviderActor` now aborts any
+previous owned pump before acknowledging a new `Start`. This matches the
+one-in-flight Pi turn contract and prevents superseded streams from publishing
+events concurrently. The actor test suite covers both explicit cancellation
+and replacement by a new start; no detached task or timing sleep is used.
+
 ## Typed request promotion (2026-08-06)
 
 The owned `HttpRequest` now receives the effective `session_id`, API key,

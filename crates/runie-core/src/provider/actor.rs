@@ -85,6 +85,10 @@ async fn run_provider_worker(
                 options,
                 reply,
             } => {
+                // Pi owns one active provider request per turn. A new start
+                // supersedes any still-running pump before its receiver is
+                // handed back, so two streams cannot publish concurrently.
+                pumps.abort_all();
                 let (event_tx, _) = broadcast::channel(STREAM_CAPACITY);
                 match stream_fn.stream(&model, &context, *options).await {
                     Ok(stream) => {
@@ -240,6 +244,23 @@ mod tests {
         let result = tokio::time::timeout(std::time::Duration::from_millis(100), rx.recv())
             .await
             .expect("cancel should close the stream");
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn a_new_start_supersedes_the_previous_owned_stream() {
+        let actor = ProviderActor::new(std::sync::Arc::new(PendingFn));
+        let mut previous = actor
+            .start(Model::default(), AgentContext::default(), None)
+            .await
+            .unwrap();
+        let _current = actor
+            .start(Model::default(), AgentContext::default(), None)
+            .await
+            .unwrap();
+        let result = tokio::time::timeout(std::time::Duration::from_millis(100), previous.recv())
+            .await
+            .expect("superseded stream should close");
         assert!(result.is_err());
     }
 
