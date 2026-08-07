@@ -31,6 +31,10 @@ The runtime fixture `visual-reset-state.yaml` now replays a started reasoning
 turn followed by `reset` and asserts the settled status, streaming flag, and
 feed lifecycle bit without recompilation.
 
+Prompt reset parity (2026-08-07): `PromptActor` now preserves its actor-owned
+theme while rebuilding transient input state for `Reset`, matching the status
+and feed actors' configuration-preserving reset behavior.
+
 ## Remaining work
 
 1. Make every externally observable TUI transition have a named event/message

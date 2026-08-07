@@ -225,7 +225,9 @@ async fn run_prompt_actor(
             event = events.recv() => {
                 match event {
                     Ok(AgentEvent::Reset) => {
+                        let theme = prompt.model_snapshot().theme;
                         prompt = PromptWidget::new();
+                        prompt.set_theme(theme);
                         let _ = snapshot_tx.send(prompt.model_snapshot());
                     }
                     Ok(AgentEvent::ThemeChanged { theme }) => {
@@ -759,5 +761,28 @@ mod tests {
             }
         }
         panic!("PromptActor did not project terminal-native theme");
+    }
+
+    #[tokio::test]
+    async fn prompt_reset_preserves_actor_owned_theme() {
+        let bus = EventBus::new();
+        let actor = PromptActor::new(&bus);
+        bus.publish(AgentEvent::ThemeChanged {
+            theme: runie_core::types::ThemeKind::RosePineMoon,
+        });
+        for _ in 0..4 {
+            tokio::task::yield_now().await;
+            if actor.model_snapshot().theme == runie_core::types::ThemeKind::RosePineMoon {
+                break;
+            }
+        }
+        bus.publish(AgentEvent::Reset);
+        for _ in 0..4 {
+            tokio::task::yield_now().await;
+            if actor.model_snapshot().theme == runie_core::types::ThemeKind::RosePineMoon {
+                return;
+            }
+        }
+        panic!("PromptActor reset discarded the actor-owned theme");
     }
 }
