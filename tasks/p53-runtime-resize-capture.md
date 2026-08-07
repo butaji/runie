@@ -72,6 +72,12 @@ The settled probe now accepts Grok's compact-width `Enter:send` and
 marker, while retaining the `Esc:cancel` active-turn exclusion. This removes a
 false timeout source when a resize changes footer vocabulary.
 
+Runtime re-probe (2026-08-08): the private tmux/asciinema driver completed a
+Runie capture with `80x12` at 250 ms and `100x24` at 500 ms, producing valid
+cast, raw, settled ANSI, manifest, and resize-report artifacts. The paired
+Grok capture still needs to be rerun with the same schedule before claiming
+cell-level resize parity.
+
 Paired schedule probe (2026-08-08): both Runie and Grok independently recorded
 the same two observed geometries. Runie reached its settled frame; Grok's
 settled-response probe timed out after the resize, so its cast is marked
