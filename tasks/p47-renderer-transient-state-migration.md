@@ -26,6 +26,17 @@ This is an architecture evidence checkpoint, not closure: the compatibility
 adapter still exists and must be retired after its callers are migrated. The
 source boundary validator continues to enforce the live feed ownership rule.
 
+## Re-audit after session reducer consolidation (2026-08-07)
+
+The current call-site search finds `EventRenderer::new`/`with_welcome` and
+legacy `Arc<Mutex<Scrollback/StatusBar>>` writes only in `#[cfg(test)]`
+compatibility constructors and focused renderer tests. `App` constructs
+`with_live_actors`; YAML replay and end-to-end paths construct `with_actors`.
+Their production branches do not access the legacy mutex projections. The
+remaining compatibility adapter is therefore isolated test/replay debt rather
+than a live second state owner. It remains scheduled for retirement, but no
+new production event boundary is blocked on it.
+
 ## Why this task exists
 
 The production `EventRenderer` no longer owns the durable feed snapshot: it
