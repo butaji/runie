@@ -432,7 +432,7 @@ impl EventRenderer {
                                 Vec::new()
                             } else {
                                 scrollback_messages_for_event(&event)
-                            };
+            };
                             if matches!(event, AgentEvent::TurnStart) {
                                 feed_messages.push(ScrollbackMsg::TurnStart);
                             }
@@ -816,6 +816,10 @@ impl EventRenderer {
         result: serde_json::Value,
         is_error: bool,
     ) -> ScrollbackMsg {
+        debug_assert!(
+            self.scrollback_actor.is_some(),
+            "tool-end reduction requires the actor-backed feed"
+        );
         let (
             activity_dirs,
             activity_files,
@@ -826,11 +830,6 @@ impl EventRenderer {
         if is_error {
             activity_failures += 1;
         }
-        if self.scrollback_actor.is_none() {
-            self.scrollback
-                .lock()
-                .apply(ScrollbackMsg::ActivityToolEnd { is_error });
-        }
         let tool_buffer = self.current_tool_header(&tool_call_id).unwrap_or_default();
         let tool_args = self.current_tool_args(&tool_call_id);
         let tool_buffer = if is_error {
@@ -838,12 +837,6 @@ impl EventRenderer {
         } else {
             completed_tool_header_with_args(&tool_buffer, &tool_name, &tool_args, &result)
         };
-        if self.scrollback_actor.is_none() {
-            if let Some(row) = self.tool_row_index(&tool_call_id) {
-                self.settle_tool_line(row);
-                self.replace_tool_line(row, &tool_buffer);
-            }
-        }
         let activity = if self.active_tool_count() <= 1
             && activity_dirs + activity_files + activity_commands + activity_subagents > 0
         {
@@ -858,13 +851,6 @@ impl EventRenderer {
         } else {
             None
         };
-        if self.scrollback_actor.is_none() {
-            if let Some(activity) = &activity {
-                if let Some(line) = self.scrollback.lock().last_mut_by_kind(LineKind::Activity) {
-                    line.text = activity.clone();
-                }
-            }
-        }
         let mut output = Vec::new();
         {
             let raw_output = tool_result_text(&result);
@@ -893,28 +879,13 @@ impl EventRenderer {
                     raw_output.lines().map(str::to_owned).collect()
                 };
             for line in rendered_lines.iter().filter(|line| !line.is_empty()) {
-                if self.scrollback_actor.is_none() {
-                    self.scrollback
-                        .lock()
-                        .append(Line::new(kind, line).for_tool(&tool_call_id));
-                }
                 output.push((kind, line.to_owned()));
             }
             if !is_error && matches!(tool_name.as_str(), "web_search" | "web-search") {
                 if let Some(sources) = web_search_sources_line(&tool_result_text(&result)) {
-                    if self.scrollback_actor.is_none() {
-                        self.scrollback.lock().append(
-                            Line::new(LineKind::ToolResult, &sources).for_tool(&tool_call_id),
-                        );
-                    }
                     output.push((LineKind::ToolResult, sources));
                 }
             }
-        }
-        if self.scrollback_actor.is_none() {
-            self.scrollback
-                .lock()
-                .apply(ScrollbackMsg::RemoveToolArgs(tool_call_id.clone()));
         }
         ScrollbackMsg::ToolEnd {
             tool_call_id,
@@ -1216,23 +1187,6 @@ impl EventRenderer {
             .get(tool_call_id)
             .cloned()
             .unwrap_or(serde_json::Value::Null)
-    }
-
-    fn replace_tool_line(&self, row: usize, text: &str) {
-        let mut sb = self.scrollback.lock();
-        if let Some(line) = sb.line_mut(row) {
-            line.text = text.to_string();
-        } else {
-            sb.append(Line::new(LineKind::Tool, text.to_string()));
-        }
-    }
-
-    fn settle_tool_line(&self, row: usize) {
-        let mut sb = self.scrollback.lock();
-        if let Some(line) = sb.line_mut(row) {
-            line.kind = LineKind::Tool;
-            line.settle_tool_row();
-        }
     }
 
     fn append_reasoning_delta(&self, delta: &str) {

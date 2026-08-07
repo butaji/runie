@@ -514,3 +514,11 @@ single `ScrollbackMsg::ToolUpdate` applied by `ScrollbackActor`. Structured
 output and serialized status updates no longer append or replace compatibility
 rows directly. `visual-tool-update.yaml`, the complete YAML fixture sweep,
 and the tool visual snapshot continue to pass.
+
+**Tool-end helper migration (2026-08-08):** Completion now builds the
+actor-neutral `ScrollbackMsg::ToolEnd` payload exclusively: settled headers,
+activity summaries, specialized memory/web-search output, and error rows are
+returned as message data and reduced by `ScrollbackActor`. Direct legacy row
+replacement, settling, output append, and argument removal were removed. The
+obsolete row mutation helpers were deleted after the compiler confirmed they
+had no remaining callers.
