@@ -167,3 +167,11 @@ changes do not require recompilation.
 Each promoted option requires a pure option reducer/merge test, a transport
 observation test, and a YAML replay assertion. Tests must use event sequences,
 must not sleep, and must preserve actor ownership of mutable request state.
+
+## Unsupported transport safety increment (2026-08-07)
+
+The generic `HttpActor` boundary now rejects `websocket` and
+`websocket-cached` requests instead of silently routing them through HTTP.
+`sse` and `auto` retain the existing HTTP path. This is an explicit event/
+request outcome and prevents a false Pi-parity claim until the provider-scoped
+WebSocket adapter exists; a focused async test pins the rejection contract.

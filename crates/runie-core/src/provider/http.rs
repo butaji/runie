@@ -37,6 +37,14 @@ pub trait HttpActor: Send + Sync + 'static {
     async fn post(&self, body: String) -> Result<HttpResponse, StreamError>;
 
     async fn post_request(&self, request: HttpRequest) -> Result<HttpResponse, StreamError> {
+        if matches!(
+            request.transport,
+            Some(ProviderTransport::Websocket | ProviderTransport::WebsocketCached)
+        ) {
+            return Err(StreamError::Invalid(
+                "websocket transport requires a provider-specific websocket adapter".into(),
+            ));
+        }
         self.post(request.body).await
     }
 
@@ -539,6 +547,28 @@ mod tests {
             .await
             .expect_err("pending request must time out");
         assert!(matches!(error, StreamError::Network(message) if message.contains("1ms")));
+    }
+
+    #[tokio::test]
+    async fn default_http_boundary_rejects_unsupported_websocket_transport() {
+        let error = PendingHttp
+            .post_request(HttpRequest {
+                body: "{}".into(),
+                session_id: None,
+                api_key: None,
+                temperature: None,
+                max_tokens: None,
+                sampling_params: Default::default(),
+                headers: Default::default(),
+                env: Default::default(),
+                metadata: Default::default(),
+                transport: Some(ProviderTransport::Websocket),
+                cache_retention: None,
+                websocket_connect_timeout_ms: None,
+            })
+            .await
+            .expect_err("generic HTTP must not silently emulate websocket");
+        assert!(error.to_string().contains("provider-specific websocket"));
     }
 
     #[tokio::test]
