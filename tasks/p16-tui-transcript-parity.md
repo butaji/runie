@@ -78,6 +78,13 @@ runner while individual tool rows continue to render `✗`.
   a focused cell/style test and the full reasoning visual snapshot pin the
   glyph and theme-token color.
 
+- **User-panel fill parity (2026-08-07):** Clean settled-frame comparison
+  showed Grok's trailing user-panel cells carry the panel background but no
+  explicit foreground. Live Runie now clears the foreground on the user-panel
+  span and emits a reset-foreground fill cell, retaining the Opaline panel
+  background token. A focused terminal-cell test verifies `bg=(36,36,36)` and
+  `fg=Reset`; the complete workspace gate remains green.
+
 ## Grok reference
 
 `~/Code/agents/grok-build/crates/codegen/xai-grok-pager/src/scrollback/render.rs`

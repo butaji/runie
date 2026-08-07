@@ -1147,16 +1147,26 @@ impl Scrollback {
                 }
             }
             if self.navigation.live_grok_layout && *kind == LineKind::User {
+                let panel_background =
+                    appearance::panel_background_style_for(self.navigation.theme)
+                        .bg
+                        .expect("panel background color");
                 for span in &mut line.spans {
-                    span.style =
-                        span.style
-                            .fg(Color::Reset)
-                            .bg(
-                                appearance::panel_background_style_for(self.navigation.theme)
-                                    .bg
-                                    .expect("panel background color"),
-                            );
+                    // Grok paints the user panel background across the row but
+                    // does not emit an explicit foreground for its trailing
+                    // blank cells. Clearing the span foreground lets the
+                    // terminal default carry through the panel fill while the
+                    // theme token still owns the background.
+                    span.style.fg = None;
+                    span.style.bg = Some(panel_background);
                 }
+                // Ratatui fills the remainder of a paragraph from its last
+                // span. Emit one reset-foreground cell so the fill matches
+                // Grok's background-only trailing panel cells.
+                line.spans.push(Span::styled(
+                    " ",
+                    Style::default().fg(Color::Reset).bg(panel_background),
+                ));
             }
             if self.navigation.live_grok_layout && *kind == LineKind::CompletedAssistant {
                 let assistant = appearance::assistant_body_style_for(self.navigation.theme);
@@ -2958,6 +2968,18 @@ mod tests {
             buffer.cell((7, 1)).expect("first user letter").symbol(),
             "P"
         );
+    }
+
+    #[test]
+    fn live_user_panel_trailing_cells_keep_default_foreground() {
+        let mut scrollback = Scrollback::new();
+        scrollback.set_live_grok_layout(true);
+        scrollback.append(Line::new(LineKind::User, "Hey"));
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 40, 2));
+        scrollback.render(Rect::new(0, 0, 40, 2), &mut buffer);
+        let trailing = buffer.cell((10, 1)).expect("user panel trailing cell");
+        assert_eq!(trailing.bg, Color::Rgb(36, 36, 36));
+        assert_eq!(trailing.fg, Color::Reset);
     }
 
     #[test]
