@@ -18,6 +18,9 @@ pub use runie_tui_model::{
 // Grok reserves a visible gutter between the first assistant row and its
 // right-aligned clock before wrapping the remaining response text.
 const TIMESTAMP_GUTTER_SPACES: usize = 3;
+// The wrapped assistant row keeps the source renderer's ten-cell overlay
+// gutter and its short-clock inset when materializing a plain text row.
+const ASSISTANT_TIMESTAMP_WRAPPED_RESERVATION: usize = 14;
 
 #[cfg(test)]
 #[allow(dead_code, reason = "only retained by quarantined legacy reducer code")]
@@ -1519,7 +1522,7 @@ impl Scrollback {
                                 format!(
                                     "{head}{:>reserved$}",
                                     timestamp,
-                                    reserved = timestamp_width + TIMESTAMP_GUTTER_SPACES + 1
+                                    reserved = ASSISTANT_TIMESTAMP_WRAPPED_RESERVATION
                                 ),
                                 false,
                             ));
@@ -2145,6 +2148,13 @@ mod tests {
             .1
             .clone();
         assert!(first.ends_with("2:11 AM"));
+        let timestamp_start = first.find("2:11 AM").expect("timestamp start");
+        let gap = first[..timestamp_start]
+            .chars()
+            .rev()
+            .take_while(|character| *character == ' ')
+            .count();
+        assert_eq!(gap, 7, "row: {first:?}");
         assert!(!first.contains("help 2:11"));
         assert!(rows.iter().any(|(_, text, _)| text.contains("with code")));
     }

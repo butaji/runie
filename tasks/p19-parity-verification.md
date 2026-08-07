@@ -68,6 +68,17 @@ scenario takes the wrapped-row reservation branch. The change was reverted;
 the remaining timestamp mismatch is specifically in that branch's effective
 reserved width and needs a separate source-backed audit.
 
+**Wrapped assistant timestamp correction (2026-08-06):** Grok's
+`EntryRenderer::timestamp_reserved()` reserves ten cells for message blocks,
+then overlays the short timestamp with its two-cell leading inset. Runie's
+wrapped assistant projection was reserving only eleven formatted cells, which
+placed the visible clock three cells too far left. The projection now uses the
+source-equivalent fourteen-cell wrapped reservation, and the focused regression
+asserts seven spaces before the visible clock. A fresh 62×32 capture shows the
+assistant row's timestamp spacing matching Grok; response text and elapsed
+telemetry still vary between live captures and require deterministic provider
+and clock inputs before a cast-wide exact comparison can be promoted.
+
 **Latest parity note (2026-08-05):** `LoopActor::continue_run` now drains
 queued steering before follow-up messages when the context ends in an
 assistant, matching pi's continuation behavior; `LastIsAssistant` remains the
