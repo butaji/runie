@@ -96,13 +96,17 @@ assertions:
     scroll_offset: 9
   visual:
     cols: 80
-    rows: 30
+    rows: 24
     screen_text:
       - "❯ Hey"
       - "┃  Hi there!"
       - "9:27 PM"
       - "Worked for"
       - "Enter:send"
+    cell_assertions:
+      # The assistant body must retain the semantic text.assistant token in
+      # the live Grok projection; terminal-default foreground is a regression.
+      - { col: 5, row: 9, symbol: "H", fg: "rgb:225,225,225" }
     screen_excludes:
       - "assistant>"
       - "user>"

@@ -810,3 +810,10 @@ sends ordinary named tmux key events with a bounded per-key interval rather
 than literal-string injection. This follows the same input path as a user and
 prevents the PTY from accepting only the first character of `Hey`; the exact
 prompt visibility check remains the acceptance gate.
+
+YAML promotion increment (2026-08-07): the stable assistant-body foreground
+contract is now asserted by `visual-hey.yaml` at a concrete rendered cell
+(`H`, row 9 in the fixed 80×24 frame, `text.assistant` RGB token), in addition to the focused renderer
+test. The fixture still drives the complete event sequence and four geometry
+replays, so this styling guarantee is checked without recompilation and is not
+dependent on a live provider response.
