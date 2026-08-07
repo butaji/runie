@@ -98,3 +98,17 @@ all prompt/UI state changes still cross actor mailboxes. The main loop now
 selects directly on the input mailbox rather than `try_recv` from the render
 tick. Key routing remains actor-mailbox based, while the render tick is
 reserved for drawing and actor-owned animation progress.
+
+## Production write audit (2026-08-07, continuation)
+
+The current source scan found no new production cross-actor mutation. The
+remaining `EventRenderer` `.lock().apply/set/append` calls are reachable only
+from its synchronous compatibility adapter; the live constructor uses actor
+snapshots and acknowledged actor messages. Core lock writes are confined to
+the loop's owned run-handle slot, subscriber registry, replay/test captures,
+or transport adapters. The feed boundary validator remains clean.
+
+This audit does not promote the compatibility adapter to “done”: its writes
+are isolated but still represent the final migration surface. Removing them
+requires moving replay callers to actor-backed snapshots, not merely
+suppressing the source check.
