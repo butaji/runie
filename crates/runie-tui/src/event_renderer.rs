@@ -2371,26 +2371,32 @@ mod tests {
         assert_eq!(summary.kind, LineKind::TurnSummary);
     }
 
-    #[test]
-    fn terminal_assistant_error_message_sets_error_status() {
-        let (mut r, sb, st) = new_renderer();
-        r.apply_event(AgentEvent::AgentStart);
-        r.apply_event(AgentEvent::MessageStart {
-            message: AgentMessage::Assistant(runie_core::types::AssistantMessage::default()),
-        });
-        r.apply_event(AgentEvent::MessageEnd {
-            message: AgentMessage::Assistant(runie_core::types::AssistantMessage {
-                stop_reason: Some(StopReason::Error),
-                error_message: Some("api: unavailable".into()),
-                ..Default::default()
-            }),
-        });
+    #[tokio::test]
+    async fn actor_terminal_assistant_error_message_sets_error_status() {
+        let scrollback = ScrollbackActor::new();
+        let status = StatusActor::new();
+        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status.clone(), false);
+        renderer.apply_actor_event(AgentEvent::AgentStart).await;
+        renderer
+            .apply_actor_event(AgentEvent::MessageStart {
+                message: AgentMessage::Assistant(runie_core::types::AssistantMessage::default()),
+            })
+            .await;
+        renderer
+            .apply_actor_event(AgentEvent::MessageEnd {
+                message: AgentMessage::Assistant(runie_core::types::AssistantMessage {
+                    stop_reason: Some(StopReason::Error),
+                    error_message: Some("api: unavailable".into()),
+                    ..Default::default()
+                }),
+            })
+            .await;
         assert_eq!(
-            st.lock().current(),
+            status.snapshot().current(),
             &Status::Error("api: unavailable".into())
         );
-        assert!(sb
-            .lock()
+        assert!(scrollback
+            .snapshot()
             .find_first_containing("error: api: unavailable")
             .is_some());
     }

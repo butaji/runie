@@ -115,12 +115,11 @@ rehydration defect: `Scrollback::from_model_snapshot` omitted the actor-owned
 both fields, and the actor-backed regression asserts `TurnStart` visibility
 before `AgentEnd` emits the completion summary.
 
-**Error-path migration audit (2026-08-08):** A trial migration of the
-terminal-assistant-error regression to `apply_actor_event(MessageEnd)` did not
-settle within the bounded test run, while its quarantined compatibility form
-remains green. The migration was reverted; this is evidence of a remaining
-actor error-event delivery/acknowledgement issue, not a reason to weaken the
-test or add timing sleeps.
+**Fifth compatibility migration (2026-08-08):** Terminal assistant-error
+coverage now uses actor-backed `MessageStart`/`MessageEnd` delivery and asserts
+the immutable status/feed snapshots. A prior apparent hang was traced to stale
+orphaned core test processes, not the actor reducer; the clean bounded replay
+passes without sleeps.
 
 ## Verification
 
