@@ -1,10 +1,10 @@
 # Grok TUI behavior inventory and Pi-core mapping
 
-Status: active (2026-08-06)
+Status: active (2026-08-07)
 
 ## Current source audit (2026-08-06)
 
-`scripts/source-inventory.sh` currently reports 37 Pi agent files, 169 Pi AI
+`scripts/source-inventory.sh` currently reports 48 Pi agent files, 174 Pi AI
 files, 496 Grok pager files, and 68 Grok pager-render files. The inventory is
 therefore synchronized with the checked-out references. This does not close
 the behavioral acceptance criteria below: the remaining evidence gaps are
