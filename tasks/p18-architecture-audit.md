@@ -43,6 +43,13 @@ cannot create a second production source of truth.
 
 ## Progress
 
+- **Loop run ownership (2026-08-08):** Removed the redundant
+  `Arc<Mutex<Option<JoinHandle<RunLoopOutcome>>>>` from `LoopActor`. The
+  actor's single-run semaphore is now the sole admission/idle projection;
+  `wait_for_idle()` awaits that permit, and the loop awaits its run directly.
+  Focused loop-entry, TUI submission, and full workspace parity suites remain
+  green.
+
 - **Audited (2026-08-05):** `cargo run -p lint-check`, formatting, and
   workspace check pass. Strict `cargo clippy --workspace --all-targets
   -- -D warnings` is not yet clean; it reports existing complexity/size and
