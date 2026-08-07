@@ -1,6 +1,6 @@
 # p37 — Pi provider transport boundary
 
-Status: planned
+Status: in progress
 
 The Pi `ProviderRequestOptions` contract is broader than Runie's current
 `HttpActor` abstraction. This task records the exact boundary so parity work
@@ -33,6 +33,7 @@ Implemented end-to-end through the owned provider request snapshot:
 - `timeoutMs`
 - `maxRetries`
 - payload and response hooks
+- request headers carried to the transport boundary
 
 The YAML runner exposes these effective options at runtime; `visual-hey.yaml`
 now declares and asserts `session_id`, thinking budgets, and sampling
@@ -42,8 +43,8 @@ Not yet implemented behaviorally:
 
 - custom fetch, provider environment, telemetry context, and transport
   selection: `HttpActor` has no injectable transport/request-context object.
-- nullable request headers: the actor accepts only a body, so headers cannot
-  reach a concrete transport.
+- nullable request headers: additive `HttpRequest` delivery now carries
+  optional headers; the default adapter preserves existing body-only actors.
 - `maxRetryDelayMs`: retry currently handles bounded transport failures but
   has no provider response metadata or clock/backoff policy.
 - named temperature/max-tokens/cache-retention fields: Runie's current

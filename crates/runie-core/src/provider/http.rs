@@ -14,9 +14,19 @@ pub struct HttpResponse {
     pub body: String,
 }
 
+#[derive(Debug, Clone)]
+pub struct HttpRequest {
+    pub body: String,
+    pub headers: std::collections::HashMap<String, String>,
+}
+
 #[async_trait::async_trait]
 pub trait HttpActor: Send + Sync + 'static {
     async fn post(&self, body: String) -> Result<HttpResponse, StreamError>;
+
+    async fn post_request(&self, request: HttpRequest) -> Result<HttpResponse, StreamError> {
+        self.post(request.body).await
+    }
 
     /// Apply pi-compatible request/response hooks at the transport boundary.
     /// Concrete adapters only implement `post`; the actor owns the side
@@ -47,13 +57,20 @@ pub trait HttpActor: Send + Sync + 'static {
                 StreamError::Invalid(format!("payload hook serialization failed: {error}"))
             })?,
         };
+        let headers = options
+            .as_ref()
+            .and_then(|options| options.headers.clone())
+            .unwrap_or_default();
         let retries = options.as_ref().and_then(|o| o.max_retries).unwrap_or(0);
         let mut response = None;
         let mut last_error = None;
         for retry_index in 0..=retries {
             match post_once(
                 self,
-                request_body.clone(),
+                HttpRequest {
+                    body: request_body.clone(),
+                    headers: headers.clone(),
+                },
                 options.as_ref().and_then(|o| o.timeout_ms),
             )
             .await
@@ -131,18 +148,18 @@ async fn abortable_retry_delay(
 
 async fn post_once<A: HttpActor + ?Sized>(
     actor: &A,
-    body: String,
+    request: HttpRequest,
     timeout_ms: Option<u64>,
 ) -> Result<HttpResponse, StreamError> {
     if let Some(timeout_ms) = timeout_ms {
         tokio::time::timeout(
             std::time::Duration::from_millis(timeout_ms),
-            actor.post(body),
+            actor.post_request(request),
         )
         .await
         .map_err(|_| StreamError::Network(format!("request timed out after {timeout_ms}ms")))?
     } else {
-        actor.post(body).await
+        actor.post_request(request).await
     }
 }
 
@@ -278,10 +295,30 @@ mod tests {
 
     struct PendingHttp;
 
+    struct HeaderCapturingHttp {
+        headers: Arc<Mutex<Option<std::collections::HashMap<String, String>>>>,
+    }
+
     #[async_trait::async_trait]
     impl HttpActor for PendingHttp {
         async fn post(&self, _body: String) -> Result<HttpResponse, StreamError> {
             std::future::pending().await
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl HttpActor for HeaderCapturingHttp {
+        async fn post(&self, _body: String) -> Result<HttpResponse, StreamError> {
+            unreachable!("post_request is the exercised boundary")
+        }
+
+        async fn post_request(&self, request: HttpRequest) -> Result<HttpResponse, StreamError> {
+            *self.headers.lock().expect("headers lock") = Some(request.headers);
+            Ok(HttpResponse {
+                status: 200,
+                headers: Default::default(),
+                body: String::new(),
+            })
         }
     }
 
@@ -374,6 +411,32 @@ mod tests {
             Some(&"replay-1".to_string())
         );
         assert_eq!(response.status, 201);
+    }
+
+    #[tokio::test]
+    async fn post_with_options_forwards_request_headers_to_transport() {
+        let headers = Arc::new(Mutex::new(None));
+        HeaderCapturingHttp {
+            headers: headers.clone(),
+        }
+        .post_with_options(
+            "{}".into(),
+            Model::default(),
+            Some(SimpleStreamOptions {
+                headers: Some([(String::from("x-trace"), String::from("replay-1"))].into()),
+                ..Default::default()
+            }),
+        )
+        .await
+        .expect("request succeeds");
+        assert_eq!(
+            headers
+                .lock()
+                .expect("headers lock")
+                .as_ref()
+                .and_then(|headers| headers.get("x-trace")),
+            Some(&String::from("replay-1"))
+        );
     }
 
     #[tokio::test]

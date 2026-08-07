@@ -610,6 +610,8 @@ pub type RetryJitterHook = std::sync::Arc<dyn Fn() -> f64 + Send + Sync>;
 pub struct SimpleStreamOptions {
     pub session_id: Option<String>,
     pub api_key: Option<String>,
+    /// Additional provider request headers (pi: `headers`).
+    pub headers: Option<std::collections::HashMap<String, String>>,
     pub signal: Option<tokio::sync::watch::Receiver<bool>>,
     pub thinking_budgets: Option<ThinkingBudgets>,
     /// Provider request timeout in milliseconds (pi: `timeoutMs`).
@@ -640,6 +642,7 @@ impl std::fmt::Debug for SimpleStreamOptions {
             .debug_struct("SimpleStreamOptions")
             .field("session_id", &self.session_id)
             .field("api_key", &self.api_key.as_ref().map(|_| "<redacted>"))
+            .field("headers", &self.headers)
             .field("signal", &self.signal.is_some())
             .field("thinking_budgets", &self.thinking_budgets)
             .field("timeout_ms", &self.timeout_ms)

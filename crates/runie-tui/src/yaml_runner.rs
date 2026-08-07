@@ -67,6 +67,8 @@ pub struct ProviderOptionsSpec {
     #[serde(default)]
     pub session_id: Option<String>,
     #[serde(default)]
+    pub headers: Option<std::collections::HashMap<String, String>>,
+    #[serde(default)]
     pub thinking_budgets: Option<runie_core::types::ThinkingBudgets>,
     #[serde(default)]
     pub timeout_ms: Option<u64>,
@@ -82,6 +84,7 @@ impl ProviderOptionsSpec {
     fn stream_options(&self) -> runie_core::types::SimpleStreamOptions {
         runie_core::types::SimpleStreamOptions {
             session_id: self.session_id.clone(),
+            headers: self.headers.clone(),
             thinking_budgets: self.thinking_budgets.clone(),
             timeout_ms: self.timeout_ms,
             max_retries: self.max_retries,
@@ -666,6 +669,7 @@ pub struct Assertions {
 #[derive(Debug, Deserialize, Default, Clone)]
 pub struct ProviderOptionsAssertions {
     pub session_id: Option<String>,
+    pub headers: Option<std::collections::HashMap<String, String>>,
     pub thinking_budgets: Option<runie_core::types::ThinkingBudgets>,
     pub timeout_ms: Option<u64>,
     pub max_retries: Option<u32>,
@@ -1653,6 +1657,14 @@ fn assert_provider_options(outcome: &ScenarioOutcome, scenario: &Scenario) -> Re
             return Err(format!(
                 "provider session id mismatch: expected {value:?}, got {:?}",
                 actual.session_id
+            ));
+        }
+    }
+    if let Some(value) = &expected.headers {
+        if actual.headers.as_ref() != Some(value) {
+            return Err(format!(
+                "provider headers mismatch: expected {value:?}, got {:?}",
+                actual.headers
             ));
         }
     }
