@@ -793,6 +793,25 @@ mod tests {
         assert_eq!(snapshot.measured_viewport_rows, 12);
         assert_eq!(snapshot.measured_anchor_row, Some(9));
     }
+
+    #[test]
+    fn measured_anchor_restores_manual_viewport_after_tool_fold() {
+        let mut state = FeedState::default();
+        state.reduce(super::ScrollbackMsg::ToolStartRunning {
+            tool_call_id: "call-1".into(),
+            header: "custom_tool running".into(),
+            activity: None,
+        });
+        state.reduce(super::ScrollbackMsg::LayoutMeasured {
+            content_rows: 30,
+            viewport_rows: 6,
+            anchor_row: Some(17),
+        });
+        state.reduce(super::ScrollbackMsg::ScrollBy(3));
+        state.reduce(super::ScrollbackMsg::ToggleToolMode("call-1".into()));
+        assert_eq!(state.snapshot().scroll_offset, 14);
+        assert!(!state.snapshot().autoscroll);
+    }
 }
 
 fn workflow_text_model(
@@ -1616,6 +1635,21 @@ impl FeedState {
             ToolDisplayMode::Expanded => ToolDisplayMode::Collapsed,
         };
         self.navigation.tool_modes.insert(id.to_owned(), next);
+        self.restore_measured_anchor();
+    }
+
+    /// Re-anchor a manually scrolled viewport after a fold changes physical
+    /// row count. The measurement is renderer-provided state delivered through
+    /// the actor; without it, compatibility behavior remains unchanged.
+    fn restore_measured_anchor(&mut self) {
+        if self.navigation.autoscroll {
+            return;
+        }
+        let Some(anchor) = self.navigation.measured_anchor_row else {
+            return;
+        };
+        let half_viewport = self.navigation.measured_viewport_rows / 2;
+        self.navigation.scroll_offset = anchor.saturating_sub(half_viewport);
     }
 
     fn scroll_by(&mut self, delta: i32) {

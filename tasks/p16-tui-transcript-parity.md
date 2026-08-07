@@ -753,6 +753,12 @@ now transfers `(content_rows, viewport_rows, anchor_row)` through the
 covered by a model test; renderer emission, YAML frame capture, and anchor
 restoration remain the next slices.
 
+Anchor restoration increment (2026-08-07): measured manual-scroll anchors now
+recenter after a `ToggleToolMode` fold transition in the pure feed reducer.
+Autoscroll and unmeasured compatibility paths remain unchanged. The remaining
+parity work is multi-member reflow across arbitrary wrapped rows and a
+cast-wide frame oracle.
+
 Renderer identity handoff (2026-08-06): semantic paint-intent lookup now
 resolves the source line's logical member ordinal and requires the matching
 `ToolCardRow.member_index` before applying theme intent. Duplicate text can no
