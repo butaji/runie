@@ -1,6 +1,6 @@
 # p36 — Events are the state-transfer boundary
 
-Status: in progress
+Status: in progress — actor/event boundary audited; compatibility renderer retirement and strict color proof remain
 
 Runie keeps mutable state inside its owning actor. Commands are actor-local
 requests; durable state changes are transferred through `AgentEvent` (core)
@@ -31,6 +31,35 @@ snapshots only and never mutate another actor's state.
 The matrix retains the original four-argument environment-assignment form;
 the compatibility branch is covered by shell syntax/argument checks so older
 capture recipes do not silently lose their color or parity-clock settings.
+
+## Transition inventory audit (2026-08-06)
+
+The externally observable TUI transitions are now represented by named
+owner-local messages rather than implicit field writes:
+
+| Transition family | Owner | Message/event boundary | Evidence |
+|---|---|---|---|
+| palette open/query/filter/escape/activate | `UiActor` | `UiMsg` | `visual-command-palette.yaml`, `ui.rs` reducer tests |
+| welcome/shortcut visibility | `UiActor` | `UiMsg` | UI actor tests and visual YAML steps |
+| prompt editing/submission/mode/search/theme | `PromptActor` | `PromptMsg` and core `AgentEvent` | prompt actor tests, event replay |
+| feed append/update/fold/scroll/select/follow | `ScrollbackActor` | `ScrollbackMsg` | feed reducer tests and YAML state assertions |
+| status/usage/theme/animation | `StatusActor` | `StatusMsg` and core/application events | status tests and visual matrix |
+| session append/reset/restore/flush | `SessionActor` | session mailbox messages and bus events | session actor tests |
+
+This closes the inventory item “unnamed TUI transition” for production actor
+APIs. The remaining direct methods on `Scrollback` and `PromptWidget` are
+reducer-local implementation details or compatibility constructors; they are
+not called by the production actor boundary. The next architectural change is
+therefore mechanical: retire the compatibility `EventRenderer` state mirror
+after its replay callers have moved to actor snapshots. It must not be
+replaced with another cross-actor mutation path.
+
+The separate strict color gap is tracked in p19/p25: the checked-in Grok cast
+is symbol-exact but was captured with terminal-default SGR, while Runie emits
+the selected Opaline theme tokens. `exact_attributes` must remain disabled for
+that contaminated reference until a same-theme, same-terminal-mode paired
+capture exists. This is an evidence gap, not permission to normalize colors or
+claim attribute parity.
 
 ## Exhaustiveness hardening
 
