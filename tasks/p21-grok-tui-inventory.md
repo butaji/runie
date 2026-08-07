@@ -445,7 +445,7 @@ Actor-owned fold intent (2026-08-06): added `ScrollbackMsg::ToggleToolMode`,
 which cycles a selected tool block between Grok-compatible expanded and
 collapsed states while preserving truncated output as retained state. The
 transition is pure reducer state owned by `ScrollbackActor`; selected-entry
-navigation and the live key-to-selection wiring remain open.
+navigation and live key-to-selection wiring are now actor-backed.
 The `tool_fold` YAML instruction now drives this reducer transition in replay,
 and the truncated activity fixture pins the resulting expanded mode.
 
@@ -458,16 +458,16 @@ Tool selection navigation (2026-08-06): empty-prompt Up/Down actions now
 publish actor-owned previous/next selection messages over projected tool IDs;
 selection wraps in transcript order and `e` folds the selected ID. Prompt
 history remains unchanged when the prompt contains text. Viewport-aware
-keyboard selection boxes and non-tool block entries are implemented; Grok's
-cell-range mouse selection remains open.
+keyboard selection boxes, non-tool block entries, and actor-owned cell-range
+mouse selection are implemented.
 
 Non-tool entry replay coverage (2026-08-06): `visual-activity-mixed.yaml`
 now drives `entry_next`/`entry_previous` through the scrollback actor after
 tool-ID selection and asserts the resulting logical selected-entry index and
 cleared tool ID. This pins the reducer boundary for Grok's mixed transcript
 navigation; the keyboard selection box is implemented and covered by the
-scrollback projection tests. The remaining selection work is Grok's separate
-mouse/text range model, not another keyboard box implementation.
+scrollback projection tests. The YAML `visual-selection-range.yaml` fixture
+now covers the separate mouse/text range model as well.
 
 Selection-surface source audit (2026-08-06): Grok's selected row uses the
 semantic `bg_visual` elevated surface across the row and `selection_border` at
@@ -479,7 +479,7 @@ be claimed as closed by the existing token test.
 
 ### Mouse/text selection contract (2026-08-07)
 
-The next implementation boundary is explicit. Grok's mouse drag is a
+The implemented event boundary is explicit. Grok's mouse drag is a
 transcript-cell selection, not an entry-index selection: the input layer owns
 an anchor cell and current head cell, normalizes reversed coordinates, and
 projects a rectangular range across wrapped rows. A split drag may begin and
@@ -488,13 +488,12 @@ viewport-relative row/column coordinates and rehydrated after scroll/resize;
 it must not be inferred from rendered text. Copy/view actions are effects
 after the reducer acknowledges the selected range.
 
-Runie's existing `SelectRange` stores logical feed indices and remains correct
-for keyboard navigation, but cannot represent this contract. The required
-event sequence is `MouseSelectionStart -> MouseSelectionExtend* ->
-MouseSelectionCommit/Clear`, reduced by the input/feed actor; the renderer may
-only paint a pure `SelectionSurface` projection using theme tokens. YAML must
-declare cell coordinates and assert the normalized range, selected text rows,
-and copy intent without invoking a clipboard in tests.
+Runie now represents this contract with viewport-relative cell coordinates. The
+event sequence `MouseSelectionStart -> MouseSelectionExtend* ->
+MouseSelectionCommit/Clear` is reduced by the feed actor; the renderer only
+paints a pure selection projection using theme tokens. YAML declares cell
+coordinates and asserts the normalized range, selected text rows, and copy
+intent without invoking a clipboard in tests.
 
 YAML selection oracle (2026-08-06): `tool_select: next|previous` replays
 through the same scrollback actor and `selected_tool_id` asserts the resulting
