@@ -401,6 +401,7 @@ impl App {
     /// live input and YAML replay. Process termination is deliberately left to
     /// the binary; every stateful command is reduced here through an event or
     /// mailbox and acknowledged before returning.
+    #[allow(clippy::too_many_lines)]
     pub async fn route_mappable_command(&self, command: MappableBuiltinCommand) -> bool {
         match command {
             MappableBuiltinCommand::NewSession => {
@@ -425,6 +426,11 @@ impl App {
                     return false;
                 };
                 self.loop_actor.set_model(selected).await;
+                true
+            }
+            MappableBuiltinCommand::ScopedModels => {
+                self.toggle_model_selector().await;
+                self.ui.send(UiMsg::ModelSelectorToggleScope).await;
                 true
             }
             MappableBuiltinCommand::Name { name } => {

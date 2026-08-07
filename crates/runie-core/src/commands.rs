@@ -80,6 +80,7 @@ pub enum MappableBuiltinCommand {
     Hotkeys,
     Quit,
     Model { reference: String },
+    ScopedModels,
     Name { name: String },
     Compact { instructions: Option<String> },
 }
@@ -92,6 +93,7 @@ pub fn parse_mappable_builtin_command(input: &str) -> Option<MappableBuiltinComm
         "/new" => Some(MappableBuiltinCommand::NewSession),
         "/hotkeys" => Some(MappableBuiltinCommand::Hotkeys),
         "/quit" => Some(MappableBuiltinCommand::Quit),
+        "/scoped-models" => Some(MappableBuiltinCommand::ScopedModels),
         "/compact" => Some(MappableBuiltinCommand::Compact { instructions: None }),
         value if value.starts_with("/compact ") => {
             let instructions = value[9..].trim();
@@ -175,6 +177,10 @@ mod tests {
             })
         );
         assert_eq!(parse_mappable_builtin_command("/quit now"), None);
+        assert_eq!(
+            parse_mappable_builtin_command("/scoped-models"),
+            Some(MappableBuiltinCommand::ScopedModels)
+        );
         assert_eq!(
             parse_mappable_builtin_command("/model openai/gpt-5"),
             Some(MappableBuiltinCommand::Model {

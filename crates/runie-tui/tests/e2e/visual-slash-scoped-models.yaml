@@ -1,0 +1,16 @@
+name: visual-slash-scoped-models
+description: Pi's /scoped-models command opens the actor-owned scoped selector.
+events: []
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    steps:
+      - "/scoped-models"
+      - Enter
+    ui:
+      model_selector_open: true
+      model_selector_scoped_only: true
+    screen_text:
+      - "Model Selector"
+      - "Models (scoped)"

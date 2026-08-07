@@ -57,7 +57,7 @@ provider-specific contract”. The source of truth is the current Pi tree at
    remain open.
    The model selector contract is now implemented through catalog/UI/loop
    actors, including async search, scoped rows, Ctrl-L routing, selection
-   commit, and YAML state/render coverage. Remaining command gaps are the
+   commit, `/scoped-models`, and YAML state/render coverage. Remaining command gaps are the
    other Pi commands not yet backed by an executable Runie capability.
 3. Cast-wide zero-diff coverage for every Pi lifecycle/error/abort family,
    including terminal capability variants and dynamic timing metadata.
