@@ -78,6 +78,8 @@ pub enum StopReason {
     Aborted,
     #[serde(rename = "pending")]
     Pending,
+    #[serde(rename = "deferred")]
+    Deferred,
 }
 
 #[cfg(test)]
@@ -93,6 +95,7 @@ mod stop_reason_tests {
             (StopReason::Error, "error"),
             (StopReason::Aborted, "aborted"),
             (StopReason::Pending, "pending"),
+            (StopReason::Deferred, "deferred"),
         ];
 
         for (reason, wire) in cases {

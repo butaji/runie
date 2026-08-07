@@ -474,6 +474,7 @@ pub enum StopReasonSpec {
     ToolUse,
     MaxTokens,
     Aborted,
+    Deferred,
 }
 
 impl From<&StopReasonSpec> for StopReason {
@@ -483,6 +484,7 @@ impl From<&StopReasonSpec> for StopReason {
             StopReasonSpec::ToolUse => StopReason::ToolUse,
             StopReasonSpec::MaxTokens => StopReason::MaxTokens,
             StopReasonSpec::Aborted => StopReason::Aborted,
+            StopReasonSpec::Deferred => StopReason::Deferred,
         }
     }
 }

@@ -1,0 +1,33 @@
+name: deferred-response
+description: Pi deferred stop reasons remain intact through YAML replay.
+initial_prompt: "defer this"
+tools: []
+events:
+  - start
+  - done: { stop_reason: deferred }
+assertions:
+  exact_events:
+    - agent_start
+    - turn_start
+    - message_start
+    - message_end
+    - message_start
+    - message_end
+    - turn_end
+    - agent_end
+  pi_events:
+    - agent_start
+    - turn_start
+    - message_start
+    - message_end
+    - message_start
+    - message_end
+    - turn_end
+    - agent_end
+  state:
+    status: ready
+    is_streaming: false
+    pending_tool_calls: 0
+    messages: 2
+  transcript_contains:
+    - "defer this"
