@@ -51,6 +51,10 @@ assertions:
     compaction_keep_recent_tokens: 20
     compaction_first_kept_entry_index: 1
     compaction_split_turn: true
+    compaction_history_indices: []
+    compaction_turn_prefix_indices: [0]
+    compaction_retained_indices: [1]
+    compaction_tokens_before: 80
   transcript_contains:
     - "Hello world"
     - "say hi"

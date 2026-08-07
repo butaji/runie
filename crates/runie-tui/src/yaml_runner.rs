@@ -967,6 +967,10 @@ pub struct StateAssertions {
     pub compaction_keep_recent_tokens: Option<u64>,
     pub compaction_first_kept_entry_index: Option<usize>,
     pub compaction_split_turn: Option<bool>,
+    pub compaction_history_indices: Option<Vec<usize>>,
+    pub compaction_turn_prefix_indices: Option<Vec<usize>>,
+    pub compaction_retained_indices: Option<Vec<usize>>,
+    pub compaction_tokens_before: Option<u64>,
     /// Termination metadata on the latest actor-owned session entry.
     pub session_last_terminate: Option<bool>,
     pub tool_count: Option<usize>,
@@ -2747,6 +2751,41 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
             cut.is_split_turn,
             "compaction_split_turn"
         );
+        if expected.compaction_history_indices.is_some()
+            || expected.compaction_turn_prefix_indices.is_some()
+            || expected.compaction_retained_indices.is_some()
+            || expected.compaction_tokens_before.is_some()
+        {
+            let preparation = runie_core::session::prepare_compaction_entries(
+                &outcome.session.entries,
+                estimates,
+                keep_recent,
+            )?
+            .ok_or_else(|| "compaction preparation unexpectedly empty".to_owned())?;
+            if let Some(expected) = &expected.compaction_history_indices {
+                assert_eq!(
+                    expected, &preparation.history_indices,
+                    "compaction_history_indices"
+                );
+            }
+            if let Some(expected) = &expected.compaction_turn_prefix_indices {
+                assert_eq!(
+                    expected, &preparation.turn_prefix_indices,
+                    "compaction_turn_prefix_indices"
+                );
+            }
+            if let Some(expected) = &expected.compaction_retained_indices {
+                assert_eq!(
+                    expected, &preparation.retained_indices,
+                    "compaction_retained_indices"
+                );
+            }
+            assert_yaml_eq!(
+                expected.compaction_tokens_before,
+                preparation.tokens_before,
+                "compaction_tokens_before"
+            );
+        }
     }
     assert_yaml_eq!(
         &expected.active_operations,

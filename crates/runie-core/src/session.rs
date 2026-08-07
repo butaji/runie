@@ -197,6 +197,48 @@ pub struct CompactionCutPoint {
     pub is_split_turn: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CompactionPreparation {
+    pub history_indices: Vec<usize>,
+    pub turn_prefix_indices: Vec<usize>,
+    pub retained_indices: Vec<usize>,
+    pub tokens_before: u64,
+    pub cut_point: CompactionCutPoint,
+}
+
+/// Build the pure payload for Pi's async compaction owner. Only index
+/// selection happens here; summary generation and journal publication remain
+/// separate event-driven operations.
+pub fn prepare_compaction_entries(
+    entries: &[SessionEntry],
+    token_estimates: &[u64],
+    keep_recent_tokens: u64,
+) -> Result<Option<CompactionPreparation>, String> {
+    if entries.is_empty() {
+        return Ok(None);
+    }
+    let cut_point = find_compaction_cut_point(
+        entries,
+        token_estimates,
+        0,
+        entries.len(),
+        keep_recent_tokens,
+    )?;
+    let history_end = cut_point
+        .turn_start_index
+        .unwrap_or(cut_point.first_kept_entry_index);
+    Ok(Some(CompactionPreparation {
+        history_indices: (0..history_end).collect(),
+        turn_prefix_indices: cut_point
+            .turn_start_index
+            .map(|start| (start..cut_point.first_kept_entry_index).collect())
+            .unwrap_or_default(),
+        retained_indices: (cut_point.first_kept_entry_index..entries.len()).collect(),
+        tokens_before: token_estimates.iter().sum(),
+        cut_point,
+    }))
+}
+
 /// Select Pi's recent-context cut point without performing summarization.
 /// `token_estimates` is supplied by the caller so estimation policy stays
 /// explicit and testable; entries that cannot begin a turn (tool results) are
@@ -1508,6 +1550,35 @@ mod tests {
         assert_eq!(cut.first_kept_entry_index, 1);
         assert_eq!(cut.turn_start_index, Some(0));
         assert!(cut.is_split_turn);
+    }
+
+    #[test]
+    fn compaction_preparation_partitions_history_prefix_and_tail() {
+        let entries = vec![
+            SessionEntry {
+                id: "user-1".into(),
+                seq: 1,
+                parent_id: None,
+                timestamp: 0,
+                message: user("request"),
+                terminate: false,
+            },
+            SessionEntry {
+                id: "assistant-1".into(),
+                seq: 2,
+                parent_id: Some("user-1".into()),
+                timestamp: 0,
+                message: AgentMessage::Assistant(Default::default()),
+                terminate: false,
+            },
+        ];
+        let preparation = prepare_compaction_entries(&entries, &[40, 40], 20)
+            .expect("preparation")
+            .expect("non-empty");
+        assert!(preparation.history_indices.is_empty());
+        assert_eq!(preparation.turn_prefix_indices, vec![0]);
+        assert_eq!(preparation.retained_indices, vec![1]);
+        assert_eq!(preparation.tokens_before, 80);
     }
 
     #[test]

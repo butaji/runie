@@ -91,6 +91,10 @@ the async summarization owner. Unit coverage pins the split-turn behavior.
 The YAML runner now accepts runtime token estimates and cut-point assertions;
 `hello-streaming.yaml` exercises the contract without recompilation.
 
+The same fixture now asserts the full pure preparation partition: history,
+split-turn prefix, retained tail, and `tokens_before`. Async summarization and
+event publication remain separate because they require an owned actor.
+
 ## Current Runie mapping
 
 `runie-core/src/session.rs` owns parent-linked message/config entries and
