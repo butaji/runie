@@ -215,3 +215,13 @@ synthetic header consumes the first hidden slot; this is source-aligned and is
 covered by the dense-group YAML oracle. The next TUI-only gap is Grok's
 mouse/text-selection box and per-member selection surface, which requires an
 explicit interaction event contract before implementation.
+
+## Selection-range event slice (2026-08-07)
+
+`FeedState` now owns `selection_anchor` and `selection_head`, with
+`ScrollbackMsg::SelectRange`/`ClearSelection` as the only transition inputs.
+The YAML `select_range` event and `visual-selection-range.yaml` fixture verify
+the values after the real actor replay and after model-to-widget snapshot
+rehydration. This is the state boundary needed before mapping crossterm mouse
+coordinates; cell-range painting and clipboard actions remain separate
+renderer/input work and are not claimed complete here.

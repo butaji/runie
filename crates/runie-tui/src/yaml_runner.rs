@@ -288,6 +288,9 @@ pub enum EventSpec {
     ToolSelect {
         tool_select: String,
     },
+    SelectRange {
+        select_range: SelectionRangeSpec,
+    },
     Scroll {
         scroll: i32,
     },
@@ -604,6 +607,7 @@ impl EventSpec {
             Self::ToolMode { .. } => None,
             Self::ToolFold { .. } => None,
             Self::ToolSelect { .. } => None,
+            Self::SelectRange { .. } => None,
             Self::Scroll { .. } => None,
             Self::AnimationTicks { .. } => None,
             Self::LayoutMeasured { .. } => None,
@@ -830,6 +834,8 @@ pub struct StateAssertions {
     pub selected_tool_id: Option<String>,
     pub selected_entry: Option<usize>,
     pub selected_member_index: Option<usize>,
+    pub selection_anchor: Option<usize>,
+    pub selection_head: Option<usize>,
     pub autoscroll: Option<bool>,
     pub scroll_offset: Option<usize>,
     pub measured_content_rows: Option<usize>,
@@ -1595,6 +1601,10 @@ fn declared_navigation(scenario: &Scenario) -> Vec<ScrollbackMsg> {
                 viewport_rows: layout_measured.viewport_rows,
                 anchor_row: layout_measured.anchor_row,
             }),
+            EventSpec::SelectRange { select_range } => Some(ScrollbackMsg::SelectRange {
+                anchor: select_range.anchor,
+                head: select_range.head,
+            }),
             _ => None,
         })
         .collect()
@@ -1606,6 +1616,12 @@ pub struct LayoutMeasuredSpec {
     pub viewport_rows: usize,
     #[serde(default)]
     pub anchor_row: Option<usize>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct SelectionRangeSpec {
+    pub anchor: usize,
+    pub head: usize,
 }
 
 fn declared_tool_seeds(scenario: &Scenario) -> Vec<ScrollbackMsg> {
@@ -2136,6 +2152,16 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
             ));
         }
     }
+    assert_yaml_eq!(
+        expected.selection_anchor.map(Some),
+        outcome.feed.selection_anchor,
+        "selection_anchor"
+    );
+    assert_yaml_eq!(
+        expected.selection_head.map(Some),
+        outcome.feed.selection_head,
+        "selection_head"
+    );
     if let Some(expected) = expected.scroll_offset {
         if outcome.feed.scroll_offset != expected {
             return Err(format!(

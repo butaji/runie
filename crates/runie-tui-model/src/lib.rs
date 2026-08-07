@@ -207,6 +207,8 @@ mod tests {
             follow_latest_user: true,
             selected_tool_id: None,
             selected_entry: None,
+            selection_anchor: None,
+            selection_head: None,
             selected_member_index: None,
             theme: ThemeKind::GrokNight,
             animation_frame: 0,

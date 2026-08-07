@@ -224,6 +224,8 @@ impl Scrollback {
         scrollback.navigation.animation_frame = snapshot.animation_frame;
         scrollback.navigation.selected_tool_id = snapshot.selected_tool_id;
         scrollback.navigation.selected_entry = snapshot.selected_entry;
+        scrollback.navigation.selection_anchor = snapshot.selection_anchor;
+        scrollback.navigation.selection_head = snapshot.selection_head;
         scrollback.navigation.tool_modes = snapshot.tool_modes;
         scrollback.navigation.revealed_dense_groups = snapshot.revealed_dense_groups;
         scrollback.navigation.center_revealed_entry = snapshot.center_revealed_entry;
@@ -350,6 +352,12 @@ impl Scrollback {
             }
             ScrollbackMsg::ToggleToolMode(id) => {
                 self.reduce_model(ScrollbackMsg::ToggleToolMode(id));
+            }
+            ScrollbackMsg::SelectRange { anchor, head } => {
+                self.reduce_model(ScrollbackMsg::SelectRange { anchor, head });
+            }
+            ScrollbackMsg::ClearSelection => {
+                self.reduce_model(ScrollbackMsg::ClearSelection);
             }
             ScrollbackMsg::SelectNextTool => self.reduce_model(ScrollbackMsg::SelectNextTool),
             ScrollbackMsg::SelectPreviousTool => {
@@ -741,6 +749,8 @@ impl Scrollback {
             selected_tool_id: self.navigation.selected_tool_id.clone(),
             selected_entry: self.navigation.selected_entry,
             selected_member_index,
+            selection_anchor: self.navigation.selection_anchor,
+            selection_head: self.navigation.selection_head,
             theme: self.navigation.theme,
             animation_frame: self.navigation.animation_frame,
             tool_modes: self.navigation.tool_modes.clone(),

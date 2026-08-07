@@ -71,6 +71,8 @@ pub struct FeedSnapshot {
     pub selected_tool_id: Option<String>,
     pub selected_entry: Option<usize>,
     pub selected_member_index: Option<usize>,
+    pub selection_anchor: Option<usize>,
+    pub selection_head: Option<usize>,
     pub theme: ThemeKind,
     pub animation_frame: usize,
     pub tool_modes: HashMap<String, ToolDisplayMode>,
@@ -90,6 +92,8 @@ pub struct FeedNavigation {
     pub follow_latest_user: bool,
     pub selected_tool_id: Option<String>,
     pub selected_entry: Option<usize>,
+    pub selection_anchor: Option<usize>,
+    pub selection_head: Option<usize>,
     pub animation_frame: usize,
     pub reasoning_expanded: bool,
     pub activity_expanded: bool,
@@ -125,6 +129,8 @@ impl Default for FeedNavigation {
             follow_latest_user: false,
             selected_tool_id: None,
             selected_entry: None,
+            selection_anchor: None,
+            selection_head: None,
             animation_frame: 0,
             reasoning_expanded: false,
             activity_expanded: false,
@@ -989,6 +995,11 @@ pub enum ScrollbackMsg {
     },
     SetToolMode(String, ToolDisplayMode),
     ToggleToolMode(String),
+    SelectRange {
+        anchor: usize,
+        head: usize,
+    },
+    ClearSelection,
     SelectNextTool,
     SelectPreviousTool,
     SelectNextEntry,
@@ -1066,6 +1077,10 @@ pub struct FeedState {
 }
 
 impl FeedState {
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the immutable feed projection keeps every actor-owned fact explicit"
+    )]
     pub fn snapshot(&self) -> FeedSnapshot {
         let selected_member_index = self.selected_member_index();
         FeedSnapshot {
@@ -1097,6 +1112,8 @@ impl FeedState {
             follow_latest_user: self.navigation.follow_latest_user,
             selected_tool_id: self.navigation.selected_tool_id.clone(),
             selected_entry: self.navigation.selected_entry,
+            selection_anchor: self.navigation.selection_anchor,
+            selection_head: self.navigation.selection_head,
             selected_member_index,
             theme: self.navigation.theme,
             animation_frame: self.navigation.animation_frame,
@@ -1213,6 +1230,14 @@ impl FeedState {
                 }
             }
             ScrollbackMsg::ToggleToolMode(id) => self.toggle_tool_mode(&id),
+            ScrollbackMsg::SelectRange { anchor, head } => {
+                self.navigation.selection_anchor = Some(anchor);
+                self.navigation.selection_head = Some(head);
+            }
+            ScrollbackMsg::ClearSelection => {
+                self.navigation.selection_anchor = None;
+                self.navigation.selection_head = None;
+            }
             ScrollbackMsg::SelectNextTool => self.select_tool(1),
             ScrollbackMsg::SelectPreviousTool => self.select_tool(-1),
             ScrollbackMsg::SelectNextEntry => self.select_entry(1),
