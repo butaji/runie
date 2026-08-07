@@ -13,6 +13,16 @@ events:
       mode: expanded
   - done: { stop_reason: tool_use }
 assertions:
+  state:
+    session_tool_started:
+      - runId: run-1
+        assistantEntryId: entry-2
+        toolIndex: 0
+        toolCallId: call-1
+        toolName: echo
+        effectiveArgs: { value: hello }
+        resultEntryId: entry-3
+        replay: never
   visual:
     cols: 80
     rows: 30

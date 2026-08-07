@@ -986,6 +986,8 @@ pub struct StateAssertions {
     pub session_step_run_ids: Option<Vec<String>>,
     /// Ordered actor-owned assistant step result entry IDs.
     pub session_step_result_entry_ids: Option<Vec<String>>,
+    /// Complete actor-produced Pi `tool_started` payloads, in lane order.
+    pub session_tool_started: Option<Vec<serde_json::Value>>,
     /// Message entry IDs selected after the newest compaction boundary.
     pub compaction_context_entry_ids: Option<Vec<String>>,
     /// Internal Pi context-message roles after compaction, before provider
@@ -2866,6 +2868,20 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
                     "session step result IDs mismatch: expected {expected:?}, got {actual:?}"
                 ));
             }
+        }
+    }
+    if let Some(expected_tools) = &expected.session_tool_started {
+        let actual_tools = outcome
+            .session
+            .lane_records
+            .iter()
+            .filter(|record| record.record_type == "tool_started")
+            .map(|record| record.data.clone())
+            .collect::<Vec<_>>();
+        if &actual_tools != expected_tools {
+            return Err(format!(
+                "session tool-start records mismatch: expected {expected_tools:?}, got {actual_tools:?}"
+            ));
         }
     }
     if let Some(expected_ids) = &expected.compaction_context_entry_ids {

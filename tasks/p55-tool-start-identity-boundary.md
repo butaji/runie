@@ -1,7 +1,7 @@
 # p55 — Pi `tool_started` identity boundary
 
-Status: in progress — actor-owned identity and pending ordering implemented;
-YAML oracle and replay reservation coverage remain (2026-08-08)
+Status: in progress — actor-owned identity, pending ordering, and YAML oracle
+implemented; persisted pending replay remains open (2026-08-08)
 
 ## First implementation slice (2026-08-08)
 
@@ -18,6 +18,9 @@ assistant entry supplies the context; the bridge no longer constructs or
 publishes a partial session record. Pending facts are cleared on reset.
 Persisted replay of pending, not-yet-admitted starts remains open because Pi
 does not journal an incomplete `tool_started` record.
+
+`visual-tool.yaml` now asserts the complete tool-start payload through the
+runtime YAML state DSL, including actor-issued assistant and result identities.
 
 ## Source contract
 
