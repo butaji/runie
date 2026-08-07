@@ -197,3 +197,11 @@ The generic `HttpActor` boundary now rejects `websocket` and
 `sse` and `auto` retain the existing HTTP path. This is an explicit event/
 request outcome and prevents a false Pi-parity claim until the provider-scoped
 WebSocket adapter exists; a focused async test pins the rejection contract.
+
+## Deferred capability boundary (2026-08-07)
+
+`ProviderActor` now exposes owned `FetchDeferred` and `CancelDeferred` mailbox
+commands. `StreamFn` supplies explicit default unsupported errors for adapters
+without these capabilities. Successful deferred fetches use the same
+actor-owned, joined stream pump as normal requests; no task is detached and
+generic HTTP is not reinterpreted as deferred-provider behavior.

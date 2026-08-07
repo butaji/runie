@@ -119,6 +119,30 @@ pub trait StreamFn: Send + Sync + 'static {
         context: &crate::types::AgentContext,
         options: Option<SimpleStreamOptions>,
     ) -> Result<AssistantMessageEventStream, StreamError>;
+
+    /// Optional Pi deferred-response polling capability.
+    async fn fetch_deferred(
+        &self,
+        _model: &Model,
+        _handle: &crate::types::DeferredHandle,
+        _options: Option<SimpleStreamOptions>,
+    ) -> Result<AssistantMessageEventStream, StreamError> {
+        Err(StreamError::Invalid(
+            "provider does not support deferred responses".into(),
+        ))
+    }
+
+    /// Optional Pi deferred-response cancellation capability.
+    async fn cancel_deferred(
+        &self,
+        _model: &Model,
+        _handle: &crate::types::DeferredHandle,
+        _options: Option<SimpleStreamOptions>,
+    ) -> Result<(), StreamError> {
+        Err(StreamError::Invalid(
+            "provider cannot cancel deferred responses".into(),
+        ))
+    }
 }
 
 #[cfg(test)]

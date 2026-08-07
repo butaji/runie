@@ -25,6 +25,23 @@ pub enum ProviderCommand {
     Cancel {
         reply: oneshot::Sender<()>,
     },
+    FetchDeferred {
+        model: Box<Model>,
+        handle: crate::types::DeferredHandle,
+        options: Box<Option<SimpleStreamOptions>>,
+        reply: oneshot::Sender<
+            Result<
+                broadcast::Receiver<crate::types::AssistantMessageEvent>,
+                crate::provider::stream_fn::StreamError,
+            >,
+        >,
+    },
+    CancelDeferred {
+        model: Box<Model>,
+        handle: crate::types::DeferredHandle,
+        options: Box<Option<SimpleStreamOptions>>,
+        reply: oneshot::Sender<Result<(), crate::provider::stream_fn::StreamError>>,
+    },
 }
 
 #[derive(Clone)]
@@ -69,6 +86,55 @@ impl ProviderActor {
 
     pub async fn cancel(&self) {
         let _ = mailbox_ack!(self.tx, |reply| ProviderCommand::Cancel { reply });
+    }
+
+    pub async fn fetch_deferred(
+        &self,
+        model: Model,
+        handle: crate::types::DeferredHandle,
+        options: Option<SimpleStreamOptions>,
+    ) -> Result<
+        broadcast::Receiver<crate::types::AssistantMessageEvent>,
+        crate::provider::stream_fn::StreamError,
+    > {
+        let (reply_tx, reply_rx) = oneshot::channel();
+        let _ = self
+            .tx
+            .send(ProviderCommand::FetchDeferred {
+                model: Box::new(model),
+                handle,
+                options: Box::new(options),
+                reply: reply_tx,
+            })
+            .await;
+        reply_rx.await.unwrap_or_else(|_| {
+            Err(crate::provider::stream_fn::StreamError::Invalid(
+                "provider actor stopped".into(),
+            ))
+        })
+    }
+
+    pub async fn cancel_deferred(
+        &self,
+        model: Model,
+        handle: crate::types::DeferredHandle,
+        options: Option<SimpleStreamOptions>,
+    ) -> Result<(), crate::provider::stream_fn::StreamError> {
+        let (reply_tx, reply_rx) = oneshot::channel();
+        let _ = self
+            .tx
+            .send(ProviderCommand::CancelDeferred {
+                model: Box::new(model),
+                handle,
+                options: Box::new(options),
+                reply: reply_tx,
+            })
+            .await;
+        reply_rx.await.unwrap_or_else(|_| {
+            Err(crate::provider::stream_fn::StreamError::Invalid(
+                "provider actor stopped".into(),
+            ))
+        })
     }
 }
 
@@ -150,6 +216,33 @@ async fn run_provider_worker(
                 pumps.abort_all();
                 let _ = reply.send(());
             }
+            ProviderCommand::FetchDeferred {
+                model,
+                handle,
+                options,
+                reply,
+            } => {
+                let (event_tx, _) = broadcast::channel(STREAM_CAPACITY);
+                match stream_fn.fetch_deferred(&model, &handle, *options).await {
+                    Ok(stream) => {
+                        let receiver = event_tx.subscribe();
+                        pumps.spawn(pump_stream(stream, event_tx, None));
+                        let _ = reply.send(Ok(receiver));
+                    }
+                    Err(error) => {
+                        let _ = reply.send(Err(error));
+                    }
+                }
+            }
+            ProviderCommand::CancelDeferred {
+                model,
+                handle,
+                options,
+                reply,
+            } => {
+                let result = stream_fn.cancel_deferred(&model, &handle, *options).await;
+                let _ = reply.send(result);
+            }
         }
     }
 }
@@ -178,8 +271,8 @@ mod tests {
     use super::*;
     use crate::provider::stream_fn::StreamError;
     use crate::types::{
-        AgentContext, AssistantMessage, AssistantMessageEvent, Model, SimpleStreamOptions,
-        StopReason, Usage,
+        AgentContext, AssistantMessage, AssistantMessageEvent, DeferredHandle, Model,
+        SimpleStreamOptions, StopReason, Usage,
     };
     use futures::stream;
 
@@ -331,6 +424,36 @@ mod tests {
             rx.recv().await.unwrap(),
             crate::types::AssistantMessageEvent::Error { error, .. }
                 if error.error_text() == "api: bad request"
+        ));
+    }
+
+    #[tokio::test]
+    async fn unsupported_deferred_commands_return_explicit_capability_errors() {
+        let actor = ProviderActor::new(std::sync::Arc::new(ThreeEventFn));
+        let handle = DeferredHandle {
+            provider: "test".into(),
+            model_id: "test".into(),
+            api: "test".into(),
+            id: "deferred-1".into(),
+            expires_at: None,
+            poll_after_ms: None,
+            data: None,
+        };
+
+        let fetch = actor
+            .fetch_deferred(Model::default(), handle.clone(), None)
+            .await;
+        assert!(matches!(
+            fetch,
+            Err(StreamError::Invalid(message))
+                if message == "provider does not support deferred responses"
+        ));
+
+        let cancel = actor.cancel_deferred(Model::default(), handle, None).await;
+        assert!(matches!(
+            cancel,
+            Err(StreamError::Invalid(message))
+                if message == "provider cannot cancel deferred responses"
         ));
     }
 }
