@@ -39,6 +39,8 @@ assertions:
       - custom
       - compaction
       - operation_started
+    active_operations:
+      op-1: started
   visual:
     cols: 80
     rows: 24

@@ -935,6 +935,7 @@ pub struct StateAssertions {
     /// Arguments on the latest assistant tool call after preparation.
     pub tool_call_arguments: Option<serde_json::Value>,
     pub session_entries: Option<usize>,
+    pub active_operations: Option<BTreeMap<String, String>>,
     /// Ordered Pi session configuration-record kinds from the actor journal.
     pub session_config_records: Option<Vec<String>>,
     /// Termination metadata on the latest actor-owned session entry.
@@ -2527,6 +2528,11 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
             ));
         }
     }
+    assert_yaml_eq!(
+        &expected.active_operations,
+        &outcome.session.active_operations,
+        "active_operations"
+    );
     if let Some(expected_terminate) = expected.session_last_terminate {
         let actual_terminate = outcome
             .session

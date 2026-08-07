@@ -5,7 +5,10 @@
 //! provider adapters. Storage backends can consume the immutable snapshot
 //! later without becoming a second state owner.
 
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{BTreeMap, HashMap},
+    sync::Arc,
+};
 
 use tokio::sync::{mpsc, oneshot, watch};
 
@@ -81,6 +84,9 @@ pub struct SessionSnapshot {
     /// Message `entries` remains the compatibility projection for existing
     /// callers; these records never become synthetic messages.
     pub config_records: Vec<SessionConfigEntry>,
+    /// Reducer-owned operation lifecycle projection keyed by Pi operation ID.
+    /// Values are `started` or `aborted`; finished operations are removed.
+    pub active_operations: BTreeMap<String, String>,
 }
 
 impl SessionSnapshot {
@@ -497,6 +503,38 @@ impl SessionActor {
                         };
                         state.leaf_id = Some(id);
                         state.config_records.push(entry);
+                        if let SessionConfigRecord::OperationRecordCreated { record_type, data } =
+                            state
+                                .config_records
+                                .last()
+                                .expect("record was just inserted")
+                                .record
+                                .clone()
+                        {
+                            let operation_id = data
+                                .get("id")
+                                .or_else(|| data.get("runId"))
+                                .and_then(serde_json::Value::as_str)
+                                .map(str::to_owned);
+                            if let Some(operation_id) = operation_id {
+                                match record_type.as_str() {
+                                    "operation_started" => {
+                                        state
+                                            .active_operations
+                                            .insert(operation_id, "started".into());
+                                    }
+                                    "abort_requested" => {
+                                        state
+                                            .active_operations
+                                            .insert(operation_id, "aborted".into());
+                                    }
+                                    "operation_finished" => {
+                                        state.active_operations.remove(&operation_id);
+                                    }
+                                    _ => {}
+                                }
+                            }
+                        }
                         let _ = snapshot_tx.send(state.clone());
                         let _ = reply.send(());
                     }
@@ -861,6 +899,30 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn operation_records_reduce_to_owned_lifecycle_state() {
+        let bus = EventBus::new();
+        let actor = SessionActor::new_with_bus(&bus);
+        bus.publish(AgentEvent::OperationRecordCreated {
+            record_type: "operation_started".into(),
+            data: serde_json::json!({"id": "op-1"}),
+        });
+        actor.flush().await;
+        assert_eq!(actor.snapshot().active_operations["op-1"], "started");
+        bus.publish(AgentEvent::OperationRecordCreated {
+            record_type: "abort_requested".into(),
+            data: serde_json::json!({"id": "op-1"}),
+        });
+        actor.flush().await;
+        assert_eq!(actor.snapshot().active_operations["op-1"], "aborted");
+        bus.publish(AgentEvent::OperationRecordCreated {
+            record_type: "operation_finished".into(),
+            data: serde_json::json!({"id": "op-1"}),
+        });
+        actor.flush().await;
+        assert!(actor.snapshot().active_operations.is_empty());
+    }
+
+    #[tokio::test]
     async fn bus_tool_termination_is_attached_to_the_owned_session_entry() {
         let bus = EventBus::new();
         let actor = SessionActor::new_with_bus(&bus);
@@ -916,6 +978,7 @@ mod tests {
                 terminate: true,
             }],
             config_records: Vec::new(),
+            active_operations: BTreeMap::new(),
         };
         let jsonl = snapshot.to_jsonl("session-1", 5, "/workspace");
         assert!(jsonl.contains("\"terminate\":true"));
@@ -949,6 +1012,7 @@ mod tests {
                     },
                 },
             ],
+            active_operations: BTreeMap::new(),
         };
         let jsonl = snapshot.to_jsonl("session-1", 5, "/workspace");
         assert!(jsonl.contains("\"type\":\"thinking_level_change\""));
