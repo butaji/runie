@@ -73,3 +73,9 @@ Response incomplete evidence (2026-08-08): `response.incomplete` with
 `StopReason::MaxTokens`; other incomplete reasons reduce to `Error`, matching
 Pi's `mapStopReason`. The 183-trace replay matrix was rerun after preserving
 the legacy chat-completions tool ordering contract.
+
+Response usage evidence (2026-08-08): terminal Responses usage now maps
+`input_tokens`, `output_tokens`, `total_tokens`, cached input tokens, and
+reasoning tokens into Runie's existing `Usage` payload on the acknowledged
+assistant `Done` event. The full workspace gate and replay matrix pass; cost
+calculation and live provider transport remain adapter-specific open work.

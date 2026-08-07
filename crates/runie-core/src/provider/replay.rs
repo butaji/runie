@@ -61,6 +61,7 @@ impl ReplayProvider {
         }];
         let mut finished = false;
         let mut stop_reason = StopReason::Stop;
+        let mut usage = Usage::default();
         let mut tool_calls = std::collections::BTreeMap::<usize, (String, String, String)>::new();
         for line in input.lines() {
             if let Some(raw_error) = line.strip_prefix("error:").map(str::trim_start) {
@@ -90,12 +91,13 @@ impl ReplayProvider {
             if has_terminal_marker(&value) {
                 finished = true;
                 stop_reason = response_stop_reason(&value);
+                usage = response_usage(&value);
             }
         }
         if !finished {
             return Err(StreamError::Invalid("trace has no terminal event".into()));
         }
-        finish_replay_events(&mut events, tool_calls, stop_reason);
+        finish_replay_events(&mut events, tool_calls, stop_reason, usage);
         Ok(Self {
             events,
             calls: AtomicUsize::new(0),
@@ -141,10 +143,44 @@ fn response_stop_reason(value: &serde_json::Value) -> StopReason {
     }
 }
 
+fn response_usage(value: &serde_json::Value) -> Usage {
+    let Some(raw) = value.pointer("/response/usage") else {
+        return Usage::default();
+    };
+    let input = raw
+        .get("input_tokens")
+        .and_then(|v| v.as_u64())
+        .unwrap_or_default();
+    let output = raw
+        .get("output_tokens")
+        .and_then(|v| v.as_u64())
+        .unwrap_or_default();
+    let cache_read = raw
+        .pointer("/input_tokens_details/cached_tokens")
+        .and_then(|v| v.as_u64())
+        .unwrap_or_default();
+    let reasoning = raw
+        .pointer("/output_tokens_details/reasoning_tokens")
+        .and_then(|v| v.as_u64())
+        .unwrap_or_default();
+    Usage {
+        input: input.saturating_sub(cache_read),
+        output,
+        cache_read,
+        total_tokens: raw
+            .get("total_tokens")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(input.saturating_add(output)),
+        reasoning,
+        ..Usage::default()
+    }
+}
+
 fn finish_replay_events(
     events: &mut Vec<AssistantMessageEvent>,
     tool_calls: std::collections::BTreeMap<usize, (String, String, String)>,
     stop_reason: StopReason,
+    usage: Usage,
 ) {
     for (_, (id, name, arguments)) in tool_calls {
         let args = serde_json::from_str(&arguments)
@@ -162,7 +198,7 @@ fn finish_replay_events(
     }
     events.push(AssistantMessageEvent::Done {
         stop_reason,
-        usage: Usage::default(),
+        usage,
         message: None,
     });
 }
@@ -428,7 +464,7 @@ mod tests {
         let provider = ReplayProvider::from_sse_body(
             "data: {\"type\":\"response.created\",\"response\":{\"id\":\"r1\"}}\n\
              data: {\"type\":\"response.output_text.delta\",\"delta\":\"hello\"}\n\
-             data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\"}}\n",
+             data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":12,\"output_tokens\":7,\"total_tokens\":19,\"input_tokens_details\":{\"cached_tokens\":3},\"output_tokens_details\":{\"reasoning_tokens\":2}}}}\n",
         )
         .expect("Responses trace");
         let mut events = provider
@@ -451,8 +487,13 @@ mod tests {
             events.next().await,
             Some(AssistantMessageEvent::Done {
                 stop_reason: StopReason::Stop,
+                usage,
                 ..
-            })
+            }) if usage.input == 9
+                && usage.output == 7
+                && usage.cache_read == 3
+                && usage.reasoning == 2
+                && usage.total_tokens == 19
         ));
     }
 
