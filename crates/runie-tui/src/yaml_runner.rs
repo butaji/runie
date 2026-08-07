@@ -831,6 +831,8 @@ pub struct StateAssertions {
     pub follow_up_mode: Option<runie_core::types::QueueMode>,
     pub loop_running: Option<bool>,
     pub abort_requested: Option<bool>,
+    /// Whether the feed actor still considers a turn lifecycle open.
+    pub turn_started: Option<bool>,
     pub tool_execution: Option<ToolExecutionMode>,
     /// Exact actor-owned workflow projections keyed by their stable run id.
     /// YAML owns the expected state; the runner only performs generic field
@@ -1997,6 +1999,11 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         expected.abort_requested,
         outcome.abort_requested,
         "abort_requested"
+    );
+    assert_yaml_eq!(
+        expected.turn_started,
+        outcome.feed.turn_started,
+        "turn_started"
     );
     assert_yaml_eq!(
         expected.tool_execution,

@@ -61,6 +61,8 @@ are explicit reducer messages and `FeedSnapshot.turn_started` determines
 whether the production path emits Grok's terminal `Worked for` row. The
 renderer no longer uses its lifecycle flag for production summary eligibility;
 the compatibility reducer remains available for synchronous tests.
+The baseline `visual-hey.yaml` fixture now asserts the final `false` value
+directly from the feed snapshot.
 
 ## Acceptance evidence
 
