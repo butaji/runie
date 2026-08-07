@@ -90,3 +90,6 @@ kinds and payloads through `OperationRecordCreated`, the actor journal, JSONL,
 and YAML replay. It is deliberately lossless transport, not an implementation
 of Pi's operation admission/reducer policy; those semantics remain the next
 operation-lane task.
+
+`visual-operation-lifecycle.yaml` now exercises start → abort → finish and
+asserts the final empty `active_operations` projection entirely at runtime.

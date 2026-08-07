@@ -1,0 +1,26 @@
+name: visual-operation-lifecycle
+description: >-
+  Operation-lane records reduce through the SessionActor lifecycle projection.
+events:
+  - operation_record:
+      record_type: operation_started
+      data:
+        id: op-yaml
+        lane: main
+  - operation_record:
+      record_type: abort_requested
+      data:
+        id: op-yaml
+        lane: main
+  - operation_record:
+      record_type: operation_finished
+      data:
+        id: op-yaml
+        lane: main
+assertions:
+  state:
+    session_config_records:
+      - operation_started
+      - abort_requested
+      - operation_finished
+    active_operations: {}
