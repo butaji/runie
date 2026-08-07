@@ -465,6 +465,13 @@ that same phase trail by `run_id`; the YAML lifecycle oracle asserts the final
 single-card projection. Richer per-phase glyphs and exact Grok spacing remain
 an attribute-level follow-up.
 
+Workflow phase paint parity (2026-08-06): the renderer now consumes the
+event-reduced phase trail without reparsing lifecycle state. Phase markers are
+resolved as semantic theme spans: `✓` success, `●` active, `✗` failed/error,
+and `○` pending; trailing agent-count metadata remains muted. This closes the
+previous all-muted phase-trail styling gap while leaving exact Grok spacing and
+any richer structured phase metadata open.
+
 Workflow card typography parity (2026-08-06): the Grok source renderer formats
 terminal status before the objective (`name done in duration: objective`),
 renders phase states as `✓`/`●`/`○`, and only shows active-agent count while

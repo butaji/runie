@@ -698,3 +698,10 @@ emit Grok's explicit `✗` marker instead of the pending `○` fallback; the
 terminal-state YAML replay oracle covers the visible result. The remaining
 workflow gap is per-span phase styling/layout and richer structured metadata,
 not state delivery or terminal glyph selection.
+
+Workflow phase semantic spans (2026-08-06): workflow trail markers now retain
+their model-produced meaning through the pure renderer boundary. Success,
+active, error, and pending markers resolve through Opaline theme tokens while
+the phase names, delimiters, objective, and agent-count suffix stay in the
+event-derived muted body style. The focused workflow tests verify both marker
+selection and token roles; exact Grok spacing remains open.

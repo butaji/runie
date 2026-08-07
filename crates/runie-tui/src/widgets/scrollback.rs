@@ -1829,14 +1829,42 @@ fn styled_line_for(kind: LineKind, text: &str, theme: ThemeKind) -> RatLine<'sta
             } else {
                 appearance::muted_style_for(theme)
             };
-            return RatLine::from(vec![
+            let mut spans = vec![
                 Span::styled(prefix.to_owned(), style),
                 Span::styled(
                     "Workflow ".to_owned(),
                     appearance::muted_style_for(theme).add_modifier(Modifier::BOLD),
                 ),
-                Span::styled(rest.to_owned(), body_style),
-            ]);
+            ];
+            if let Some(trail_start) = rest.rfind("  [") {
+                let head = &rest[..trail_start];
+                let trail = &rest[trail_start + 3..];
+                spans.push(Span::styled(format!("{head}  ["), body_style));
+                if let Some(trail_end) = trail.find(']') {
+                    let trail_body = &trail[..trail_end];
+                    for (index, phase) in trail_body.split(" · ").enumerate() {
+                        if index > 0 {
+                            spans.push(Span::styled(" · ".to_owned(), body_style));
+                        }
+                        let (phase_style, mark) = match phase.chars().last() {
+                            Some('✓') => (appearance::success_style_for(theme), '✓'),
+                            Some('✗') => (appearance::error_style_for(theme), '✗'),
+                            Some('●') => (appearance::accent_style_for(theme), '●'),
+                            _ => (body_style, '○'),
+                        };
+                        let phase_name = phase.strip_suffix(mark).unwrap_or(phase);
+                        spans.push(Span::styled(phase_name.to_owned(), body_style));
+                        spans.push(Span::styled(mark.to_string(), phase_style));
+                    }
+                    spans.push(Span::styled("]".to_owned(), body_style));
+                    spans.push(Span::styled(trail[trail_end + 1..].to_owned(), body_style));
+                } else {
+                    spans.push(Span::styled(trail.to_owned(), body_style));
+                }
+            } else {
+                spans.push(Span::styled(rest.to_owned(), body_style));
+            }
+            return RatLine::from(spans);
         }
         for label in ["Web Search", "Memory Search", "Search Tools"] {
             if let Some(rest) = body.strip_prefix(label) {
@@ -3550,8 +3578,9 @@ mod tests {
             "◆ Workflow release: ship it  [tests ●]  (2 agents)",
             ThemeKind::GrokNight,
         );
-        assert_eq!(running.spans.len(), 3);
         assert!(running.spans[1].style.add_modifier.contains(Modifier::BOLD));
+        assert!(running.spans.iter().any(|span| span.content == "●"
+            && span.style.fg == appearance::accent_style_for(ThemeKind::GrokNight).fg));
         assert_eq!(
             running.spans[2].style.fg,
             appearance::muted_style_for(ThemeKind::GrokNight).fg
