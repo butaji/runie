@@ -32,7 +32,8 @@ Source: `crates/runie-tui/src/event_renderer.rs`, `EventRenderer` fields and
 The legacy synchronous constructors may retain a compatibility adapter during
 the migration, but production must have one owner for each field. A field is
 not considered migrated merely because its final `Line` is sent through a
-mailbox.
+mailbox. The live `App` now satisfies this boundary; remaining legacy widget
+mutexes are confined to synchronous replay/test constructors.
 
 ## Migration order
 

@@ -372,10 +372,13 @@ were still using terminal-default styles after a theme event. The GrokNight
 default path intentionally preserves Grok's terminal-default foreground
 attributes, while alternate themes use explicit Opaline tokens.
 
-Architecture audit note: `PromptActor` and `UiActor` own mailbox/watch state,
-but `Scrollback` and `StatusBar` are still shared behind `parking_lot::Mutex`
-and are mutated by `EventRenderer` and the render loop. This is a remaining
-SSOT/MVU migration target, not evidence of completed actor parity.
+Architecture audit closure (2026-08-07): `PromptActor`, `UiActor`,
+`ScrollbackActor`, and `StatusActor` are the production mailbox/watch owners.
+`App` and `EventRenderer::with_live_actors` consume actor snapshots and do not
+mutate the legacy `Scrollback`/`StatusBar` mutexes. `Projection::Legacy` and
+the mutex-backed widgets remain only for synchronous compatibility/replay
+tests; they are not a second production state owner. Their eventual removal is
+test-harness cleanup, not an open live SSOT boundary.
 
 The first migration seam is now in place for status: `StatusMsg` is the
 explicit reducer input, `StatusBar::apply` is the pure transition boundary,
