@@ -579,7 +579,29 @@ async fn stream_options(model: &Model, deps: &RunLoopDeps) -> Option<SimpleStrea
     let mut options = deps.stream_options.clone();
     options.api_key = api_key;
     options.signal = deps.abort.clone();
+    options.sampling_params = merge_sampling_params(
+        model.sampling_params.as_ref(),
+        options.sampling_params.take(),
+    );
     Some(options)
+}
+
+/// Merge model defaults with per-request overrides using Pi's precedence:
+/// request values win when both maps contain the same key.
+fn merge_sampling_params(
+    model: Option<&std::collections::HashMap<String, serde_json::Value>>,
+    request: Option<std::collections::HashMap<String, serde_json::Value>>,
+) -> Option<std::collections::HashMap<String, serde_json::Value>> {
+    match (model, request) {
+        (None, None) => None,
+        (Some(model), None) => Some(model.clone()),
+        (None, Some(request)) => Some(request),
+        (Some(model), Some(request)) => {
+            let mut merged = model.clone();
+            merged.extend(request);
+            Some(merged)
+        }
+    }
 }
 
 async fn drain_assistant_events(
@@ -923,6 +945,23 @@ fn _tools_marker(_t: &[Arc<dyn AgentTool>]) {}
 #[cfg(test)]
 mod event_reconstruction_tests {
     use super::*;
+
+    #[test]
+    fn sampling_params_merge_request_over_model_defaults() {
+        let model: std::collections::HashMap<_, _> = [
+            ("temperature".into(), serde_json::json!(0.2)),
+            ("top_p".into(), serde_json::json!(0.9)),
+        ]
+        .into_iter()
+        .collect();
+        let request: std::collections::HashMap<_, _> =
+            [("temperature".into(), serde_json::json!(0.7))]
+                .into_iter()
+                .collect();
+        let merged = merge_sampling_params(Some(&model), Some(request)).unwrap();
+        assert_eq!(merged["temperature"], serde_json::json!(0.7));
+        assert_eq!(merged["top_p"], serde_json::json!(0.9));
+    }
 
     #[test]
     fn stream_updates_replace_provider_placeholder_with_owned_partial() {

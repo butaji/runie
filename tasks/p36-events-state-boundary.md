@@ -75,3 +75,8 @@ Pi's `Model` exposes optional `samplingParams?: Record<string, unknown>`.
 Runie now preserves this as `Model::sampling_params` at the serde boundary,
 with a round-trip test proving the camelCase wire key and arbitrary JSON value
 shape. Provider adapters can now receive the same model defaults as Pi.
+
+The loop also merges those model defaults with per-request
+`SimpleStreamOptions::sampling_params`, using request values as the winning
+layer. The merge is pure and covered by a focused core test, keeping provider
+configuration state inside the loop's owned option snapshot.

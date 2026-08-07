@@ -601,6 +601,9 @@ pub struct SimpleStreamOptions {
     pub api_key: Option<String>,
     pub signal: Option<tokio::sync::watch::Receiver<bool>>,
     pub thinking_budgets: Option<ThinkingBudgets>,
+    /// Per-request sampling overrides. The loop merges these over
+    /// `Model::sampling_params`, matching Pi's `StreamOptions` contract.
+    pub sampling_params: Option<std::collections::HashMap<String, serde_json::Value>>,
     /// pi `onPayload`: provider adapters may inspect or replace request data.
     pub on_payload: Option<PayloadHook>,
     /// pi `onResponse`: provider adapters may observe response metadata.
@@ -615,6 +618,7 @@ impl std::fmt::Debug for SimpleStreamOptions {
             .field("api_key", &self.api_key.as_ref().map(|_| "<redacted>"))
             .field("signal", &self.signal.is_some())
             .field("thinking_budgets", &self.thinking_budgets)
+            .field("sampling_params", &self.sampling_params)
             .field("on_payload", &self.on_payload.is_some())
             .field("on_response", &self.on_response.is_some())
             .finish()
