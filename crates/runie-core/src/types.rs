@@ -603,6 +603,8 @@ pub type RetryDelayHook = std::sync::Arc<
         + Sync,
 >;
 
+pub type RetryJitterHook = std::sync::Arc<dyn Fn() -> f64 + Send + Sync>;
+
 /// Options passed to a `StreamFn::stream` call.
 #[derive(Clone, Default)]
 pub struct SimpleStreamOptions {
@@ -628,6 +630,8 @@ pub struct SimpleStreamOptions {
     /// Injectable scheduler for provider retry delays. Production uses an
     /// abortable Tokio timer; replay tests can record decisions without time.
     pub retry_delay: Option<RetryDelayHook>,
+    /// Injectable `Math.random` equivalent for Pi's exponential retry jitter.
+    pub retry_jitter: Option<RetryJitterHook>,
 }
 
 impl std::fmt::Debug for SimpleStreamOptions {
@@ -645,6 +649,7 @@ impl std::fmt::Debug for SimpleStreamOptions {
             .field("on_payload", &self.on_payload.is_some())
             .field("on_response", &self.on_response.is_some())
             .field("retry_delay", &self.retry_delay.is_some())
+            .field("retry_jitter", &self.retry_jitter.is_some())
             .finish()
     }
 }

@@ -64,10 +64,14 @@ pub trait HttpActor: Send + Sync + 'static {
                 }
                 Err(error) => {
                     if retry_index < retries {
-                        if let Some(decision) = provider_retry_delay_ms(
+                        if let Some(decision) = provider_retry_delay_ms_with_jitter(
                             &error,
                             retry_index,
                             options.as_ref().and_then(|o| o.max_retry_delay_ms),
+                            options
+                                .as_ref()
+                                .and_then(|o| o.retry_jitter.as_ref())
+                                .map(|jitter| jitter()),
                         ) {
                             let delay = decision?;
                             let signal = options.as_ref().and_then(|o| o.signal.clone());
@@ -181,6 +185,15 @@ pub fn provider_retry_delay_ms(
     retry_index: u32,
     max_retry_delay_ms: Option<u64>,
 ) -> Option<Result<u64, StreamError>> {
+    provider_retry_delay_ms_with_jitter(error, retry_index, max_retry_delay_ms, None)
+}
+
+pub fn provider_retry_delay_ms_with_jitter(
+    error: &StreamError,
+    retry_index: u32,
+    max_retry_delay_ms: Option<u64>,
+    jitter: Option<f64>,
+) -> Option<Result<u64, StreamError>> {
     let StreamError::Provider {
         message,
         status,
@@ -203,11 +216,15 @@ pub fn provider_retry_delay_ms(
     if !retryable {
         return Some(Err(error.clone()));
     }
-    let delay = header_value(headers, "retry-after-ms")
+    let server_delay = header_value(headers, "retry-after-ms")
         .and_then(|value| value.parse::<f64>().ok())
         .map(|value| value.max(0.0).ceil() as u64)
-        .or_else(|| header_value(headers, "retry-after").and_then(retry_after_delay_ms))
-        .unwrap_or_else(|| (500_u64.saturating_mul(1_u64 << retry_index.min(4))).min(8_000));
+        .or_else(|| header_value(headers, "retry-after").and_then(retry_after_delay_ms));
+    let delay = server_delay.unwrap_or_else(|| {
+        let base = (500_u64.saturating_mul(1_u64 << retry_index.min(4))).min(8_000);
+        let random = jitter.unwrap_or_else(rand::random::<f64>).clamp(0.0, 1.0);
+        (base as f64 * (1.0 - random * 0.25)).max(0.0).ceil() as u64
+    });
     let cap = max_retry_delay_ms.unwrap_or(DEFAULT_MAX_RETRY_DELAY_MS);
     if cap > 0 && delay > cap {
         return Some(Err(StreamError::Provider {
@@ -457,6 +474,23 @@ mod tests {
                 status: Some(500),
                 ..
             }))
+        ));
+    }
+
+    #[test]
+    fn exponential_retry_jitter_is_bounded_and_injectable() {
+        let error = StreamError::Provider {
+            message: "overloaded".into(),
+            status: Some(500),
+            headers: Default::default(),
+        };
+        assert!(matches!(
+            provider_retry_delay_ms_with_jitter(&error, 0, None, Some(0.0)),
+            Some(Ok(500))
+        ));
+        assert!(matches!(
+            provider_retry_delay_ms_with_jitter(&error, 0, None, Some(1.0)),
+            Some(Ok(375))
         ));
     }
 }

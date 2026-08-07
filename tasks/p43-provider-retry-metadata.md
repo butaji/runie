@@ -37,6 +37,8 @@ observes the actor-owned abort watch. Provider errors are retried only when the
 typed status/header policy allows it; legacy network errors retain the existing
 immediate retry behavior. HTTP-date `Retry-After` values are now parsed, and
 `SimpleStreamOptions::retry_delay` allows replay tests to record delay decisions
-without sleeping. The remaining exactness gap is Pi's bounded random jitter on
-exponential fallback delays; it needs an injected randomness source so tests
-can assert the policy without nondeterminism.
+without sleeping. `RetryJitterHook` now supplies Pi's bounded random jitter
+explicitly: production uses a random source while replay tests assert exact
+lower and upper policy edges without nondeterminism. The implementation slices
+in this task are complete; a future provider-specific audit may still add
+SDK-specific metadata if a concrete Pi provider exposes it.
