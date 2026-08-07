@@ -25,7 +25,9 @@ Authoritative sources:
 Runie now also has a pure `ModelCatalog` contract with YAML-driven search and
 scoped-cycle coverage, plus `ModelCatalogActor` with an owned worker, mailbox,
 acknowledged commands, and a watch snapshot carrying typed catalog/selection
-events. Runie has an actor-owned `ModelChanged` event and a YAML-tested explicit
+events. The explicit `/model provider/model` route now selects through this
+actor before `LoopActor` publishes the actor-owned `ModelChanged` event, and a
+YAML-tested explicit
 `/model provider/model` route. It does not yet own a model catalog, scoped
 model projection, async refresh result, selection query/index, or cycle
 direction. The current route must therefore remain explicit and must not claim
