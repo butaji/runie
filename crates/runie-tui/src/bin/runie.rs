@@ -340,10 +340,8 @@ async fn run_app(
         } else {
             status.render(layout.status, frame.buffer_mut());
         }
-        let theme = status.theme();
         let mut scrollback = Scrollback::from_model_snapshot(document.props.feed.clone());
         scrollback.set_live_grok_layout(true);
-        scrollback.set_theme(theme);
         scrollback.remove_kind(runie_tui::widgets::LineKind::SessionStart);
         scrollback.normalize_live_completed_assistants();
         scrollback.add_live_assistant_timestamp(layout.scrollback.width as usize);
@@ -602,10 +600,8 @@ async fn run_app(
                         } else {
                             status.render(layout.status, buf);
                         }
-                        let theme = status.theme();
                         let mut scrollback = Scrollback::from_model_snapshot(document.props.feed.clone());
                         scrollback.set_live_grok_layout(true);
-                        scrollback.set_theme(theme);
                         scrollback.remove_kind(runie_tui::widgets::LineKind::SessionStart);
                         scrollback.normalize_live_completed_assistants();
                         scrollback.add_live_assistant_timestamp(layout.scrollback.width as usize);

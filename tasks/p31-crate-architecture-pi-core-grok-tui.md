@@ -119,6 +119,12 @@ accepted. This is intentionally a classifier first; delivery-specific message
 construction remains in the actor until the remaining scope variants have
 been migrated.
 
+Render-boundary cleanup (2026-08-06): production draw paths no longer call
+`Scrollback::set_theme` after rehydrating the widget from `FeedSnapshot`.
+Theme is read from the actor-owned snapshot exactly once; remaining widget
+mutations in the draw closure are local terminal-adapter transforms, not
+shared state changes.
+
 The first p35 slice is complete: animation-frame ownership is part of the
 model-owned `FeedNavigation` value object, with pure advance/reset tests; the
 widget only adapts that fact for terminal rendering.
