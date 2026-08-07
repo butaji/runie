@@ -61,6 +61,8 @@ The renderer must never own spans or infer telemetry from status text.
    callback-scoped API with automatic settlement.
    Span allocation starts at `1`, matching Pi's in-memory recorder IDs, and
    the YAML fixtures assert the resulting parent links.
+   Active spans default to `ok` at creation, matching Pi's in-memory span
+   recorder rather than exposing an intermediate unset status.
 4. Add a YAML runtime fixture with declared span commands and ordered snapshot
    assertions. **Done:** `TelemetryAction`, `TelemetryScenario`, and the
    runtime-discovered `tests/telemetry_replay.rs` execute YAML actions through

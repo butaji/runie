@@ -167,7 +167,7 @@ impl TelemetryActor {
                             name,
                             attributes,
                             events: Vec::new(),
-                            status: SpanStatus::Unset,
+                            status: SpanStatus::Ok,
                             error: None,
                             ended: false,
                             end_sequence: None,
@@ -230,9 +230,6 @@ impl TelemetryActor {
                             .iter_mut()
                             .find(|span| span.id == id && !span.ended)
                         {
-                            if span.status == SpanStatus::Unset {
-                                span.status = SpanStatus::Ok;
-                            }
                             span.ended = true;
                             span.end_sequence = Some(next_end_sequence);
                             next_end_sequence = next_end_sequence.wrapping_add(1);
@@ -523,5 +520,16 @@ mod tests {
         assert_eq!(snapshot.spans[0].status, SpanStatus::Ok);
         assert_eq!(snapshot.spans[1].status, SpanStatus::Error);
         assert!(snapshot.spans.iter().all(|span| span.ended));
+    }
+
+    #[tokio::test]
+    async fn active_span_defaults_to_pi_ok_status() {
+        let actor = TelemetryActor::new();
+        let span = actor
+            .start_span(None, "active", HashMap::new())
+            .await
+            .unwrap();
+        assert_eq!(actor.snapshot().spans[0].status, SpanStatus::Ok);
+        span.end().await;
     }
 }
