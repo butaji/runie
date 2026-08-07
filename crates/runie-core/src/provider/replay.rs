@@ -189,6 +189,7 @@ fn collect_tool_calls(
 ) {
     collect_anthropic_tool_call(value, tool_calls);
     collect_openai_tool_calls(value, tool_calls);
+    collect_responses_tool_call(value, tool_calls);
 }
 
 fn collect_anthropic_tool_call(
@@ -248,6 +249,88 @@ fn collect_openai_tool_calls(
     }
 }
 
+#[allow(clippy::too_many_lines)]
+fn collect_responses_tool_call(
+    value: &serde_json::Value,
+    tool_calls: &mut std::collections::BTreeMap<usize, (String, String, String)>,
+) {
+    let Some(event_type) = value.get("type").and_then(|v| v.as_str()) else {
+        return;
+    };
+    match event_type {
+        "response.output_item.added" => {
+            let Some(item) = value.get("item") else {
+                return;
+            };
+            if item.get("type").and_then(|v| v.as_str()) != Some("function_call") {
+                return;
+            }
+            let index = value
+                .get("output_index")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0) as usize;
+            let entry = tool_calls.entry(index).or_default();
+            if let Some(id) = item
+                .get("call_id")
+                .or_else(|| item.get("id"))
+                .and_then(|v| v.as_str())
+            {
+                entry.0 = id.into();
+            }
+            if let Some(name) = item.get("name").and_then(|v| v.as_str()) {
+                entry.1 = name.into();
+            }
+        }
+        "response.function_call_arguments.delta" => {
+            let index = value
+                .get("output_index")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0) as usize;
+            let entry = tool_calls.entry(index).or_default();
+            if let Some(delta) = value.get("delta").and_then(|v| v.as_str()) {
+                entry.2.push_str(delta);
+            }
+        }
+        "response.function_call_arguments.done" => {
+            let index = value
+                .get("output_index")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0) as usize;
+            let entry = tool_calls.entry(index).or_default();
+            if let Some(arguments) = value.get("arguments").and_then(|v| v.as_str()) {
+                entry.2 = arguments.into();
+            }
+        }
+        "response.output_item.done" => {
+            let Some(item) = value.get("item") else {
+                return;
+            };
+            if item.get("type").and_then(|v| v.as_str()) != Some("function_call") {
+                return;
+            }
+            let index = value
+                .get("output_index")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0) as usize;
+            let entry = tool_calls.entry(index).or_default();
+            if let Some(id) = item
+                .get("call_id")
+                .or_else(|| item.get("id"))
+                .and_then(|v| v.as_str())
+            {
+                entry.0 = id.into();
+            }
+            if let Some(name) = item.get("name").and_then(|v| v.as_str()) {
+                entry.1 = name.into();
+            }
+            if let Some(arguments) = item.get("arguments").and_then(|v| v.as_str()) {
+                entry.2 = arguments.into();
+            }
+        }
+        _ => {}
+    }
+}
+
 fn has_terminal_marker(value: &serde_json::Value) -> bool {
     value.get("type").and_then(|v| v.as_str()) == Some("message_stop")
         || value.get("type").and_then(|v| v.as_str()) == Some("response.completed")
@@ -290,6 +373,7 @@ impl StreamFn for ReplayProvider {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::AssistantContent;
     use futures::StreamExt;
 
     #[tokio::test]
@@ -323,5 +407,41 @@ mod tests {
                 ..
             })
         ));
+    }
+
+    #[tokio::test]
+    async fn responses_trace_collects_function_call_arguments_by_output_index() {
+        let provider = ReplayProvider::from_sse_body(
+            "data: {\"type\":\"response.output_item.added\",\"output_index\":2,\"item\":{\"type\":\"function_call\",\"call_id\":\"call-1\",\"name\":\"echo\"}}\n\
+             data: {\"type\":\"response.function_call_arguments.delta\",\"output_index\":2,\"delta\":\"{\\\"x\\\":\"}\n\
+             data: {\"type\":\"response.function_call_arguments.done\",\"output_index\":2,\"arguments\":\"{\\\"x\\\":1}\"}\n\
+             data: {\"type\":\"response.output_item.done\",\"output_index\":2,\"item\":{\"type\":\"function_call\",\"call_id\":\"call-1\",\"name\":\"echo\",\"arguments\":\"{\\\"x\\\":1}\"}}\n\
+             data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\"}}\n",
+        )
+        .expect("Responses tool trace");
+        let mut events = provider
+            .stream(
+                &Model::default(),
+                &crate::types::AgentContext::default(),
+                None,
+            )
+            .await
+            .expect("replay stream");
+        let mut tool_call = None;
+        while let Some(event) = events.next().await {
+            if let AssistantMessageEvent::ToolCallDelta { partial, .. } = event {
+                tool_call = partial
+                    .content
+                    .into_iter()
+                    .find_map(|content| match content {
+                        AssistantContent::ToolCall(call) => Some(call),
+                        _ => None,
+                    });
+            }
+        }
+        let tool_call = tool_call.expect("tool call event");
+        assert_eq!(tool_call.id, "call-1");
+        assert_eq!(tool_call.name, "echo");
+        assert_eq!(tool_call.arguments, serde_json::json!({"x": 1}));
     }
 }

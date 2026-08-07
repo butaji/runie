@@ -30,7 +30,8 @@ provider-specific contract”. The source of truth is the current Pi tree at
    decoder, continuation cache, pre-stream retry, SSE fallback, and owned
    session/account cleanup. The generic HTTP actor must not emulate these.
    Runie's replay adapter now also accepts Pi's OpenAI Responses text-delta and
-   completion event names and normalizes them to the ordinary assistant event
+   completion event names, plus function-call argument deltas keyed by
+   `output_index`, and normalizes them to the ordinary assistant event
    contract; this is replay-format coverage, not a claim of live Codex socket
    parity.
 2. Provider-specific deferred-response polling/decoding and cancellation.
