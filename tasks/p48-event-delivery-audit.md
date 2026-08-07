@@ -72,6 +72,13 @@ migrating each replay caller to an actor-backed snapshot without changing its
 deterministic YAML contract. Acceptance remains the full YAML suite plus a
 source audit proving that `with_live_actors` cannot access `Projection::Legacy`.
 
+## Deferred snapshot oracle (2026-08-07)
+
+The deferred-response replay now asserts the final assistant message's
+actor-owned `stop_reason: deferred` and complete `DeferredHandle` from YAML.
+This closes the previous evidence gap between deferred event delivery and the
+state snapshot while keeping provider fetch/cancel capability errors explicit.
+
 ## Declarative replay contract (2026-08-07)
 
 The YAML runner already provides the event-delivery assertions required by the
