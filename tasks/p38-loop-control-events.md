@@ -104,6 +104,11 @@ same actor path.
 now uses actor-backed `MessageStart`/`MessageUpdate` delivery and asserts the
 `StatusActor` snapshot. The legacy status-lock test was removed.
 
+**Fourth compatibility migration (2026-08-08):** Agent-end readiness and
+no-completion-summary coverage now uses actor-backed lifecycle events and
+immutable feed/status snapshots. The legacy lock-based lifecycle test was
+removed.
+
 ## Verification
 
 - event sequences prove mode changes, busy rejection, abort, and completion

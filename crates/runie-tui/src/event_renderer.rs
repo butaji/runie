@@ -2335,13 +2335,20 @@ mod tests {
         assert_eq!(status.snapshot().current(), &Status::Streaming);
     }
 
-    #[test]
-    fn agent_end_sets_ready() {
-        let (mut r, sb, st) = new_renderer();
-        r.apply_event(AgentEvent::AgentStart);
-        r.apply_event(AgentEvent::AgentEnd { messages: vec![] });
-        assert_eq!(st.lock().current(), &Status::Ready);
-        assert!(sb.lock().find_first_containing("Worked for").is_none());
+    #[tokio::test]
+    async fn actor_agent_end_sets_ready() {
+        let scrollback = ScrollbackActor::new();
+        let status = StatusActor::new();
+        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status.clone(), false);
+        renderer.apply_actor_event(AgentEvent::AgentStart).await;
+        renderer
+            .apply_actor_event(AgentEvent::AgentEnd { messages: vec![] })
+            .await;
+        assert_eq!(status.snapshot().current(), &Status::Ready);
+        assert!(scrollback
+            .snapshot()
+            .find_first_containing("Worked for")
+            .is_none());
     }
 
     #[test]
