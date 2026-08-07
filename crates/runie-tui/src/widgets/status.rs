@@ -63,6 +63,7 @@ pub struct StatusBar {
     turn_usage: Option<Usage>,
     turn_stop_reason: Option<StopReason>,
     context_window: Option<u64>,
+    thinking_elapsed_ms: Option<u64>,
 }
 
 /// Grok's one-row foreground activity indicator above the prompt.
@@ -191,6 +192,7 @@ impl StatusBar {
             turn_usage: None,
             turn_stop_reason: None,
             context_window: None,
+            thinking_elapsed_ms: None,
         }
     }
 
@@ -207,6 +209,7 @@ impl StatusBar {
             turn_usage: snapshot.turn_usage,
             turn_stop_reason: snapshot.turn_stop_reason,
             context_window: snapshot.context_window,
+            thinking_elapsed_ms: snapshot.thinking_elapsed_ms,
         }
     }
 
@@ -241,6 +244,7 @@ impl StatusBar {
                 self.elapsed_ticks = 0;
                 self.turn_usage = None;
                 self.turn_stop_reason = None;
+                self.thinking_elapsed_ms = None;
             }
             StatusMsg::BeginTurn => {
                 self.elapsed_ticks = self.elapsed_ticks_override.unwrap_or_default();
@@ -253,7 +257,7 @@ impl StatusBar {
             }
             StatusMsg::SetTheme(theme) => self.theme = theme,
             StatusMsg::SetContextWindow(window) => self.context_window = window,
-            StatusMsg::SetThinkingElapsed(_) => {}
+            StatusMsg::SetThinkingElapsed(elapsed_ms) => self.thinking_elapsed_ms = elapsed_ms,
             StatusMsg::AdvanceAnimation => {
                 if matches!(
                     self.state,
@@ -345,7 +349,7 @@ impl StatusBar {
             turn_usage: self.turn_usage.clone(),
             turn_stop_reason: self.turn_stop_reason,
             context_window: self.context_window,
-            thinking_elapsed_ms: None,
+            thinking_elapsed_ms: self.thinking_elapsed_ms,
         }
     }
 

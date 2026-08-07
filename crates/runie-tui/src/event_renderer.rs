@@ -278,8 +278,6 @@ pub struct EventRenderer {
     in_assistant_stream: bool,
     in_reasoning: bool,
     reasoning_buffer: String,
-    #[cfg(test)]
-    thinking_elapsed_ms: Option<u64>,
     /// True between ToolExecutionStart and ToolExecutionEnd.
     in_tool_exec: bool,
     activity_dirs: usize,
@@ -340,8 +338,6 @@ impl EventRenderer {
             in_assistant_stream: false,
             in_reasoning: false,
             reasoning_buffer: String::new(),
-            #[cfg(test)]
-            thinking_elapsed_ms: None,
             in_tool_exec: false,
             activity_dirs: 0,
             activity_files: 0,
@@ -698,7 +694,6 @@ impl EventRenderer {
         reason = "event loop coordinates owned status/feed projections and shutdown"
     )]
     pub fn apply_event(&mut self, event: AgentEvent) {
-        self.record_thinking_elapsed(&event);
         if self.status_actor.is_none() {
             for message in status_messages_for_event(&event) {
                 self.status.lock().apply(message);
@@ -802,10 +797,6 @@ impl EventRenderer {
                 }
             }
             AgentEvent::Reset => {
-                #[cfg(test)]
-                {
-                    self.thinking_elapsed_ms = None;
-                }
                 self.in_assistant_stream = false;
                 self.in_reasoning = false;
                 self.reasoning_buffer.clear();
@@ -834,44 +825,12 @@ impl EventRenderer {
         }
     }
 
-    fn record_thinking_elapsed(&mut self, event: &AgentEvent) {
-        #[cfg(not(test))]
-        let _ = event;
-        #[cfg(test)]
-        {
-            if let AgentEvent::MessageUpdate {
-                event: AssistantMessageEvent::ThinkingEnd { elapsed_ms, .. },
-                ..
-            } = event
-            {
-                self.thinking_elapsed_ms = *elapsed_ms;
-            }
-            if let AgentEvent::MessageEnd {
-                message: runie_core::types::AgentMessage::Assistant(assistant),
-            } = event
-            {
-                self.thinking_elapsed_ms = assistant.thinking_elapsed_ms;
-            }
-            if matches!(event, AgentEvent::AgentStart | AgentEvent::Reset) {
-                self.thinking_elapsed_ms = None;
-            }
-        }
-    }
-
     fn thinking_elapsed_ms(&self) -> Option<u64> {
-        self.status_actor
-            .as_ref()
-            .map(|actor| actor.model_snapshot().thinking_elapsed_ms)
-            .unwrap_or_else(|| {
-                #[cfg(test)]
-                {
-                    self.thinking_elapsed_ms
-                }
-                #[cfg(not(test))]
-                {
-                    None
-                }
-            })
+        if let Some(actor) = &self.status_actor {
+            actor.model_snapshot().thinking_elapsed_ms
+        } else {
+            self.status.lock().model_snapshot().thinking_elapsed_ms
+        }
     }
 
     fn handle_reset(&mut self) {

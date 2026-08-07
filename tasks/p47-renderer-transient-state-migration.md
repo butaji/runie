@@ -75,6 +75,14 @@ compatibility `Scrollback` model through `ScrollbackMsg`, and finalization
 reads the same model snapshot used by the actor path. This removes one
 renderer-side lifecycle mirror while preserving replay behavior.
 
+Thinking-duration ownership increment (2026-08-07): the compatibility
+`StatusBar` now retains `thinking_elapsed_ms` in its renderer-independent
+snapshot, exactly like `StatusState`. `EventRenderer` no longer keeps a
+test-only duration cache or records terminal thinking events itself; the
+existing `StatusMsg::SetThinkingElapsed` projection is authoritative for both
+live and synchronous replay paths. This removes one renderer-side mirror
+without changing the YAML `visual-thinking-duration` contract.
+
 Assistant metadata ownership increment (2026-08-07): the live
 `with_live_actors` path no longer runs `handle_message_start/update/end` through
 the compatibility metadata reducer. Assistant text/reasoning lifecycle is
