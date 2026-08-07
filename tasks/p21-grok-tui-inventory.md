@@ -672,6 +672,10 @@ running `truncated → expanded → truncated` cycle through three declarative
 keeps the fold contract in the no-recompile YAML path, alongside the pure
 reducer oracle.
 
+`visual-tool-settled-fold.yaml` covers the complementary settled
+`expanded → collapsed → expanded → collapsed` cycle, so both state-dependent
+Grok fold tables are exercised through runtime YAML.
+
 ### Web-search sources projection (2026-08-06)
 
 Grok's `WebSearchToolCallBlock` renders a separate `Sources:` row after the

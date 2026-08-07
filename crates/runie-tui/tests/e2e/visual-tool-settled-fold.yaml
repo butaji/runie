@@ -1,0 +1,25 @@
+name: visual-tool-settled-fold
+description: |
+  A settled generic tool follows Grok's collapsed ↔ expanded fold cycle;
+  the state is replayed entirely from YAML without timers or recompilation.
+initial_prompt: "inspect"
+events:
+  - start
+  - tool_seed:
+      tool_call_id: call-settled
+      header: custom_tool complete
+      running: false
+  - tool_fold: call-settled
+  - tool_fold: call-settled
+  - tool_fold: call-settled
+assertions:
+  state:
+    tool_blocks: 1
+    tool_modes: [collapsed]
+    tool_running: [false]
+    tool_kinds: [generic]
+  visual:
+    cols: 80
+    rows: 24
+    screen_text:
+      - "custom_tool complete"
