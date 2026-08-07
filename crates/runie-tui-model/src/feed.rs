@@ -722,6 +722,7 @@ fn workflow_text_model(
             let mark = match phase_state.as_str() {
                 "active" | "running" => '●',
                 "done" | "completed" => '✓',
+                "failed" | "error" | "interrupted" => '✗',
                 _ => '○',
             };
             format!("{title} {mark}")

@@ -52,7 +52,7 @@ assertions:
   state:
     tool_blocks: 3
     tool_headers:
-      - "Workflow verify failed in 2.3s: validate the release  [checks ○]"
+      - "Workflow verify failed in 2.3s: validate the release  [checks ✗]"
       - "Workflow publish ◌ cancelled after 0.9s: publish the release  [upload ● · cleanup ○]"
       - "Workflow review paused at 4.1s: review the release  [approval ●]"
     workflows:
@@ -86,5 +86,5 @@ assertions:
     cell_assertions:
       - { col: 0, row: 0, symbol: " ", bg: "default" }
     screen_text:
-      - "Workflow verify failed in 2.3s: validate the release  [checks ○]"
+      - "Workflow verify failed in 2.3s: validate the release  [checks ✗]"
       - "Workflow publish ◌ cancelled after 0.9s: publish the release  [upload ● · cleanup ○]"

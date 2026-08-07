@@ -44,6 +44,7 @@ fn workflow_phase_mark(state: &str) -> char {
     match state {
         "done" => '✓',
         "active" => '●',
+        "failed" | "error" | "interrupted" => '✗',
         _ => '○',
     }
 }
@@ -3504,7 +3505,7 @@ mod tests {
                 Some(1_200),
                 0,
             ),
-            "Workflow release failed in 1.2s: ship the release  [tests ○]"
+            "Workflow release failed in 1.2s: ship the release  [tests ✗]"
         );
         assert_eq!(
             workflow_text(

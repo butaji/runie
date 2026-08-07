@@ -690,3 +690,11 @@ metadata, and a dimmed cancelled body. Runie now resolves those spans through
 Opaline semantic tokens for both running and cancelled workflow rows, with a
 focused light/dark renderer test. Workflow phase-trail layout and richer
 structured metadata remain separate open parity work.
+
+Workflow terminal phase markers (2026-08-06): workflow phase state is now
+reduced through the shared model formatter for `active`/`running`,
+`done`/`completed`, and `failed`/`error`/`interrupted` states. Failed phases
+emit Grok's explicit `✗` marker instead of the pending `○` fallback; the
+terminal-state YAML replay oracle covers the visible result. The remaining
+workflow gap is per-span phase styling/layout and richer structured metadata,
+not state delivery or terminal glyph selection.
