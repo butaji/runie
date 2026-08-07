@@ -812,6 +812,8 @@ pub struct StateAssertions {
     pub messages: Option<usize>,
     /// `addedToolNames` from the latest Pi tool result.
     pub tool_result_added_tool_names: Option<Vec<String>>,
+    /// `details` from the latest Pi tool result.
+    pub tool_result_details: Option<serde_json::Value>,
     pub session_entries: Option<usize>,
     pub tool_count: Option<usize>,
     pub streaming_contains: Option<String>,
@@ -2078,6 +2080,23 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
             Some(expected_names.clone()),
             actual_names,
             "tool_result_added_tool_names"
+        );
+    }
+    if let Some(expected_details) = &expected.tool_result_details {
+        let actual_details = actual
+            .messages
+            .iter()
+            .rev()
+            .find_map(|message| match message {
+                AgentMessage::ToolResult(result) => Some(&result.details),
+                _ => None,
+            })
+            .cloned()
+            .unwrap_or(serde_json::Value::Null);
+        assert_yaml_eq!(
+            Some(expected_details.clone()),
+            actual_details,
+            "tool_result_details"
         );
     }
     assert_yaml_eq!(

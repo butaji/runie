@@ -4,6 +4,7 @@ initial_prompt: "stop after this tool"
 tools:
   - name: echo
     output: "terminal result"
+    details: { source: replay, exit_code: 0 }
     terminate: true
     added_tool_names: ["runtime_tool"]
 events:
@@ -13,6 +14,7 @@ events:
 assertions:
   state:
     tool_result_added_tool_names: [runtime_tool]
+    tool_result_details: { source: replay, exit_code: 0 }
   pi_events:
     - agent_start
     - turn_start

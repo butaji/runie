@@ -354,3 +354,5 @@ the complete Pi event vector, including the update/end lifecycle, while
 confirming that `terminate: true` prevents an automatic follow-up turn.
 It also asserts the resulting `added_tool_names` on the core actor snapshot,
 so the metadata is validated as state rather than only as transport.
+The same scenario asserts the structured Pi `details` payload on the latest
+tool result, closing both deterministic metadata paths through the actor.
