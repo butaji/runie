@@ -46,6 +46,11 @@ read-range/image suffixes, and terminal completion vocabulary now live in
 that projection directly, removing the final completion-format dependency on
 `event_renderer` while preserving existing tool-card replay behavior.
 
+Boundary enforcement (2026-08-08): `validate-feed-actor-boundary.py` now
+rejects renderer, Ratatui, and Crossterm imports from `ScrollbackActor` in
+addition to direct widget reduction. This makes the declarative model/render
+separation executable in CI rather than relying only on review discipline.
+
 Reset lifecycle increment (2026-08-07): `AgentEvent::Reset` now maps to
 explicit status/feed reset reducers. Status clears terminal turn facts while
 preserving theme/context configuration, and feed clear resets turn-summary

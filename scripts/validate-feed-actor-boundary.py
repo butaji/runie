@@ -14,6 +14,9 @@ def main() -> int:
         "Scrollback::new(": "actor must construct FeedState, not the widget",
         "state.apply(": "actor must reduce through FeedState::reduce",
         "state.apply_batch(": "actor must reduce through FeedState::reduce",
+        "crate::event_renderer": "actor must not depend on renderer-only projections",
+        "ratatui::": "actor must not depend on terminal rendering types",
+        "crossterm::": "actor must not depend on terminal input types",
     }
     failures = [f"{needle}: {reason}" for needle, reason in forbidden.items() if needle in source]
     if failures:
