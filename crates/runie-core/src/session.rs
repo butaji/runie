@@ -37,6 +37,13 @@ pub enum SessionConfigRecord {
         custom_type: String,
         data: Option<serde_json::Value>,
     },
+    CompactionCreated {
+        summary: String,
+        retained_tail: Vec<AgentMessage>,
+        tokens_before: u64,
+        details: Option<serde_json::Value>,
+        usage: Option<crate::types::Usage>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -228,6 +235,38 @@ impl SessionSnapshot {
                             .to_owned(),
                         data: value.get("data").cloned().filter(|value| !value.is_null()),
                     },
+                    "compaction" => SessionConfigRecord::CompactionCreated {
+                        summary: value
+                            .get("summary")
+                            .and_then(serde_json::Value::as_str)
+                            .ok_or_else(|| {
+                                format!("session entry {} is missing summary", line_index + 2)
+                            })?
+                            .to_owned(),
+                        retained_tail: serde_json::from_value(
+                            value.get("retainedTail").cloned().ok_or_else(|| {
+                                format!("session entry {} is missing retainedTail", line_index + 2)
+                            })?,
+                        )
+                        .map_err(|error| format!("invalid retainedTail: {error}"))?,
+                        tokens_before: value
+                            .get("tokensBefore")
+                            .and_then(serde_json::Value::as_u64)
+                            .ok_or_else(|| {
+                                format!("session entry {} is missing tokensBefore", line_index + 2)
+                            })?,
+                        details: value
+                            .get("details")
+                            .cloned()
+                            .filter(|value| !value.is_null()),
+                        usage: value
+                            .get("usage")
+                            .cloned()
+                            .filter(|value| !value.is_null())
+                            .map(serde_json::from_value)
+                            .transpose()
+                            .map_err(|error| format!("invalid usage: {error}"))?,
+                    },
                     _ => {
                         return Err(format!(
                             "unsupported session mutation at line {}",
@@ -342,6 +381,22 @@ impl SessionSnapshot {
                 SessionConfigRecord::CustomSessionEntryCreated { custom_type, data } => (
                     "custom",
                     serde_json::json!({ "customType": custom_type, "data": data }),
+                ),
+                SessionConfigRecord::CompactionCreated {
+                    summary,
+                    retained_tail,
+                    tokens_before,
+                    details,
+                    usage,
+                } => (
+                    "compaction",
+                    serde_json::json!({
+                        "summary": summary,
+                        "retainedTail": retained_tail,
+                        "tokensBefore": tokens_before,
+                        "details": details,
+                        "usage": usage,
+                    }),
                 ),
             };
             entry["kind"] = serde_json::Value::String("entry".into());
@@ -554,6 +609,28 @@ impl SessionActor {
                             break;
                         }
                     }
+                    AgentEvent::CompactionCreated {
+                        summary,
+                        retained_tail,
+                        tokens_before,
+                        details,
+                        usage,
+                    } => {
+                        if !mailbox_ack!(tx, |reply| {
+                            Command::Config(
+                                SessionConfigRecord::CompactionCreated {
+                                    summary,
+                                    retained_tail,
+                                    tokens_before,
+                                    details,
+                                    usage,
+                                },
+                                reply,
+                            )
+                        }) {
+                            break;
+                        }
+                    }
                     AgentEvent::ToolExecutionEnd {
                         tool_call_id,
                         result,
@@ -627,6 +704,22 @@ impl SessionActor {
                 self.record_config(SessionConfigRecord::CustomSessionEntryCreated {
                     custom_type: custom_type.clone(),
                     data: data.clone(),
+                })
+                .await;
+            }
+            AgentEvent::CompactionCreated {
+                summary,
+                retained_tail,
+                tokens_before,
+                details,
+                usage,
+            } => {
+                self.record_config(SessionConfigRecord::CompactionCreated {
+                    summary: summary.clone(),
+                    retained_tail: retained_tail.clone(),
+                    tokens_before: *tokens_before,
+                    details: details.clone(),
+                    usage: usage.clone(),
                 })
                 .await;
             }

@@ -316,6 +316,9 @@ pub enum EventSpec {
     CustomEntry {
         custom_entry: CustomEntrySpec,
     },
+    Compaction {
+        compaction: CompactionSpec,
+    },
     ToolMode {
         tool_mode: ToolModeSpec,
     },
@@ -441,6 +444,18 @@ pub struct CustomEntrySpec {
     pub custom_type: String,
     #[serde(default)]
     pub data: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct CompactionSpec {
+    pub summary: String,
+    #[serde(default)]
+    pub retained_tail: Vec<AgentMessage>,
+    pub tokens_before: u64,
+    #[serde(default)]
+    pub details: Option<serde_json::Value>,
+    #[serde(default)]
+    pub usage: Option<Usage>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -662,6 +677,7 @@ impl EventSpec {
             Self::ActiveTools { .. } => None,
             Self::BranchSummary { .. } => None,
             Self::CustomEntry { .. } => None,
+            Self::Compaction { .. } => None,
             Self::ToolMode { .. } => None,
             Self::ToolFold { .. } => None,
             Self::ToolSelect { .. } => None,
@@ -710,6 +726,13 @@ impl EventSpec {
             Self::CustomEntry { custom_entry } => Some(AgentEvent::CustomSessionEntryCreated {
                 custom_type: custom_entry.custom_type.clone(),
                 data: custom_entry.data.clone(),
+            }),
+            Self::Compaction { compaction } => Some(AgentEvent::CompactionCreated {
+                summary: compaction.summary.clone(),
+                retained_tail: compaction.retained_tail.clone(),
+                tokens_before: compaction.tokens_before,
+                details: compaction.details.clone(),
+                usage: compaction.usage.clone(),
             }),
             Self::ToolMode { tool_mode } => Some(AgentEvent::ToolDisplayModeChanged {
                 tool_call_id: tool_mode.tool_call_id.clone(),
@@ -2472,6 +2495,9 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
                 runie_core::session::SessionConfigRecord::CustomSessionEntryCreated { .. } => {
                     "custom".to_owned()
                 }
+                runie_core::session::SessionConfigRecord::CompactionCreated { .. } => {
+                    "compaction".to_owned()
+                }
             })
             .collect::<Vec<_>>();
         if actual_records.as_slice() != expected_records.as_slice() {
@@ -3069,6 +3095,7 @@ fn event_kind(event: &runie_core::types::AgentEvent) -> &'static str {
         ActiveToolsChanged { .. } => "active_tools_changed",
         BranchSummaryCreated { .. } => "branch_summary_created",
         CustomSessionEntryCreated { .. } => "custom_session_entry_created",
+        CompactionCreated { .. } => "compaction_created",
         ToolDisplayModeChanged { .. } => "tool_display_mode_changed",
         TurnEnd { .. } => "turn_end",
         MessageStart { .. } => "message_start",

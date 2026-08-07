@@ -977,6 +977,15 @@ pub enum AgentEvent {
         custom_type: String,
         data: Option<serde_json::Value>,
     },
+    /// Persist a Pi compaction result; the compaction algorithm remains
+    /// agent-owned while this event preserves its journal payload.
+    CompactionCreated {
+        summary: String,
+        retained_tail: Vec<AgentMessage>,
+        tokens_before: u64,
+        details: Option<serde_json::Value>,
+        usage: Option<Usage>,
+    },
     ToolDisplayModeChanged {
         tool_call_id: String,
         mode: ToolDisplayMode,

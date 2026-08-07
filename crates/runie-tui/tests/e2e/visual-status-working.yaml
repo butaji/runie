@@ -15,6 +15,9 @@ events:
       custom_type: replay.marker
       data:
         value: 42
+  - compaction:
+      summary: "Compacted earlier context"
+      tokens_before: 2048
   - text_delta: "working"
 assertions:
   state:
@@ -27,6 +30,7 @@ assertions:
       - active_tools_change
       - branch_summary
       - custom
+      - compaction
   visual:
     cols: 80
     rows: 24

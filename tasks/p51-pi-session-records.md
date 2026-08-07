@@ -74,8 +74,13 @@ Custom extension records now also use `CustomSessionEntryCreated` and preserve
 `customType`/`data` through the actor journal and JSONL. YAML replay covers the
 payload path without compiling extension-specific test code.
 
+Compaction payloads now use `CompactionCreated` and preserve summary, retained
+tail, token count, optional details, and usage through the same event, actor,
+JSONL, and YAML paths. This is journal parity only; the compaction algorithm,
+context trimming, and operation lifecycle remain outside this slice.
+
 ## Explicitly separate
 
-Compaction/full branch navigation and operation-lane records
+Full branch navigation and operation-lane records
 remain separate follow-up work until their Pi source semantics, storage
 lifecycle, and actor events are mapped in detail.
