@@ -462,6 +462,20 @@ impl CompactionContextProjection {
 }
 
 impl SessionSnapshot {
+    /// Return the first entry selected by Pi's ordered entry query.
+    pub fn find_entry(&self, query: &SessionEntryQuery) -> Option<SessionEntryRecord> {
+        self.find_entries(query).into_iter().next()
+    }
+
+    /// Return the first entry selected by an explicit branch query.
+    pub fn find_entry_on_branch(
+        &self,
+        query: &SessionBranchEntryQuery,
+    ) -> Result<Option<SessionEntryRecord>, String> {
+        self.find_entries_on_branch(query)
+            .map(|entries| entries.into_iter().next())
+    }
+
     /// Find entries on one validated parent-linked branch.
     #[allow(
         clippy::too_many_lines,
@@ -3349,6 +3363,35 @@ mod tests {
                 ..SessionBranchEntryQuery::default()
             })
             .is_err());
+    }
+
+    #[test]
+    fn singular_entry_queries_preserve_declared_order() {
+        let snapshot = SessionSnapshot {
+            entries: vec![SessionEntry {
+                id: "message-1".into(),
+                seq: 1,
+                parent_id: None,
+                timestamp: 0,
+                message: user("one"),
+                terminate: false,
+            }],
+            leaf_id: Some("message-1".into()),
+            ..SessionSnapshot::default()
+        };
+        assert!(matches!(
+            snapshot.find_entry(&SessionEntryQuery::default()),
+            Some(SessionEntryRecord::Message(entry)) if entry.id == "message-1"
+        ));
+        assert!(matches!(
+            snapshot
+                .find_entry_on_branch(&SessionBranchEntryQuery {
+                    start: "message-1".into(),
+                    ..SessionBranchEntryQuery::default()
+                })
+                .expect("branch lookup"),
+            Some(SessionEntryRecord::Message(entry)) if entry.id == "message-1"
+        ));
     }
 
     #[test]

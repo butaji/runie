@@ -2,6 +2,14 @@
 
 Status: in_progress
 
+## Completed slice (2026-08-08, singular entry reads)
+
+`SessionSnapshot::find_entry` and `find_entry_on_branch` now mirror Pi's
+singular read helpers by reusing the ordered declarative query boundaries.
+They preserve caller-selected ordering and return `None` rather than
+inventing a fallback entry; branch lookup continues to require an explicit
+validated start.
+
 ## Completed slice (2026-08-08, branch entry query)
 
 `SessionBranchEntryQuery` and `SessionSnapshot::find_entries_on_branch` now
