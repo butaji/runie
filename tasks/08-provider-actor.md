@@ -1,6 +1,6 @@
 # Step 08: ProviderActor + StreamFn trait
 
-**Status:** pending
+**Status:** implemented; provider-specific deferred/WebSocket adapters remain open (2026-08-07)
 **Depends on:** 07
 
 ## Goal
@@ -22,6 +22,15 @@ Implement the actor that owns the one in-flight LLM stream and the abstract `Str
 ## Verification
 - `cargo check -p runie-core` → exit 0.
 - Unit test: `MockStreamFn` (defined in step 11) emits 3 events; actor forwards all 3 to subscribers.
+
+## Current parity boundary
+
+`ProviderActor` now owns the in-flight stream pump, cancellation, replacement
+of superseded runs, and `FetchDeferred`/`CancelDeferred` mailbox commands.
+Unsupported adapter capabilities return explicit `StreamError` values rather
+than being silently reinterpreted as HTTP or SSE. YAML replay covers the
+deferred event-to-state contract; provider-specific polling and WebSocket wire
+adapters remain separate implementation slices.
 
 ## Notes
 - The actor is the **only** site that owns the cancellation token. The loop actor requests cancellation via `actor.cancel()`.
