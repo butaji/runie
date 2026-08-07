@@ -233,6 +233,9 @@ impl Scrollback {
         scrollback.navigation.settled_no_tool_phase = snapshot.settled_no_tool_phase;
         scrollback.navigation.live_grok_layout = snapshot.live_grok_layout;
         scrollback.navigation.next_tool_row_id = snapshot.next_tool_row_id;
+        scrollback.navigation.measured_content_rows = snapshot.measured_content_rows;
+        scrollback.navigation.measured_viewport_rows = snapshot.measured_viewport_rows;
+        scrollback.navigation.measured_anchor_row = snapshot.measured_anchor_row;
         scrollback
     }
 
@@ -731,9 +734,9 @@ impl Scrollback {
             live_grok_layout: self.navigation.live_grok_layout,
             next_tool_row_id: self.navigation.next_tool_row_id,
             turn_started: false,
-            measured_content_rows: 0,
-            measured_viewport_rows: 0,
-            measured_anchor_row: None,
+            measured_content_rows: self.navigation.measured_content_rows,
+            measured_viewport_rows: self.navigation.measured_viewport_rows,
+            measured_anchor_row: self.navigation.measured_anchor_row,
         }
     }
 

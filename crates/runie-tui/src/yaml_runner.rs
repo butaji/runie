@@ -291,6 +291,9 @@ pub enum EventSpec {
     Scroll {
         scroll: i32,
     },
+    LayoutMeasured {
+        layout_measured: LayoutMeasuredSpec,
+    },
     RevealLatest {
         reveal_latest: bool,
     },
@@ -598,6 +601,7 @@ impl EventSpec {
             Self::ToolFold { .. } => None,
             Self::ToolSelect { .. } => None,
             Self::Scroll { .. } => None,
+            Self::LayoutMeasured { .. } => None,
             Self::RevealLatest { .. } => None,
             Self::FollowLatest { .. } => None,
             Self::BackgroundStart { .. }
@@ -639,6 +643,7 @@ impl EventSpec {
             Self::ThinkingStart { .. } | Self::ThinkingEnd { .. } => None,
             Self::ToolFold { .. } => None,
             Self::ToolSelect { .. } => None,
+            Self::LayoutMeasured { .. } => None,
             Self::BackgroundStart { background_start } => Some(AgentEvent::BackgroundWorkStarted {
                 work_id: background_start.work_id.clone(),
                 description: background_start.description.clone(),
@@ -1552,9 +1557,22 @@ fn declared_navigation(scenario: &Scenario) -> Vec<ScrollbackMsg> {
             EventSpec::ToolSelect { tool_select } if tool_select == "entry_previous" => {
                 Some(ScrollbackMsg::SelectPreviousEntry)
             }
+            EventSpec::LayoutMeasured { layout_measured } => Some(ScrollbackMsg::LayoutMeasured {
+                content_rows: layout_measured.content_rows,
+                viewport_rows: layout_measured.viewport_rows,
+                anchor_row: layout_measured.anchor_row,
+            }),
             _ => None,
         })
         .collect()
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct LayoutMeasuredSpec {
+    pub content_rows: usize,
+    pub viewport_rows: usize,
+    #[serde(default)]
+    pub anchor_row: Option<usize>,
 }
 
 fn declared_tool_seeds(scenario: &Scenario) -> Vec<ScrollbackMsg> {

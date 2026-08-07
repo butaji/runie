@@ -1,0 +1,12 @@
+name: visual-layout-measurement
+description: Layout facts cross the YAML event DSL into the feed actor snapshot.
+events:
+  - layout_measured:
+      content_rows: 42
+      viewport_rows: 12
+      anchor_row: 9
+assertions:
+  state:
+    measured_content_rows: 42
+    measured_viewport_rows: 12
+    measured_anchor_row: 9
