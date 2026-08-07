@@ -798,6 +798,14 @@ the live and bus-owned reducers. Both event paths now preserve header identity
 and retain the semantic `ToolError` output row; `visual-tool-error.yaml`
 asserts the source-backed shape without compiled fixture code.
 
+Memory path display closure (2026-08-08): Grok's `MemorySearchToolCallBlock`
+strips its installation-specific memory root before painting result metadata
+and falls back to the final path component. The renderer-independent Runie
+memory projection now applies the same `/memory/`-relative and filename
+fallback rule before live and YAML consumers receive rows. The specialized
+fixture and pure model tests cover both forms; styling and panel fill remain
+renderer concerns.
+
 Pi error-vector closure (2026-08-06): `visual-tool-error.yaml` now also
 asserts the complete Pi lifecycle vector through tool execution, tool-result
 message boundaries, continuation turn, and `agent_end`. This keeps the

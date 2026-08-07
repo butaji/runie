@@ -36,10 +36,11 @@ pub fn memory_display_lines(output: &str) -> Vec<String> {
         .iter()
         .enumerate()
         .flat_map(|(index, result)| {
+            let path = display_memory_path(&result.path);
             let location = if result.start_line == 0 && result.end_line == 0 {
-                result.path.clone()
+                path
             } else {
-                format!("{}:{}-{}", result.path, result.start_line, result.end_line)
+                format!("{}:{}-{}", path, result.start_line, result.end_line)
             };
             std::iter::once(format!(
                 "  {}. {}  (score: {:.2}, {})",
@@ -58,6 +59,16 @@ pub fn memory_display_lines(output: &str) -> Vec<String> {
             )
         })
         .collect()
+}
+
+/// Grok's memory card does not expose the installation-specific memory root.
+/// Keep the projection deterministic across machines by retaining the path
+/// below a `/memory/` segment and falling back to the final path component.
+fn display_memory_path(path: &str) -> String {
+    if let Some((_, relative)) = path.rsplit_once("/memory/") {
+        return relative.to_owned();
+    }
+    path.rsplit('/').next().unwrap_or(path).to_owned()
 }
 
 #[allow(
@@ -139,11 +150,20 @@ mod tests {
     #[test]
     fn projects_structured_results_into_shared_transcript_rows() {
         let rows = memory_display_lines(
-            "### Result 1 (score: 0.72, source: global)\n**File:** memory.md (lines 1-2)\n```\nalpha\n```",
+            "### Result 1 (score: 0.72, source: global)\n**File:** /var/lib/grok/memory/memory.md (lines 1-2)\n```\nalpha\n```",
         );
         assert_eq!(
             rows,
             ["  1. memory.md:1-2  (score: 0.72, global)", "    alpha"]
         );
+    }
+
+    #[test]
+    fn memory_rows_hide_installation_specific_roots() {
+        let rows = memory_display_lines(
+            "### Result 1 (score: 0.72, source: global)\n**File:** /memory/MEMORY.md (lines 1-2)\n```\nalpha\n```\n### Result 2 (score: 0.42, source: session)\n**File:** /tmp/session.md (lines 3-4)\n```\nbeta\n```",
+        );
+        assert_eq!(rows[0], "  1. MEMORY.md:1-2  (score: 0.72, global)");
+        assert_eq!(rows[2], "  2. session.md:3-4  (score: 0.42, session)");
     }
 }
