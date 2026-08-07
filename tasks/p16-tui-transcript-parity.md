@@ -683,3 +683,10 @@ source summary row instead of treating the suffix as another domain.
 Memory-snippet semantics (2026-08-06): memory-card content rows now project
 the muted paint intent from the model-owned `MemorySearch` card kind, matching
 Grok's muted snippet preview while ordinary tool output remains primary.
+
+Workflow-card typography (2026-08-06): source inspection of Grok's
+`WorkflowBlock::output` shows a bold `Workflow ` label, muted body/phase
+metadata, and a dimmed cancelled body. Runie now resolves those spans through
+Opaline semantic tokens for both running and cancelled workflow rows, with a
+focused light/dark renderer test. Workflow phase-trail layout and richer
+structured metadata remain separate open parity work.

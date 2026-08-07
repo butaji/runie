@@ -1822,6 +1822,21 @@ fn styled_line_for(kind: LineKind, text: &str, theme: ThemeKind) -> RatLine<'sta
         }
         let split = header_start + marker_len;
         let (prefix, body) = text.split_at(split);
+        if let Some(rest) = body.strip_prefix("Workflow ") {
+            let body_style = if rest.contains("◌ cancelled") {
+                appearance::muted_style_for(theme).add_modifier(Modifier::DIM)
+            } else {
+                appearance::muted_style_for(theme)
+            };
+            return RatLine::from(vec![
+                Span::styled(prefix.to_owned(), style),
+                Span::styled(
+                    "Workflow ".to_owned(),
+                    appearance::muted_style_for(theme).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(rest.to_owned(), body_style),
+            ]);
+        }
         for label in ["Web Search", "Memory Search", "Search Tools"] {
             if let Some(rest) = body.strip_prefix(label) {
                 return RatLine::from(vec![
@@ -3524,6 +3539,35 @@ mod tests {
                 0,
             ),
             "Workflow research: compare A then compare B finish"
+        );
+    }
+
+    #[test]
+    fn workflow_card_uses_grok_semantic_header_and_cancelled_text_tokens() {
+        let running = styled_line_for(
+            LineKind::ToolRunning,
+            "◆ Workflow release: ship it  [tests ●]  (2 agents)",
+            ThemeKind::GrokNight,
+        );
+        assert_eq!(running.spans.len(), 3);
+        assert!(running.spans[1].style.add_modifier.contains(Modifier::BOLD));
+        assert_eq!(
+            running.spans[2].style.fg,
+            appearance::muted_style_for(ThemeKind::GrokNight).fg
+        );
+
+        let cancelled = styled_line_for(
+            LineKind::Tool,
+            "◆ Workflow release ◌ cancelled after 1.2s: ship it",
+            ThemeKind::GrokDay,
+        );
+        assert!(cancelled.spans[2]
+            .style
+            .add_modifier
+            .contains(Modifier::DIM));
+        assert_eq!(
+            cancelled.spans[2].style.fg,
+            appearance::muted_style_for(ThemeKind::GrokDay).fg
         );
     }
 }
