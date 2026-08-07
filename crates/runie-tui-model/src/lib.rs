@@ -213,6 +213,9 @@ mod tests {
             live_grok_layout: false,
             next_tool_row_id: 0,
             turn_started: false,
+            measured_content_rows: 0,
+            measured_viewport_rows: 0,
+            measured_anchor_row: None,
         }
     }
 }

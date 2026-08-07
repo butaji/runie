@@ -345,6 +345,15 @@ impl Scrollback {
                 self.reduce_model(ScrollbackMsg::SelectPreviousEntry)
             }
             ScrollbackMsg::ScrollBy(lines) => self.reduce_model(ScrollbackMsg::ScrollBy(lines)),
+            ScrollbackMsg::LayoutMeasured {
+                content_rows,
+                viewport_rows,
+                anchor_row,
+            } => self.reduce_model(ScrollbackMsg::LayoutMeasured {
+                content_rows,
+                viewport_rows,
+                anchor_row,
+            }),
             ScrollbackMsg::RevealLatest => {
                 self.reduce_model(ScrollbackMsg::RevealLatest);
             }
@@ -722,6 +731,9 @@ impl Scrollback {
             live_grok_layout: self.navigation.live_grok_layout,
             next_tool_row_id: self.navigation.next_tool_row_id,
             turn_started: false,
+            measured_content_rows: 0,
+            measured_viewport_rows: 0,
+            measured_anchor_row: None,
         }
     }
 

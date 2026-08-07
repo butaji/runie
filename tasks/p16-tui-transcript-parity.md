@@ -747,6 +747,12 @@ violate the declarative/state-versus-render boundary. The next implementation
 slice is therefore a typed layout-measurement event and YAML frame oracle,
 followed by reducer anchor restoration.
 
+Measurement contract increment (2026-08-07): `ScrollbackMsg::LayoutMeasured`
+now transfers `(content_rows, viewport_rows, anchor_row)` through the
+`ScrollbackActor` reducer into `FeedSnapshot`. The contract is pure and
+covered by a model test; renderer emission, YAML frame capture, and anchor
+restoration remain the next slices.
+
 Renderer identity handoff (2026-08-06): semantic paint-intent lookup now
 resolves the source line's logical member ordinal and requires the matching
 `ToolCardRow.member_index` before applying theme intent. Duplicate text can no

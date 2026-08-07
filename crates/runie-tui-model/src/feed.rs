@@ -69,6 +69,10 @@ pub struct FeedSnapshot {
     pub animation_frame: usize,
     pub tool_modes: HashMap<String, ToolDisplayMode>,
     pub turn_started: bool,
+    /// Last renderer measurement delivered through `LayoutMeasured`.
+    pub measured_content_rows: usize,
+    pub measured_viewport_rows: usize,
+    pub measured_anchor_row: Option<usize>,
 }
 
 /// Renderer-independent navigation and animation facts for a feed.
@@ -94,6 +98,9 @@ pub struct FeedNavigation {
     pub live_grok_layout: bool,
     pub next_tool_row_id: u64,
     pub turn_started: bool,
+    pub measured_content_rows: usize,
+    pub measured_viewport_rows: usize,
+    pub measured_anchor_row: Option<usize>,
 }
 
 impl Default for FeedNavigation {
@@ -119,6 +126,9 @@ impl Default for FeedNavigation {
             live_grok_layout: false,
             next_tool_row_id: 0,
             turn_started: false,
+            measured_content_rows: 0,
+            measured_viewport_rows: 0,
+            measured_anchor_row: None,
         }
     }
 }
@@ -498,8 +508,8 @@ impl ToolCardKind {
 #[cfg(test)]
 mod tests {
     use super::{
-        default_tool_display_mode, project_tool_blocks, project_tool_card_rows, Line, LineKind,
-        ToolCardKind, ToolCardPaintIntent, ToolCardRow, ToolCardRowKind,
+        default_tool_display_mode, project_tool_blocks, project_tool_card_rows, FeedState, Line,
+        LineKind, ToolCardKind, ToolCardPaintIntent, ToolCardRow, ToolCardRowKind,
     };
     use runie_core::types::ToolDisplayMode;
     use std::collections::HashMap;
@@ -769,6 +779,20 @@ mod tests {
             ToolDisplayMode::Collapsed
         );
     }
+
+    #[test]
+    fn layout_measurement_is_delivered_through_the_feed_event_boundary() {
+        let mut state = FeedState::default();
+        state.reduce(super::ScrollbackMsg::LayoutMeasured {
+            content_rows: 42,
+            viewport_rows: 12,
+            anchor_row: Some(9),
+        });
+        let snapshot = state.snapshot();
+        assert_eq!(snapshot.measured_content_rows, 42);
+        assert_eq!(snapshot.measured_viewport_rows, 12);
+        assert_eq!(snapshot.measured_anchor_row, Some(9));
+    }
 }
 
 fn workflow_text_model(
@@ -894,6 +918,14 @@ pub enum ScrollbackMsg {
     SelectNextEntry,
     SelectPreviousEntry,
     ScrollBy(i32),
+    /// Deliver physical layout facts from the renderer without mutating the
+    /// feed outside its owning actor. The reducer may use these facts for
+    /// future Grok-equivalent fold-anchor restoration.
+    LayoutMeasured {
+        content_rows: usize,
+        viewport_rows: usize,
+        anchor_row: Option<usize>,
+    },
     /// Re-enable follow mode and reveal the newest transcript content.
     /// This models Grok's explicit follow/goto-bottom transition.
     RevealLatest,
@@ -988,6 +1020,9 @@ impl FeedState {
             animation_frame: self.navigation.animation_frame,
             tool_modes: self.navigation.tool_modes.clone(),
             turn_started: self.navigation.turn_started,
+            measured_content_rows: self.navigation.measured_content_rows,
+            measured_viewport_rows: self.navigation.measured_viewport_rows,
+            measured_anchor_row: self.navigation.measured_anchor_row,
         }
     }
 
@@ -1060,6 +1095,15 @@ impl FeedState {
             ScrollbackMsg::SelectNextEntry => self.select_entry(1),
             ScrollbackMsg::SelectPreviousEntry => self.select_entry(-1),
             ScrollbackMsg::ScrollBy(delta) => self.scroll_by(delta),
+            ScrollbackMsg::LayoutMeasured {
+                content_rows,
+                viewport_rows,
+                anchor_row,
+            } => {
+                self.navigation.measured_content_rows = content_rows;
+                self.navigation.measured_viewport_rows = viewport_rows;
+                self.navigation.measured_anchor_row = anchor_row;
+            }
             ScrollbackMsg::RevealLatest => self.navigation.reveal_latest(self.lines.len()),
             ScrollbackMsg::MarkToolError(id) => self.mark_tool_error(&id),
             ScrollbackMsg::ReplaceLine(index, text) => {
