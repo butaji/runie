@@ -4,25 +4,25 @@ actions:
     attributes:
       model: test-model
   - type: start
-    parent_id: 0
+    parent_id: 1
     name: pi.provider.stream
   - type: event
-    id: 1
+    id: 2
     name: assistant.event
   - type: status
-    id: 1
+    id: 2
     status: ok
   - type: end
-    id: 1
+    id: 2
   - type: status
-    id: 0
+    id: 1
     status: ok
   - type: end
-    id: 0
+    id: 1
 expected:
-  next_id: 2
+  next_id: 3
   spans:
-    - id: 0
+    - id: 1
       parent_id: null
       name: pi.turn
       attributes:
@@ -31,8 +31,8 @@ expected:
       status: ok
       ended: true
       end_sequence: 1
-    - id: 1
-      parent_id: 0
+    - id: 2
+      parent_id: 1
       name: pi.provider.stream
       attributes: {}
       events:

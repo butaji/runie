@@ -59,6 +59,8 @@ The renderer must never own spans or infer telemetry from status text.
    Pi's no-op settled-span context behavior.
    `TelemetrySpan::with_child` now provides the corresponding nested
    callback-scoped API with automatic settlement.
+   Span allocation starts at `1`, matching Pi's in-memory recorder IDs, and
+   the YAML fixtures assert the resulting parent links.
 4. Add a YAML runtime fixture with declared span commands and ordered snapshot
    assertions. **Done:** `TelemetryAction`, `TelemetryScenario`, and the
    runtime-discovered `tests/telemetry_replay.rs` execute YAML actions through

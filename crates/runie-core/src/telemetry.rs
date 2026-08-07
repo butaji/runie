@@ -137,7 +137,10 @@ impl TelemetryActor {
         let (tx, owner) = spawn_actor_worker!(32, move |mut rx: mpsc::Receiver<
             TelemetryCommand,
         >| async move {
-            let mut state = TelemetrySnapshot::default();
+            let mut state = TelemetrySnapshot {
+                next_id: 1,
+                ..TelemetrySnapshot::default()
+            };
             let mut next_end_sequence = 0_u64;
             while let Some(command) = rx.recv().await {
                 match command {
@@ -479,6 +482,7 @@ mod tests {
             .unwrap()
             .unwrap();
         let snapshot = actor.snapshot();
+        assert_eq!(root.id, 1);
         assert_eq!(snapshot.spans[1].parent_id, Some(root.id));
         assert_eq!(snapshot.spans[1].events[0].name, "headers");
         assert_eq!(snapshot.spans[1].status, SpanStatus::Ok);
