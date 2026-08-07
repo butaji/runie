@@ -77,26 +77,24 @@ threshold render an `N more` header, hidden members have zero layout height,
 and navigation/reveal can restore them. Setting the value to `0` disables the
 pass. Grok tests cover the threshold, disabled mode, group breaks, and reveal.
 
-Runie currently has a coarser projection: `activity_expanded=false` hides all
-tool rows in the activity projection, while `true` renders all rows. It has no
-bounded dense-run policy, `N more` header, zero-height hidden-member model, or
-reveal state. This is a genuine multi-member parity gap, but it is not safe to
-patch from a single `Hey` frame: the decisive missing data is the ordered
-tool-event sequence, group break conditions, configured threshold, and
-selected/reveal interaction.
+Runie now derives bounded dense groups from the actor-owned transcript and
+folds non-selected members at the physical-row boundary when
+`activity_expanded=false`; single-tool cards and selected members remain
+visible. The actor retains Grok's tool-mode state independently of the group
+fold. The decisive YAML oracle uses twelve ordered tool events, a grouped
+summary, representative member exclusions, and screen assertions at five
+geometries.
 
-Acceleration decision: add a YAML trace with 12 ordered tool calls, one
-non-groupable break, and threshold assertions before implementing the
-projection. This is the smallest oracle that distinguishes collapsed activity
-from Grok's `N more` truncation. Until then, the three-worker lifecycle frame
-is a fixture-specific pass, not generalized group parity.
+Acceleration result: the dense collapsed fixture now distinguishes collapsed
+activity from Grok's bounded visible-tail behavior and runs through the
+runtime YAML matrix without recompilation. Remaining dense parity is limited
+to additional group-break and interactive reveal variants.
 
 Implementation progress (2026-08-06): `runie-tui` now exposes a pure
 `dense_tool_group_members` policy helper and the named
-`GROK_GROUP_MAX_VISIBLE` source default. Reducer/renderer integration and the
-YAML assertion are intentionally still pending; the helper is covered by
-unit tests and keeps the next change from embedding grouping rules in paint
-code.
+`GROK_GROUP_MAX_VISIBLE` source default. Reducer/renderer integration is now
+covered by the dense YAML screen oracle and renderer regression tests; the
+remaining follow-up is broader group-break/reveal coverage.
 
 The decisive replay oracle is now present as
 `visual-activity-dense-groups.yaml`: twelve ordered Bash members are split by
