@@ -55,6 +55,8 @@ provider-specific contract”. The source of truth is the current Pi tree at
    async route through their owning actor/event boundaries, with YAML action or
    post-state coverage. Model catalog selection and the remaining commands
    remain open.
+   The exact missing selector contract and actor/YAML design are captured in
+   P65; an explicit `/model provider/model` route is not selector parity.
 3. Cast-wide zero-diff coverage for every Pi lifecycle/error/abort family,
    including terminal capability variants and dynamic timing metadata.
 
