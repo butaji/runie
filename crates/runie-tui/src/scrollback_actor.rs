@@ -68,6 +68,13 @@ impl ScrollbackActor {
         let _ = mailbox_ack!(self.tx, |reply| Command::ApplyBatch(messages, reply));
     }
 
+    pub async fn apply_event(&self, event: &AgentEvent) {
+        let messages = bus_messages_for_event(event.clone());
+        if !messages.is_empty() {
+            self.apply_batch(messages).await;
+        }
+    }
+
     pub fn snapshot(&self) -> Scrollback {
         Scrollback::from_model_snapshot(self.snapshot.borrow().clone())
     }

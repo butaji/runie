@@ -130,6 +130,7 @@ enum PromptMsg {
         runie_core::types::ThemeKind,
         tokio::sync::oneshot::Sender<()>,
     ),
+    ApplyEvent(Box<AgentEvent>, tokio::sync::oneshot::Sender<()>),
 }
 
 #[derive(Clone)]
@@ -188,6 +189,13 @@ impl PromptActor {
     pub async fn set_theme(&self, theme: runie_core::types::ThemeKind) {
         let (reply, result) = tokio::sync::oneshot::channel();
         self.unit(PromptMsg::SetTheme(theme, reply)).await;
+        let _ = result.await;
+    }
+
+    pub async fn apply_event(&self, event: AgentEvent) {
+        let (reply, result) = tokio::sync::oneshot::channel();
+        self.unit(PromptMsg::ApplyEvent(Box::new(event), reply))
+            .await;
         let _ = result.await;
     }
 
@@ -271,6 +279,12 @@ fn handle_prompt_message(prompt: &mut PromptWidget, message: PromptMsg) {
             prompt.set_theme(theme);
             let _ = reply.send(());
         }
+        PromptMsg::ApplyEvent(event, reply) => {
+            if let AgentEvent::ThemeChanged { theme } = *event {
+                prompt.set_theme(theme);
+            }
+            let _ = reply.send(());
+        }
     }
 }
 
@@ -322,18 +336,10 @@ impl App {
     /// the event. The wait is cooperative and bounded; no renderer state is
     /// mutated directly.
     pub async fn set_theme(&self, theme: runie_core::types::ThemeKind) {
-        const THEME_ACK_ATTEMPTS: usize = 16;
-        self.bus
-            .publish(runie_core::types::AgentEvent::ThemeChanged { theme });
-        for _ in 0..THEME_ACK_ATTEMPTS {
-            if self.model_snapshot().prompt.theme == theme
-                && self.status_snapshot().theme() == theme
-                && self.scrollback_snapshot().theme() == theme
-            {
-                return;
-            }
-            tokio::task::yield_now().await;
-        }
+        let event = AgentEvent::ThemeChanged { theme };
+        self.prompt.apply_event(event.clone()).await;
+        self.status_actor.apply_event(&event).await;
+        self.scrollback_actor.apply_event(&event).await;
     }
 
     pub async fn toggle_command_palette(&self) {
