@@ -333,10 +333,17 @@ impl App {
         self.loop_actor.reset().await
     }
 
-    /// Publish one typed theme event. Each owning projection consumes the
-    /// event from its bus subscription and reduces it in its own mailbox.
+    /// Deliver one typed theme event to every owning projection and await the
+    /// three mailbox acknowledgements before returning. The coordinator is
+    /// the single delivery boundary for this application command; each actor
+    /// still owns and reduces only its own state.
     pub async fn set_theme(&self, theme: runie_core::types::ThemeKind) {
-        self.bus.publish(AgentEvent::ThemeChanged { theme });
+        let event = AgentEvent::ThemeChanged { theme };
+        tokio::join!(
+            self.prompt.apply_event(event.clone()),
+            self.status_actor.apply_event(&event),
+            self.scrollback_actor.apply_event(&event),
+        );
     }
 
     pub async fn toggle_command_palette(&self) {

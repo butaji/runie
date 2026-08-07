@@ -1,6 +1,6 @@
 # p44 — Replace theme polling with actor acknowledgements
 
-Status: in progress
+Status: complete (2026-08-06)
 
 `App::set_theme` currently publishes `ThemeChanged` and performs bounded
 `yield_now` polling until prompt, status, and scrollback snapshots converge.
@@ -22,6 +22,7 @@ after all three owners reduce the event; no snapshot polling remains. The
 event source stays declarative and each actor retains exclusive state
 ownership.
 
-Status is complete: the acknowledgement barrier is now the authoritative
-completion signal for theme application, with actor snapshots used only as
-read-only projections afterward.
+The coordinator now delivers one typed `ThemeChanged` event to prompt, status,
+and scrollback actor mailboxes and awaits all three acknowledgements. It does
+not rely on broadcast delivery or snapshot polling; snapshots remain
+read-only projections after the barrier.
