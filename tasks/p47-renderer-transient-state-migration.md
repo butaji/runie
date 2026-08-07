@@ -52,8 +52,9 @@ mailbox.
 Thinking duration now follows `ThinkingEnd`/assistant terminal events into the
 actor-owned `StatusSnapshot`. Production finalization reads that snapshot for
 the Grok `Thought for …` label; only the compatibility test renderer retains a
-test-scoped fallback. `visual-reasoning.yaml` asserts the duration from YAML,
-so changing the event sequence does not require recompilation.
+test-scoped fallback. `visual-thinking-duration.yaml` asserts the event-to-
+snapshot path directly, so changing the event sequence does not require
+recompilation.
 
 ## Acceptance evidence
 

@@ -1,0 +1,16 @@
+name: visual-thinking-duration
+description: |
+  Verifies that Pi's ThinkingEnd duration is delivered through the event
+  boundary into the actor-owned status projection. The fixture is runtime
+  loaded and requires no Rust recompilation when the event changes.
+events:
+  - start
+  - thinking_start: { index: 0 }
+  - thinking_end:
+      index: 0
+      content: "checking"
+      elapsed_ms: 900
+assertions:
+  state:
+    status: ready
+    thinking_elapsed_ms: 900
