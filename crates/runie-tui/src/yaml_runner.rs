@@ -215,6 +215,11 @@ pub struct ToolSpec {
     pub error: Option<String>,
     #[serde(default)]
     pub media: Option<String>,
+    /// Pi-compatible terminal hint for this deterministic tool result.
+    #[serde(default)]
+    pub terminate: bool,
+    #[serde(default)]
+    pub added_tool_names: Vec<String>,
 }
 
 fn default_tool_kind() -> String {
@@ -1276,6 +1281,8 @@ pub struct ReplayTool {
     error: bool,
     details: serde_json::Value,
     media: Option<String>,
+    terminate: bool,
+    added_tool_names: Vec<String>,
 }
 
 impl ReplayTool {
@@ -1286,6 +1293,8 @@ impl ReplayTool {
             error: false,
             details: serde_json::Value::Null,
             media: None,
+            terminate: false,
+            added_tool_names: Vec::new(),
         }
     }
 
@@ -1296,6 +1305,8 @@ impl ReplayTool {
             error: true,
             details: serde_json::Value::Null,
             media: None,
+            terminate: false,
+            added_tool_names: Vec::new(),
         }
     }
 
@@ -1306,6 +1317,8 @@ impl ReplayTool {
             error: false,
             details: serde_json::Value::Null,
             media: None,
+            terminate: false,
+            added_tool_names: Vec::new(),
         }
     }
 
@@ -1315,6 +1328,8 @@ impl ReplayTool {
         details: serde_json::Value,
         error: bool,
         media: Option<String>,
+        terminate: bool,
+        added_tool_names: Vec<String>,
     ) -> Self {
         Self {
             name: name.into(),
@@ -1322,6 +1337,8 @@ impl ReplayTool {
             error,
             details,
             media,
+            terminate,
+            added_tool_names,
         }
     }
 }
@@ -1367,8 +1384,8 @@ impl AgentTool for ReplayTool {
             content,
             details: self.details.clone(),
             usage: None,
-            added_tool_names: vec![],
-            terminate: false,
+            added_tool_names: self.added_tool_names.clone(),
+            terminate: self.terminate,
         })
     }
 }
@@ -1786,6 +1803,8 @@ fn register_scenario_tool(
         || tool.details.is_some()
         || tool.error.is_some()
         || tool.media.is_some()
+        || tool.terminate
+        || !tool.added_tool_names.is_empty()
     {
         registry.register(Arc::new(ReplayTool::configured(
             &tool.name,
@@ -1793,6 +1812,8 @@ fn register_scenario_tool(
             tool.details.clone().unwrap_or(serde_json::Value::Null),
             tool.error.is_some(),
             tool.media.clone(),
+            tool.terminate,
+            tool.added_tool_names.clone(),
         )));
         return Ok(());
     }

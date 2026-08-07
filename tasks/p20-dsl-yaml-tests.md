@@ -346,3 +346,9 @@ updates on one mailbox DSL path.
 Mailbox audit (2026-08-06): remaining manual oneshot channels are limited to
 typed result paths (`PromptOutcome`, provider stream receivers, and
 `ToolOutcome`); all unit acknowledgements now use `mailbox_ack!`.
+
+Tool-result replay extension (2026-08-07): deterministic YAML `ToolSpec`
+supports Pi's `terminate` and `added_tool_names` result fields. The
+`visual-tool-terminate.yaml` scenario runs through the real loop and asserts
+the complete Pi event vector, including the update/end lifecycle, while
+confirming that `terminate: true` prevents an automatic follow-up turn.

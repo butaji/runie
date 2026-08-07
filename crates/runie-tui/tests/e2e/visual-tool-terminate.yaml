@@ -1,0 +1,30 @@
+name: visual-tool-terminate
+description: YAML exposes Pi's terminate hint through a deterministic tool result.
+initial_prompt: "stop after this tool"
+tools:
+  - name: echo
+    output: "terminal result"
+    terminate: true
+    added_tool_names: ["runtime_tool"]
+events:
+  - start
+  - tool_call: { name: echo, args: { value: "stop" } }
+  - done: { stop_reason: tool_use }
+assertions:
+  pi_events:
+    - agent_start
+    - turn_start
+    - message_start
+    - message_end
+    - message_start
+    - message_update
+    - message_end
+    - tool_execution_start
+    - tool_execution_update
+    - tool_execution_end
+    - message_start
+    - message_end
+    - turn_end
+    - agent_end
+  transcript_contains:
+    - "terminal result"
