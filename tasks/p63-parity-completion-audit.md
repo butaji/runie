@@ -49,6 +49,9 @@ provider-specific contract”. The source of truth is the current Pi tree at
 
 1. Exact grouped member-card geometry and reflow across all display modes.
 2. Complete Pi-mappable command registry/action execution.
+   The source-backed Pi built-in slash-command vocabulary is now present as a
+   pure macro-generated `runie-core::commands` registry (P64); actor-owned
+   execution and YAML action/state coverage remain open.
 3. Cast-wide zero-diff coverage for every Pi lifecycle/error/abort family,
    including terminal capability variants and dynamic timing metadata.
 

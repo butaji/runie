@@ -22,6 +22,7 @@
 //! See `tasks/` for the implementation plan; the test suite is the
 //! behavioural contract.
 
+pub mod commands;
 pub mod convert;
 mod event_dsl;
 pub mod types;
