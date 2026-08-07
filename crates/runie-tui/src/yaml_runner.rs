@@ -838,6 +838,8 @@ pub struct StateAssertions {
     pub tool_count: Option<usize>,
     /// Ordered labels from the actor-owned registered tool projection.
     pub tool_labels: Option<Vec<String>>,
+    /// Ordered per-tool execution-mode overrides from the actor-owned registry.
+    pub tool_execution_modes: Option<Vec<Option<ToolExecutionMode>>>,
     pub streaming_contains: Option<String>,
     pub error_contains: Option<String>,
     pub context_window: Option<u64>,
@@ -2211,6 +2213,18 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
             .map(|tool| tool.label().to_owned())
             .collect::<Vec<_>>();
         assert_yaml_eq!(Some(expected_labels.clone()), actual_labels, "tool_labels");
+    }
+    if let Some(expected_modes) = &expected.tool_execution_modes {
+        let actual_modes = actual
+            .tools
+            .iter()
+            .map(|tool| tool.execution_mode())
+            .collect::<Vec<_>>();
+        assert_yaml_eq!(
+            Some(expected_modes.clone()),
+            actual_modes,
+            "tool_execution_modes"
+        );
     }
     if let Some(expected_arguments) = &expected.tool_call_arguments {
         let actual_arguments = latest_tool_call_arguments()

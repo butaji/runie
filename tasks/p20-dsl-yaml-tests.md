@@ -369,6 +369,7 @@ keeping fixtures declarative and runtime-editable.
 Per-tool execution mode (2026-08-07): `ToolSpec.execution_mode` now maps Pi's
 per-tool `executionMode` override onto the owned `AgentTool` registry path;
 the termination replay fixture exercises the declarative `sequential` value.
+Its state assertions also verify the registered execution-mode projection.
 
 Argument-preparation replay (2026-08-07): YAML `prepared_arguments` maps the
 Pi `prepareArguments` replacement path onto deterministic replay tools.

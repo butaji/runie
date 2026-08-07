@@ -18,6 +18,7 @@ assertions:
     tool_result_added_tool_names: [runtime_tool]
     tool_result_details: { source: replay, exit_code: 0 }
     tool_result_usage: { input: 3, output: 2, totalTokens: 5 }
+    tool_execution_modes: [sequential]
   pi_events:
     - agent_start
     - turn_start
