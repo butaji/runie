@@ -190,6 +190,80 @@ pub struct SessionLaneRecordSnapshot {
     pub data: serde_json::Value,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CompactionCutPoint {
+    pub first_kept_entry_index: usize,
+    pub turn_start_index: Option<usize>,
+    pub is_split_turn: bool,
+}
+
+/// Select Pi's recent-context cut point without performing summarization.
+/// `token_estimates` is supplied by the caller so estimation policy stays
+/// explicit and testable; entries that cannot begin a turn (tool results) are
+/// never selected as a cut point.
+#[allow(
+    clippy::too_many_lines,
+    reason = "the Pi cut-point decision table stays explicit"
+)]
+pub fn find_compaction_cut_point(
+    entries: &[SessionEntry],
+    token_estimates: &[u64],
+    start_index: usize,
+    end_index: usize,
+    keep_recent_tokens: u64,
+) -> Result<CompactionCutPoint, String> {
+    if start_index > end_index
+        || end_index > entries.len()
+        || entries.len() != token_estimates.len()
+    {
+        return Err("compaction cut-point bounds do not match entries".into());
+    }
+    let cut_points = (start_index..end_index)
+        .filter(|index| {
+            matches!(
+                &entries[*index].message,
+                AgentMessage::User(_) | AgentMessage::Assistant(_)
+            )
+        })
+        .collect::<Vec<_>>();
+    let Some(mut cut_index) = cut_points.first().copied() else {
+        return Ok(CompactionCutPoint {
+            first_kept_entry_index: start_index,
+            turn_start_index: None,
+            is_split_turn: false,
+        });
+    };
+    let mut accumulated = 0;
+    for index in (start_index..end_index).rev() {
+        if !matches!(&entries[index].message, AgentMessage::ToolResult(_)) {
+            accumulated += token_estimates[index];
+        }
+        if accumulated >= keep_recent_tokens {
+            if let Some(candidate) = cut_points
+                .iter()
+                .copied()
+                .find(|candidate| *candidate >= index)
+            {
+                cut_index = candidate;
+            }
+            break;
+        }
+    }
+    let is_user = matches!(&entries[cut_index].message, AgentMessage::User(_));
+    let turn_start_index = if is_user {
+        None
+    } else {
+        (start_index..=cut_index)
+            .rev()
+            .find(|index| matches!(&entries[*index].message, AgentMessage::User(_)))
+    };
+    Ok(CompactionCutPoint {
+        first_kept_entry_index: cut_index,
+        turn_start_index,
+        is_split_turn: turn_start_index.is_some(),
+    })
+}
+
 /// Pi's durable operation-lane record families. The payload remains JSON at
 /// the wire boundary, but classification is typed before the actor reducer
 /// changes its owned projection.
@@ -1408,6 +1482,32 @@ mod tests {
             [1, 2]
         );
         assert!(snapshot.fork_at_message("missing").is_err());
+    }
+
+    #[test]
+    fn compaction_cut_point_preserves_recent_budget_and_reports_split_turn() {
+        let entries = vec![
+            SessionEntry {
+                id: "user-1".into(),
+                seq: 1,
+                parent_id: None,
+                timestamp: 0,
+                message: user("request"),
+                terminate: false,
+            },
+            SessionEntry {
+                id: "assistant-1".into(),
+                seq: 2,
+                parent_id: Some("user-1".into()),
+                timestamp: 0,
+                message: AgentMessage::Assistant(Default::default()),
+                terminate: false,
+            },
+        ];
+        let cut = find_compaction_cut_point(&entries, &[40, 40], 0, 2, 20).expect("cut point");
+        assert_eq!(cut.first_kept_entry_index, 1);
+        assert_eq!(cut.turn_start_index, Some(0));
+        assert!(cut.is_split_turn);
     }
 
     #[test]

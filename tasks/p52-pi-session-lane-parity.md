@@ -82,6 +82,15 @@ file-operation details into the async summarization boundary. Runie currently
 journals `CompactionCreated` but does not yet implement this preparation
 algorithm.
 
+## Completed slice (2026-08-07, pure cut-point planner)
+
+`find_compaction_cut_point` now provides the first pure compaction boundary.
+It accepts caller-owned token estimates, excludes tool-result entries from cut
+points, preserves the recent-token budget, and reports a split-turn prefix for
+the async summarization owner. Unit coverage pins the split-turn behavior.
+YAML exposure remains the next step because the runtime scenario schema must
+declare token estimates and cut-point expectations without recompilation.
+
 ## Current Runie mapping
 
 `runie-core/src/session.rs` owns parent-linked message/config entries and
