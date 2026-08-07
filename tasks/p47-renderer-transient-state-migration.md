@@ -107,6 +107,12 @@ flag, which was assigned on thinking/text transitions but never read. The
 reasoning buffer remains the sole compatibility text accumulator; live
 reasoning continues to come from the feed actor snapshot.
 
+Assistant text ownership increment (2026-08-07): removed the compatibility
+`streaming_buffer`. Text deltas now append directly to the existing assistant
+line in the compatibility feed model, and finalization reads that model. The
+live path was already feed-actor-owned; this removes the duplicate text
+accumulator from replay without changing Grok line ordering.
+
 Assistant metadata ownership increment (2026-08-07): the live
 `with_live_actors` path no longer runs `handle_message_start/update/end` through
 the compatibility metadata reducer. Assistant text/reasoning lifecycle is

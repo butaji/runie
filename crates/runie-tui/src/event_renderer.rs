@@ -273,8 +273,6 @@ pub struct EventRenderer {
     /// Actor-owned status projection used by the production event loop while
     /// the compatibility widget projection is being retired.
     status_actor: Option<StatusActor>,
-    /// Accumulated text while an assistant message is streaming.
-    streaming_buffer: String,
     /// Tool rows are keyed by the core tool-call id because parallel tools may
     /// update and finish in a different order than they started.
     tool_rows: HashMap<String, usize>,
@@ -332,7 +330,6 @@ impl EventRenderer {
             scrollback_actor,
             status,
             status_actor,
-            streaming_buffer: String::new(),
             tool_rows: HashMap::new(),
             pending_tools: HashMap::new(),
             in_assistant_stream: false,
@@ -796,7 +793,6 @@ impl EventRenderer {
             AgentEvent::Reset => {
                 self.in_assistant_stream = false;
                 self.reasoning_buffer.clear();
-                self.streaming_buffer.clear();
             }
             AgentEvent::MessageStart { message } => self.handle_message_start(message),
             AgentEvent::MessageUpdate { event, .. } => self.handle_message_update(event),
@@ -1144,7 +1140,6 @@ impl EventRenderer {
         if self.status_actor.is_none() {
             self.status.lock().set(Status::Thinking);
         }
-        self.streaming_buffer.clear();
         self.tool_rows.clear();
         self.pending_tools.clear();
         self.in_assistant_stream = false;
@@ -1188,7 +1183,6 @@ impl EventRenderer {
             AgentMessage::Assistant(_) => {
                 self.activity_group_open = false;
                 self.in_assistant_stream = true;
-                self.streaming_buffer.clear();
                 self.reasoning_buffer.clear();
                 if self.scrollback_actor.is_none() {
                     let mut scrollback = self.scrollback.lock();
@@ -1229,8 +1223,6 @@ impl EventRenderer {
                     // provisional working indicator is transient only.
                     scrollback.remove_kind(LineKind::ThinkingStatus);
                 }
-                drop(scrollback);
-                self.replace_last_assistant_line(&self.streaming_buffer.clone());
             }
             if let Some(error) = assistant.error_message {
                 if self.status_actor.is_none() {
@@ -1256,9 +1248,8 @@ impl EventRenderer {
                 if self.status_actor.is_none() {
                     self.status.lock().set(Status::Streaming);
                 }
-                self.streaming_buffer.push_str(&delta);
                 if self.scrollback_actor.is_none() {
-                    self.replace_last_assistant_line(&self.streaming_buffer.clone());
+                    self.append_assistant_delta(&delta);
                 }
             }
             AssistantMessageEvent::ThinkingDelta { delta, .. } if self.in_assistant_stream => {
@@ -1303,12 +1294,12 @@ impl EventRenderer {
         }
     }
 
-    fn replace_last_assistant_line(&self, text: &str) {
+    fn append_assistant_delta(&self, delta: &str) {
         let mut sb = self.scrollback.lock();
         if let Some(last) = sb.lines_mut_last_assistant() {
-            last.text = text.to_string();
+            last.text.push_str(delta);
         } else {
-            sb.append(Line::new(LineKind::Assistant, text.to_string()));
+            sb.append(Line::new(LineKind::Assistant, delta.to_string()));
         }
     }
 
@@ -2100,7 +2091,6 @@ mod tests {
                 partial: Default::default(),
             },
         });
-        assert!(renderer.streaming_buffer.is_empty());
         assert!(renderer.reasoning_buffer.is_empty());
         assert!(!renderer.in_assistant_stream);
     }
