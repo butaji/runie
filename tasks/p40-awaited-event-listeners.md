@@ -1,6 +1,6 @@
 # p40 — Awaited lifecycle listener settlement
 
-Status: in progress
+Status: complete (2026-08-07)
 
 ## Source evidence
 

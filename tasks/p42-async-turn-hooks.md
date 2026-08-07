@@ -1,6 +1,6 @@
 # p42 — Await async turn hooks
 
-Status: in progress
+Status: complete (2026-08-07)
 
 Pi permits asynchronous `prepareNextTurn` and `shouldStopAfterTurn` callbacks;
 the loop awaits them after `turn_end` and before steering/follow-up polling.

@@ -1,6 +1,6 @@
 # p41 — Reject reset during an active Pi run
 
-Status: in progress
+Status: complete (2026-08-07)
 
 Pi's `Agent.reset()` throws while an active run exists. Runie's previous reset
 path published `Reset` and cleared queues unconditionally, allowing a reset to
