@@ -10,6 +10,8 @@ events:
   - text_delta: "first-reply"
   - done: { stop_reason: stop }
 assertions:
+  state:
+    follow_up_mode: all
   transcript_contains:
     - "first"
     - "first-reply"

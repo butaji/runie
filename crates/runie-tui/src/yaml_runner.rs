@@ -712,6 +712,9 @@ pub struct StateAssertions {
     pub reasoning_expanded: Option<bool>,
     pub activity_expanded: Option<bool>,
     pub follow_latest_user: Option<bool>,
+    /// Effective queue policies projected by the loop actor.
+    pub steering_mode: Option<runie_core::types::QueueMode>,
+    pub follow_up_mode: Option<runie_core::types::QueueMode>,
     /// Exact actor-owned workflow projections keyed by their stable run id.
     /// YAML owns the expected state; the runner only performs generic field
     /// comparison so workflow fixtures stay recompilation-free.
@@ -1205,6 +1208,8 @@ pub struct ScenarioOutcome {
     pub state: runie_core::state::AgentStateSnapshot,
     pub status: crate::widgets::StatusSnapshot,
     pub provider_options: Vec<SimpleStreamOptions>,
+    pub steering_mode: runie_core::types::QueueMode,
+    pub follow_up_mode: runie_core::types::QueueMode,
 }
 
 pub struct ScenarioError(pub String);
@@ -1245,6 +1250,8 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
         state: actor_snapshot.state_snapshot(),
         status,
         provider_options,
+        steering_mode: actor_snapshot.steering_mode().await,
+        follow_up_mode: actor_snapshot.follow_up_mode().await,
     })
 }
 
@@ -1658,6 +1665,16 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
     );
     assert_yaml_eq!(expected.messages, actual.messages.len(), "messages");
     assert_yaml_eq!(expected.tool_count, actual.tools.len(), "tool_count");
+    assert_yaml_eq!(
+        expected.steering_mode,
+        outcome.steering_mode,
+        "steering_mode"
+    );
+    assert_yaml_eq!(
+        expected.follow_up_mode,
+        outcome.follow_up_mode,
+        "follow_up_mode"
+    );
     if let Some(needle) = &expected.streaming_contains {
         let text = actual
             .streaming_message

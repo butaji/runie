@@ -13,3 +13,8 @@ are already required.
 
 Future DSL work must preserve this separation: declarative event data first,
 actor-owned reduction second, pure snapshot rendering third.
+
+The YAML runner now also exposes the effective steering and follow-up queue
+policies in `assertions.state`; `follow-up.yaml` verifies the `all` policy
+after actor construction. This makes queue configuration a state assertion,
+not merely a deserialization check.
