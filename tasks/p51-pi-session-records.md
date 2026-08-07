@@ -158,3 +158,7 @@ operation records cannot mutate the snapshot or lane log. The event replay
 path intentionally ignores the returned error at the compatibility boundary,
 matching Pi's event delivery semantics while direct session callers can
 observe admission failure. No new wire record was invented.
+## Latest increment
+
+- P60 adds Pi label facts as actor-delivered events with JSONL round-trip
+  support; see `tasks/p60-pi-session-labels.md`.

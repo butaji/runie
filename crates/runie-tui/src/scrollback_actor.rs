@@ -283,6 +283,7 @@ fn bus_messages_for_event(event: AgentEvent) -> Vec<ScrollbackMsg> {
         | AgentEvent::ActiveToolsChanged { .. }
         | AgentEvent::BranchSummaryCreated { .. }
         | AgentEvent::CustomSessionEntryCreated { .. }
+        | AgentEvent::SessionLabelChanged { .. }
         | AgentEvent::CompactionCreated { .. }
         | AgentEvent::OperationRecordCreated { .. }
         | AgentEvent::TurnStart
@@ -573,6 +574,7 @@ fn background_messages_for_event(event: AgentEvent) -> Vec<ScrollbackMsg> {
         | AgentEvent::ThemeChanged { .. }
         | AgentEvent::ModelChanged { .. }
         | AgentEvent::ActiveToolsChanged { .. }
+        | AgentEvent::SessionLabelChanged { .. }
         | AgentEvent::BranchSummaryCreated { .. }
         | AgentEvent::CustomSessionEntryCreated { .. }
         | AgentEvent::CompactionCreated { .. }

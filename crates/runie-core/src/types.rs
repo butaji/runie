@@ -981,6 +981,11 @@ pub enum AgentEvent {
     ActiveToolsChanged {
         tool_names: Vec<String>,
     },
+    /// Pi-compatible session label fact, applied by the session actor.
+    SessionLabelChanged {
+        target_id: String,
+        label: Option<String>,
+    },
     /// Application-owned session branch summary; navigation identity is kept
     /// in the event so the journal cannot reduce an anonymous summary.
     BranchSummaryCreated {

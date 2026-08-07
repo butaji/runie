@@ -31,6 +31,10 @@ pub enum SessionConfigRecord {
     ActiveToolsChanged {
         tool_names: Vec<String>,
     },
+    LabelChanged {
+        target_id: String,
+        label: Option<String>,
+    },
     BranchSummaryCreated {
         from_id: String,
         summary: String,
@@ -69,6 +73,12 @@ macro_rules! session_config_record {
             AgentEvent::ActiveToolsChanged { tool_names } => {
                 Some(SessionConfigRecord::ActiveToolsChanged {
                     tool_names: tool_names.clone(),
+                })
+            }
+            AgentEvent::SessionLabelChanged { target_id, label } => {
+                Some(SessionConfigRecord::LabelChanged {
+                    target_id: target_id.clone(),
+                    label: label.clone(),
                 })
             }
             AgentEvent::BranchSummaryCreated {
@@ -154,6 +164,7 @@ impl SessionEntryRecord {
                 SessionConfigRecord::ModelChanged { .. } => "model_change",
                 SessionConfigRecord::ThinkingLevelChanged { .. } => "thinking_level_change",
                 SessionConfigRecord::ActiveToolsChanged { .. } => "active_tools_change",
+                SessionConfigRecord::LabelChanged { .. } => "label",
                 SessionConfigRecord::BranchSummaryCreated { .. } => "branch_summary",
                 SessionConfigRecord::CustomSessionEntryCreated { .. } => "custom",
                 SessionConfigRecord::CompactionCreated { .. } => "compaction",
@@ -1711,6 +1722,29 @@ impl SessionSnapshot {
                         )
                         .map_err(|error| format!("invalid activeToolNames: {error}"))?,
                     },
+                    "label" => SessionConfigRecord::LabelChanged {
+                        target_id: value
+                            .get("targetId")
+                            .and_then(serde_json::Value::as_str)
+                            .ok_or_else(|| {
+                                format!("session entry {} is missing targetId", line_index + 2)
+                            })?
+                            .to_owned(),
+                        label: match value.get("label") {
+                            None | Some(serde_json::Value::Null) => None,
+                            Some(value) => Some(
+                                value
+                                    .as_str()
+                                    .ok_or_else(|| {
+                                        format!(
+                                            "session entry {} has invalid label",
+                                            line_index + 2
+                                        )
+                                    })?
+                                    .to_owned(),
+                            ),
+                        },
+                    },
                     "branch_summary" => SessionConfigRecord::BranchSummaryCreated {
                         from_id: value
                             .get("fromId")
@@ -1913,6 +1947,10 @@ impl SessionSnapshot {
                 SessionConfigRecord::ActiveToolsChanged { tool_names } => (
                     "active_tools_change",
                     serde_json::json!({ "activeToolNames": tool_names }),
+                ),
+                SessionConfigRecord::LabelChanged { target_id, label } => (
+                    "label",
+                    serde_json::json!({ "targetId": target_id, "label": label }),
                 ),
                 SessionConfigRecord::BranchSummaryCreated {
                     from_id,

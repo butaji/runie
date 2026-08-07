@@ -327,6 +327,9 @@ pub enum EventSpec {
     ActiveTools {
         active_tools: Vec<String>,
     },
+    SessionLabel {
+        session_label: SessionLabelSpec,
+    },
     BranchSummary {
         branch_summary: BranchSummarySpec,
     },
@@ -470,6 +473,13 @@ pub struct BranchSummarySpec {
     pub summary: String,
     #[serde(default)]
     pub details: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct SessionLabelSpec {
+    pub target_id: String,
+    #[serde(default)]
+    pub label: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -715,6 +725,7 @@ impl EventSpec {
             Self::ContextWindow { .. } => None,
             Self::ThinkingLevel { .. } => None,
             Self::ActiveTools { .. } => None,
+            Self::SessionLabel { .. } => None,
             Self::BranchSummary { .. } => None,
             Self::CustomEntry { .. } => None,
             Self::Compaction { .. } => None,
@@ -773,6 +784,10 @@ impl EventSpec {
             }),
             Self::ActiveTools { active_tools } => Some(AgentEvent::ActiveToolsChanged {
                 tool_names: active_tools.clone(),
+            }),
+            Self::SessionLabel { session_label } => Some(AgentEvent::SessionLabelChanged {
+                target_id: session_label.target_id.clone(),
+                label: session_label.label.clone(),
             }),
             Self::BranchSummary { branch_summary } => Some(AgentEvent::BranchSummaryCreated {
                 from_id: branch_summary.from_id.clone(),
@@ -2835,6 +2850,7 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
                 runie_core::session::SessionConfigRecord::ActiveToolsChanged { .. } => {
                     "active_tools_change".to_owned()
                 }
+                runie_core::session::SessionConfigRecord::LabelChanged { .. } => "label".to_owned(),
                 runie_core::session::SessionConfigRecord::BranchSummaryCreated { .. } => {
                     "branch_summary".to_owned()
                 }
@@ -3818,6 +3834,7 @@ fn event_kind(event: &runie_core::types::AgentEvent) -> &'static str {
         ThemeChanged { .. } => "theme_changed",
         ModelChanged { .. } => "model_changed",
         ActiveToolsChanged { .. } => "active_tools_changed",
+        SessionLabelChanged { .. } => "session_label_changed",
         BranchSummaryCreated { .. } => "branch_summary_created",
         CustomSessionEntryCreated { .. } => "custom_session_entry_created",
         CompactionCreated { .. } => "compaction_created",

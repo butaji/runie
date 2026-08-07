@@ -90,6 +90,7 @@ pub fn status_messages_for_event(event: &AgentEvent) -> Vec<StatusMsg> {
         }
         AgentEvent::ThinkingLevelChanged { .. }
         | AgentEvent::ActiveToolsChanged { .. }
+        | AgentEvent::SessionLabelChanged { .. }
         | AgentEvent::BranchSummaryCreated { .. }
         | AgentEvent::CustomSessionEntryCreated { .. }
         | AgentEvent::CompactionCreated { .. }

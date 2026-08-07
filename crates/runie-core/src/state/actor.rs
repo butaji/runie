@@ -197,6 +197,9 @@ impl AgentStateActor {
                 // Session configuration is reduced by SessionActor; the
                 // agent message/state projection has no active-tool field.
             }
+            AgentEvent::SessionLabelChanged { .. } => {
+                // SessionActor owns label journal facts.
+            }
             AgentEvent::BranchSummaryCreated { .. } => {
                 // SessionActor owns branch-summary journal records.
             }
