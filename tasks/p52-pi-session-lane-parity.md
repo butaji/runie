@@ -281,6 +281,14 @@ abort signal, terminal state error, and final assistant stop reason. Aborted
 assistant results therefore publish `operation_finished: aborted` instead of
 being mislabeled as completed; `visual-aborted-turn.yaml` asserts this case.
 
+## Completed slice (2026-08-07, separate-lane JSONL restart)
+
+JSONL import now recognizes all typed operation-lane families before applying
+message-lane sequence and parent-link validation. Restart therefore reduces
+lane records directly, without creating configuration entries or changing the
+message leaf/sequence topology. Export/import coverage explicitly asserts that
+operation facts survive while `config_records` contains no operation records.
+
 ## Implementation order
 
 1. Replace the generic Rust operation-record payload with a typed internal

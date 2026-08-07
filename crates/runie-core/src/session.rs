@@ -715,6 +715,15 @@ impl SessionSnapshot {
                     line_index + 2
                 ));
             }
+            let entry_type = value
+                .get("type")
+                .and_then(serde_json::Value::as_str)
+                .ok_or_else(|| format!("session entry {} is missing type", line_index + 2))?;
+            if session_lane_record_kind(entry_type).is_some() {
+                let data = value.clone();
+                reduce_operation_record(&mut snapshot, entry_type, &data);
+                continue;
+            }
             let seq = value
                 .get("seq")
                 .and_then(serde_json::Value::as_u64)
@@ -757,10 +766,6 @@ impl SessionSnapshot {
                 .get("timestamp")
                 .and_then(serde_json::Value::as_i64)
                 .ok_or_else(|| format!("session entry {} has invalid timestamp", line_index + 2))?;
-            let entry_type = value
-                .get("type")
-                .and_then(serde_json::Value::as_str)
-                .ok_or_else(|| format!("session entry {} is missing type", line_index + 2))?;
             if entry_type != "message" {
                 let record = match entry_type {
                     "model_change" => SessionConfigRecord::ModelChanged {
@@ -1716,6 +1721,12 @@ mod tests {
         let (_, _, imported) = SessionSnapshot::from_jsonl(&jsonl).expect("operation JSONL");
         assert_eq!(imported.active_operations, original.active_operations);
         assert_eq!(imported.operation_outcomes, original.operation_outcomes);
+        assert!(imported.config_records.iter().all(|entry| {
+            !matches!(
+                entry.record,
+                SessionConfigRecord::OperationRecordCreated { .. }
+            )
+        }));
         assert_eq!(
             imported
                 .lane_records
