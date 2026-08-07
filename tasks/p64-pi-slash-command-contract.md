@@ -1,6 +1,7 @@
 # P64 — Pi built-in slash-command contract
 
-Status: registry implemented; actor-owned command execution remains open
+Status: registry implemented; six commands have actor-owned execution and
+YAML coverage, remaining commands stay explicitly unsupported
 (2026-08-08)
 
 ## Source contract
@@ -70,7 +71,7 @@ being replayed through a different harness.
 
 Required next evidence:
 
-- map each command to the Pi source handler and owning Runie actor;
-- add a typed command event/result for the Pi-mappable subset;
-- drive command sequences from editable YAML and assert resulting snapshots;
+- map the remaining commands to the Pi source handler and owning Runie actor;
+- add typed command events/results for newly mappable capabilities;
+- drive remaining command sequences from editable YAML and assert snapshots;
 - capture whole-screen palette/action output at the four standard geometries.
