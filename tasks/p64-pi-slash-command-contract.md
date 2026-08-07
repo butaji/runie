@@ -19,6 +19,9 @@ registry is therefore reusable by an actor, RPC boundary, YAML oracle, or TUI
 projection without duplicating command strings.
 
 Focused tests assert source order, count, argument hints, and pure filtering.
+`crates/runie-core/tests/fixtures/pi-slash-commands.yaml` is also loaded at
+test runtime and compares the complete registry, keeping the scenario data
+editable without recompiling the test harness.
 
 ## Remaining boundary
 
