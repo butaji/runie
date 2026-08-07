@@ -34,7 +34,7 @@ use runie_core::tools::executor::ToolExecHooks;
 use runie_core::tools::ToolExecutorActor;
 use runie_core::tools::ToolRegistry;
 use runie_core::types::{
-    AgentContext, AgentMessage, Model, QueueMode, SimpleStreamOptions, ThemeKind, ToolExecutionMode,
+    AgentContext, Model, QueueMode, SimpleStreamOptions, ThemeKind, ToolExecutionMode,
 };
 
 use futures::StreamExt;
@@ -685,17 +685,9 @@ async fn run_app(
                                             if is_quit_command(&text) {
                                                 return Ok(AppExit::Quit);
                                             }
-                                            let user_msg = AgentMessage::User(runie_core::types::UserMessage {
-                                                content: vec![runie_core::types::UserContent::Text { text }],
-                                                timestamp: runie_tui::clock::unix_timestamp_seconds(),
-                                            });
-                                            if let Err(error) = app
-                                                .loop_actor
-                                                .prompt(vec![user_msg], AgentContext::default())
-                                                .await
-                                            {
-                                                eprintln!("prompt error: {error:?}");
-                                            }
+                                            let _ = app.handle_prompt_outcome(
+                                                PromptOutcome::Submitted(text),
+                                            ).await;
                                         }
                                     }
                                     _ => {}

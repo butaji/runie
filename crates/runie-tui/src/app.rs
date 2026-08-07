@@ -297,11 +297,33 @@ pub struct App {
     pub loop_actor: LoopActor,
     pub bus: EventBus,
     pub ui: UiActor,
+    submission_tx: SubmissionTx,
+    _submission_owner: std::sync::Arc<runie_core::task_owner::TaskOwner>,
+}
+
+type Submission = (Vec<AgentMessage>, tokio::sync::oneshot::Sender<()>);
+type SubmissionTx = mpsc::Sender<Submission>;
+
+fn submission_actor(
+    loop_actor: LoopActor,
+) -> (
+    SubmissionTx,
+    std::sync::Arc<runie_core::task_owner::TaskOwner>,
+) {
+    runie_core::spawn_actor_worker!(32, |mut rx: mpsc::Receiver<Submission>| async move {
+        while let Some((messages, accepted)) = rx.recv().await {
+            let _ = accepted.send(());
+            let _ = loop_actor
+                .prompt(messages, runie_core::types::AgentContext::default())
+                .await;
+        }
+    })
 }
 
 impl App {
     pub fn new(loop_actor: LoopActor, bus: EventBus) -> Self {
         let ui = UiActor::new(&bus);
+        let (submission_tx, submission_owner) = submission_actor(loop_actor.clone());
         Self {
             prompt: PromptActor::new(&bus),
             status_actor: StatusActor::new(),
@@ -314,11 +336,14 @@ impl App {
             loop_actor,
             bus,
             ui,
+            submission_tx,
+            _submission_owner: submission_owner,
         }
     }
 
     pub fn new_with_welcome(loop_actor: LoopActor, bus: EventBus) -> Self {
         let ui = UiActor::new_with_welcome(&bus, true);
+        let (submission_tx, submission_owner) = submission_actor(loop_actor.clone());
         Self {
             prompt: PromptActor::new(&bus),
             status_actor: StatusActor::new(),
@@ -329,6 +354,8 @@ impl App {
             loop_actor,
             bus,
             ui,
+            submission_tx,
+            _submission_owner: submission_owner,
         }
     }
 
@@ -495,7 +522,7 @@ impl App {
     }
 
     /// Handle a prompt outcome. Returns Some(text) on submit.
-    pub async fn handle_prompt_outcome(&mut self, outcome: PromptOutcome) -> Option<String> {
+    pub async fn handle_prompt_outcome(&self, outcome: PromptOutcome) -> Option<String> {
         match outcome {
             PromptOutcome::Submitted(text) => {
                 let timestamp = crate::clock::unix_timestamp_seconds();
@@ -503,10 +530,16 @@ impl App {
                     content: vec![runie_core::types::UserContent::Text { text: text.clone() }],
                     timestamp,
                 });
-                let _ = self
-                    .loop_actor
-                    .prompt(vec![user_msg], runie_core::types::AgentContext::default())
-                    .await;
+                let (accepted, acknowledged) = tokio::sync::oneshot::channel();
+                if self
+                    .submission_tx
+                    .send((vec![user_msg], accepted))
+                    .await
+                    .is_err()
+                {
+                    return None;
+                }
+                let _ = acknowledged.await;
                 Some(text)
             }
             PromptOutcome::Edited | PromptOutcome::Ignored => None,

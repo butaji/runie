@@ -166,6 +166,17 @@ result asynchronously. The actor remains the sole reader of live session
 state; no caller mutates or races a snapshot. Summary generation and the
 event-owned `CompactionCreated` journal mutation remain the next boundary.
 
+The dedicated `visual-compaction-publication.yaml` replay now isolates this
+sequence and asserts the resulting record, context-role, token, and initial
+visual projections without bypassing the session actor.
+
+## Interactive submission responsiveness (2026-08-08)
+
+Prompt submission is now routed through an owned `App` submission actor. The
+UI awaits only mailbox acceptance; the actor owns the potentially slow
+`LoopActor::prompt` future. This keeps terminal input and rendering reactive
+while preserving the event-driven loop boundary and avoids orphaned tasks.
+
 ## Compaction publication boundary audit (2026-08-08)
 
 The publication half of that boundary is now source-verified: a

@@ -1,0 +1,23 @@
+name: visual-compaction-publication
+description: |
+  Compaction publication crosses the session actor as one event and exposes
+  the resulting ordered record/context projection through runtime YAML.
+events:
+  - start
+  - compaction:
+      summary: "Compacted earlier context"
+      tokens_before: 2048
+      retained_tail: []
+      details: { source: replay }
+assertions:
+  state:
+    session_config_records: [compaction]
+    compaction_context_entry_ids: []
+    compaction_context_roles: [compactionSummary]
+    compaction_context_tokens: 901
+    compaction_reserve_tokens: 100
+  visual:
+    cols: 80
+    rows: 24
+    screen_text:
+      - "Starting session…"
