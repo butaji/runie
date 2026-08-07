@@ -352,7 +352,7 @@ impl ToolCardKind {
             || lower.starts_with("web search ")
         {
             Self::WebSearch
-        } else if matches!(lower.as_str(), "search" | "grep" | "find")
+        } else if matches!(lower.as_str(), "search" | "grep" | "find" | "glob")
             || lower.starts_with("search ")
         {
             Self::Search
@@ -376,8 +376,10 @@ impl ToolCardKind {
             || lower.starts_with("use ")
         {
             Self::Use
-        } else if matches!(lower.as_str(), "search_tools" | "search-tools")
-            || lower.starts_with("search tools ")
+        } else if matches!(
+            lower.as_str(),
+            "search_tools" | "search-tools" | "search_tool"
+        ) || lower.starts_with("search tools ")
         {
             Self::SearchTools
         } else if matches!(lower.as_str(), "subagent" | "agent" | "task")
@@ -442,6 +444,15 @@ mod tests {
                 ToolDisplayMode::Truncated
             );
         }
+    }
+
+    #[test]
+    fn grok_search_aliases_keep_their_specialized_card_families() {
+        assert_eq!(ToolCardKind::from_header("glob"), ToolCardKind::Search);
+        assert_eq!(
+            ToolCardKind::from_header("search_tool"),
+            ToolCardKind::SearchTools
+        );
     }
 
     #[test]

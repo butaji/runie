@@ -335,6 +335,12 @@ preserves those aliases through default truncated mode, activity accounting,
 semantic headers, and YAML replay; `visual-execute-alias.yaml` explicitly
 drives the expand intent before asserting the settled card.
 
+Search alias closure (2026-08-06): Grok maps `glob` to Search and singular
+`search_tool` to Search Tools. Runie now preserves both semantic families in
+the model and renderer header/card projections. `visual-search-aliases.yaml`
+replays both names through supported stub tools and asserts their typed card
+families and visible labels.
+
 Status chrome theme propagation (2026-08-06): `TurnStatus` and the status
 footer now resolve spinner, label, shortcut, and loading styles from the
 actor-selected theme. A GrokDay regression renders both the footer and active

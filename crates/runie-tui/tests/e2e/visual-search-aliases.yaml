@@ -1,0 +1,27 @@
+name: visual-search-aliases
+description: Grok search aliases retain Search and Search Tools card families.
+initial_prompt: "Find the tools"
+tools:
+  - name: glob
+    kind: echo
+  - name: search_tool
+    kind: echo
+events:
+  - start
+  - tool_call:
+      name: glob
+      args: { pattern: "*.rs" }
+  - tool_call:
+      name: search_tool
+      args: { query: "filesystem" }
+  - done: { stop_reason: tool_use }
+assertions:
+  state:
+    tool_blocks: 2
+    tool_kinds: [search, search_tools]
+  visual:
+    cols: 80
+    rows: 24
+    screen_text:
+      - "Search"
+      - "Search Tools filesystem"

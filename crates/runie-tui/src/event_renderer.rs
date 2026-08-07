@@ -1314,7 +1314,7 @@ pub(crate) fn tool_header(tool_name: &str, args: &serde_json::Value) -> String {
                 .unwrap_or("");
             format!("Edit {}", make_relative_path(path))
         }
-        "search" | "grep" | "find" => {
+        "search" | "grep" | "find" | "glob" => {
             let pattern = args
                 .get("pattern")
                 .or_else(|| args.get("query"))
@@ -1346,7 +1346,7 @@ pub(crate) fn tool_header(tool_name: &str, args: &serde_json::Value) -> String {
                 .unwrap_or("");
             format!("Fetch {url}")
         }
-        "search_tools" | "search-tools" => {
+        "search_tools" | "search-tools" | "search_tool" => {
             let query = args
                 .get("query")
                 .or_else(|| args.get("pattern"))
@@ -1464,7 +1464,7 @@ pub(crate) fn completed_tool_header(
             let lines = output.lines().count();
             format!("{pending_header} ({lines} lines)")
         }
-        "search" | "grep" | "find" => {
+        "search" | "grep" | "find" | "glob" => {
             let matches = output
                 .lines()
                 .filter(|line| !line.trim().is_empty())
@@ -1481,7 +1481,7 @@ pub(crate) fn completed_tool_header(
                 if sites == 1 { "" } else { "s" }
             )
         }
-        "search_tools" | "search-tools" => {
+        "search_tools" | "search-tools" | "search_tool" => {
             let results = output
                 .lines()
                 .filter(|line| !line.trim().is_empty())
