@@ -60,7 +60,14 @@ pub fn status_messages_for_event(event: &AgentEvent) -> Vec<StatusMsg> {
             AssistantMessageEvent::Error { error, .. } => {
                 vec![StatusMsg::Set(Status::Error(error.error_text()))]
             }
-            _ => Vec::new(),
+            AssistantMessageEvent::Start { .. }
+            | AssistantMessageEvent::TextStart { .. }
+            | AssistantMessageEvent::TextEnd { .. }
+            | AssistantMessageEvent::ThinkingStart { .. }
+            | AssistantMessageEvent::ThinkingEnd { .. }
+            | AssistantMessageEvent::ToolCallStart { .. }
+            | AssistantMessageEvent::ToolCallDelta { .. }
+            | AssistantMessageEvent::ToolCallEnd { .. } => Vec::new(),
         },
         AgentEvent::MessageEnd {
             message: AgentMessage::Assistant(assistant),
@@ -76,7 +83,20 @@ pub fn status_messages_for_event(event: &AgentEvent) -> Vec<StatusMsg> {
                 Vec::new()
             }
         }
-        _ => Vec::new(),
+        AgentEvent::ThinkingLevelChanged { .. }
+        | AgentEvent::ToolDisplayModeChanged { .. }
+        | AgentEvent::MessageStart { .. }
+        | AgentEvent::MessageEnd { .. }
+        | AgentEvent::ToolExecutionStart { .. }
+        | AgentEvent::ToolExecutionUpdate { .. }
+        | AgentEvent::ToolExecutionEnd { .. }
+        | AgentEvent::BackgroundWorkStarted { .. }
+        | AgentEvent::BackgroundWorkProgress { .. }
+        | AgentEvent::BackgroundWorkFinished { .. }
+        | AgentEvent::BackgroundWorkCancelled { .. }
+        | AgentEvent::WorkflowStarted { .. }
+        | AgentEvent::WorkflowProgress { .. }
+        | AgentEvent::WorkflowFinished { .. } => Vec::new(),
     }
 }
 

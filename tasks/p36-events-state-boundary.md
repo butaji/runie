@@ -32,6 +32,16 @@ The matrix retains the original four-argument environment-assignment form;
 the compatibility branch is covered by shell syntax/argument checks so older
 capture recipes do not silently lose their color or parity-clock settings.
 
+## Exhaustiveness hardening
+
+`status_messages_for_event` now names every intentionally ignored outer
+`AgentEvent` variant and every intentionally ignored assistant sub-event.
+This removes the wildcard fallback at the status boundary: adding a Pi event
+or assistant sub-event now fails to compile until its status projection is
+classified. The same exhaustive-table treatment should be applied to the
+remaining feed and UI projection tables as their compatibility paths are
+retired.
+
 The capture helper remains an external instrument, not production state. Its
 bounded polling is intentionally limited to detecting terminal readiness and
 settled output; it does not mutate Runie's state.
