@@ -42,6 +42,12 @@ pub enum ProviderCommand {
         options: Box<Option<SimpleStreamOptions>>,
         reply: oneshot::Sender<Result<(), crate::provider::stream_fn::StreamError>>,
     },
+    SummarizeCompaction {
+        request: Box<crate::session::CompactionSummaryRequest>,
+        reply: oneshot::Sender<
+            Result<crate::session::CompactionSummary, crate::provider::stream_fn::StreamError>,
+        >,
+    },
 }
 
 #[derive(Clone)]
@@ -134,6 +140,25 @@ impl ProviderActor {
                 model: Box::new(model),
                 handle,
                 options: Box::new(options),
+                reply: reply_tx,
+            })
+            .await;
+        reply_rx.await.unwrap_or_else(|_| {
+            Err(crate::provider::stream_fn::StreamError::Invalid(
+                "provider actor stopped".into(),
+            ))
+        })
+    }
+
+    pub async fn summarize_compaction(
+        &self,
+        request: crate::session::CompactionSummaryRequest,
+    ) -> Result<crate::session::CompactionSummary, crate::provider::stream_fn::StreamError> {
+        let (reply_tx, reply_rx) = oneshot::channel();
+        let _ = self
+            .tx
+            .send(ProviderCommand::SummarizeCompaction {
+                request: Box::new(request),
                 reply: reply_tx,
             })
             .await;
@@ -267,6 +292,10 @@ async fn run_provider_worker(
                 reply,
             } => {
                 let result = stream_fn.cancel_deferred(&model, &handle, *options).await;
+                let _ = reply.send(result);
+            }
+            ProviderCommand::SummarizeCompaction { request, reply } => {
+                let result = stream_fn.summarize_compaction(&request).await;
                 let _ = reply.send(result);
             }
         }

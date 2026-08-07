@@ -177,6 +177,15 @@ UI awaits only mailbox acceptance; the actor owns the potentially slow
 `LoopActor::prompt` future. This keeps terminal input and rendering reactive
 while preserving the event-driven loop boundary and avoids orphaned tasks.
 
+## Provider-backed summary capability seam (2026-08-08)
+
+`CompactionSummaryRequest` and `CompactionSummary` now define the explicit
+provider boundary for Pi-style summary generation. `StreamFn` exposes an
+optional async `summarize_compaction` capability, and `ProviderActor` routes it
+through its owned mailbox with an explicit unsupported-capability default.
+Session preparation and `CompactionCreated` publication remain separate actor
+responsibilities; no generic provider behavior is fabricated.
+
 ## Compaction publication boundary audit (2026-08-08)
 
 The publication half of that boundary is now source-verified: a

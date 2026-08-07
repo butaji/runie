@@ -133,6 +133,17 @@ pub trait StreamFn: Send + Sync + 'static {
         options: Option<SimpleStreamOptions>,
     ) -> Result<AssistantMessageEventStream, StreamError>;
 
+    /// Optional Pi compaction-summary capability. Providers own summary
+    /// generation; the session actor owns preparation and publication.
+    async fn summarize_compaction(
+        &self,
+        _request: &crate::session::CompactionSummaryRequest,
+    ) -> Result<crate::session::CompactionSummary, StreamError> {
+        Err(StreamError::Invalid(
+            "provider does not support compaction summaries".into(),
+        ))
+    }
+
     /// Optional Pi deferred-response polling capability.
     async fn fetch_deferred(
         &self,

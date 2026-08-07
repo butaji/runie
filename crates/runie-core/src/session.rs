@@ -297,6 +297,27 @@ pub struct CompactionPreparation {
     pub cut_point: CompactionCutPoint,
 }
 
+/// Provider-owned input for Pi-compatible asynchronous compaction summary
+/// generation. Session indexing prepares this value; the provider must not
+/// mutate session state or publish journal records.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CompactionSummaryRequest {
+    pub history: Vec<AgentMessage>,
+    pub turn_prefix: Vec<AgentMessage>,
+    pub retained_tail: Vec<AgentMessage>,
+    pub tokens_before: u64,
+    pub previous_summary: Option<String>,
+}
+
+/// Provider result consumed by the session/loop coordinator before it emits
+/// the actor-owned `CompactionCreated` event.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CompactionSummary {
+    pub summary: String,
+    pub usage: Option<crate::types::Usage>,
+    pub details: Option<serde_json::Value>,
+}
+
 /// Pi's automatic-compaction threshold settings.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CompactionSettings {
