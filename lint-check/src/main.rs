@@ -98,6 +98,16 @@ fn scan_source(path: &str, src: &str) -> Vec<String> {
 fn scan_line(path: &str, src: &str, idx: usize, line: &str) -> Vec<String> {
     let mut findings = Vec::new();
     let trimmed = line.trim_start();
+    if (path.contains("/crates/runie-tui/src/") || path.starts_with("crates/runie-tui/src/"))
+        && !path.ends_with("/yaml_runner.rs")
+        && !path.contains("/src/bin/")
+        && (trimmed.contains("std::fs::") || trimmed.contains("std::process::Command"))
+    {
+        findings.push(format!(
+            "{path}:{}: blocking filesystem/process API in runtime TUI; use an owned async boundary",
+            idx + 1
+        ));
+    }
     if let Some(lit) = extract_numeric_literal(trimmed) {
         if !is_exempt(trimmed, &lit)
             && !(path.ends_with("/appearance.rs") && trimmed.contains("#"))

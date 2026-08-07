@@ -158,33 +158,6 @@ impl PromptWidget {
         };
     }
 
-    /// Synchronous fixture helper for unit tests only.
-    ///
-    /// Live input always enters through `PromptActor`, which awaits
-    /// `open_file_search_async`; keeping this helper test-only prevents a
-    /// blocking filesystem path from being used by the runtime TUI.
-    #[cfg(test)]
-    pub fn open_file_search(&mut self) {
-        if let Some(path) = self.selected_file.clone() {
-            self.viewer_lines = std::fs::read_to_string(&path)
-                .map(|contents| contents.lines().take(20).map(str::to_owned).collect())
-                .unwrap_or_else(|error| vec![format!("unable to read {path}: {error}")]);
-            self.mode = InputMode::FileViewer;
-            return;
-        }
-        self.mode = InputMode::FileSearch;
-        self.buffer.clear();
-        self.file_candidate_index = 0;
-        self.file_candidates = std::fs::read_dir(".")
-            .ok()
-            .into_iter()
-            .flat_map(|entries| entries.flatten())
-            .filter_map(|entry| entry.file_name().into_string().ok())
-            .filter(|name| !name.starts_with('.'))
-            .collect();
-        self.file_candidates.sort();
-    }
-
     /// Async actor-owned file-search transition. Terminal input remains
     /// responsive while filesystem enumeration or preview reads are pending;
     /// the widget only receives the resulting immutable facts after the
@@ -672,10 +645,10 @@ mod tests {
         assert!(text.contains("plan"));
     }
 
-    #[test]
-    fn file_search_mode_is_owned_by_prompt_and_esc_exits_it() {
+    #[tokio::test]
+    async fn file_search_mode_is_owned_by_prompt_and_esc_exits_it() {
         let mut p = PromptWidget::new();
-        p.open_file_search();
+        p.open_file_search_async().await;
         assert!(p.file_search_active());
         assert_eq!(
             p.handle_key(key(KeyCode::Esc, KeyModifiers::NONE)),
@@ -692,10 +665,10 @@ mod tests {
         assert!(p.file_candidates.iter().any(|name| name == "Cargo.toml"));
     }
 
-    #[test]
-    fn file_search_accepts_a_selected_candidate() {
+    #[tokio::test]
+    async fn file_search_accepts_a_selected_candidate() {
         let mut p = PromptWidget::new();
-        p.open_file_search();
+        p.open_file_search_async().await;
         assert!(!p.file_candidates.is_empty());
         let expected = p.file_matches()[0].clone();
         assert_eq!(
@@ -706,11 +679,11 @@ mod tests {
         assert!(!p.file_search_active());
     }
 
-    #[test]
-    fn file_search_hands_selected_file_to_bounded_viewer() {
+    #[tokio::test]
+    async fn file_search_hands_selected_file_to_bounded_viewer() {
         let mut p = PromptWidget::new();
         p.selected_file = Some("Cargo.toml".into());
-        p.open_file_search();
+        p.open_file_search_async().await;
         assert!(p.file_viewer_active());
         assert!(!p.viewer_lines.is_empty());
         assert!(p.render_height() >= 2);

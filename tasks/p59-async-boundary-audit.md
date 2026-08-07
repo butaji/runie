@@ -1,6 +1,6 @@
 # P59 — Async boundary audit
 
-Status: audited (2026-08-08; runtime sync helper quarantined)
+Status: audited (2026-08-08; runtime sync APIs enforced)
 
 ## Evidence
 
@@ -12,10 +12,14 @@ The production actor/provider paths were scanned after P57 and P58:
 - provider retry delays and cancellation use Tokio timers/signals
 - all production spawned workers are attached to actor/task owners or joined
 
-The former synchronous `PromptWidget::open_file_search` helper is now compiled
-only for unit tests. The live `PromptActor` path can only call the async
-Tokio-filesystem implementation, so a blocking file search cannot be reached
-from the runtime TUI.
+The former synchronous `PromptWidget::open_file_search` helper was removed;
+its fixtures now await the same async implementation used by the live actor.
+`lint-check` also rejects `std::fs` and `std::process::Command` in runtime TUI
+modules (offline YAML/capture harnesses and binaries remain explicitly
+separate), preventing a blocking filesystem/process path from being
+reintroduced into live rendering silently. Welcome rendering is now fully
+pure and uses declarative fallback metadata rather than invoking Git or the
+filesystem during a render/event reduction.
 
 The remaining `std::sync::Mutex<Vec<AgentEvent>>` is an explicitly documented
 compatibility-only side buffer used when no event bus is supplied. Live tool

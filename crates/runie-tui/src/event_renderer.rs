@@ -1371,28 +1371,10 @@ fn append_failure_suffix(mut text: String, failures: usize, running: bool) -> St
 /// minimal-mode chrome). Adopts grok's `insta::assert_snapshot!` pattern:
 /// the function is a pure formatter, the test pins its output to a snapshot.
 pub fn welcome_modal_lines() -> Vec<Line> {
-    let cwd = std::env::current_dir()
-        .ok()
-        .and_then(|p| p.file_name().map(|n| n.to_string_lossy().into_owned()))
-        .unwrap_or_else(|| "runie".into());
-    let branch = std::process::Command::new("git")
-        .args(["rev-parse", "--abbrev-ref", "HEAD"])
-        .output()
-        .ok()
-        .and_then(|o| {
-            if o.status.success() {
-                String::from_utf8(o.stdout).ok()
-            } else {
-                None
-            }
-        })
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
-        .unwrap_or_else(|| "main".into());
     let version = env!("CARGO_PKG_VERSION");
     vec![
         Line::new(LineKind::System, format!("╭─ Runie  v{version} ─")),
-        Line::new(LineKind::System, format!("│ {branch} {cwd}")),
+        Line::new(LineKind::System, String::from("│ main runie")),
         Line::new(LineKind::System, String::from("│ Model · runie-core")),
         Line::new(LineKind::System, String::from("│ /help for commands")),
         Line::new(LineKind::System, String::from("╰─")),
