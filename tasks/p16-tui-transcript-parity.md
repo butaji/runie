@@ -626,3 +626,11 @@ model owns lifecycle-to-role classification; the renderer must resolve these
 roles through theme tokens. A focused model test covers header/content/error
 states without terminal types. Wiring every specialized card's spans through
 this intent remains the next renderer slice.
+
+Paint-intent resolution (2026-08-06): the scrollback renderer now resolves
+exact, unwrapped typed card rows through `PaintIntent` and Opaline theme tokens
+before terminal painting. Existing span modifiers and bold action-name
+structure are preserved; rows that are reflowed or wrapped remain on the
+renderer's normal text path until their physical-row identity is carried
+explicitly. This keeps the partial migration honest while making header,
+content, success, error, and muted semantics available at the render boundary.

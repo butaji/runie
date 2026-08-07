@@ -9,10 +9,11 @@ use ratatui::text::{Line as RatLine, Span};
 use ratatui::widgets::{Paragraph, Widget, Wrap};
 
 use crate::appearance;
+use crate::view::PaintIntent;
 use runie_core::types::ThemeKind;
 pub use runie_tui_model::{
     project_tool_card_rows, FeedNavigation, FeedSnapshot, FeedState, Line, LineKind, ScrollbackMsg,
-    ToolBlock, ToolCardKind, ToolCardRowKind,
+    ToolBlock, ToolCardKind, ToolCardPaintIntent, ToolCardRowKind,
 };
 
 // Grok reserves a visible gutter between the first assistant row and its
@@ -1064,6 +1065,21 @@ impl Scrollback {
                 styled_line_for(*kind, text, self.navigation.theme)
             };
             let mut line = line;
+            if let Some(intent) = self.tool_paint_intent(*kind, text) {
+                let paint = match intent {
+                    ToolCardPaintIntent::Header => PaintIntent::Base,
+                    ToolCardPaintIntent::Content => PaintIntent::Base,
+                    ToolCardPaintIntent::Success => PaintIntent::Success,
+                    ToolCardPaintIntent::Error => PaintIntent::Error,
+                    ToolCardPaintIntent::Muted => PaintIntent::Muted,
+                };
+                let semantic_style = appearance::style_for_intent(self.navigation.theme, paint);
+                for span in &mut line.spans {
+                    if let Some(foreground) = semantic_style.fg {
+                        span.style = span.style.fg(foreground);
+                    }
+                }
+            }
             if self.navigation.live_grok_layout && *kind == LineKind::User {
                 for span in &mut line.spans {
                     span.style =
@@ -1265,6 +1281,28 @@ impl Scrollback {
                 }
             }
         }
+    }
+
+    fn tool_paint_intent(&self, kind: LineKind, text: &str) -> Option<ToolCardPaintIntent> {
+        if !matches!(
+            kind,
+            LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError | LineKind::ToolOutput
+        ) {
+            return None;
+        }
+        let line = self
+            .lines
+            .iter()
+            .find(|line| line.kind == kind && line.text == text)?;
+        let id = line.tool_call_id.as_deref()?;
+        let rows = project_tool_card_rows(
+            &self.lines,
+            &self.navigation.tool_names,
+            &self.navigation.tool_modes,
+        );
+        rows.into_iter()
+            .find(|row| row.tool_call_id == id && row.text == text)
+            .map(|row| row.paint_intent())
     }
 
     #[allow(
