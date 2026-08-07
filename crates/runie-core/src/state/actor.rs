@@ -12,7 +12,7 @@ use crate::events::EventBus;
 use crate::types::{AgentEvent, AgentMessage, AgentTool, Model, ThinkingLevel};
 
 use super::snapshot::{AgentStateSnapshot, BackgroundWorkSnapshot, WorkflowSnapshot};
-use crate::task_owner::{spawn_actor_worker, TaskOwner};
+use crate::task_owner::{mailbox_ack, spawn_actor_worker, TaskOwner};
 
 /// Maximum number of in-flight commands the actor accepts before backpressure
 /// kicks in. Sized to absorb a full assistant turn's worth of mutations.
@@ -71,156 +71,81 @@ impl AgentStateActor {
         }
     }
 
+    /// Shared DSL boundary for acknowledged state commands. The constructor
+    /// remains supplied by each method so payload semantics stay visible.
+    async fn acknowledge<F>(&self, command: F)
+    where
+        F: FnOnce(oneshot::Sender<()>) -> StateCommand,
+    {
+        let _ = mailbox_ack!(self.tx, command);
+    }
+
     pub async fn set_system_prompt(&self, s: String) {
-        let (ack_tx, ack_rx) = oneshot::channel();
-        if self
-            .tx
-            .send(StateCommand::SetSystemPrompt(s, ack_tx))
-            .await
-            .is_ok()
-        {
-            let _ = ack_rx.await;
-        }
+        self.acknowledge(|reply| StateCommand::SetSystemPrompt(s, reply))
+            .await;
     }
 
     pub async fn set_model(&self, m: Model) {
-        let (ack_tx, ack_rx) = oneshot::channel();
-        if self
-            .tx
-            .send(StateCommand::SetModel(m, ack_tx))
-            .await
-            .is_ok()
-        {
-            let _ = ack_rx.await;
-        }
+        self.acknowledge(|reply| StateCommand::SetModel(m, reply))
+            .await;
     }
 
     pub async fn set_thinking_level(&self, t: ThinkingLevel) {
-        let (ack_tx, ack_rx) = oneshot::channel();
-        if self
-            .tx
-            .send(StateCommand::SetThinkingLevel(t, ack_tx))
-            .await
-            .is_ok()
-        {
-            let _ = ack_rx.await;
-        }
+        self.acknowledge(|reply| StateCommand::SetThinkingLevel(t, reply))
+            .await;
     }
 
     pub async fn push_message(&self, m: AgentMessage) {
-        let (ack_tx, ack_rx) = oneshot::channel();
-        if self
-            .tx
-            .send(StateCommand::PushMessage(m, Some(ack_tx)))
-            .await
-            .is_ok()
-        {
-            let _ = ack_rx.await;
-        }
+        self.acknowledge(|reply| StateCommand::PushMessage(m, Some(reply)))
+            .await;
     }
 
     pub async fn replace_messages(&self, msgs: Vec<AgentMessage>) {
-        let (ack_tx, ack_rx) = oneshot::channel();
-        if self
-            .tx
-            .send(StateCommand::ReplaceMessages(msgs, ack_tx))
-            .await
-            .is_ok()
-        {
-            let _ = ack_rx.await;
-        }
+        self.acknowledge(|reply| StateCommand::ReplaceMessages(msgs, reply))
+            .await;
     }
 
     pub async fn set_tools(&self, tools: Vec<Arc<dyn AgentTool>>) {
-        let (ack_tx, ack_rx) = oneshot::channel();
-        if self
-            .tx
-            .send(StateCommand::SetTools(tools, ack_tx))
-            .await
-            .is_ok()
-        {
-            let _ = ack_rx.await;
-        }
+        self.acknowledge(|reply| StateCommand::SetTools(tools, reply))
+            .await;
     }
 
     pub async fn mark_streaming(&self, on: bool) {
-        let (ack_tx, ack_rx) = oneshot::channel();
-        if self
-            .tx
-            .send(StateCommand::MarkStreaming(on, ack_tx))
-            .await
-            .is_ok()
-        {
-            let _ = ack_rx.await;
-        }
+        self.acknowledge(|reply| StateCommand::MarkStreaming(on, reply))
+            .await;
     }
 
     pub async fn set_streaming_message(&self, m: Option<AgentMessage>) {
-        let (ack_tx, ack_rx) = oneshot::channel();
-        if self
-            .tx
-            .send(StateCommand::SetStreamingMessage(m, ack_tx))
-            .await
-            .is_ok()
-        {
-            let _ = ack_rx.await;
-        }
+        self.acknowledge(|reply| StateCommand::SetStreamingMessage(m, reply))
+            .await;
     }
 
     pub async fn set_streaming_state(&self, streaming: bool, message: Option<AgentMessage>) {
-        let (ack_tx, ack_rx) = oneshot::channel();
-        let _ = self
-            .tx
-            .send(StateCommand::SetStreamingState {
-                streaming,
-                message,
-                ack: ack_tx,
-            })
-            .await;
-        let _ = ack_rx.await;
+        self.acknowledge(|reply| StateCommand::SetStreamingState {
+            streaming,
+            message,
+            ack: reply,
+        })
+        .await;
     }
 
     pub async fn add_pending_tool_call(&self, id: String) {
-        let (ack_tx, ack_rx) = oneshot::channel();
-        if self
-            .tx
-            .send(StateCommand::AddPendingToolCall(id, Some(ack_tx)))
-            .await
-            .is_ok()
-        {
-            let _ = ack_rx.await;
-        }
+        self.acknowledge(|reply| StateCommand::AddPendingToolCall(id, Some(reply)))
+            .await;
     }
 
     pub async fn remove_pending_tool_call(&self, id: String) {
-        let (ack_tx, ack_rx) = oneshot::channel();
-        if self
-            .tx
-            .send(StateCommand::RemovePendingToolCall(id, Some(ack_tx)))
-            .await
-            .is_ok()
-        {
-            let _ = ack_rx.await;
-        }
+        self.acknowledge(|reply| StateCommand::RemovePendingToolCall(id, Some(reply)))
+            .await;
     }
 
     pub async fn set_error(&self, e: Option<String>) {
-        let (ack_tx, ack_rx) = oneshot::channel();
-        if self
-            .tx
-            .send(StateCommand::SetError(e, Some(ack_tx)))
-            .await
-            .is_ok()
-        {
-            let _ = ack_rx.await;
-        }
+        self.acknowledge(|reply| StateCommand::SetError(e, Some(reply)))
+            .await;
     }
 
     pub async fn reset(&self) {
-        let (ack_tx, ack_rx) = oneshot::channel();
-        if self.tx.send(StateCommand::Reset(ack_tx)).await.is_ok() {
-            let _ = ack_rx.await;
-        }
+        self.acknowledge(StateCommand::Reset).await;
     }
 
     /// Apply a published agent event to the actor-owned projection.

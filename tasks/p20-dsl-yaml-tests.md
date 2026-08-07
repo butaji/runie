@@ -288,3 +288,10 @@ YAML without recompiling the test harness.
 
 The workflow terminal-state fixture also covers a cancelled phase state and
 asserts Grok's fallback `○` glyph alongside the actor-owned workflow snapshot.
+
+### State mailbox DSL reuse (2026-08-06)
+
+`AgentStateActor` public mutators now route their explicit `StateCommand`
+constructors through a small private acknowledgement helper backed by
+`mailbox_ack!`. The macro removes repeated oneshot plumbing without hiding
+payload semantics or changing the YAML fixture boundary.

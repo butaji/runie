@@ -133,3 +133,8 @@ Configuration exception audit (2026-08-06): the Pi-compatible
 API, not a live agent/TUI state projection. Production `LoopActor` instances
 receive their `StreamFn` through `ProviderActor::new`; no production state
 transition uses the singleton, so it is not a second runtime state owner.
+
+State mailbox DSL consolidation (2026-08-06): acknowledged `StateCommand`
+construction now shares `mailbox_ack!` plumbing through the state actor's
+private helper. State ownership and command payloads remain explicit at each
+public method.
