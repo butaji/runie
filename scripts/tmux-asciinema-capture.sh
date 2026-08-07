@@ -123,20 +123,36 @@ fi
 # visible. Give the crossterm input worker one bounded turn to subscribe before
 # injecting the scenario; otherwise the first prompt bytes can be lost only at
 # the widest geometry.
-sleep 0.2
+# Let the owned async input worker complete its subscription after the first
+# prompt frame. The prompt marker and the mailbox readiness are separate
+# events; a short fixed grace period prevents the first character from being
+# lost on narrow and freshly resized panes.
+sleep 1.0
 
-# Send one ordinary tmux key event per character. A single multi-character
-# argument is interpreted as a tmux key name (`Hey`), while `-l` emits a
-# paste-like byte sequence that crossterm does not expose as ordinary
-# character events to Runie.
+# Send one literal tmux key event per character. A single multi-character
+# argument is interpreted as a tmux key name (`Hey`), and an unqualified
+# uppercase character can likewise be interpreted as a tmux key name rather
+# than delivered as text. Literal one-character sends preserve the exact
+# prompt, including uppercase input, while keeping the bounded per-key pace.
+typed_prompt=""
 while IFS= read -r -n 1 character; do
     if [[ -n "$character" ]]; then
-        # Send one key event per character. Literal paste mode can coalesce or
-        # drop trailing bytes in crossterm editors; named key events preserve
-        # the editor's ordinary-character path. Keep a bounded gap so both
+        # Keep a bounded gap so both
         # Grok and Runie's async input workers acknowledge each character.
-        tmux send-keys -t "$session" "$character"
-        sleep 0.08
+        typed_prompt+="$character"
+        acknowledged=0
+        for _ in $(seq 1 40); do
+            screen=$(tmux capture-pane -p -t "$session" 2>/dev/null || true)
+            if printf '%s' "$screen" | grep -Fq "$typed_prompt"; then
+                acknowledged=1
+                break
+            fi
+            tmux send-keys -t "$session" -l -- "$character"
+            sleep 0.05
+        done
+        if [[ "$acknowledged" != 1 ]]; then
+            reject_capture "prompt_key_timeout"
+        fi
     fi
 done <<< "$prompt"
 injected_screen=$(tmux capture-pane -p -t "$session" 2>/dev/null || true)

@@ -17,6 +17,21 @@ This task is the independent review pass for parity work: every implementation
 change must be checked against the capture/replay instruments before being
 called parity.
 
+## Prompt injection reliability re-audit (2026-08-08)
+
+Fresh local capture attempts exposed a second input-driver failure mode: the
+prompt marker can be visible before Runie's owned asynchronous input worker has
+completed its subscription, and `tmux send-keys` treats an unqualified
+uppercase character as a key name. The capture helper now sends one literal
+character at a time, waits for the typed prefix to be visible, retries a key
+when the prefix is not acknowledged, and gives the input worker a bounded
+post-prompt grace period. A missing prefix is reported as
+`prompt_key_timeout`; it is never accepted as parity evidence.
+
+The saved local attempt still contains invalid artifacts on some geometries,
+so no new full-screen parity claim is made from it. A complete fresh matrix
+must pass the helper's prompt gate before `cast_compare` results are used.
+
 ## Current instruments
 
 - `scripts/tmux-asciinema-capture.sh`: private tmux PTY, fixed geometry,
