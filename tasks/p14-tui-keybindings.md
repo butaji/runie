@@ -1,5 +1,7 @@
 # p14 — TUI: keybinding parity (Shift+Tab, Ctrl+x, Ctrl+L, history, Tab, file-search, multiline)
 
+Status: complete (2026-08-07)
+
 **Parity target:** grok-build pager keyboard surface.
 
 ## Grok reference
