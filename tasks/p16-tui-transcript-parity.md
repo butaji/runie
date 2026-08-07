@@ -754,7 +754,10 @@ covered by a model test; renderer emission, YAML frame capture, and anchor
 restoration remain the next slices.
 
 Anchor restoration increment (2026-08-07): measured manual-scroll anchors now
-recenter after a `ToggleToolMode` fold transition in the pure feed reducer.
+preserve their viewport by applying the measured physical-anchor delta after a
+`ToggleToolMode` fold transition in the pure feed reducer, matching Grok's
+`new_virtual_y - old_virtual_y` rule. The live measurement now reports the
+selected physical row from the same row projection used for rendering.
 Autoscroll and unmeasured compatibility paths remain unchanged. The remaining
 parity work is multi-member reflow across arbitrary wrapped rows and a
 cast-wide frame oracle.

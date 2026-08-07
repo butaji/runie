@@ -809,7 +809,13 @@ mod tests {
         });
         state.reduce(super::ScrollbackMsg::ScrollBy(3));
         state.reduce(super::ScrollbackMsg::ToggleToolMode("call-1".into()));
-        assert_eq!(state.snapshot().scroll_offset, 14);
+        assert_eq!(state.snapshot().scroll_offset, 4);
+        state.reduce(super::ScrollbackMsg::LayoutMeasured {
+            content_rows: 34,
+            viewport_rows: 6,
+            anchor_row: Some(21),
+        });
+        assert_eq!(state.snapshot().scroll_offset, 8);
         assert!(!state.snapshot().autoscroll);
     }
 }
@@ -1119,6 +1125,23 @@ impl FeedState {
                 viewport_rows,
                 anchor_row,
             } => {
+                if !self.navigation.autoscroll {
+                    if let (Some(previous), Some(current)) =
+                        (self.navigation.measured_anchor_row, anchor_row)
+                    {
+                        if current >= previous {
+                            self.navigation.scroll_offset = self
+                                .navigation
+                                .scroll_offset
+                                .saturating_add(current - previous);
+                        } else {
+                            self.navigation.scroll_offset = self
+                                .navigation
+                                .scroll_offset
+                                .saturating_sub(previous - current);
+                        }
+                    }
+                }
                 self.navigation.measured_content_rows = content_rows;
                 self.navigation.measured_viewport_rows = viewport_rows;
                 self.navigation.measured_anchor_row = anchor_row;
@@ -1635,21 +1658,6 @@ impl FeedState {
             ToolDisplayMode::Expanded => ToolDisplayMode::Collapsed,
         };
         self.navigation.tool_modes.insert(id.to_owned(), next);
-        self.restore_measured_anchor();
-    }
-
-    /// Re-anchor a manually scrolled viewport after a fold changes physical
-    /// row count. The measurement is renderer-provided state delivered through
-    /// the actor; without it, compatibility behavior remains unchanged.
-    fn restore_measured_anchor(&mut self) {
-        if self.navigation.autoscroll {
-            return;
-        }
-        let Some(anchor) = self.navigation.measured_anchor_row else {
-            return;
-        };
-        let half_viewport = self.navigation.measured_viewport_rows / 2;
-        self.navigation.scroll_offset = anchor.saturating_sub(half_viewport);
     }
 
     fn scroll_by(&mut self, delta: i32) {

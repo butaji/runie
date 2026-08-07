@@ -1338,6 +1338,23 @@ impl Scrollback {
             .len()
     }
 
+    /// Return the selected member's physical row in the same projection used
+    /// by rendering. This is the anchor identity sent to the feed actor.
+    pub fn measured_anchor_row(&self, area: Rect, terminal_rows: u16) -> Option<usize> {
+        let selected = self
+            .navigation
+            .selected_entry
+            .and_then(|index| self.lines.get(index))?;
+        let text = selected.text.as_str();
+        if text.is_empty() {
+            return None;
+        }
+        let compact = crate::layout::grok_effective_compact(false, terminal_rows);
+        self.physical_rows(area.width as usize, compact, area.height)
+            .iter()
+            .position(|(_, candidate, _)| candidate.contains(text))
+    }
+
     #[allow(
         clippy::too_many_lines,
         reason = "semantic paint lookup keeps source identity and theme intent together"
