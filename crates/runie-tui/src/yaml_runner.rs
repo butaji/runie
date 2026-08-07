@@ -704,13 +704,6 @@ pub struct VisualAssertions {
     pub screen_text: Vec<String>,
     #[serde(default)]
     pub screen_excludes: Vec<String>,
-    /// Optional actor-owned command-palette state after `steps` settle.
-    #[serde(default)]
-    pub palette_open: Option<bool>,
-    #[serde(default)]
-    pub palette_query: Option<String>,
-    #[serde(default)]
-    pub palette_index: Option<usize>,
     /// Generic actor-owned UI projection assertions. These are evaluated
     /// after declarative key steps have gone through the UiActor mailbox.
     #[serde(default)]
@@ -2702,31 +2695,6 @@ pub async fn render_visual_buffer(
             }
         }
     }
-    if let Some(expected) = vis.palette_open {
-        if palette.command_palette_open != expected {
-            return Err(format!(
-                "palette_open mismatch: expected {expected}, got {}",
-                palette.command_palette_open
-            ));
-        }
-    }
-    if let Some(expected) = &vis.palette_query {
-        if palette.command_palette_query != *expected {
-            return Err(format!(
-                "palette_query mismatch: expected {expected:?}, got {:?}",
-                palette.command_palette_query
-            ));
-        }
-    }
-    if let Some(expected) = vis.palette_index {
-        if palette.command_palette_index != expected {
-            return Err(format!(
-                "palette_index mismatch: expected {expected}, got {}",
-                palette.command_palette_index
-            ));
-        }
-    }
-
     // Grok clears the idle welcome surface as soon as editing begins; the
     // synthetic idle events above must not remain in the typed frame.
     if !vis.steps.is_empty() && scenario.initial_prompt.is_none() {

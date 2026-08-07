@@ -185,6 +185,11 @@ actor; `visual-activity-mixed.yaml` asserts the resulting visible `⌄` marker f
   from production and YAML rendering. This keeps declarative visibility in
   `UiState` and terminal painting in one renderer implementation.
 
+- **UI assertion consolidation (2026-08-06):** Migrated all command-palette
+  fixtures to `visual.ui` and removed the duplicated top-level palette
+  assertion fields from the YAML runner. UI state now has one declarative
+  schema and one comparison path.
+
 - **Actor workflow state oracle (2026-08-06):** YAML `state.workflows` now
   compares the complete actor-owned workflow projection (identity, objective,
   phase/state, active-agent count, terminal status, and elapsed time) by stable

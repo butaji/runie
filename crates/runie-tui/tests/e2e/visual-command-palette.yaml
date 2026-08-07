@@ -9,9 +9,10 @@ assertions:
       - Ctrl+P
       - "new"
       - Esc
-    palette_open: true
-    palette_query: ""
-    palette_index: 0
+    ui:
+      command_palette_open: true
+      command_palette_query: ""
+      command_palette_index: 0
     screen_text:
       - "Commands"
       - "New Session"

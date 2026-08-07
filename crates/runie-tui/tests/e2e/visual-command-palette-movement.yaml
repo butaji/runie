@@ -8,9 +8,10 @@ assertions:
     steps:
       - Ctrl+P
       - PaletteDown
-    palette_open: true
-    palette_query: ""
-    palette_index: 1
+    ui:
+      command_palette_open: true
+      command_palette_query: ""
+      command_palette_index: 1
     screen_text:
       - "Commands"
       - "Keyboard Shortcuts"
