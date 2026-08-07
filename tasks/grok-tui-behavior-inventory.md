@@ -67,7 +67,7 @@ Animation tests must control frame/tick inputs explicitly. They must not use
 **Declarative tick replay (2026-08-07):** YAML now accepts
 `animation_ticks: N`. Each declared tick is reduced through both the
 actor-owned status and feed projections, and state assertions can pin
-`animation_frame` and `elapsed_ticks`. The `visual-animation-events.yaml`
+`animation_frame`, `elapsed_ticks`, and `animation_demand`. The `visual-animation-events.yaml`
 fixture keeps the status active while ticking, then checks the complete
 rendered screen. This makes animation progression editable without
 recompilation and confirms that ticks repaint existing rows rather than

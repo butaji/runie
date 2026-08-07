@@ -10,6 +10,7 @@ assertions:
   state:
     animation_frame: 3
     elapsed_ticks: 3
+    animation_demand: true
     is_streaming: false
   visual:
     cols: 80

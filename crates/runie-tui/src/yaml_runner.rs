@@ -844,6 +844,7 @@ pub struct StateAssertions {
     /// actors. This keeps animation replay event-driven and sleep-free.
     pub animation_frame: Option<usize>,
     pub elapsed_ticks: Option<u64>,
+    pub animation_demand: Option<bool>,
     pub reasoning_expanded: Option<bool>,
     pub activity_expanded: Option<bool>,
     pub follow_latest_user: Option<bool>,
@@ -2016,6 +2017,11 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         expected.elapsed_ticks,
         outcome.status.elapsed_ticks,
         "elapsed_ticks"
+    );
+    assert_yaml_eq!(
+        expected.animation_demand,
+        outcome.status.animation_demand(),
+        "animation_demand"
     );
     assert_yaml_eq!(expected.is_streaming, actual.is_streaming, "is_streaming");
     assert_yaml_eq!(
