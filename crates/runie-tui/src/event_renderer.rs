@@ -283,7 +283,6 @@ pub struct EventRenderer {
     activity_commands: usize,
     activity_subagents: usize,
     activity_failures: usize,
-    active_tool_count: usize,
     activity_group_open: bool,
     /// If true, the next AgentStart emits the welcome modal lines
     /// (matching grok's minimal-mode chrome) and then clears this flag.
@@ -341,7 +340,6 @@ impl EventRenderer {
             activity_commands: 0,
             activity_subagents: 0,
             activity_failures: 0,
-            active_tool_count: 0,
             activity_group_open: false,
             emit_welcome,
             live_grok_layout: false,
@@ -874,7 +872,7 @@ impl EventRenderer {
         tool_name: String,
         args: serde_json::Value,
     ) -> ScrollbackMsg {
-        let starts_new_activity_group = self.active_tool_count == 0 && !self.activity_group_open;
+        let starts_new_activity_group = self.tool_buffers.is_empty() && !self.activity_group_open;
         if starts_new_activity_group {
             self.activity_dirs = 0;
             self.activity_files = 0;
@@ -901,7 +899,6 @@ impl EventRenderer {
         } else if matches!(tool_name.as_str(), "subagent" | "agent" | "task") {
             self.activity_subagents += 1;
         }
-        self.active_tool_count += 1;
         self.tool_args.insert(tool_call_id.clone(), args.clone());
         let tool_buffer = tool_header(&tool_name, &args);
         let activity = if self.activity_dirs
@@ -967,7 +964,7 @@ impl EventRenderer {
         {
             return None;
         }
-        if self.active_tool_count > 0 && self.tool_buffers.contains_key(&tool_call_id) {
+        if self.tool_buffers.contains_key(&tool_call_id) {
             if let Some(output) = structured_update_text(&partial_result) {
                 let output_lines = structured_memory_lines(&output);
                 if self.scrollback_actor.is_none() {
@@ -1019,7 +1016,6 @@ impl EventRenderer {
         result: serde_json::Value,
         is_error: bool,
     ) -> ScrollbackMsg {
-        self.active_tool_count = self.active_tool_count.saturating_sub(1);
         if is_error {
             self.activity_failures += 1;
         }
@@ -1036,7 +1032,7 @@ impl EventRenderer {
                 self.replace_tool_line(row, &tool_buffer);
             }
         }
-        let activity = if self.active_tool_count == 0
+        let activity = if self.tool_buffers.is_empty()
             && self.activity_dirs
                 + self.activity_files
                 + self.activity_commands
@@ -1146,7 +1142,6 @@ impl EventRenderer {
         self.activity_commands = 0;
         self.activity_subagents = 0;
         self.activity_failures = 0;
-        self.active_tool_count = 0;
         self.activity_group_open = false;
         if self.scrollback_actor.is_none() {
             self.scrollback.lock().apply(ScrollbackMsg::TurnEnd);

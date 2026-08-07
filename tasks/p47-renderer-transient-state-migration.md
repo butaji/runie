@@ -91,6 +91,12 @@ tool-id buffer as their event-derived predicate, matching the parallel-tool
 identity contract already covered by the renderer tests. The live path remains
 fully actor-owned.
 
+Pending-tool ownership increment (2026-08-07): the compatibility
+`active_tool_count` counter is now derived from the pending `tool_buffers` map
+keyed by tool-call ID. This removes another mutable count that could diverge
+from lifecycle events; start/update/end behavior remains identity-based and
+parallel-tool coverage passes.
+
 Assistant metadata ownership increment (2026-08-07): the live
 `with_live_actors` path no longer runs `handle_message_start/update/end` through
 the compatibility metadata reducer. Assistant text/reasoning lifecycle is
