@@ -267,6 +267,12 @@
       "file": "p29-parity-acceleration-review.md",
       "status": "in_progress",
       "title": "Process: per-run missing-data review and parity acceleration loop"
+    },
+    {
+      "id": "p51",
+      "file": "p51-pi-session-records.md",
+      "status": "planned",
+      "title": "Core: Pi session configuration records through actor-owned events"
     }
   ]
 }
