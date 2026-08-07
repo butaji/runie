@@ -1,6 +1,6 @@
 # p32 — Actor-owned tool-row identity
 
-Status: in progress (2026-08-06; reducer/projection slice advanced)
+Status: complete (2026-08-07)
 
 ## Current audit (2026-08-06)
 
@@ -130,3 +130,8 @@ assertions, proving that call ID alone is not row ownership.
 2. Carry it through tool start/update/end messages and typed `ToolBlock` state.
 3. Remove compatibility-only row mutation from the live adapter.
 4. Add the duplicate-seed YAML oracle and run the complete local gate.
+
+All four increments are complete. Live tool-row identity is owned by
+`FeedState`; the compatibility row map remains only in the synchronous replay
+adapter and is not a production state owner. The duplicate-seed YAML oracle,
+full visual suite, and actor-boundary validator pass.
