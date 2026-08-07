@@ -14,6 +14,13 @@ only the visible tail until the collapsed projection removes or folds those
 rows; adding a marker assertion now would accept a non-observable state rather
 than prove screen parity.
 
+**Collapsed-flag audit (2026-08-08):** A focused replay with
+`activity_expanded: false` still produced the expanded dense tail even though
+the state assertion reported `false`. This identifies an event-delivery or
+render-snapshot boundary defect between the YAML visual request and the final
+buffer; do not change per-tool collapse semantics until that boundary is
+reproduced and fixed.
+
 **Latest parity note (2026-08-05):** Grouped activity now retains Grok's
 failure suffix (`· N failed`) after failed directory/file/command tools
 complete. `visual-tool-error.yaml` exercises the contract through the YAML
