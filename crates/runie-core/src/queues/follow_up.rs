@@ -2,9 +2,9 @@
 
 use std::sync::Arc;
 
-use tokio::sync::{mpsc, oneshot, Notify};
+use tokio::sync::{mpsc, Notify};
 
-use crate::task_owner::{mailbox_ack, mailbox_call, spawn_actor_worker, TaskOwner};
+use crate::task_owner::{mailbox_call, spawn_actor_worker, TaskOwner};
 use crate::types::AgentMessage;
 
 #[derive(Debug, Clone, Default)]
@@ -18,7 +18,7 @@ enum FollowUpCommand {
     Push(Box<AgentMessage>, mpsc::Sender<String>),
     DrainOne(mpsc::Sender<Option<AgentMessage>>),
     DrainAll(mpsc::Sender<Vec<AgentMessage>>),
-    Clear(oneshot::Sender<()>),
+    Clear(mpsc::Sender<Vec<String>>),
     Len(mpsc::Sender<usize>),
 }
 
@@ -63,8 +63,8 @@ impl FollowUpQueueActor {
         mailbox_call!(self.tx, FollowUpCommand::DrainAll, Vec::new())
     }
 
-    pub async fn clear(&self) {
-        let _ = mailbox_ack!(self.tx, FollowUpCommand::Clear);
+    pub async fn clear(&self) -> Vec<String> {
+        mailbox_call!(self.tx, FollowUpCommand::Clear, Vec::new())
     }
 
     pub async fn len(&self) -> usize {
@@ -115,8 +115,9 @@ async fn run_follow_up_worker(mut rx: mpsc::Receiver<FollowUpCommand>) {
                 let _ = reply.send(drained).await;
             }
             FollowUpCommand::Clear(reply) => {
+                let ids = queue.iter().map(|(id, _)| id.clone()).collect();
                 queue.clear();
-                let _ = reply.send(());
+                let _ = reply.send(ids).await;
             }
             FollowUpCommand::Len(reply) => {
                 let _ = reply.send(queue.len()).await;

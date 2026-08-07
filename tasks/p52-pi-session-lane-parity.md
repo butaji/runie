@@ -205,6 +205,13 @@ existing consumers. Queue event publication and cancellation records remain
 next, because they need the queue kind and active run context at the loop
 boundary.
 
+Queue publication is now wired at `LoopActor::steer`, `follow_up`, and the
+corresponding clear methods. After an acknowledged queue mutation, the loop
+publishes `OperationRecordCreated` facts with `queue_enqueued` or
+`queue_cancelled`, including the actor-issued identity and serialized target.
+The queue actors remain the sole owners of identity allocation; session
+reduction still occurs through the event bus and `SessionActor`.
+
 ## Implementation order
 
 1. Replace the generic Rust operation-record payload with a typed internal

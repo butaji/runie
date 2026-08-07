@@ -2,9 +2,9 @@
 
 use std::sync::Arc;
 
-use tokio::sync::{mpsc, oneshot, Notify};
+use tokio::sync::{mpsc, Notify};
 
-use crate::task_owner::{mailbox_ack, mailbox_call, spawn_actor_worker, TaskOwner};
+use crate::task_owner::{mailbox_call, spawn_actor_worker, TaskOwner};
 use crate::types::AgentMessage;
 
 /// Snapshot of the steering queue for read-only consumers.
@@ -20,7 +20,7 @@ enum SteeringCommand {
     Push(Box<AgentMessage>, mpsc::Sender<String>),
     DrainOne(mpsc::Sender<Option<AgentMessage>>),
     DrainAll(mpsc::Sender<Vec<AgentMessage>>),
-    Clear(oneshot::Sender<()>),
+    Clear(mpsc::Sender<Vec<String>>),
     Len(mpsc::Sender<usize>),
 }
 
@@ -65,8 +65,8 @@ impl SteeringQueueActor {
         mailbox_call!(self.tx, SteeringCommand::DrainAll, Vec::new())
     }
 
-    pub async fn clear(&self) {
-        let _ = mailbox_ack!(self.tx, SteeringCommand::Clear);
+    pub async fn clear(&self) -> Vec<String> {
+        mailbox_call!(self.tx, SteeringCommand::Clear, Vec::new())
     }
 
     pub async fn len(&self) -> usize {
@@ -118,8 +118,9 @@ async fn run_steering_worker(mut rx: mpsc::Receiver<SteeringCommand>) {
                 let _ = reply.send(drained).await;
             }
             SteeringCommand::Clear(reply) => {
+                let ids = queue.iter().map(|(id, _)| id.clone()).collect();
                 queue.clear();
-                let _ = reply.send(());
+                let _ = reply.send(ids).await;
             }
             SteeringCommand::Len(reply) => {
                 let _ = reply.send(queue.len()).await;

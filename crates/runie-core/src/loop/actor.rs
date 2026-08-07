@@ -72,6 +72,13 @@ fn reduce_control(snapshot: &mut LoopControlSnapshot, event: LoopControlEvent) {
     }
 }
 
+fn publish_queue_record(bus: &EventBus, record_type: &str, data: serde_json::Value) {
+    bus.publish(AgentEvent::OperationRecordCreated {
+        record_type: record_type.to_owned(),
+        data,
+    });
+}
+
 enum LoopControlCommand {
     Reduce(LoopControlEvent, oneshot::Sender<()>),
 }
@@ -326,21 +333,55 @@ impl LoopActor {
     }
 
     pub async fn steer(&self, msg: AgentMessage) {
-        self.inner.deps.steering.push(msg).await;
+        let payload = serde_json::to_value(&msg).unwrap_or(serde_json::Value::Null);
+        if let Some(entry_id) = self.inner.deps.steering.push(msg).await {
+            publish_queue_record(
+                &self.inner.deps.bus,
+                "queue_enqueued",
+                serde_json::json!({
+                    "id": entry_id,
+                    "queue": "steer",
+                    "target": payload,
+                }),
+            );
+        }
     }
 
     pub async fn follow_up(&self, msg: AgentMessage) {
-        self.inner.deps.follow_up.push(msg).await;
+        let payload = serde_json::to_value(&msg).unwrap_or(serde_json::Value::Null);
+        if let Some(entry_id) = self.inner.deps.follow_up.push(msg).await {
+            publish_queue_record(
+                &self.inner.deps.bus,
+                "queue_enqueued",
+                serde_json::json!({
+                    "id": entry_id,
+                    "queue": "followUp",
+                    "target": payload,
+                }),
+            );
+        }
     }
 
     /// Remove all queued steering messages.
     pub async fn clear_steering_queue(&self) {
-        self.inner.deps.steering.clear().await;
+        for entry_id in self.inner.deps.steering.clear().await {
+            publish_queue_record(
+                &self.inner.deps.bus,
+                "queue_cancelled",
+                serde_json::json!({"id": entry_id, "entryId": entry_id}),
+            );
+        }
     }
 
     /// Remove all queued follow-up messages.
     pub async fn clear_follow_up_queue(&self) {
-        self.inner.deps.follow_up.clear().await;
+        for entry_id in self.inner.deps.follow_up.clear().await {
+            publish_queue_record(
+                &self.inner.deps.bus,
+                "queue_cancelled",
+                serde_json::json!({"id": entry_id, "entryId": entry_id}),
+            );
+        }
     }
 
     /// Remove all queued steering and follow-up messages.
