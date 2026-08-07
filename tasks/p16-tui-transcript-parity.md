@@ -21,6 +21,12 @@ render-snapshot boundary defect between the YAML visual request and the final
 buffer; do not change per-tool collapse semantics until that boundary is
 reproduced and fixed.
 
+**Dense-group fix verified (2026-08-08):** Collapsed activity now folds the
+multi-tool member rows while retaining the grouped summary; the dense YAML
+fixture asserts both the summary and absence of representative member rows.
+The prior viewport-only caveat is retained as historical evidence, not as the
+current expected behavior.
+
 **Boundary assertion (2026-08-08):** The YAML renderer now checks the
 actor-owned feed snapshot immediately before drawing and fails if the
 declarative `activity_expanded` value was not delivered. The check passes for

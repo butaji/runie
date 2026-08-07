@@ -28,3 +28,6 @@ assertions:
     activity_expanded: false
     screen_text:
       - "Ran 12 commands"
+    screen_excludes:
+      - "Run seven"
+      - "Run twelve"
