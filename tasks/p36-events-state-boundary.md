@@ -148,3 +148,8 @@ Session mailbox consolidation (2026-08-06): journal append/reset/import/flush
 and the session event projection now acknowledge through `mailbox_ack!`, so
 session state remains actor-owned while all mutation entry points share the
 same event/mailbox DSL boundary.
+
+Prompt mailbox consolidation (2026-08-06): prompt clear/mode/theme/caption/
+search/event mutations now use the shared acknowledgement DSL, while key
+handling retains its typed outcome reply. No prompt widget state crosses the
+actor boundary directly.

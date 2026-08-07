@@ -153,8 +153,11 @@ impl PromptActor {
         }
     }
 
-    async fn unit(&self, message: PromptMsg) {
-        let _ = self.tx.send(message).await;
+    async fn acknowledge<F>(&self, command: F)
+    where
+        F: FnOnce(tokio::sync::oneshot::Sender<()>) -> PromptMsg,
+    {
+        let _ = runie_core::mailbox_ack!(self.tx, command);
     }
 
     pub async fn handle_key(&self, key: KeyEvent) -> PromptOutcome {
@@ -166,47 +169,35 @@ impl PromptActor {
     }
 
     pub async fn clear(&self) {
-        let (reply, result) = tokio::sync::oneshot::channel();
-        self.unit(PromptMsg::Clear(reply)).await;
-        let _ = result.await;
+        self.acknowledge(PromptMsg::Clear).await;
     }
 
     pub async fn cycle_mode(&self) {
-        let (reply, result) = tokio::sync::oneshot::channel();
-        self.unit(PromptMsg::CycleMode(reply)).await;
-        let _ = result.await;
+        self.acknowledge(PromptMsg::CycleMode).await;
     }
 
     pub async fn set_placeholder_visible(&self, visible: bool) {
-        let (reply, result) = tokio::sync::oneshot::channel();
-        self.unit(PromptMsg::SetPlaceholderVisible(visible, reply))
+        self.acknowledge(|reply| PromptMsg::SetPlaceholderVisible(visible, reply))
             .await;
-        let _ = result.await;
     }
 
     pub async fn set_theme(&self, theme: runie_core::types::ThemeKind) {
-        let (reply, result) = tokio::sync::oneshot::channel();
-        self.unit(PromptMsg::SetTheme(theme, reply)).await;
-        let _ = result.await;
+        self.acknowledge(|reply| PromptMsg::SetTheme(theme, reply))
+            .await;
     }
 
     pub async fn apply_event(&self, event: AgentEvent) {
-        let (reply, result) = tokio::sync::oneshot::channel();
-        self.unit(PromptMsg::ApplyEvent(Box::new(event), reply))
+        self.acknowledge(|reply| PromptMsg::ApplyEvent(Box::new(event), reply))
             .await;
-        let _ = result.await;
     }
 
     pub async fn open_file_search(&self) {
-        let (reply, result) = tokio::sync::oneshot::channel();
-        self.unit(PromptMsg::OpenFileSearch(reply)).await;
-        let _ = result.await;
+        self.acknowledge(PromptMsg::OpenFileSearch).await;
     }
 
     pub async fn set_model_caption(&self, caption: String) {
-        let (reply, result) = tokio::sync::oneshot::channel();
-        self.unit(PromptMsg::SetCaption(caption, reply)).await;
-        let _ = result.await;
+        self.acknowledge(|reply| PromptMsg::SetCaption(caption, reply))
+            .await;
     }
 
     pub fn snapshot(&self) -> PromptWidget {

@@ -306,3 +306,7 @@ actor, keeping the YAML/event model applicable to all TUI state owners.
 projection now use `mailbox_ack!`. The JSONL parser remains pure and the
 validated snapshot still crosses the actor mailbox explicitly; the DSL only
 removes repeated acknowledgement plumbing.
+
+`PromptActor` unit mutations now share the same acknowledgement helper and
+`mailbox_ack!`; the typed `handle_key` result remains a separate explicit
+mailbox path because it returns `PromptOutcome` rather than a unit ack.
