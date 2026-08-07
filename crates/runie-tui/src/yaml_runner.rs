@@ -1307,6 +1307,7 @@ pub struct ReplayTool {
     name: String,
     label: String,
     description: String,
+    parameters: Option<serde_json::Value>,
     output: String,
     error: bool,
     details: serde_json::Value,
@@ -1324,6 +1325,7 @@ impl ReplayTool {
             name: name.into(),
             label: name.into(),
             description: "Deterministic visual replay tool.".into(),
+            parameters: None,
             output: output.into(),
             error: false,
             details: serde_json::Value::Null,
@@ -1341,6 +1343,7 @@ impl ReplayTool {
             name: name.into(),
             label: name.into(),
             description: "Deterministic visual replay tool.".into(),
+            parameters: None,
             output: output.into(),
             error: true,
             details: serde_json::Value::Null,
@@ -1358,6 +1361,7 @@ impl ReplayTool {
             name: name.into(),
             label: name.into(),
             description: "Deterministic visual replay tool.".into(),
+            parameters: None,
             output: output.into(),
             error: false,
             details: serde_json::Value::Null,
@@ -1378,6 +1382,7 @@ impl ReplayTool {
         name: &str,
         label: Option<String>,
         description: Option<String>,
+        parameters: Option<serde_json::Value>,
         output: String,
         details: serde_json::Value,
         usage: Option<Usage>,
@@ -1392,6 +1397,7 @@ impl ReplayTool {
             name: name.into(),
             label: label.unwrap_or_else(|| name.into()),
             description: description.unwrap_or_else(|| "Deterministic visual replay tool.".into()),
+            parameters,
             output,
             error,
             details,
@@ -1415,6 +1421,9 @@ impl AgentTool for ReplayTool {
     }
     fn description(&self) -> &str {
         &self.description
+    }
+    fn parameters(&self) -> Option<serde_json::Value> {
+        self.parameters.clone()
     }
     fn execution_mode(&self) -> Option<ToolExecutionMode> {
         self.execution_mode
@@ -1884,6 +1893,7 @@ fn register_scenario_tool(
             &tool.name,
             tool.label.clone(),
             tool.description.clone(),
+            tool.parameters.clone(),
             tool.output.clone().unwrap_or_default(),
             tool.details.clone().unwrap_or(serde_json::Value::Null),
             tool.usage.clone(),
