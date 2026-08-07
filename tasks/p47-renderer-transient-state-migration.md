@@ -538,3 +538,8 @@ owners, and all helper reads come from immutable actor snapshots. The former
 panic-only compatibility abstraction and its fallback lock reads are removed;
 the 150 core tests, 23 renderer tests, 28 visual tests, YAML suite, and source
 boundary validators remain green.
+
+**Post-delivery metadata reduction (2026-08-08):** The renderer’s exhaustive
+compatibility event table was reduced to its only remaining local concern: the
+one-shot welcome emission flag. Actor-owned lifecycle, feed, status, tool, and
+session events are no longer reclassified by a renderer metadata hook.

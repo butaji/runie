@@ -580,59 +580,12 @@ impl EventRenderer {
             .await;
     }
 
-    /// Maintain renderer-local event metadata needed to construct the next
-    /// actor message batch. This deliberately has no projection writes: the
-    /// production path has already delivered the event to the status and
-    /// scrollback actors, while the legacy `apply_event` adapter remains
-    /// available only to compatibility tests.
-    #[allow(
-        clippy::too_many_lines,
-        reason = "the exhaustive compatibility metadata table keeps event ownership auditable"
-    )]
+    /// Clear the one-shot welcome emission flag after actor delivery.
+    /// All stateful event reduction happens in the owning actors before this
+    /// local render-policy update.
     fn apply_actor_metadata(&mut self, event: AgentEvent) {
-        if self.live_tool_events_owned {
-            if matches!(event, AgentEvent::AgentStart) {
-                self.emit_welcome = false;
-            }
-            return;
-        }
-        match event {
-            AgentEvent::AgentStart => {
-                self.emit_welcome = false;
-            }
-            AgentEvent::AgentEnd { .. } => {}
-            AgentEvent::TurnStart => {
-                // Turn lifecycle is reduced by the actor event mapping.
-            }
-            AgentEvent::Reset => {}
-            // Transcript and assistant lifecycle events are reduced by the
-            // actor-backed feed above; this compatibility metadata hook must
-            // not recreate a second message projection.
-            AgentEvent::MessageStart { .. }
-            | AgentEvent::MessageUpdate { .. }
-            | AgentEvent::MessageEnd { .. } => {}
-            AgentEvent::ToolExecutionStart { .. }
-            | AgentEvent::ToolExecutionUpdate { .. }
-            | AgentEvent::ToolExecutionEnd { .. }
-            | AgentEvent::Error { .. }
-            | AgentEvent::ThinkingLevelChanged { .. }
-            | AgentEvent::Waiting { .. }
-            | AgentEvent::ThemeChanged { .. }
-            | AgentEvent::ModelChanged { .. }
-            | AgentEvent::ActiveToolsChanged { .. }
-            | AgentEvent::BranchSummaryCreated { .. }
-            | AgentEvent::CustomSessionEntryCreated { .. }
-            | AgentEvent::CompactionCreated { .. }
-            | AgentEvent::OperationRecordCreated { .. }
-            | AgentEvent::ToolDisplayModeChanged { .. }
-            | AgentEvent::TurnEnd { .. }
-            | AgentEvent::BackgroundWorkStarted { .. }
-            | AgentEvent::BackgroundWorkProgress { .. }
-            | AgentEvent::BackgroundWorkFinished { .. }
-            | AgentEvent::BackgroundWorkCancelled { .. }
-            | AgentEvent::WorkflowStarted { .. }
-            | AgentEvent::WorkflowProgress { .. }
-            | AgentEvent::WorkflowFinished { .. } => {}
+        if matches!(event, AgentEvent::AgentStart) {
+            self.emit_welcome = false;
         }
     }
 
