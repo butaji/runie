@@ -101,6 +101,15 @@ the actor cancels its in-flight runs rather than orphaning them.
 uses a never-resolving provider and submits two prompts, proving both
 admissions complete without sleeps or provider completion.
 
+## Run ownership uses one SSOT (2026-08-08)
+
+`LoopActor` no longer stores an active `JoinHandle` behind a mutex. The
+single-run semaphore is already the actor-owned admission state, so
+`wait_for_idle()` now awaits a fresh permit and `run_inner()` awaits the run
+directly. This removes the redundant mutable coordination projection while
+preserving busy rejection, abort propagation, and asynchronous listener
+settlement. The core `loop_entry` suite covers all four boundaries.
+
 **First compatibility migration (2026-08-08):** The welcome/agent-start
 regression now uses `with_actors` and `apply_actor_event`, asserting immutable
 feed/status snapshots. Its legacy lock-based setup was removed, and the

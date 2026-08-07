@@ -5,15 +5,14 @@ use std::sync::{
     Arc,
 };
 
-use tokio::sync::{mpsc, oneshot, watch, Mutex, OwnedSemaphorePermit, Semaphore};
-use tokio::task::JoinHandle;
+use tokio::sync::{mpsc, oneshot, watch, OwnedSemaphorePermit, Semaphore};
 
 use crate::events::{EventBus, SubscriberRegistry};
 use crate::hooks::TurnHooks;
 use crate::provider::ProviderActor;
 use crate::queues::{FollowUpQueueActor, SteeringQueueActor};
 use crate::r#loop::driver::{
-    run_loop, ApiKeyResolver, ConvertToLlm, RunLoopDeps, RunLoopOutcome, TransformContext,
+    run_loop, ApiKeyResolver, ConvertToLlm, RunLoopDeps, TransformContext,
 };
 use crate::state::AgentStateActor;
 #[cfg(test)]
@@ -147,7 +146,6 @@ pub struct LoopActor {
 
 struct Inner {
     deps: LoopDeps,
-    current: Mutex<Option<JoinHandle<RunLoopOutcome>>>,
     next_run_id: AtomicU64,
     /// True while a run is in flight; guards concurrent `prompt()` (pi's
     /// "Agent is already processing a prompt" rejection).
@@ -201,7 +199,6 @@ impl LoopActor {
         Self {
             inner: Arc::new(Inner {
                 deps,
-                current: Mutex::new(None),
                 next_run_id: AtomicU64::new(1),
                 running: Arc::new(Semaphore::new(1)),
                 control_commands,
@@ -240,24 +237,7 @@ impl LoopActor {
         let control = self.inner.control_rx.borrow().clone();
         deps.steering_mode = control.steering_mode;
         deps.follow_up_mode = control.follow_up_mode;
-        // OWNER: LoopActor — handle stored in `current` for `wait_for_idle`.
-        let handle = tokio::spawn(async move {
-            run_loop(prompts, context, deps, skip_initial_steering_poll).await
-        });
-        *self.inner.current.lock().await = Some(handle);
-
-        let outcome = {
-            let handle = self
-                .inner
-                .current
-                .lock()
-                .await
-                .take()
-                .expect("run handle stored by prompt");
-            handle
-                .await
-                .map_err(|e| LoopError::Internal(e.to_string()))?
-        };
+        let outcome = run_loop(prompts, context, deps, skip_initial_steering_poll).await;
         Ok(outcome.new_messages)
     }
 
@@ -489,9 +469,11 @@ impl LoopActor {
     }
 
     pub async fn wait_for_idle(&self) {
-        let mut g = self.inner.current.lock().await;
-        if let Some(handle) = g.take() {
-            let _ = handle.await;
+        // The admission permit is the single source of truth for whether a
+        // run is active. Waiting for a fresh permit avoids a second mutable
+        // JoinHandle/Mutex state owner and remains sleep-free.
+        if let Ok(permit) = self.inner.running.clone().acquire_owned().await {
+            drop(permit);
         }
     }
 
