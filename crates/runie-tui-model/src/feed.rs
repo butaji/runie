@@ -251,7 +251,8 @@ pub enum ToolCardRowKind {
 ///
 /// This is deliberately not a terminal colour or Ratatui style: theme and
 /// capability resolution belongs to the renderer boundary.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ToolCardPaintIntent {
     Header,
     Running,

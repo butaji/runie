@@ -224,6 +224,13 @@ and display mode. This verifies the actor projection's payload, while keeping
 rendered truncation separate from retained state; specialized renderers and
 selection/navigation remain open.
 
+Semantic paint-intent oracle (2026-08-08): the typed card-row projection now
+also exposes serializable `header`, `running`, `content`, `success`, `error`,
+and `muted` paint roles to YAML. `visual-tool-error.yaml` asserts the
+header/error sequence through the real event → actor → model projection. This
+keeps styling semantics declarative without putting terminal colors into the
+model or requiring fixture recompilation.
+
 Specialized-card audit (2026-08-06): Pi-core `ToolExecutionStart.args` are
 already consumed once by `tool_header` and retained through the actor-owned
 line/tool-block projection. No second argument store was introduced. The next

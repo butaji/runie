@@ -37,6 +37,7 @@ assertions:
     tool_blocks: 1
     tool_output_lines: 0
     tool_row_kinds: [header, status]
+    tool_row_paint_intents: [header, error]
   transcript_contains:
     - "tool failed"
   visual:
