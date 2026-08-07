@@ -271,3 +271,8 @@ behavior required before this slice can be marked parity-complete:
 
 Runie's current ±3 mapping intentionally covers only the default wheel case;
 the normalizer and its YAML/event-sequence oracle remain open.
+
+Mouse capture lifecycle closure (2026-08-07): the interactive terminal now
+enables crossterm mouse capture together with the alternate screen and disables
+it during restoration. This makes the already-owned mouse event path reachable
+in real terminals; it does not claim the normalization contract above.
