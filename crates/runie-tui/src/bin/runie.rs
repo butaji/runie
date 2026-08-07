@@ -24,6 +24,7 @@ use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::Terminal;
+use runie_core::commands::{parse_mappable_builtin_command, MappableBuiltinCommand};
 use runie_core::events::EventBus;
 use runie_core::provider::stream_fn::{AssistantMessageEventStream, StreamError, StreamFn};
 use runie_core::provider::ProviderActor;
@@ -691,6 +692,22 @@ async fn run_app(
                                     KeyCode::Enter => {
                                         let outcome = app.prompt.handle_key(key).await;
                                         if let PromptOutcome::Submitted(text) = outcome {
+                                            if let Some(command) =
+                                                parse_mappable_builtin_command(&text)
+                                            {
+                                                match command {
+                                                    MappableBuiltinCommand::NewSession => {
+                                                        let _ = app.reset_session().await;
+                                                    }
+                                                    MappableBuiltinCommand::Hotkeys => {
+                                                        app.toggle_shortcuts().await;
+                                                    }
+                                                    MappableBuiltinCommand::Quit => {
+                                                        return Ok(AppExit::Quit);
+                                                    }
+                                                }
+                                                continue;
+                                            }
                                             if is_quit_command(&text) {
                                                 return Ok(AppExit::Quit);
                                             }

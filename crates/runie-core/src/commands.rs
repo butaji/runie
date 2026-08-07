@@ -71,6 +71,28 @@ pub fn matching_pi_builtin_slash_commands(query: &str) -> Vec<SlashCommand> {
         .collect()
 }
 
+/// The subset whose effects already have an owning Runie actor boundary.
+/// Keeping this separate from the complete registry prevents unsupported Pi
+/// commands from being reported as successful no-ops.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MappableBuiltinCommand {
+    NewSession,
+    Hotkeys,
+    Quit,
+}
+
+/// Parse an exact Pi built-in command that Runie can currently route through
+/// an existing actor/application boundary. Non-mappable commands return
+/// `None` and remain ordinary prompt text until their capability is built.
+pub fn parse_mappable_builtin_command(input: &str) -> Option<MappableBuiltinCommand> {
+    match input.trim() {
+        "/new" => Some(MappableBuiltinCommand::NewSession),
+        "/hotkeys" => Some(MappableBuiltinCommand::Hotkeys),
+        "/quit" => Some(MappableBuiltinCommand::Quit),
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -103,5 +125,19 @@ mod tests {
                 .collect::<Vec<_>>(),
             vec!["login", "logout"]
         );
+    }
+
+    #[test]
+    fn mappable_parser_rejects_unimplemented_commands_without_swallowing_text() {
+        assert_eq!(
+            parse_mappable_builtin_command(" /new "),
+            Some(MappableBuiltinCommand::NewSession)
+        );
+        assert_eq!(
+            parse_mappable_builtin_command("/compact"),
+            None,
+            "unsupported commands must remain ordinary prompt input"
+        );
+        assert_eq!(parse_mappable_builtin_command("/quit now"), None);
     }
 }

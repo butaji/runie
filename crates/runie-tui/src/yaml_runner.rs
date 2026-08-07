@@ -13,6 +13,7 @@ use crate::event_renderer::EventRenderer;
 use crate::widgets::{FeedSnapshot, Line, LineKind, Scrollback, ScrollbackMsg, ToolBlock};
 use parking_lot::Mutex;
 use ratatui::buffer::Buffer;
+use runie_core::commands::{parse_mappable_builtin_command, MappableBuiltinCommand};
 use runie_core::events::{EventBus, Subscriber};
 use runie_core::provider::stream_fn::{
     AssistantMessageEventStream, StreamError, StreamFn, WebSocketAdapter,
@@ -4712,6 +4713,21 @@ pub async fn render_visual_buffer(
                 })
                 .await;
             if let PromptOutcome::Submitted(text) = outcome {
+                if let Some(command) = parse_mappable_builtin_command(&text) {
+                    match command {
+                        MappableBuiltinCommand::NewSession => {
+                            let _ = app.reset_session().await;
+                        }
+                        MappableBuiltinCommand::Hotkeys => {
+                            app.toggle_shortcuts().await;
+                        }
+                        // The offline runner cannot terminate its test task;
+                        // consuming the typed command still proves it crossed
+                        // the same parser boundary as the live binary.
+                        MappableBuiltinCommand::Quit => {}
+                    }
+                    continue;
+                }
                 let user_msg = AgentMessage::User(UserMessage {
                     content: vec![UserContent::Text { text }],
                     timestamp: scenario.initial_prompt_timestamp(),

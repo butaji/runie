@@ -33,6 +33,13 @@ and a YAML event-sequence/state assertion before it is exposed in the TUI.
 Unsupported effects must return an explicit typed capability result rather than
 being treated as successful no-ops.
 
+The first executable subset is now routed through the same boundaries in the
+live binary and YAML runner: `/new` awaits the loop reset, `/hotkeys` sends a
+`ToggleShortcuts` mailbox message, and `/quit` is consumed only by the live
+application exit boundary. `/compact` and other unsupported commands remain
+ordinary prompt text. `visual-slash-hotkeys.yaml` proves the route without a
+provider submission.
+
 Required next evidence:
 
 - map each command to the Pi source handler and owning Runie actor;

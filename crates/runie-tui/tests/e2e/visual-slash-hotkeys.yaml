@@ -1,0 +1,15 @@
+name: visual-slash-hotkeys
+description: Pi's /hotkeys command routes through the UI actor without provider submission.
+events: []
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    steps:
+      - "/hotkeys"
+      - Enter
+    ui:
+      shortcuts_open: true
+      command_palette_open: false
+    screen_text:
+      - "Shortcuts"
