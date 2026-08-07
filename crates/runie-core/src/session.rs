@@ -260,6 +260,29 @@ fn reduce_operation_record(
 }
 
 impl SessionSnapshot {
+    /// Return the selected branch from oldest to newest journal node.
+    /// Message and configuration records share the same parent/id namespace.
+    pub fn branch_entry_ids(&self) -> Vec<String> {
+        let mut parents = BTreeMap::new();
+        for entry in &self.entries {
+            parents.insert(entry.id.clone(), entry.parent_id.clone());
+        }
+        for entry in &self.config_records {
+            parents.insert(entry.id.clone(), entry.parent_id.clone());
+        }
+        let mut path = Vec::new();
+        let mut current = self.leaf_id.clone();
+        while let Some(id) = current {
+            if path.iter().any(|seen| seen == &id) {
+                break;
+            }
+            current = parents.get(&id).cloned().flatten();
+            path.push(id);
+        }
+        path.reverse();
+        path
+    }
+
     /// Parse the message-only subset emitted by [`Self::to_jsonl`].
     /// Validation follows Pi's v4 invariants for header, sequence, and parent
     /// linkage; unsupported mutation kinds are rejected explicitly.
@@ -970,6 +993,38 @@ mod tests {
                 summarize: true,
                 summary_entry_id: Some("summary-target".into()),
             })
+        );
+    }
+
+    #[test]
+    fn branch_entry_ids_follow_shared_parent_links() {
+        let mut snapshot = SessionSnapshot::default();
+        let message_entry = |seq: u64, parent_id: Option<&str>, id: &str| SessionEntry {
+            id: id.into(),
+            seq,
+            parent_id: parent_id.map(str::to_owned),
+            timestamp: 0,
+            message: user("test"),
+            terminate: false,
+        };
+        snapshot.entries = vec![
+            message_entry(1, None, "message-1"),
+            message_entry(2, Some("message-1"), "message-2"),
+        ];
+        snapshot.config_records = vec![SessionConfigEntry {
+            id: "config-3".into(),
+            seq: 3,
+            parent_id: Some("message-2".into()),
+            timestamp: 0,
+            record: SessionConfigRecord::CustomSessionEntryCreated {
+                custom_type: "test".into(),
+                data: None,
+            },
+        }];
+        snapshot.leaf_id = Some("config-3".into());
+        assert_eq!(
+            snapshot.branch_entry_ids(),
+            ["message-1", "message-2", "config-3"]
         );
     }
 

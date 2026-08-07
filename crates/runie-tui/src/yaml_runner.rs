@@ -935,6 +935,8 @@ pub struct StateAssertions {
     /// Arguments on the latest assistant tool call after preparation.
     pub tool_call_arguments: Option<serde_json::Value>,
     pub session_entries: Option<usize>,
+    /// Ordered parent-linked Pi session nodes from the selected leaf.
+    pub session_branch_entry_ids: Option<Vec<String>>,
     pub active_operations: Option<BTreeMap<String, String>>,
     /// Last Pi navigation intent reduced by the session actor.
     pub navigation: Option<NavigationAssertion>,
@@ -2564,6 +2566,11 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         &expected.operation_kinds,
         &outcome.session.operation_kinds,
         "operation_kinds"
+    );
+    assert_yaml_eq!(
+        &expected.session_branch_entry_ids,
+        &outcome.session.branch_entry_ids(),
+        "session_branch_entry_ids"
     );
     if let Some(expected_errors) = &expected.operation_errors {
         let actual_errors = outcome

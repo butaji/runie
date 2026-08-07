@@ -131,3 +131,13 @@ operation record. `visual-navigation-intent.yaml` exercises and asserts the
 projection without compiled scenario code. This is intentionally the intent
 projection only: Pi's full branch tree/context reconstruction, target
 validation, and navigation admission/outcome policy remain open.
+
+## Parent-linked branch projection (2026-08-07)
+
+`SessionSnapshot::branch_entry_ids()` now walks the shared parent/id namespace
+across message and configuration journal records from the actor-owned leaf,
+then returns the selected branch oldest-first. YAML state assertions expose
+`session_branch_entry_ids`; `visual-status-working.yaml` exercises the mixed
+message/configuration path at runtime. This closes branch-path projection
+without claiming Pi's remaining target validation, fork storage, or context
+materialization behavior.

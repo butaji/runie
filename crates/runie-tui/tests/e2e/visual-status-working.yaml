@@ -32,6 +32,14 @@ assertions:
     is_streaming: false
     pending_tool_calls: 0
     messages: 1
+    session_branch_entry_ids:
+      - entry-1
+      - entry-2
+      - entry-3
+      - entry-4
+      - entry-5
+      - entry-6
+      - entry-7
     session_config_records:
       - thinking_level_change
       - active_tools_change
