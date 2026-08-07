@@ -2,6 +2,14 @@
 
 Status: in_progress
 
+## Completed slice (2026-08-08, ordered session log)
+
+`SessionSnapshot::get_log` now merges message/config entries and admitted
+operation records into one Pi-compatible sequence-ordered read result, with
+`afterSeq` and `limit` semantics. The typed `SessionLogItem` union keeps entry
+and record ownership explicit and does not synthesize state or mutate the
+journal. Regression coverage verifies mixed-lane ordering and cursor reads.
+
 ## Completed slice (2026-08-08, declarative lane queries)
 
 `SessionSnapshot::find_lane_records` and `SessionLaneQuery` now provide the

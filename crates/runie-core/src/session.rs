@@ -183,6 +183,19 @@ pub struct SessionStats {
     pub cost_total: f64,
 }
 
+/// Ordered durable items returned by the Pi-compatible session log query.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SessionLogItem {
+    Entry {
+        seq: u64,
+        entry: SessionEntryRecord,
+    },
+    Record {
+        seq: u64,
+        record: SessionLaneRecordSnapshot,
+    },
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct SessionSnapshot {
     pub sequence: u64,
@@ -436,6 +449,35 @@ impl CompactionContextProjection {
 }
 
 impl SessionSnapshot {
+    /// Return message/config entries and operation records in journal order.
+    pub fn get_log(&self, after_seq: Option<u64>, limit: Option<usize>) -> Vec<SessionLogItem> {
+        let mut items = self
+            .find_entries(&SessionEntryQuery {
+                after_seq,
+                ..SessionEntryQuery::default()
+            })
+            .into_iter()
+            .map(|entry| SessionLogItem::Entry {
+                seq: entry.seq(),
+                entry,
+            })
+            .chain(self.lane_records.iter().filter_map(|record| {
+                let seq = record.seq?;
+                (after_seq.is_none_or(|after| seq > after)).then(|| SessionLogItem::Record {
+                    seq,
+                    record: record.clone(),
+                })
+            }))
+            .collect::<Vec<_>>();
+        items.sort_by_key(|item| match item {
+            SessionLogItem::Entry { seq, .. } | SessionLogItem::Record { seq, .. } => *seq,
+        });
+        if let Some(limit) = limit {
+            items.truncate(limit);
+        }
+        items
+    }
+
     /// Return unfinished operation starts newest-first, matching Pi's
     /// recovery query. The limit is applied after ordering.
     pub fn find_open_operations(
@@ -2751,6 +2793,36 @@ mod tests {
                 .collect::<Vec<_>>(),
             ["run-2"]
         );
+    }
+
+    #[test]
+    fn session_log_merges_entries_and_lane_records_by_sequence() {
+        let mut snapshot = SessionSnapshot {
+            entries: vec![SessionEntry {
+                id: "entry-1".into(),
+                seq: 1,
+                parent_id: None,
+                timestamp: 7,
+                message: user("hello"),
+                terminate: false,
+            }],
+            ..SessionSnapshot::default()
+        };
+        snapshot.lane_records.push(SessionLaneRecordSnapshot {
+            record_type: "operation_started".into(),
+            id: "run-1".into(),
+            lane: Some("main".into()),
+            seq: Some(2),
+            timestamp: Some(7),
+            data: serde_json::json!({"id": "run-1"}),
+        });
+        let log = snapshot.get_log(Some(0), Some(2));
+        assert!(matches!(log[0], SessionLogItem::Entry { seq: 1, .. }));
+        assert!(matches!(log[1], SessionLogItem::Record { seq: 2, .. }));
+        assert!(snapshot
+            .get_log(Some(1), None)
+            .iter()
+            .all(|item| matches!(item, SessionLogItem::Record { seq: 2, .. })));
     }
 
     #[test]
