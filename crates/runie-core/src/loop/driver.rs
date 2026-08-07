@@ -590,6 +590,9 @@ async fn stream_options(model: &Model, deps: &RunLoopDeps) -> Option<SimpleStrea
     let mut options = deps.stream_options.clone();
     options.api_key = api_key;
     options.signal = deps.abort.clone();
+    options.max_tokens = options
+        .max_tokens
+        .or((model.max_tokens > 0).then_some(model.max_tokens));
     options.headers = merge_headers(&model.headers, options.headers.take());
     options.sampling_params = merge_sampling_params(
         model.sampling_params.as_ref(),

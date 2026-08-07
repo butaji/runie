@@ -38,6 +38,8 @@ Implemented end-to-end through the owned provider request snapshot:
 - preferred transport carried to the transport boundary
 - model headers merged into request headers with request values taking
   precedence, matching Pi's provider construction
+- model `maxTokens` propagated as the default request output limit, with an
+  explicit request value taking precedence
 
 The YAML runner exposes these effective options at runtime; `visual-hey.yaml`
 now declares and asserts `session_id`, thinking budgets, and sampling
@@ -46,6 +48,9 @@ parameters.
 `visual-hey.yaml` now declares model defaults and request overrides, and its
 provider assertion verifies the effective merged header map at runtime without
 recompilation.
+
+The same fixture declares model `maxTokens: 128` and request `max_tokens: 64`,
+asserting the request-level value wins in the effective provider options.
 
 Not yet implemented behaviorally:
 

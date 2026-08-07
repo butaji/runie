@@ -619,6 +619,8 @@ pub struct SimpleStreamOptions {
     pub transport: Option<ProviderTransport>,
     pub signal: Option<tokio::sync::watch::Receiver<bool>>,
     pub thinking_budgets: Option<ThinkingBudgets>,
+    /// Effective provider output limit (pi: `maxTokens`).
+    pub max_tokens: Option<u64>,
     /// Provider request timeout in milliseconds (pi: `timeoutMs`).
     pub timeout_ms: Option<u64>,
     /// Maximum additional attempts after the initial provider request (pi:

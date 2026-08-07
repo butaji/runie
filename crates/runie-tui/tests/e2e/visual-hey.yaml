@@ -8,9 +8,11 @@ provider_options:
   model_headers:
     x-model-default: model
     x-shared: model
+  model_max_tokens: 128
   headers:
     x-request: request
     x-shared: request
+  max_tokens: 64
   thinking_budgets:
     high: 512
   sampling_params:
@@ -36,6 +38,7 @@ assertions:
       x-model-default: model
       x-request: request
       x-shared: request
+    max_tokens: 64
     thinking_budgets:
       high: 512
     sampling_params:

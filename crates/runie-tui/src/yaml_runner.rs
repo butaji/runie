@@ -67,6 +67,8 @@ pub struct ProviderOptionsSpec {
     #[serde(default)]
     pub model_headers: Option<std::collections::HashMap<String, String>>,
     #[serde(default)]
+    pub model_max_tokens: Option<u64>,
+    #[serde(default)]
     pub session_id: Option<String>,
     #[serde(default)]
     pub headers: Option<std::collections::HashMap<String, String>>,
@@ -78,6 +80,8 @@ pub struct ProviderOptionsSpec {
     pub transport: Option<String>,
     #[serde(default)]
     pub thinking_budgets: Option<runie_core::types::ThinkingBudgets>,
+    #[serde(default)]
+    pub max_tokens: Option<u64>,
     #[serde(default)]
     pub timeout_ms: Option<u64>,
     #[serde(default)]
@@ -97,6 +101,7 @@ impl ProviderOptionsSpec {
             metadata: self.metadata.clone(),
             transport: self.transport.as_deref().map(parse_provider_transport),
             thinking_budgets: self.thinking_budgets.clone(),
+            max_tokens: self.max_tokens,
             timeout_ms: self.timeout_ms,
             max_retries: self.max_retries,
             max_retry_delay_ms: self.max_retry_delay_ms,
@@ -704,6 +709,7 @@ pub struct ProviderOptionsAssertions {
     pub metadata: Option<std::collections::HashMap<String, serde_json::Value>>,
     pub transport: Option<String>,
     pub thinking_budgets: Option<runie_core::types::ThinkingBudgets>,
+    pub max_tokens: Option<u64>,
     pub timeout_ms: Option<u64>,
     pub max_retries: Option<u32>,
     pub max_retry_delay_ms: Option<u64>,
@@ -1322,10 +1328,20 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
             events: listener_events.clone(),
         }))
         .await;
-    if let Some(headers) = &scenario.provider_options.model_headers {
+    if scenario.provider_options.model_headers.is_some()
+        || scenario.provider_options.model_max_tokens.is_some()
+    {
         actor
             .set_model(Model {
-                headers: headers.clone(),
+                headers: scenario
+                    .provider_options
+                    .model_headers
+                    .clone()
+                    .unwrap_or_default(),
+                max_tokens: scenario
+                    .provider_options
+                    .model_max_tokens
+                    .unwrap_or_default(),
                 ..Model::default()
             })
             .await;
@@ -1708,6 +1724,7 @@ pub async fn assert_scenario_async(
 
 #[allow(
     clippy::too_many_lines,
+    clippy::cognitive_complexity,
     reason = "provider option oracle stays declarative and grouped"
 )]
 fn assert_provider_options(outcome: &ScenarioOutcome, scenario: &Scenario) -> Result<(), String> {
@@ -1763,6 +1780,14 @@ fn assert_provider_options(outcome: &ScenarioOutcome, scenario: &Scenario) -> Re
             return Err(format!(
                 "provider timeout mismatch: expected {value}, got {:?}",
                 actual.timeout_ms
+            ));
+        }
+    }
+    if let Some(value) = expected.max_tokens {
+        if actual.max_tokens != Some(value) {
+            return Err(format!(
+                "provider max tokens mismatch: expected {value}, got {:?}",
+                actual.max_tokens
             ));
         }
     }
