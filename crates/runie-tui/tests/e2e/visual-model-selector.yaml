@@ -1,0 +1,18 @@
+name: visual-model-selector
+description: Model selector state is reduced by actor events and projected declaratively.
+events: []
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    steps:
+      - ModelSelector
+      - ModelSelectorScope
+    ui:
+      model_selector_open: true
+      model_selector_query: ""
+      model_selector_index: 0
+      model_selector_scoped_only: true
+    screen_text:
+      - "Model Selector"
+      - "Models (scoped)"

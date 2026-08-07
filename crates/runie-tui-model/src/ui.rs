@@ -16,7 +16,7 @@ pub enum UiCommand {
     ActivatePaletteEntry(PaletteAction),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UiMsg {
     HideWelcome,
     ToggleShortcuts,
@@ -33,6 +33,7 @@ pub enum UiMsg {
     ModelSelectorEscape,
     ModelSelectorToggleScope,
     SetModelSelectorResultCount(usize),
+    SetModelSelectorRows(Vec<String>),
     Reset,
 }
 
@@ -89,6 +90,7 @@ pub struct UiState {
     pub model_selector_index: usize,
     pub model_selector_scoped_only: bool,
     pub model_selector_result_count: usize,
+    pub model_selector_rows: Vec<String>,
 }
 
 impl UiState {
@@ -158,6 +160,13 @@ impl UiState {
             UiMsg::SetModelSelectorResultCount(count) => {
                 self.model_selector_result_count = count;
                 self.model_selector_index = self.model_selector_index.min(count.saturating_sub(1));
+            }
+            UiMsg::SetModelSelectorRows(rows) => {
+                self.model_selector_result_count = rows.len();
+                self.model_selector_rows = rows;
+                self.model_selector_index = self
+                    .model_selector_index
+                    .min(self.model_selector_result_count.saturating_sub(1));
             }
             UiMsg::ModelSelectorChar(_)
             | UiMsg::ModelSelectorBackspace

@@ -30,7 +30,7 @@ pub enum AppExit {
     Error(String),
 }
 
-fn palette_command_for(state: &UiState, message: UiMsg) -> Option<UiCommand> {
+fn palette_command_for(state: &UiState, message: &UiMsg) -> Option<UiCommand> {
     if !matches!(message, UiMsg::ActivateCommandPalette) {
         return None;
     }
@@ -48,6 +48,14 @@ fn initial_ui_state(show_welcome: bool) -> UiState {
     } else {
         UiState::new()
     }
+}
+
+fn model_selector_rows(snapshot: &runie_core::model_catalog::ModelCatalogSnapshot) -> Vec<String> {
+    snapshot
+        .results
+        .iter()
+        .map(|model| format!("{}/{}", model.provider, model.id))
+        .collect()
 }
 
 #[derive(Clone)]
@@ -78,7 +86,7 @@ impl UiActor {
                 tokio::select! {
                     message = rx.recv() => {
                         let Some((message, applied)) = message else { break };
-                        let command = palette_command_for(&state, message);
+                        let command = palette_command_for(&state, &message);
                         state = state.update(message);
                         if let Some(command) = command {
                             let _ = command_tx.send(command);
@@ -502,15 +510,27 @@ impl App {
     /// actor before opening its selector. The UI owns query/index/scope;
     /// catalog ownership remains in `ModelCatalogActor`.
     pub async fn toggle_model_selector(&self) {
-        let count = self.model_catalog.snapshot().results.len();
-        self.ui
-            .send(UiMsg::SetModelSelectorResultCount(count))
-            .await;
+        let rows = model_selector_rows(&self.model_catalog.snapshot());
+        self.ui.send(UiMsg::SetModelSelectorRows(rows)).await;
         self.ui.send(UiMsg::ToggleModelSelector).await;
     }
 
     pub async fn model_selector_key(&self, msg: UiMsg) {
         self.ui.send(msg).await;
+        let ui = self.ui.snapshot();
+        if ui.model_selector_open {
+            self.model_catalog
+                .search(
+                    ui.model_selector_query.clone(),
+                    ui.model_selector_scoped_only,
+                )
+                .await;
+            self.ui
+                .send(UiMsg::SetModelSelectorRows(model_selector_rows(
+                    &self.model_catalog.snapshot(),
+                )))
+                .await;
+        }
     }
 
     pub async fn command_palette_key(&self, msg: UiMsg) {

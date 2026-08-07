@@ -13,6 +13,7 @@ pub struct ModelSelectorWidget {
     selected: usize,
     scoped_only: bool,
     result_count: usize,
+    rows: Vec<String>,
     theme: ThemeKind,
 }
 
@@ -22,12 +23,14 @@ impl ModelSelectorWidget {
         selected: usize,
         scoped_only: bool,
         result_count: usize,
+        rows: Vec<String>,
     ) -> Self {
         Self {
             query: query.into(),
             selected,
             scoped_only,
             result_count,
+            rows,
             theme: ThemeKind::GrokNight,
         }
     }
@@ -52,12 +55,19 @@ impl Widget for ModelSelectorWidget {
             height,
         };
         let scope = if self.scoped_only { "scoped" } else { "all" };
-        let text = format!(
-            "Models ({scope})\n\n> {}\n\n› result {} of {}\n\nTab: toggle scope",
-            self.query,
+        let mut text = format!("Models ({scope})\n\n> {}\n", self.query);
+        for (index, row) in self.rows.iter().take(5).enumerate() {
+            text.push_str(&format!(
+                "\n{}{}",
+                if index == self.selected { "› " } else { "  " },
+                row
+            ));
+        }
+        text.push_str(&format!(
+            "\n\nresult {} of {}\nTab: toggle scope",
             self.selected.saturating_add(1),
             self.result_count
-        );
+        ));
         Paragraph::new(text)
             .style(appearance::base_style_for(self.theme))
             .wrap(Wrap { trim: false })

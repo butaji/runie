@@ -1317,6 +1317,10 @@ pub struct UiAssertions {
     pub command_palette_open: Option<bool>,
     pub command_palette_query: Option<String>,
     pub command_palette_index: Option<usize>,
+    pub model_selector_open: Option<bool>,
+    pub model_selector_query: Option<String>,
+    pub model_selector_index: Option<usize>,
+    pub model_selector_scoped_only: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Default, Clone, Copy)]
@@ -4632,6 +4636,26 @@ pub async fn render_visual_buffer(
             app.hide_welcome().await;
             continue;
         }
+        if step == "ModelSelector" {
+            app.toggle_model_selector().await;
+            app.hide_welcome().await;
+            continue;
+        }
+        if step == "ModelSelectorScope" {
+            app.model_selector_key(crate::app::UiMsg::ModelSelectorToggleScope)
+                .await;
+            continue;
+        }
+        if step == "ModelSelectorUp" {
+            app.model_selector_key(crate::app::UiMsg::ModelSelectorMove(-1))
+                .await;
+            continue;
+        }
+        if step == "ModelSelectorDown" {
+            app.model_selector_key(crate::app::UiMsg::ModelSelectorMove(1))
+                .await;
+            continue;
+        }
         if step == "Ctrl+X" {
             app.toggle_shortcuts().await;
             app.hide_welcome().await;
@@ -4804,6 +4828,38 @@ pub async fn render_visual_buffer(
                 return Err(format!(
                     "ui.command_palette_index mismatch: expected {value}, got {}",
                     palette.command_palette_index
+                ));
+            }
+        }
+        if let Some(value) = expected.model_selector_open {
+            if palette.model_selector_open != value {
+                return Err(format!(
+                    "ui.model_selector_open mismatch: expected {value}, got {}",
+                    palette.model_selector_open
+                ));
+            }
+        }
+        if let Some(value) = &expected.model_selector_query {
+            if palette.model_selector_query != *value {
+                return Err(format!(
+                    "ui.model_selector_query mismatch: expected {value:?}, got {:?}",
+                    palette.model_selector_query
+                ));
+            }
+        }
+        if let Some(value) = expected.model_selector_index {
+            if palette.model_selector_index != value {
+                return Err(format!(
+                    "ui.model_selector_index mismatch: expected {value}, got {}",
+                    palette.model_selector_index
+                ));
+            }
+        }
+        if let Some(value) = expected.model_selector_scoped_only {
+            if palette.model_selector_scoped_only != value {
+                return Err(format!(
+                    "ui.model_selector_scoped_only mismatch: expected {value}, got {}",
+                    palette.model_selector_scoped_only
                 ));
             }
         }
@@ -5150,6 +5206,17 @@ fn draw_visual_frame(
                     palette.command_palette_query,
                     palette.command_palette_index,
                 )
+                .render(f.area(), f.buffer_mut());
+            }
+            if palette.model_selector_open {
+                crate::widgets::ModelSelectorWidget::new(
+                    palette.model_selector_query,
+                    palette.model_selector_index,
+                    palette.model_selector_scoped_only,
+                    palette.model_selector_result_count,
+                    palette.model_selector_rows,
+                )
+                .with_theme(theme)
                 .render(f.area(), f.buffer_mut());
             }
             if palette.shortcuts_open {

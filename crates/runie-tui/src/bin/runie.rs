@@ -112,6 +112,7 @@ fn render_model_selector(
             ui.model_selector_index,
             ui.model_selector_scoped_only,
             ui.model_selector_result_count,
+            ui.model_selector_rows.clone(),
         )
         .with_theme(theme),
         area,
