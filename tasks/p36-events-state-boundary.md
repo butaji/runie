@@ -28,6 +28,10 @@ snapshots only and never mutate another actor's state.
    `capture-scenario.sh` reads prompt/quit settings from the YAML fixture at
    runtime without recompilation.
 
+The matrix retains the original four-argument environment-assignment form;
+the compatibility branch is covered by shell syntax/argument checks so older
+capture recipes do not silently lose their color or parity-clock settings.
+
 The capture helper remains an external instrument, not production state. Its
 bounded polling is intentionally limited to detecting terminal readiness and
 settled output; it does not mutate Runie's state.
