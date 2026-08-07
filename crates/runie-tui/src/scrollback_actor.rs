@@ -32,33 +32,12 @@ impl ScrollbackActor {
         let (snapshot_tx, snapshot) = watch::channel(FeedState::default().snapshot());
         let (tx, owner) = spawn_actor_worker!(32, |mut rx: mpsc::Receiver<Command>| async move {
             let mut state = FeedState::default();
-            let mut active_tools = HashSet::new();
-            let mut tool_headers = HashMap::new();
-            let mut tool_args = HashMap::new();
-            let mut tool_names = HashMap::new();
-            let mut active_tool_count = 0;
-            let mut activity_failures = 0;
-            let mut activity_dirs = 0;
-            let mut activity_files = 0;
-            let mut activity_commands = 0;
-            let mut activity_subagents = 0;
+            let mut projection = OwnedEventProjection::default();
             while let Some(command) = rx.recv().await {
                 let (messages, reply) = match command {
                     Command::ApplyBatch(messages, reply) => (messages, reply),
                     Command::ApplyEvent(event, reply) => {
-                        let messages = owned_event_messages(
-                            *event,
-                            &mut active_tools,
-                            &mut tool_headers,
-                            &mut tool_args,
-                            &mut tool_names,
-                            &mut active_tool_count,
-                            &mut activity_failures,
-                            &mut activity_dirs,
-                            &mut activity_files,
-                            &mut activity_commands,
-                            &mut activity_subagents,
-                        );
+                        let messages = projection.messages(*event);
                         (messages, reply)
                     }
                 };
@@ -171,71 +150,72 @@ async fn run_bus_projection(
 /// The bus bridge is deliberately stateless. Tool identity, lifecycle, and
 /// activity counters belong to the ScrollbackActor reducer, so every event
 /// changes one SSOT and the bridge cannot diverge from direct commands.
-#[allow(
-    clippy::too_many_arguments,
-    clippy::too_many_lines,
-    clippy::cognitive_complexity
-)]
-fn owned_event_messages(
-    event: AgentEvent,
-    active_tools: &mut HashSet<String>,
-    tool_headers: &mut HashMap<String, String>,
-    tool_args: &mut HashMap<String, serde_json::Value>,
-    tool_names: &mut HashMap<String, String>,
-    active_tool_count: &mut usize,
-    activity_failures: &mut usize,
-    activity_dirs: &mut usize,
-    activity_files: &mut usize,
-    activity_commands: &mut usize,
-    activity_subagents: &mut usize,
-) -> Vec<ScrollbackMsg> {
-    if let AgentEvent::ToolExecutionStart {
-        tool_call_id,
-        tool_name,
-        args,
-    } = &event
-    {
-        active_tools.insert(tool_call_id.clone());
-        tool_headers.insert(
-            tool_call_id.clone(),
-            crate::event_renderer::tool_header(tool_name, args),
-        );
-        tool_args.insert(tool_call_id.clone(), args.clone());
-        tool_names.insert(tool_call_id.clone(), tool_name.clone());
-        if matches!(tool_name.as_str(), "list_dir" | "list_files") {
-            *activity_dirs += 1;
-        } else if matches!(tool_name.as_str(), "read" | "read_file") {
-            *activity_files += 1;
-        } else if matches!(tool_name.as_str(), "bash" | "shell" | "exec" | "run") {
-            *activity_commands += 1;
-        } else if matches!(tool_name.as_str(), "subagent" | "agent" | "task") {
-            *activity_subagents += 1;
+#[derive(Default)]
+struct OwnedEventProjection {
+    active_tools: HashSet<String>,
+    tool_headers: HashMap<String, String>,
+    tool_args: HashMap<String, serde_json::Value>,
+    tool_names: HashMap<String, String>,
+    active_tool_count: usize,
+    activity_failures: usize,
+    activity_dirs: usize,
+    activity_files: usize,
+    activity_commands: usize,
+    activity_subagents: usize,
+}
+
+impl OwnedEventProjection {
+    #[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
+    fn messages(&mut self, event: AgentEvent) -> Vec<ScrollbackMsg> {
+        if let AgentEvent::ToolExecutionStart {
+            tool_call_id,
+            tool_name,
+            args,
+        } = &event
+        {
+            self.active_tools.insert(tool_call_id.clone());
+            self.tool_headers.insert(
+                tool_call_id.clone(),
+                crate::event_renderer::tool_header(tool_name, args),
+            );
+            self.tool_args.insert(tool_call_id.clone(), args.clone());
+            self.tool_names
+                .insert(tool_call_id.clone(), tool_name.clone());
+            if matches!(tool_name.as_str(), "list_dir" | "list_files") {
+                self.activity_dirs += 1;
+            } else if matches!(tool_name.as_str(), "read" | "read_file") {
+                self.activity_files += 1;
+            } else if matches!(tool_name.as_str(), "bash" | "shell" | "exec" | "run") {
+                self.activity_commands += 1;
+            } else if matches!(tool_name.as_str(), "subagent" | "agent" | "task") {
+                self.activity_subagents += 1;
+            }
+            self.active_tool_count += 1;
         }
-        *active_tool_count += 1;
-    }
-    let completion = ordinary_tool_end_messages(
-        active_tools,
-        tool_headers,
-        tool_args,
-        tool_names,
-        active_tool_count,
-        activity_failures,
-        (
-            *activity_dirs,
-            *activity_files,
-            *activity_commands,
-            *activity_subagents,
-        ),
-        &event,
-    );
-    if !completion.is_empty() {
-        completion
-    } else {
-        let messages = bus_messages_for_event(event.clone());
-        if messages.is_empty() {
-            tool_update_messages(active_tools, tool_headers, &event)
+        let completion = ordinary_tool_end_messages(
+            &mut self.active_tools,
+            &mut self.tool_headers,
+            &mut self.tool_args,
+            &mut self.tool_names,
+            &mut self.active_tool_count,
+            &mut self.activity_failures,
+            (
+                self.activity_dirs,
+                self.activity_files,
+                self.activity_commands,
+                self.activity_subagents,
+            ),
+            &event,
+        );
+        if !completion.is_empty() {
+            completion
         } else {
-            messages
+            let messages = bus_messages_for_event(event.clone());
+            if messages.is_empty() {
+                tool_update_messages(&self.active_tools, &mut self.tool_headers, &event)
+            } else {
+                messages
+            }
         }
     }
 }

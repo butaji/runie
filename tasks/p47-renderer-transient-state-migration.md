@@ -13,6 +13,15 @@ slot is now an owned FIFO `VecDeque<KeyEvent>`; each delivered key is processed
 in order, while rendering remains a pure snapshot projection. The capture
 driver separately rejects any prompt that is not observed exactly.
 
+## Actor-local projection context (2026-08-08)
+
+The feed actor's event-to-message projection had its reducer-owned identity
+maps and activity counters threaded through an eleven-argument function.
+`OwnedEventProjection` now encapsulates that context inside the actor worker.
+The projection remains mutable only while reducing an `ApplyEvent` command; it
+is not exposed to renderers or other actors. This is an ownership and DSL
+simplification with no change to event ordering or YAML replay behavior.
+
 ## Single live feed subscription (2026-08-07)
 
 `App` now constructs `ScrollbackActor::new()` and leaves interactive bus
