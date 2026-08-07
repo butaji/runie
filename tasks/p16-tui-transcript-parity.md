@@ -70,6 +70,14 @@ runner while individual tool rows continue to render `✗`.
   remaining work is to reconcile them against a fresh, frame-locked Grok
   capture before claiming full transcript parity.
 
+- **Thinking rail parity (2026-08-07):** Settled Grok frames show the
+  collapsed `Thought for …` row with an accent-colored `❙` rail. Runie's
+  existing token-aware `styled_thought_summary` path was present but
+  unreachable because the physical row used the generic summary gutter. The
+  declarative feed projection now emits the accent rail for thought summaries;
+  a focused cell/style test and the full reasoning visual snapshot pin the
+  glyph and theme-token color.
+
 ## Grok reference
 
 `~/Code/agents/grok-build/crates/codegen/xai-grok-pager/src/scrollback/render.rs`

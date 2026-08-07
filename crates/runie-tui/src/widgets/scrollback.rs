@@ -1609,7 +1609,9 @@ impl Scrollback {
             let parts: Vec<_> = source.split('\n').collect();
             for (index, part) in parts.iter().enumerate() {
                 let prefix = if line.kind == LineKind::TurnSummary && width >= 50 {
-                    if width < 70 || self.navigation.live_grok_layout {
+                    if line.text.contains("◆ Thought") {
+                        "❙  "
+                    } else if width < 70 || self.navigation.live_grok_layout {
                         "   "
                     } else {
                         "     "
@@ -2962,11 +2964,25 @@ mod tests {
     fn turn_summary_uses_groks_column_six_gutter() {
         let mut scrollback = Scrollback::new();
         scrollback.append(Line::new(LineKind::TurnSummary, "Worked for 2.3s"));
-        let mut buffer = Buffer::empty(Rect::new(0, 0, 30, 1));
-        scrollback.render(Rect::new(0, 0, 30, 1), &mut buffer);
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 60, 1));
+        scrollback.render(Rect::new(0, 0, 60, 1), &mut buffer);
         assert_eq!(buffer.cell((0, 0)).expect("first gutter").symbol(), " ");
         assert_eq!(buffer.cell((2, 0)).expect("fifth gutter").symbol(), " ");
         assert_eq!(buffer.cell((3, 0)).expect("summary start").symbol(), "W");
+    }
+
+    #[test]
+    fn thought_summary_uses_groks_accent_rail() {
+        let mut scrollback = Scrollback::new();
+        scrollback.append(Line::new(LineKind::TurnSummary, "◆ Thought for 0.2s"));
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 60, 1));
+        scrollback.render(Rect::new(0, 0, 60, 1), &mut buffer);
+        assert_eq!(buffer.cell((0, 0)).expect("thought rail").symbol(), "❙");
+        assert_eq!(
+            buffer.cell((0, 0)).expect("thought rail").fg,
+            Color::Rgb(187, 154, 247)
+        );
+        assert_eq!(buffer.cell((3, 0)).expect("thought marker").symbol(), "◆");
     }
 
     #[test]

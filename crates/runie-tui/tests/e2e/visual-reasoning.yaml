@@ -16,8 +16,8 @@ assertions:
     rows: 30
     screen_text:
       - "❯ explain"
-      - "     ◆ Thought"
-      - "◆ Thought for 0.9s"
+      - "❙  ◆ Thought"
+      - "❙  ◆ Thought for 0.9s"
       - "ready."
       - "Enter:send"
     screen_excludes:
