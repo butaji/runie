@@ -962,6 +962,8 @@ pub struct StateAssertions {
     pub session_config_records: Option<Vec<String>>,
     /// Ordered admitted Pi operation-lane record kinds.
     pub session_lane_records: Option<Vec<String>>,
+    /// Message entry IDs selected after the newest compaction boundary.
+    pub compaction_context_entry_ids: Option<Vec<String>>,
     /// Runtime-declared token estimates for the pure compaction oracle.
     pub compaction_token_estimates: Option<Vec<u64>>,
     pub compaction_keep_recent_tokens: Option<u64>,
@@ -2720,6 +2722,24 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         if actual_records.as_slice() != expected_records.as_slice() {
             return Err(format!(
                 "session lane records mismatch: expected {expected_records:?}, got {actual_records:?}"
+            ));
+        }
+    }
+    if let Some(expected_ids) = &expected.compaction_context_entry_ids {
+        let actual_ids = outcome
+            .session
+            .compaction_context_projection()
+            .map(|projection| {
+                projection
+                    .message_indices
+                    .into_iter()
+                    .map(|index| outcome.session.entries[index].id.clone())
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        if &actual_ids != expected_ids {
+            return Err(format!(
+                "compaction context entries mismatch: expected {expected_ids:?}, got {actual_ids:?}"
             ));
         }
     }

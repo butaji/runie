@@ -206,6 +206,63 @@ pub struct CompactionPreparation {
     pub cut_point: CompactionCutPoint,
 }
 
+/// Pure provider-context boundary after the newest Pi compaction record.
+///
+/// The summary remains journal metadata until the provider-specific message
+/// projector materializes it. Retained messages are carried by the
+/// compaction record; ordinary message indices identify only entries written
+/// after that boundary, so callers cannot accidentally send the compacted
+/// prefix again.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CompactionContextProjection {
+    pub summary: String,
+    pub tokens_before: u64,
+    pub retained_tail: Vec<AgentMessage>,
+    pub message_indices: Vec<usize>,
+}
+
+impl SessionSnapshot {
+    /// Build the latest-compaction context boundary without mutating the
+    /// actor-owned journal. Deferred assistant results are excluded because
+    /// Pi's context builder does not send them to the provider.
+    pub fn compaction_context_projection(&self) -> Option<CompactionContextProjection> {
+        let compaction = self
+            .config_records
+            .iter()
+            .filter_map(|entry| match &entry.record {
+                SessionConfigRecord::CompactionCreated {
+                    summary,
+                    retained_tail,
+                    tokens_before,
+                    ..
+                } => Some((entry.seq, summary, retained_tail, *tokens_before)),
+                _ => None,
+            })
+            .max_by_key(|(seq, ..)| *seq)?;
+        let (_, summary, retained_tail, tokens_before) = compaction;
+        let message_indices = self
+            .entries
+            .iter()
+            .enumerate()
+            .filter(|(_, entry)| entry.seq > compaction.0)
+            .filter(|(_, entry)| {
+                !matches!(
+                    &entry.message,
+                    AgentMessage::Assistant(message)
+                        if message.stop_reason == Some(StopReason::Deferred)
+                )
+            })
+            .map(|(index, _)| index)
+            .collect();
+        Some(CompactionContextProjection {
+            summary: summary.clone(),
+            tokens_before,
+            retained_tail: retained_tail.clone(),
+            message_indices,
+        })
+    }
+}
+
 /// Build the pure payload for Pi's async compaction owner. Only index
 /// selection happens here; summary generation and journal publication remain
 /// separate event-driven operations.
@@ -1983,6 +2040,68 @@ mod tests {
         assert_eq!(preparation.turn_prefix_indices, vec![0]);
         assert_eq!(preparation.retained_indices, vec![1]);
         assert_eq!(preparation.tokens_before, 80);
+    }
+
+    #[test]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the regression fixture spells out the parent-linked journal boundary"
+    )]
+    fn compaction_context_projection_drops_prefix_and_deferred_results() {
+        let snapshot = SessionSnapshot {
+            sequence: 4,
+            leaf_id: Some("entry-4".into()),
+            entries: vec![
+                SessionEntry {
+                    id: "entry-1".into(),
+                    seq: 1,
+                    parent_id: None,
+                    timestamp: 0,
+                    message: user("old"),
+                    terminate: false,
+                },
+                SessionEntry {
+                    id: "entry-2".into(),
+                    seq: 2,
+                    parent_id: Some("entry-1".into()),
+                    timestamp: 0,
+                    message: AgentMessage::Assistant(Default::default()),
+                    terminate: false,
+                },
+                SessionEntry {
+                    id: "entry-4".into(),
+                    seq: 4,
+                    parent_id: Some("entry-3".into()),
+                    timestamp: 0,
+                    message: AgentMessage::Assistant(AssistantMessage {
+                        stop_reason: Some(StopReason::Deferred),
+                        ..Default::default()
+                    }),
+                    terminate: false,
+                },
+            ],
+            config_records: vec![SessionConfigEntry {
+                id: "entry-3".into(),
+                seq: 3,
+                parent_id: Some("entry-2".into()),
+                timestamp: 0,
+                record: SessionConfigRecord::CompactionCreated {
+                    summary: "summary".into(),
+                    retained_tail: vec![user("retained")],
+                    tokens_before: 80,
+                    details: None,
+                    usage: None,
+                },
+            }],
+            ..Default::default()
+        };
+        let projection = snapshot
+            .compaction_context_projection()
+            .expect("latest compaction");
+        assert_eq!(projection.summary, "summary");
+        assert_eq!(projection.tokens_before, 80);
+        assert_eq!(projection.retained_tail.len(), 1);
+        assert!(projection.message_indices.is_empty());
     }
 
     #[tokio::test]

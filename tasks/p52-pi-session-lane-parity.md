@@ -197,6 +197,16 @@ message, and does not admit a compaction operation through the live loop.
 Those are the concrete next boundaries; the existing generic JSON payload
 must not be mistaken for full Pi compaction parity.
 
+### Completed slice (2026-08-07, compaction context boundary)
+
+`SessionSnapshot::compaction_context_projection` is now a pure projection of
+the newest compaction record. It returns the persisted summary metadata and
+retained tail, selects only message entries after the compaction sequence, and
+filters deferred assistant results exactly at the context boundary. A core
+regression constructs a parent-linked journal with a deferred post-boundary
+entry, while the YAML state DSL asserts the selected entry IDs through the
+real session actor path. No provider or TUI code mutates the session snapshot.
+
 The following are not yet exact Pi parity:
 
 - the public wire boundary still carries operation records as generic

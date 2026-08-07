@@ -45,6 +45,7 @@ assertions:
       - branch_summary
       - custom
       - compaction
+    compaction_context_entry_ids: []
     active_operations:
       op-1: started
   visual:
