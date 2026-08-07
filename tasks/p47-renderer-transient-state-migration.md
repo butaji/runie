@@ -103,6 +103,12 @@ actor/compatibility feed projection: an activity row after the newest user
 entry identifies the current Grok activity group. Starting a new user turn
 therefore naturally starts a fresh group without a renderer reset flag.
 
+Activity-counter ownership increment (2026-08-07): activity counts now live in
+`FeedNavigation`/`FeedSnapshot` and change only through
+`ActivityReset`/`ActivityToolStart`/`ActivityToolEnd` messages. The renderer no
+longer owns directory/file/command/subagent/failure counters; activity labels
+are formatted from actor facts, including the live and compatibility paths.
+
 Thinking-duration ownership increment (2026-08-07): the compatibility
 `StatusBar` now retains `thinking_elapsed_ms` in its renderer-independent
 snapshot, exactly like `StatusState`. `EventRenderer` no longer keeps a

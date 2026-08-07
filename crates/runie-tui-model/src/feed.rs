@@ -50,6 +50,11 @@ pub struct FeedSnapshot {
     /// Tool names are reducer facts used to resolve specialized Grok cards.
     pub tool_names: HashMap<String, String>,
     pub tool_args: HashMap<String, serde_json::Value>,
+    pub activity_dirs: usize,
+    pub activity_files: usize,
+    pub activity_commands: usize,
+    pub activity_subagents: usize,
+    pub activity_failures: usize,
     pub settled_no_tool_phase: bool,
     pub live_grok_layout: bool,
     pub next_tool_row_id: u64,
@@ -97,6 +102,11 @@ pub struct FeedNavigation {
     pub workflow_phases: HashMap<String, Vec<(String, String)>>,
     pub tool_names: HashMap<String, String>,
     pub tool_args: HashMap<String, serde_json::Value>,
+    pub activity_dirs: usize,
+    pub activity_files: usize,
+    pub activity_commands: usize,
+    pub activity_subagents: usize,
+    pub activity_failures: usize,
     pub settled_no_tool_phase: bool,
     pub live_grok_layout: bool,
     pub next_tool_row_id: u64,
@@ -127,6 +137,11 @@ impl Default for FeedNavigation {
             workflow_phases: HashMap::new(),
             tool_names: HashMap::new(),
             tool_args: HashMap::new(),
+            activity_dirs: 0,
+            activity_files: 0,
+            activity_commands: 0,
+            activity_subagents: 0,
+            activity_failures: 0,
             settled_no_tool_phase: false,
             live_grok_layout: false,
             next_tool_row_id: 0,
@@ -967,6 +982,11 @@ pub enum ScrollbackMsg {
     SetToolName(String, String),
     SetToolArgs(String, serde_json::Value),
     RemoveToolArgs(String),
+    ActivityReset,
+    ActivityToolStart(String),
+    ActivityToolEnd {
+        is_error: bool,
+    },
     SetToolMode(String, ToolDisplayMode),
     ToggleToolMode(String),
     SelectNextTool,
@@ -1057,6 +1077,11 @@ impl FeedState {
             ),
             tool_names: self.navigation.tool_names.clone(),
             tool_args: self.navigation.tool_args.clone(),
+            activity_dirs: self.navigation.activity_dirs,
+            activity_files: self.navigation.activity_files,
+            activity_commands: self.navigation.activity_commands,
+            activity_subagents: self.navigation.activity_subagents,
+            activity_failures: self.navigation.activity_failures,
             settled_no_tool_phase: self.navigation.settled_no_tool_phase,
             live_grok_layout: self.navigation.live_grok_layout,
             next_tool_row_id: self.navigation.next_tool_row_id,
@@ -1114,6 +1139,38 @@ impl FeedState {
             }
             ScrollbackMsg::RemoveToolArgs(id) => {
                 self.navigation.tool_args.remove(&id);
+            }
+            ScrollbackMsg::ActivityReset => {
+                self.navigation.activity_dirs = 0;
+                self.navigation.activity_files = 0;
+                self.navigation.activity_commands = 0;
+                self.navigation.activity_subagents = 0;
+                self.navigation.activity_failures = 0;
+            }
+            ScrollbackMsg::ActivityToolStart(name) => {
+                if matches!(name.as_str(), "list_dir" | "list_files" | "ls") {
+                    self.navigation.activity_dirs += 1;
+                } else if matches!(name.as_str(), "read" | "read_file") {
+                    self.navigation.activity_files += 1;
+                } else if matches!(
+                    name.as_str(),
+                    "bash"
+                        | "shell"
+                        | "exec"
+                        | "run"
+                        | "execute"
+                        | "run_terminal_command"
+                        | "run_terminal_cmd"
+                ) {
+                    self.navigation.activity_commands += 1;
+                } else if matches!(name.as_str(), "subagent" | "agent" | "task") {
+                    self.navigation.activity_subagents += 1;
+                }
+            }
+            ScrollbackMsg::ActivityToolEnd { is_error } => {
+                if is_error {
+                    self.navigation.activity_failures += 1;
+                }
             }
             ScrollbackMsg::AdvanceAnimation => self.navigation.advance_animation(),
             ScrollbackMsg::RemoveKind(kind) => self.lines.retain(|line| line.kind != kind),
@@ -1416,6 +1473,11 @@ impl FeedState {
         self.lines.clear();
         self.navigation.tool_names.clear();
         self.navigation.tool_args.clear();
+        self.navigation.activity_dirs = 0;
+        self.navigation.activity_files = 0;
+        self.navigation.activity_commands = 0;
+        self.navigation.activity_subagents = 0;
+        self.navigation.activity_failures = 0;
         self.navigation.tool_modes.clear();
         self.navigation.workflow_headers.clear();
         self.navigation.workflow_phases.clear();

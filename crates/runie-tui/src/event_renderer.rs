@@ -87,6 +87,7 @@ pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
         } => vec![
             ScrollbackMsg::SetToolName(tool_call_id.clone(), tool_name.clone()),
             ScrollbackMsg::SetToolArgs(tool_call_id.clone(), args.clone()),
+            ScrollbackMsg::ActivityToolStart(tool_name.clone()),
             ScrollbackMsg::SetToolMode(
                 tool_call_id.clone(),
                 runie_tui_model::default_tool_display_mode(tool_name),
@@ -184,8 +185,17 @@ pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
             status: status.clone(),
             elapsed_ms: *elapsed_ms,
         }],
-        AgentEvent::ToolExecutionEnd { tool_call_id, .. } => {
-            vec![ScrollbackMsg::RemoveToolArgs(tool_call_id.clone())]
+        AgentEvent::ToolExecutionEnd {
+            tool_call_id,
+            is_error,
+            ..
+        } => {
+            vec![
+                ScrollbackMsg::ActivityToolEnd {
+                    is_error: *is_error,
+                },
+                ScrollbackMsg::RemoveToolArgs(tool_call_id.clone()),
+            ]
         }
         AgentEvent::AgentStart
         | AgentEvent::AgentEnd { .. }
@@ -274,11 +284,6 @@ pub struct EventRenderer {
     /// Actor-owned status projection used by the production event loop while
     /// the compatibility widget projection is being retired.
     status_actor: Option<StatusActor>,
-    activity_dirs: usize,
-    activity_files: usize,
-    activity_commands: usize,
-    activity_subagents: usize,
-    activity_failures: usize,
     /// If true, the next AgentStart emits the welcome modal lines
     /// (matching grok's minimal-mode chrome) and then clears this flag.
     emit_welcome: bool,
@@ -334,11 +339,6 @@ impl EventRenderer {
             scrollback_actor,
             status,
             status_actor,
-            activity_dirs: 0,
-            activity_files: 0,
-            activity_commands: 0,
-            activity_subagents: 0,
-            activity_failures: 0,
             emit_welcome,
             live_grok_layout: false,
             live_tool_events_owned: false,
@@ -867,49 +867,40 @@ impl EventRenderer {
     ) -> ScrollbackMsg {
         let starts_new_activity_group =
             self.active_tool_count() == 0 && !self.activity_group_exists_since_latest_user();
-        if starts_new_activity_group {
-            self.activity_dirs = 0;
-            self.activity_files = 0;
-            self.activity_commands = 0;
-            self.activity_subagents = 0;
-            self.activity_failures = 0;
+        if starts_new_activity_group && self.scrollback_actor.is_none() {
+            self.scrollback.lock().apply(ScrollbackMsg::ActivityReset);
         }
-        if matches!(tool_name.as_str(), "list_dir" | "list_files" | "ls") {
-            self.activity_dirs += 1;
-        } else if matches!(tool_name.as_str(), "read" | "read_file") {
-            self.activity_files += 1;
-        } else if matches!(
-            tool_name.as_str(),
-            "bash"
-                | "shell"
-                | "exec"
-                | "run"
-                | "execute"
-                | "run_terminal_command"
-                | "run_terminal_cmd"
-        ) {
-            self.activity_commands += 1;
-        } else if matches!(tool_name.as_str(), "subagent" | "agent" | "task") {
-            self.activity_subagents += 1;
+        if self.scrollback_actor.is_none() {
+            self.scrollback
+                .lock()
+                .apply(ScrollbackMsg::ActivityToolStart(tool_name.clone()));
         }
-        let tool_buffer = tool_header(&tool_name, &args);
-        let activity = if self.activity_dirs
-            + self.activity_files
-            + self.activity_commands
-            + self.activity_subagents
-            > 0
-        {
-            Some(activity_text(
-                self.activity_dirs,
-                self.activity_files,
-                self.activity_commands,
-                self.activity_subagents,
-                self.activity_failures,
-                true,
-            ))
+        let counts = if self.scrollback_actor.is_none() {
+            self.activity_counts()
         } else {
-            None
+            self.activity_counts_with_start(&tool_name, starts_new_activity_group)
         };
+        let (
+            activity_dirs,
+            activity_files,
+            activity_commands,
+            activity_subagents,
+            activity_failures,
+        ) = counts;
+        let tool_buffer = tool_header(&tool_name, &args);
+        let activity =
+            if activity_dirs + activity_files + activity_commands + activity_subagents > 0 {
+                Some(activity_text(
+                    activity_dirs,
+                    activity_files,
+                    activity_commands,
+                    activity_subagents,
+                    activity_failures,
+                    true,
+                ))
+            } else {
+                None
+            };
         if self.scrollback_actor.is_none() {
             if let Some(activity) = &activity {
                 let mut scrollback = self.scrollback.lock();
@@ -1018,8 +1009,20 @@ impl EventRenderer {
         result: serde_json::Value,
         is_error: bool,
     ) -> ScrollbackMsg {
+        let (
+            activity_dirs,
+            activity_files,
+            activity_commands,
+            activity_subagents,
+            mut activity_failures,
+        ) = self.activity_counts();
         if is_error {
-            self.activity_failures += 1;
+            activity_failures += 1;
+        }
+        if self.scrollback_actor.is_none() {
+            self.scrollback
+                .lock()
+                .apply(ScrollbackMsg::ActivityToolEnd { is_error });
         }
         let tool_buffer = self.current_tool_header(&tool_call_id).unwrap_or_default();
         let tool_args = self.current_tool_args(&tool_call_id);
@@ -1035,18 +1038,14 @@ impl EventRenderer {
             }
         }
         let activity = if self.active_tool_count() <= 1
-            && self.activity_dirs
-                + self.activity_files
-                + self.activity_commands
-                + self.activity_subagents
-                > 0
+            && activity_dirs + activity_files + activity_commands + activity_subagents > 0
         {
             Some(activity_text(
-                self.activity_dirs,
-                self.activity_files,
-                self.activity_commands,
-                self.activity_subagents,
-                self.activity_failures,
+                activity_dirs,
+                activity_files,
+                activity_commands,
+                activity_subagents,
+                activity_failures,
                 false,
             ))
         } else {
@@ -1138,11 +1137,6 @@ impl EventRenderer {
         if self.status_actor.is_none() {
             self.status.lock().set(Status::Thinking);
         }
-        self.activity_dirs = 0;
-        self.activity_files = 0;
-        self.activity_commands = 0;
-        self.activity_subagents = 0;
-        self.activity_failures = 0;
         if self.scrollback_actor.is_none() {
             self.scrollback.lock().apply(ScrollbackMsg::TurnEnd);
         }
@@ -1355,6 +1349,52 @@ impl EventRenderer {
         lines[latest_user..]
             .iter()
             .any(|line| line.kind == LineKind::Activity)
+    }
+
+    fn activity_counts(&self) -> (usize, usize, usize, usize, usize) {
+        let snapshot = self
+            .scrollback_actor
+            .as_ref()
+            .map(|actor| actor.model_snapshot())
+            .unwrap_or_else(|| self.scrollback.lock().model_snapshot());
+        (
+            snapshot.activity_dirs,
+            snapshot.activity_files,
+            snapshot.activity_commands,
+            snapshot.activity_subagents,
+            snapshot.activity_failures,
+        )
+    }
+
+    fn activity_counts_with_start(
+        &self,
+        tool_name: &str,
+        reset: bool,
+    ) -> (usize, usize, usize, usize, usize) {
+        let (mut dirs, mut files, mut commands, mut subagents, failures) = if reset {
+            (0, 0, 0, 0, 0)
+        } else {
+            self.activity_counts()
+        };
+        if matches!(tool_name, "list_dir" | "list_files" | "ls") {
+            dirs += 1;
+        } else if matches!(tool_name, "read" | "read_file") {
+            files += 1;
+        } else if matches!(
+            tool_name,
+            "bash"
+                | "shell"
+                | "exec"
+                | "run"
+                | "execute"
+                | "run_terminal_command"
+                | "run_terminal_cmd"
+        ) {
+            commands += 1;
+        } else if matches!(tool_name, "subagent" | "agent" | "task") {
+            subagents += 1;
+        }
+        (dirs, files, commands, subagents, failures)
     }
 
     fn current_tool_header(&self, tool_call_id: &str) -> Option<String> {
@@ -2057,6 +2097,7 @@ mod tests {
             vec![
                 ScrollbackMsg::SetToolName("bash-1".into(), "bash".into()),
                 ScrollbackMsg::SetToolArgs("bash-1".into(), serde_json::json!({"command": "pwd"}),),
+                ScrollbackMsg::ActivityToolStart("bash".into()),
                 ScrollbackMsg::SetToolMode(
                     "bash-1".into(),
                     runie_core::types::ToolDisplayMode::Truncated,

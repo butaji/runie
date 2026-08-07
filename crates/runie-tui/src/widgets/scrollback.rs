@@ -312,6 +312,9 @@ impl Scrollback {
             ScrollbackMsg::RemoveToolArgs(id) => {
                 self.reduce_model(ScrollbackMsg::RemoveToolArgs(id));
             }
+            ScrollbackMsg::ActivityReset
+            | ScrollbackMsg::ActivityToolStart(_)
+            | ScrollbackMsg::ActivityToolEnd { .. } => self.reduce_model(message),
             ScrollbackMsg::AdvanceAnimation => {
                 self.reduce_model(ScrollbackMsg::AdvanceAnimation);
             }
@@ -724,6 +727,11 @@ impl Scrollback {
             tool_blocks: self.tool_blocks(),
             tool_names: self.navigation.tool_names.clone(),
             tool_args: self.navigation.tool_args.clone(),
+            activity_dirs: self.navigation.activity_dirs,
+            activity_files: self.navigation.activity_files,
+            activity_commands: self.navigation.activity_commands,
+            activity_subagents: self.navigation.activity_subagents,
+            activity_failures: self.navigation.activity_failures,
             autoscroll: self.navigation.autoscroll,
             scroll_offset: self.navigation.scroll_offset,
             reasoning_expanded: self.navigation.reasoning_expanded,
