@@ -1196,7 +1196,9 @@ impl EventRenderer {
                     scrollback.append(Line::new(LineKind::Assistant, String::new()));
                 }
             }
-            AgentMessage::ToolResult(_) | AgentMessage::Custom(_) => {}
+            AgentMessage::ToolResult(_)
+            | AgentMessage::CompactionSummary(_)
+            | AgentMessage::Custom(_) => {}
         }
     }
 

@@ -217,14 +217,42 @@ pub struct CompactionPreparation {
 pub struct CompactionContextProjection {
     pub summary: String,
     pub tokens_before: u64,
+    pub timestamp: i64,
     pub retained_tail: Vec<AgentMessage>,
     pub message_indices: Vec<usize>,
+}
+
+impl CompactionContextProjection {
+    /// Materialize Pi's internal context-message sequence. The summary keeps
+    /// its distinct role until `convert_to_llm` applies provider wire rules.
+    pub fn messages(&self, entries: &[SessionEntry]) -> Vec<AgentMessage> {
+        let mut messages =
+            Vec::with_capacity(1 + self.retained_tail.len() + self.message_indices.len());
+        messages.push(AgentMessage::CompactionSummary(
+            crate::types::CompactionSummaryMessage {
+                summary: self.summary.clone(),
+                tokens_before: self.tokens_before,
+                timestamp: self.timestamp,
+            },
+        ));
+        messages.extend(self.retained_tail.clone());
+        messages.extend(
+            self.message_indices
+                .iter()
+                .filter_map(|index| entries.get(*index).map(|entry| entry.message.clone())),
+        );
+        messages
+    }
 }
 
 impl SessionSnapshot {
     /// Build the latest-compaction context boundary without mutating the
     /// actor-owned journal. Deferred assistant results are excluded because
     /// Pi's context builder does not send them to the provider.
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the projection keeps Pi's compaction boundary decision table explicit"
+    )]
     pub fn compaction_context_projection(&self) -> Option<CompactionContextProjection> {
         let compaction = self
             .config_records
@@ -235,11 +263,17 @@ impl SessionSnapshot {
                     retained_tail,
                     tokens_before,
                     ..
-                } => Some((entry.seq, summary, retained_tail, *tokens_before)),
+                } => Some((
+                    entry.seq,
+                    summary,
+                    retained_tail,
+                    *tokens_before,
+                    entry.timestamp,
+                )),
                 _ => None,
             })
             .max_by_key(|(seq, ..)| *seq)?;
-        let (_, summary, retained_tail, tokens_before) = compaction;
+        let (_, summary, retained_tail, tokens_before, timestamp) = compaction;
         let message_indices = self
             .entries
             .iter()
@@ -257,6 +291,7 @@ impl SessionSnapshot {
         Some(CompactionContextProjection {
             summary: summary.clone(),
             tokens_before,
+            timestamp,
             retained_tail: retained_tail.clone(),
             message_indices,
         })

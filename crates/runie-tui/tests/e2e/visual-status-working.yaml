@@ -46,6 +46,7 @@ assertions:
       - custom
       - compaction
     compaction_context_entry_ids: []
+    compaction_context_roles: [compactionSummary]
     active_operations:
       op-1: started
   visual:

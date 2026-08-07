@@ -169,6 +169,17 @@ pub struct UserMessage {
     pub timestamp: i64,
 }
 
+/// Pi's internal context message emitted after session compaction. It is not
+/// a user-authored message; the provider conversion layer wraps its summary
+/// in Pi's compaction delimiters and emits a user wire message.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompactionSummaryMessage {
+    pub summary: String,
+    pub tokens_before: u64,
+    pub timestamp: i64,
+}
+
 impl<'de> Deserialize<'de> for UserMessage {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         #[derive(Deserialize)]
@@ -454,6 +465,7 @@ pub enum AgentMessage {
     User(UserMessage),
     Assistant(AssistantMessage),
     ToolResult(ToolResultMessage),
+    CompactionSummary(CompactionSummaryMessage),
     /// App-defined message type. Stored alongside the standard union so apps
     /// can introduce new roles without modifying the core.
     Custom(CustomMessage),
@@ -465,6 +477,7 @@ impl Serialize for AgentMessage {
             AgentMessage::User(m) => ("user", serde_json::to_value(m)),
             AgentMessage::Assistant(m) => ("assistant", serde_json::to_value(m)),
             AgentMessage::ToolResult(m) => ("toolResult", serde_json::to_value(m)),
+            AgentMessage::CompactionSummary(m) => ("compactionSummary", serde_json::to_value(m)),
             AgentMessage::Custom(_) => {
                 // Custom is opaque on the wire; represent as null.
                 return s.serialize_none();
@@ -496,6 +509,9 @@ impl<'de> Deserialize<'de> for AgentMessage {
                 serde_json::from_value(value).map_err(serde::de::Error::custom)?,
             )),
             "toolResult" | "tool_result" => Ok(AgentMessage::ToolResult(
+                serde_json::from_value(value).map_err(serde::de::Error::custom)?,
+            )),
+            "compactionSummary" | "compaction_summary" => Ok(AgentMessage::CompactionSummary(
                 serde_json::from_value(value).map_err(serde::de::Error::custom)?,
             )),
             _ => Err(serde::de::Error::custom(format!("unknown role: {role}"))),
@@ -531,6 +547,7 @@ impl AgentMessage {
             Self::User(m) => m.timestamp,
             Self::Assistant(m) => m.timestamp,
             Self::ToolResult(m) => m.timestamp,
+            Self::CompactionSummary(m) => m.timestamp,
             Self::Custom(m) => m.0.timestamp(),
         }
     }
@@ -1303,8 +1320,13 @@ mod tests {
             }),
             AgentMessage::Assistant(AssistantMessage::default()),
             AgentMessage::ToolResult(ToolResultMessage::default()),
+            AgentMessage::CompactionSummary(CompactionSummaryMessage {
+                summary: "s".into(),
+                tokens_before: 1,
+                timestamp: 2,
+            }),
         ];
-        let roles = ["user", "assistant", "toolResult"];
+        let roles = ["user", "assistant", "toolResult", "compactionSummary"];
         for (message, role) in messages.into_iter().zip(roles) {
             let json = serde_json::to_value(&message).expect("message wire value");
             assert_eq!(json["role"], role);

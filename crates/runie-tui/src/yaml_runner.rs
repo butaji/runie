@@ -984,6 +984,9 @@ pub struct StateAssertions {
     pub session_lane_records: Option<Vec<String>>,
     /// Message entry IDs selected after the newest compaction boundary.
     pub compaction_context_entry_ids: Option<Vec<String>>,
+    /// Internal Pi context-message roles after compaction, before provider
+    /// conversion applies wire-role rules.
+    pub compaction_context_roles: Option<Vec<String>>,
     /// Runtime-declared token estimates for the pure compaction oracle.
     pub compaction_token_estimates: Option<Vec<u64>>,
     pub compaction_keep_recent_tokens: Option<u64>,
@@ -2829,6 +2832,34 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         if &actual_ids != expected_ids {
             return Err(format!(
                 "compaction context entries mismatch: expected {expected_ids:?}, got {actual_ids:?}"
+            ));
+        }
+    }
+    if let Some(expected_roles) = &expected.compaction_context_roles {
+        let actual_roles = outcome
+            .session
+            .compaction_context_projection()
+            .map(|projection| {
+                projection
+                    .messages(&outcome.session.entries)
+                    .into_iter()
+                    .map(|message| match message {
+                        runie_core::types::AgentMessage::CompactionSummary(_) => {
+                            "compactionSummary".to_owned()
+                        }
+                        runie_core::types::AgentMessage::User(_) => "user".to_owned(),
+                        runie_core::types::AgentMessage::Assistant(_) => "assistant".to_owned(),
+                        runie_core::types::AgentMessage::ToolResult(_) => "toolResult".to_owned(),
+                        runie_core::types::AgentMessage::Custom(custom) => {
+                            custom.0.role().to_owned()
+                        }
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        if &actual_roles != expected_roles {
+            return Err(format!(
+                "compaction context roles mismatch: expected {expected_roles:?}, got {actual_roles:?}"
             ));
         }
     }

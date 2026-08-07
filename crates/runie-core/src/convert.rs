@@ -5,6 +5,10 @@
 
 use crate::types::{AgentMessage, WireMessage};
 
+pub const COMPACTION_SUMMARY_PREFIX: &str =
+    "The conversation history before this point was compacted into the following summary:\n\n<summary>\n";
+pub const COMPACTION_SUMMARY_SUFFIX: &str = "\n</summary>";
+
 /// Default conversion: drops `Custom`, maps `User`/`Assistant`/`ToolResult`
 /// to their wire shape. Apps needing custom-message handling supply their own
 /// `convert_to_llm` hook.
@@ -32,6 +36,15 @@ pub fn default_convert_to_llm(messages: &[AgentMessage]) -> Vec<WireMessage> {
                 is_error: t.is_error,
                 timestamp: t.timestamp,
             }),
+            AgentMessage::CompactionSummary(summary) => Some(WireMessage::User {
+                content: vec![crate::types::UserContent::Text {
+                    text: format!(
+                        "{COMPACTION_SUMMARY_PREFIX}{}{COMPACTION_SUMMARY_SUFFIX}",
+                        summary.summary
+                    ),
+                }],
+                timestamp: summary.timestamp,
+            }),
             AgentMessage::Custom(_) => None,
         })
         .collect()
@@ -41,8 +54,8 @@ pub fn default_convert_to_llm(messages: &[AgentMessage]) -> Vec<WireMessage> {
 mod tests {
     use super::*;
     use crate::types::{
-        AgentMessageExt, AssistantContent, AssistantMessage, StopReason, TextContent,
-        ToolResultContent, ToolResultMessage, UserContent, UserMessage,
+        AgentMessageExt, AssistantContent, AssistantMessage, CompactionSummaryMessage, StopReason,
+        TextContent, ToolResultContent, ToolResultMessage, UserContent, UserMessage,
     };
     use std::sync::Arc;
 
@@ -82,6 +95,29 @@ mod tests {
     fn default_convert_passes_through_text() {
         let t = TextContent { text: "abc".into() };
         let _ = t; // type check
+    }
+
+    #[test]
+    fn compaction_summary_keeps_internal_role_and_uses_pi_user_wire_text() {
+        let message = AgentMessage::CompactionSummary(CompactionSummaryMessage {
+            summary: "prior work".into(),
+            tokens_before: 42,
+            timestamp: 9,
+        });
+        let json = serde_json::to_value(&message).expect("internal message wire");
+        assert_eq!(json["role"], "compactionSummary");
+        assert_eq!(json["tokensBefore"], 42);
+        let wire = default_convert_to_llm(&[message]);
+        let WireMessage::User { content, timestamp } = &wire[0] else {
+            panic!("compaction summary must become a user wire message");
+        };
+        assert_eq!(*timestamp, 9);
+        assert_eq!(
+            content,
+            &[UserContent::Text {
+                text: format!("{COMPACTION_SUMMARY_PREFIX}prior work{COMPACTION_SUMMARY_SUFFIX}"),
+            }]
+        );
     }
 
     #[test]

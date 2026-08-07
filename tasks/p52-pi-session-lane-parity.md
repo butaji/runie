@@ -189,38 +189,45 @@ not only a cut-point calculation:
   entry, and completion outcome for a `compaction` operation kind, including
   retry/abort/failure distinctions.
 
-Runie currently has the first pure index partition and lossless
-`CompactionCreated` journal payload, plus YAML assertions for the cut point.
-It does not yet expose a pure context builder that applies the latest
-compaction boundary, does not represent the summary as a provider-context
-message, and does not admit a compaction operation through the live loop.
-Those are the concrete next boundaries; the existing generic JSON payload
-must not be mistaken for full Pi compaction parity.
+Runie initially had only the pure index partition and lossless
+`CompactionCreated` journal payload. The typed context-message increment below
+now applies the latest compaction boundary and represents its summary before
+provider conversion; live summarization and compaction-operation admission
+remain separate gaps.
 
 ### Event/schema boundary audit (2026-08-08)
 
 The upstream context projector calls `createCompactionSummaryMessage`, which
 emits a distinct `role: "compactionSummary"` message carrying `summary`,
-`tokensBefore`, and `timestamp`, followed by the retained tail. Runie's
-`AgentMessage` union currently contains only user, assistant, and tool-result
-roles. The existing `CompactionCreated` event therefore stops at the
-actor-owned journal boundary; it must not be coerced into a user message or
+`tokensBefore`, and `timestamp`, followed by the retained tail. The existing
+`CompactionCreated` event must not be coerced into a user message or
 constructed by a provider/TUI caller.
 
-The required next increment is an explicit core event and typed message
-variant (or an equivalently typed provider-context projection), reduced by
-the session actor and consumed by the provider context adapter. The event
-must carry the persisted compaction identity and preserve ordering with the
-retained tail. YAML replay must drive `CompactionCreated` through the actor
-mailbox and assert the resulting context message sequence; no caller may
-mutate a session snapshot or append a synthetic message directly. Until that
-schema exists, compaction context parity remains open and the current
-projection is journal-boundary evidence only.
+The typed message variant is now present and reduced from the actor-owned
+projection. It carries the persisted timestamp and preserves ordering with
+the retained tail. YAML replay drives `CompactionCreated` through the actor
+mailbox and asserts the resulting context role sequence; no caller mutates a
+session snapshot or appends a synthetic message directly.
 
 This audit also confirms the general state-transfer rule: every state change
 at this boundary is delivered as a typed event/message to the owning actor;
 renderers and provider adapters may only consume immutable snapshots or
 context projections.
+
+### Completed typed context-message increment (2026-08-08)
+
+`CompactionSummaryMessage` is now an explicit `AgentMessage` variant. The
+session projection materializes the ordered internal context sequence as
+`compactionSummary`, retained-tail messages, and post-boundary messages. The
+default provider conversion maps only the summary variant to Pi's user wire
+message with the exact `COMPACTION_SUMMARY_PREFIX`/suffix and preserves its
+timestamp. The TUI treats the internal message as non-feed context data.
+
+The YAML `visual-status-working.yaml` replay asserts the internal role through
+the session actor projection, while core tests assert serialization and the
+provider conversion separately. The remaining compaction gap is narrowed to
+Pi's live summarization owner and publication timing; no direct snapshot
+mutation or provider-side synthetic message is used.
 
 ### Completed slice (2026-08-07, compaction context boundary)
 
