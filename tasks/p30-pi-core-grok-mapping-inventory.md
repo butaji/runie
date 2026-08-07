@@ -108,7 +108,7 @@ with the authoritative checkout present it is part of `just ci`.
 
 | Pi-core family | Representative source | Runie mapping | Status |
 |---|---|---|---|
-| Agent lifecycle | `agent/src/agent-loop.ts`, `agent.ts` | `LoopActor`, event bus, barriers | covered; keep event-order YAML fixtures |
+| Agent lifecycle | `agent/src/agent-loop.ts`, `agent.ts` | `LoopActor`, event bus, barriers | event order covered; awaited listener settlement is tracked by p40 |
 | Agent state | `agent/src/types.ts` | `AgentStateActor` + immutable snapshot | covered; workflow snapshot recently added |
 | Message lifecycle | `agent/src/types.ts` | `AgentEvent`, assistant sectional events | covered by replay and TUI YAML |
 | Tool lifecycle | `agent/src/agent-loop.ts` | `ToolExecutorActor`, typed tool events | covered; continue specialized cards |

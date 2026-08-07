@@ -35,6 +35,12 @@
       "title": "Provide a side-effect-free typed event-sequence DSL beneath YAML fixtures"
     },
     {
+      "id": "p40",
+      "file": "p40-awaited-event-listeners.md",
+      "status": "planned",
+      "title": "Await ordered Pi lifecycle listeners before run and idle settlement"
+    },
+    {
       "id": "p35",
       "file": "p35-scrollback-model-reducer.md",
       "status": "done",
