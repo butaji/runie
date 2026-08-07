@@ -64,6 +64,9 @@ pub struct Scenario {
     pub capture_while_waiting: bool,
     /// Deterministic user-row clock for full-frame replay assertions.
     pub prompt_timestamp: Option<String>,
+    /// Deterministic Pi tool-result timestamp for replay.
+    #[serde(default)]
+    pub tool_result_timestamp: i64,
     #[serde(default)]
     pub assertions: Assertions,
 }
@@ -832,6 +835,8 @@ pub struct StateAssertions {
     pub tool_result_usage: Option<Usage>,
     /// `isError` from the latest Pi tool result.
     pub tool_result_is_error: Option<bool>,
+    /// Timestamp on the latest Pi tool result.
+    pub tool_result_timestamp: Option<i64>,
     /// Arguments on the latest assistant tool call after preparation.
     pub tool_call_arguments: Option<serde_json::Value>,
     pub session_entries: Option<usize>,
@@ -1853,7 +1858,10 @@ fn build_scenario_loop(
         state: AgentStateActor::new(),
         steering: SteeringQueueActor::new(),
         follow_up: FollowUpQueueActor::new(),
-        tool_executor: ToolExecutorActor::new(Arc::new(registry)),
+        tool_executor: ToolExecutorActor::new_with_timestamp(
+            Arc::new(registry),
+            scenario.tool_result_timestamp,
+        ),
         provider,
         bus: bus.clone(),
         subscribers: runie_core::events::SubscriberRegistry::new(),
@@ -2215,6 +2223,16 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
             .map(|result| result.is_error)
             .unwrap_or(false);
         assert_yaml_eq!(Some(expected_error), actual_error, "tool_result_is_error");
+    }
+    if let Some(expected_timestamp) = expected.tool_result_timestamp {
+        let actual_timestamp = latest_tool_result()
+            .map(|result| result.timestamp)
+            .unwrap_or_default();
+        assert_yaml_eq!(
+            Some(expected_timestamp),
+            actual_timestamp,
+            "tool_result_timestamp"
+        );
     }
     if let Some(expected_labels) = &expected.tool_labels {
         let actual_labels = actual
@@ -3369,7 +3387,8 @@ pub async fn render_visual_buffer(
     for t in &scenario.tools {
         register_scenario_tool(&mut reg, t).map_err(|error| error.to_string())?;
     }
-    let tool_executor = ToolExecutorActor::new(Arc::new(reg));
+    let tool_executor =
+        ToolExecutorActor::new_with_timestamp(Arc::new(reg), scenario.tool_result_timestamp);
     let provider = ProviderActor::new(Arc::new(ScenarioStream {
         events: scenario
             .events

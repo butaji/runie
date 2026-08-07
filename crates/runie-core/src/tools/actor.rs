@@ -48,11 +48,16 @@ pub struct ToolExecutorActor {
 
 impl ToolExecutorActor {
     pub fn new(registry: Arc<ToolRegistry>) -> Self {
+        Self::new_with_timestamp(registry, 0)
+    }
+
+    /// Construct an executor with an injected deterministic tool-result clock.
+    pub fn new_with_timestamp(registry: Arc<ToolRegistry>, tool_result_timestamp: i64) -> Self {
         let reg = registry.clone();
 
         // OWNER: ToolExecutorActor
         let (tx, worker) = spawn_actor_worker!(64, move |rx| async move {
-            run_tool_worker(rx, reg).await;
+            run_tool_worker(rx, reg, tool_result_timestamp).await;
         });
 
         Self {
@@ -143,7 +148,11 @@ fn aborted_outcome(calls: &[ToolCall], reason: &str) -> ToolOutcome {
     }
 }
 
-async fn run_tool_worker(mut rx: mpsc::Receiver<ToolCommand>, registry: Arc<ToolRegistry>) {
+async fn run_tool_worker(
+    mut rx: mpsc::Receiver<ToolCommand>,
+    registry: Arc<ToolRegistry>,
+    tool_result_timestamp: i64,
+) {
     while let Some(cmd) = rx.recv().await {
         let ToolCommand::Execute {
             assistant_message,
@@ -174,6 +183,7 @@ async fn run_tool_worker(mut rx: mpsc::Receiver<ToolCommand>, registry: Arc<Tool
             registry: registry.clone(),
             hooks,
             updates: Arc::new(std::sync::Mutex::new(Vec::new())),
+            tool_result_timestamp,
         };
 
         let outcome: DispatchOutcome = match effective_mode {

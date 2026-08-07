@@ -1562,3 +1562,9 @@ paths, whereas Pi records the tool-result time. Closing this requires an
 injected, actor-owned clock/event input (with a deterministic YAML clock for
 replay), not a renderer-side timestamp patch. Until that slice is implemented,
 strict message-timestamp parity remains open.
+
+**Tool-result clock implementation (2026-08-07):** The tool executor now
+accepts an actor-owned deterministic timestamp, and YAML scenarios can declare
+`tool_result_timestamp` plus assert the resulting `ToolResultMessage`. The
+default remains zero for existing callers; live runtime clock injection and
+provider-specific timestamp semantics remain separate follow-up work.

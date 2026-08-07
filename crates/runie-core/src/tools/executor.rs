@@ -62,6 +62,8 @@ pub struct ToolExecContext {
     pub hooks: ToolExecHooks,
     pub bus: Option<crate::events::EventBus>,
     pub updates: Arc<std::sync::Mutex<Vec<crate::types::AgentEvent>>>,
+    /// Deterministic tool-result timestamp supplied by the owning actor.
+    pub tool_result_timestamp: i64,
 }
 
 /// Result of dispatching a batch.
@@ -85,9 +87,12 @@ pub async fn execute_sequential(calls: Vec<ToolCall>, ctx: ToolExecContext) -> D
         };
         outcome.events.extend(take_updates(&ctx));
         outcome.events.push(tool_end(&call, &result, is_error));
-        outcome
-            .tool_results
-            .push(tool_result_message(&call, &result, is_error));
+        outcome.tool_results.push(tool_result_message(
+            &call,
+            &result,
+            is_error,
+            ctx.tool_result_timestamp,
+        ));
         if !result.terminate {
             outcome.all_terminated = false;
         }
@@ -127,6 +132,7 @@ fn tool_result_message(
     call: &ToolCall,
     result: &AgentToolResult,
     is_error: bool,
+    timestamp: i64,
 ) -> ToolResultMessage {
     ToolResultMessage {
         tool_call_id: call.id.clone(),
@@ -136,7 +142,7 @@ fn tool_result_message(
         usage: result.usage.clone(),
         added_tool_names: result.added_tool_names.clone(),
         is_error,
-        timestamp: 0,
+        timestamp,
     }
 }
 
@@ -159,9 +165,13 @@ pub async fn execute_parallel(calls: Vec<ToolCall>, ctx: ToolExecContext) -> Dis
     let mut all_terminated = !by_id.is_empty();
     for call in &preflighted {
         if let Some((name, r, is_error)) = by_id.remove(&call.id) {
-            outcome
-                .tool_results
-                .push(tool_result_message_named(call, name, &r, is_error));
+            outcome.tool_results.push(tool_result_message_named(
+                call,
+                name,
+                &r,
+                is_error,
+                ctx.tool_result_timestamp,
+            ));
             if !r.terminate {
                 all_terminated = false;
             }
@@ -212,7 +222,7 @@ fn preflight_calls(
         match prepare_and_validate(&call, ctx) {
             Ok(prepared) => valid.push(prepared),
             Err(message) => {
-                append_failed_call(&mut outcome, &call, &message);
+                append_failed_call(&mut outcome, &call, &message, ctx.tool_result_timestamp);
                 had_invalid = true;
             }
         }
@@ -220,13 +230,18 @@ fn preflight_calls(
     (valid, outcome, had_invalid)
 }
 
-fn append_failed_call(outcome: &mut DispatchOutcome, call: &ToolCall, message: &str) {
+fn append_failed_call(
+    outcome: &mut DispatchOutcome,
+    call: &ToolCall,
+    message: &str,
+    timestamp: i64,
+) {
     let result = synthetic_error_result(message);
     outcome.events.push(tool_start(call));
     outcome.events.push(tool_end(call, &result, true));
     outcome
         .tool_results
-        .push(tool_result_message(call, &result, true));
+        .push(tool_result_message(call, &result, true, timestamp));
 }
 
 async fn dispatch_result(call: &ToolCall, ctx: &ToolExecContext) -> (AgentToolResult, bool) {
@@ -241,8 +256,9 @@ fn tool_result_message_named(
     name: String,
     result: &AgentToolResult,
     is_error: bool,
+    timestamp: i64,
 ) -> ToolResultMessage {
-    let mut message = tool_result_message(call, result, is_error);
+    let mut message = tool_result_message(call, result, is_error, timestamp);
     message.tool_name = name;
     message
 }
@@ -729,6 +745,7 @@ mod tests {
                 hooks: ToolExecHooks::default(),
                 bus: None,
                 updates: Arc::new(std::sync::Mutex::new(Vec::new())),
+                tool_result_timestamp: 0,
             };
             let outcome = execute_sequential(vec![], ctx).await;
             assert!(outcome.tool_results.is_empty());
@@ -767,6 +784,7 @@ mod tests {
                 ..ToolExecHooks::default()
             },
             bus: None,
+            tool_result_timestamp: 0,
             updates: Arc::new(std::sync::Mutex::new(Vec::new())),
         };
         let call = ToolCall {
@@ -782,6 +800,10 @@ mod tests {
         assert!(!executed.load(Ordering::Acquire));
     }
 
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the cancellation test keeps setup and awaited assertions together"
+    )]
     #[tokio::test]
     async fn abort_during_before_tool_hook_cancels_hook_signal() {
         let executed = Arc::new(AtomicBool::new(false));
@@ -807,6 +829,7 @@ mod tests {
                 ..ToolExecHooks::default()
             },
             bus: None,
+            tool_result_timestamp: 0,
             updates: Arc::new(std::sync::Mutex::new(Vec::new())),
         };
         let call = ToolCall {
@@ -846,6 +869,7 @@ mod tests {
             context: crate::types::AgentContext::default(),
             abort: Some(abort_rx),
             bus: Some(bus),
+            tool_result_timestamp: 0,
             registry: Arc::new(registry),
             hooks: ToolExecHooks {
                 after_tool_call: Some(Arc::new(|input| {
