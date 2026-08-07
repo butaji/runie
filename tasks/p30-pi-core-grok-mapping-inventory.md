@@ -214,3 +214,13 @@ boundaries. `AGENTS.md` remains authoritative and was not modified.
 - Every “out of scope” row is not used as evidence against core parity.
 - No parity claim is made from a component-only snapshot when full-screen
   geometry or terminal attributes are required.
+
+## `addedToolNames` semantic audit (2026-08-07)
+
+Pi does not mutate the active `AgentTool` registry when a tool result carries
+`addedToolNames`. The names are consumed later by provider adapters and
+deferred-tool encoding (for example tool references in Anthropic/OpenAI
+payloads). Runie preserves the field through the owned tool-result event and
+message snapshots; registry mutation would be incorrect. The remaining gap is
+provider-specific deferred-tool encoding, tracked with the provider boundary,
+not an actor state-transfer gap.
