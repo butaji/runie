@@ -1,0 +1,39 @@
+name: visual-operation-admission
+description: >-
+  Pi session lane admission is an event sequence: malformed and duplicate
+  operation records do not change the SessionActor projection.
+events:
+  - operation_record:
+      record_type: operation_started
+      data:
+        id: op-admission
+        lane: main
+        intent:
+          kind: run
+  - operation_record:
+      record_type: operation_started
+      data:
+        id: op-admission
+        lane: main
+        intent:
+          kind: run
+  - operation_record:
+      record_type: operation_finished
+      data:
+        outcome: completed
+  - operation_record:
+      record_type: operation_finished
+      data:
+        id: op-admission
+        lane: main
+        outcome: completed
+assertions:
+  state:
+    session_config_records:
+      - operation_started
+      - operation_started
+      - operation_finished
+      - operation_finished
+    active_operations: {}
+    operation_outcomes:
+      op-admission: completed

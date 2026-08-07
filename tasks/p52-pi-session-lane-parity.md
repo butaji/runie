@@ -12,6 +12,9 @@ Malformed or duplicate generic wire events remain journal facts for forward
 compatibility, but the reducer ignores them rather than corrupting state.
 Unit tests cover family classification, usage identity, malformed records,
 duplicate admission, and the existing lifecycle replay.
+The runtime YAML fixture `visual-operation-admission.yaml` covers the same
+event sequence through the SessionActor and asserts that only the valid start
+and finish alter the projection.
 
 This is intentionally only the first admission boundary. Typed event
 variants, sequence/lane validation, durable storage, and recovery remain open.
