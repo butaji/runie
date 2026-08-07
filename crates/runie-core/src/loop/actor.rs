@@ -13,7 +13,9 @@ use crate::r#loop::driver::{
     run_loop, ApiKeyResolver, ConvertToLlm, RunLoopDeps, RunLoopOutcome, TransformContext,
 };
 use crate::state::AgentStateActor;
-use crate::task_owner::{mailbox_ack, spawn_owned_worker, TaskOwner};
+#[cfg(test)]
+use crate::task_owner::spawn_owned_worker;
+use crate::task_owner::{mailbox_ack, spawn_actor_worker, TaskOwner};
 use crate::tools::executor::ToolExecHooks;
 use crate::tools::ToolExecutorActor;
 use crate::types::{AgentContext, AgentEvent, AgentMessage, QueueMode, ToolExecutionMode};
@@ -147,22 +149,24 @@ impl LoopActor {
             steering_mode: deps.steering_mode,
             follow_up_mode: deps.follow_up_mode,
         });
-        let (control_commands, mut commands) = mpsc::channel(32);
         let abort_tx_for_control = abort_tx.clone();
-        let control_owner = spawn_owned_worker!(async move {
-            while let Some(LoopControlCommand::Reduce(event, reply)) = commands.recv().await {
-                if matches!(
-                    event,
-                    LoopControlEvent::RunStarted | LoopControlEvent::AbortCleared
-                ) {
-                    let _ = abort_tx_for_control.send(false);
-                } else if matches!(event, LoopControlEvent::AbortRequested) {
-                    let _ = abort_tx_for_control.send(true);
+        let (control_commands, control_owner) = spawn_actor_worker!(
+            32,
+            |mut commands: mpsc::Receiver<LoopControlCommand>| async move {
+                while let Some(LoopControlCommand::Reduce(event, reply)) = commands.recv().await {
+                    if matches!(
+                        event,
+                        LoopControlEvent::RunStarted | LoopControlEvent::AbortCleared
+                    ) {
+                        let _ = abort_tx_for_control.send(false);
+                    } else if matches!(event, LoopControlEvent::AbortRequested) {
+                        let _ = abort_tx_for_control.send(true);
+                    }
+                    control_tx.send_modify(|snapshot| reduce_control(snapshot, event));
+                    let _ = reply.send(());
                 }
-                control_tx.send_modify(|snapshot| reduce_control(snapshot, event));
-                let _ = reply.send(());
             }
-        });
+        );
         Self {
             inner: Arc::new(Inner {
                 deps,

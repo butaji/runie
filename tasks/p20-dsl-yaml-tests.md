@@ -60,6 +60,11 @@ behavior fixtures editable without recompiling Rust.
   ownership are established by the same thin DSL used by core actors. Command
   types and worker reducers remain explicit at each call site.
 
+- **Loop-control mailbox DSL reuse (2026-08-07):** `LoopActor` now uses the
+  shared `spawn_actor_worker!` macro for its control-event mailbox and owned
+  worker. The reducer and acknowledgement protocol remain explicit, while
+  one more production actor no longer duplicates channel/task ownership setup.
+
 - **Subscriber ownership DSL reuse (2026-08-06):** The core loop's event
   subscriber bridge now uses `spawn_owned_worker!` instead of manually wrapping
   its `tokio::spawn` in `TaskOwner`. The loop run handle remains explicit
