@@ -15,6 +15,10 @@ and checked against the same TestBackend frame as screen text and cast
 references, allowing color/style regressions to be added without recompiling
 the runner or duplicating full-screen dumps.
 
+The oracle's own unit coverage now exercises glyphs, RGB foreground/background,
+and bold/italic/underline/inverse modifiers together, while the workflow YAML
+fixture proves runtime discovery through the normal fixture sweep.
+
 **Feed attribute-oracle audit (2026-08-06):** Attempting to promote the
 legacy `grok-rich.cast` feed frame to `exact_attributes: true` produced 518
 differences beginning at the session row: the cast contains terminal-default

@@ -3397,3 +3397,50 @@ pub fn load_scenario(path: &Path) -> Result<Scenario, String> {
     let text = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
     serde_yaml::from_str(&text).map_err(|e| e.to_string())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{assert_cell_expectations, CellAssertion};
+    use ratatui::{
+        buffer::Buffer,
+        layout::Rect,
+        style::{Color, Modifier, Style},
+    };
+
+    #[test]
+    fn yaml_cell_oracle_checks_glyph_palette_and_all_modifiers() {
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 3, 1));
+        buffer.set_string(
+            0,
+            0,
+            "X",
+            Style::default()
+                .fg(Color::Rgb(1, 2, 3))
+                .bg(Color::Rgb(4, 5, 6))
+                .add_modifier(
+                    Modifier::BOLD | Modifier::ITALIC | Modifier::UNDERLINED | Modifier::REVERSED,
+                ),
+        );
+        let assertions = vec![
+            CellAssertion {
+                col: 0,
+                row: 0,
+                symbol: Some("X".into()),
+                fg: Some("rgb:1,2,3".into()),
+                bg: Some("rgb:4,5,6".into()),
+                bold: Some(true),
+                italic: Some(true),
+                underline: Some(true),
+                inverse: Some(true),
+            },
+            CellAssertion {
+                col: 1,
+                row: 0,
+                symbol: Some(" ".into()),
+                bg: Some("default".into()),
+                ..CellAssertion::default()
+            },
+        ];
+        assert_cell_expectations(&buffer, &assertions).expect("cell assertions pass");
+    }
+}
