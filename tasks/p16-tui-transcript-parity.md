@@ -667,3 +667,8 @@ Web-source typography (2026-08-06): Grok's web-search card renders the
 `Sources:` label in the muted token while source domains use the primary body
 token. Runie now preserves that label/domain distinction in the output-row
 renderer, with a GrokDay token assertion.
+
+Memory-result typography (2026-08-06): Grok's memory card renders result
+metadata muted and the file/range operand as bold primary text. Runie now
+splits `Result N · score · source · path:range` into equivalent semantic spans,
+with a focused path-style assertion.

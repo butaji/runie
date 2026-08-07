@@ -1885,6 +1885,26 @@ fn styled_line_for(kind: LineKind, text: &str, theme: ThemeKind) -> RatLine<'sta
         return styled_activity_line(text, style);
     }
     if matches!(kind, LineKind::ToolOutput | LineKind::ToolResult) {
+        if let Some(memory) = text.strip_prefix("Result ") {
+            let mut parts = memory.split(" · ");
+            let number = parts.next().unwrap_or_default();
+            let score = parts.next().unwrap_or_default();
+            let source = parts.next().unwrap_or_default();
+            let path = parts.next();
+            if let Some(path) = path {
+                return RatLine::from(vec![
+                    Span::styled("Result ", appearance::muted_style_for(theme)),
+                    Span::styled(
+                        format!("{number} · {score} · {source} · "),
+                        appearance::muted_style_for(theme),
+                    ),
+                    Span::styled(
+                        path.to_owned(),
+                        appearance::base_style_for(theme).add_modifier(Modifier::BOLD),
+                    ),
+                ]);
+            }
+        }
         if let Some(sources) = text.strip_prefix("  Sources: ") {
             let label = "  Sources: ";
             return RatLine::from(vec![
@@ -2587,6 +2607,24 @@ mod tests {
         assert_eq!(
             rendered.spans[1].style.fg,
             appearance::base_style_for(ThemeKind::GrokDay).fg
+        );
+    }
+
+    #[test]
+    fn memory_result_paths_are_bold_primary_spans() {
+        let rendered = styled_line_for(
+            LineKind::ToolOutput,
+            "Result 1 · 0.72 · global · memory.md:1-2",
+            ThemeKind::GrokNight,
+        );
+        assert_eq!(rendered.spans.len(), 3);
+        assert!(rendered.spans[2]
+            .style
+            .add_modifier
+            .contains(Modifier::BOLD));
+        assert_eq!(
+            rendered.spans[2].style.fg,
+            appearance::base_style_for(ThemeKind::GrokNight).fg
         );
     }
 
