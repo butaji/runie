@@ -19,6 +19,15 @@ and finish alter the projection.
 This is intentionally only the first admission boundary. Typed event
 variants, sequence/lane validation, durable storage, and recovery remain open.
 
+## Completed slice (2026-08-07, JSONL recovery)
+
+`SessionSnapshot::repair_jsonl_torn_tail` is now the pure recovery boundary for
+the JSONL loader. It normalizes a valid final line, discards only an invalid
+final physical line (the Pi torn-tail rule), and rejects invalid non-final
+lines. `SessionActor::restore_jsonl` uses this boundary before validated
+import. Unit tests cover both recoverable final corruption and unrecoverable
+middle-of-file corruption.
+
 ## Source contract
 
 The authoritative upstream files are:

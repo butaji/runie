@@ -381,6 +381,11 @@ impl SessionSnapshot {
     /// Parse the message-only subset emitted by [`Self::to_jsonl`].
     /// Validation follows Pi's v4 invariants for header, sequence, and parent
     /// linkage; unsupported mutation kinds are rejected explicitly.
+    ///
+    /// The filesystem actor should call [`Self::repair_jsonl_torn_tail`] before
+    /// handing file contents to this parser. Keeping repair pure makes the
+    /// recovery decision deterministic and leaves publication to the storage
+    /// actor.
     #[allow(
         clippy::too_many_lines,
         clippy::cognitive_complexity,
@@ -617,6 +622,32 @@ impl SessionSnapshot {
             });
         }
         Ok((session_id, cwd, snapshot))
+    }
+
+    /// Repair the one failure Pi's JSONL loader may recover locally: an
+    /// unterminated or invalid final physical line. A malformed non-final
+    /// line is never discarded. Valid final content is only normalized by
+    /// appending its missing newline; no mutation is interpreted here.
+    pub fn repair_jsonl_torn_tail(input: &str) -> Result<String, String> {
+        let mut lines = input.split('\n').collect::<Vec<_>>();
+        while lines.last().is_some_and(|line| line.is_empty()) {
+            lines.pop();
+        }
+        let header = lines
+            .first()
+            .ok_or_else(|| "session JSONL is empty".to_owned())?;
+        serde_json::from_str::<serde_json::Value>(header)
+            .map_err(|error| format!("invalid session header: {error}"))?;
+        for (index, line) in lines.iter().enumerate().skip(1) {
+            if serde_json::from_str::<serde_json::Value>(line).is_err() {
+                if index + 1 != lines.len() {
+                    return Err(format!("invalid session entry {}", index + 1));
+                }
+                lines.truncate(index);
+                return Ok(format!("{}\n", lines.join("\n")));
+            }
+        }
+        Ok(format!("{}\n", lines.join("\n")))
     }
 
     /// Encode the message lane using Pi's JSONL v4 header/entry shape.
@@ -941,7 +972,8 @@ impl SessionActor {
     /// Parsing is pure; replacing the owned journal and publishing its
     /// snapshot are performed only by the actor worker.
     pub async fn restore_jsonl(&self, input: &str) -> Result<(String, String), String> {
-        let (session_id, cwd, snapshot) = SessionSnapshot::from_jsonl(input)?;
+        let repaired = SessionSnapshot::repair_jsonl_torn_tail(input)?;
+        let (session_id, cwd, snapshot) = SessionSnapshot::from_jsonl(&repaired)?;
         if !mailbox_ack!(self.tx, |reply| Command::Import(snapshot, reply)) {
             return Err("session actor restore was not acknowledged".to_owned());
         }
@@ -1377,5 +1409,27 @@ mod tests {
             entry(1, serde_json::Value::Null, "branch")
         );
         assert!(SessionSnapshot::from_jsonl(&unsupported_kind).is_err());
+    }
+
+    #[test]
+    fn jsonl_repair_discards_only_a_torn_final_line() {
+        let input = concat!(
+            "{\"kind\":\"header\",\"version\":4,\"id\":\"s\",\"createdAt\":1,\"cwd\":\"/tmp\"}\n",
+            "{\"kind\":\"entry\",\"lane\":\"main\",\"seq\":1}\n",
+            "{\"kind\":\"entry\",\"lane\":"
+        );
+        let repaired = SessionSnapshot::repair_jsonl_torn_tail(input).expect("repair");
+        assert!(repaired.ends_with("\"seq\":1}\n"));
+        assert_eq!(repaired.lines().count(), 2);
+    }
+
+    #[test]
+    fn jsonl_repair_rejects_a_broken_non_final_line() {
+        let input = concat!(
+            "{\"kind\":\"header\",\"version\":4}\n",
+            "{broken}\n",
+            "{\"kind\":\"entry\"}"
+        );
+        assert!(SessionSnapshot::repair_jsonl_torn_tail(input).is_err());
     }
 }
