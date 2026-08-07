@@ -330,3 +330,7 @@ mutation. This keeps scenario setup and live model configuration aligned.
 `AgentStateActor::apply_event` now shares the same acknowledgement helper as
 direct state commands, keeping replayed event reduction and ordinary state
 updates on one mailbox DSL path.
+
+Mailbox audit (2026-08-06): remaining manual oneshot channels are limited to
+typed result paths (`PromptOutcome`, provider stream receivers, and
+`ToolOutcome`); all unit acknowledgements now use `mailbox_ack!`.

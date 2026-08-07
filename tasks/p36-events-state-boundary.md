@@ -172,6 +172,11 @@ State event application consolidation (2026-08-06): `AgentStateActor` now
 acknowledges `ApplyEvent` through its shared mailbox DSL, preserving the
 single actor-owned event-to-state boundary.
 
+Mailbox ownership audit (2026-08-06): core and TUI production unit-ack
+commands have no remaining handwritten oneshot plumbing; typed response
+commands remain explicit because their result values cannot use the unit-ack
+DSL.
+
 Provider cancellation consolidation (2026-08-06): cancellation acknowledgement
 now uses `mailbox_ack!`, retaining provider pump ownership and the settled
 abort boundary without duplicating oneshot plumbing.
