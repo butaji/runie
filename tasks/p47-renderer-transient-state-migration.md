@@ -324,3 +324,10 @@ Mouse capture lifecycle closure (2026-08-07): the interactive terminal now
 enables crossterm mouse capture together with the alternate screen and disables
 it during restoration. This makes the already-owned mouse event path reachable
 in real terminals; it does not claim the normalization contract above.
+
+Auto-classification slice (2026-08-07): `ScrollNormalizer` now keeps
+event-derived stream count and elapsed interval state. In auto mode it
+promotes slow multi-event streams to trackpad pricing while retaining the
+fast wheel acceleration band; forced wheel/trackpad modes remain explicit.
+`visual-scroll-trackpad.yaml` replays the slow stream at runtime. Full Grok
+flush-cadence/backlog caps and terminal-specific heuristic tuning remain open.

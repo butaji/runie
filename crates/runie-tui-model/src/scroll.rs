@@ -27,6 +27,9 @@ pub struct ScrollNormalizer {
     inverted: bool,
     mode: ScrollMode,
     pending_units: i32,
+    stream_events: i32,
+    stream_elapsed_ms: u64,
+    stream_trackpad: bool,
 }
 
 const FIXED_POINT: i32 = 10;
@@ -59,6 +62,9 @@ impl ScrollNormalizer {
             inverted: false,
             mode: ScrollMode::Auto,
             pending_units: 0,
+            stream_events: 0,
+            stream_elapsed_ms: 0,
+            stream_trackpad: false,
         }
     }
 
@@ -129,16 +135,39 @@ impl ScrollNormalizer {
         (self, delta)
     }
 
+    const fn classify_stream(mut self, interval: u64) -> Self {
+        if self.stream_events == 0 {
+            self.stream_events = 1;
+        } else {
+            self.stream_events += 1;
+            self.stream_elapsed_ms += interval;
+        }
+        self.stream_trackpad = match self.mode {
+            ScrollMode::Trackpad => true,
+            ScrollMode::Wheel => false,
+            ScrollMode::Auto if self.events_per_tick == 1 => interval <= 30 || self.stream_trackpad,
+            ScrollMode::Auto => {
+                self.stream_trackpad
+                    || (self.stream_events >= self.events_per_tick && self.stream_elapsed_ms > 12)
+            }
+        };
+        self
+    }
+
     /// Push an event at an injected monotonic millisecond timestamp. A gap
     /// larger than Grok's stream boundary starts a fresh gesture; replay can
     /// exercise this without wall-clock access or test sleeps.
     pub const fn push_at(mut self, at_ms: u64, direction: ScrollDirection) -> (Self, i32) {
         if let Some(last) = self.last_event_ms {
-            if at_ms.saturating_sub(last) > self.stream_gap_ms {
-                self.pending_units = 0;
-            }
             let interval = at_ms.saturating_sub(last);
-            let multiplier = if matches!(self.mode, ScrollMode::Trackpad) {
+            if interval > self.stream_gap_ms {
+                self.pending_units = 0;
+                self.stream_events = 0;
+                self.stream_elapsed_ms = 0;
+                self.stream_trackpad = false;
+            }
+            self = self.classify_stream(interval);
+            let multiplier = if self.stream_trackpad {
                 BASE_MULTIPLIER
             } else if interval < 8 {
                 FAST_MULTIPLIER
@@ -151,6 +180,9 @@ impl ScrollNormalizer {
             return self.push_with_multiplier(direction, multiplier);
         }
         self.last_event_ms = Some(at_ms);
+        self.stream_events = 1;
+        self.stream_elapsed_ms = 0;
+        self.stream_trackpad = matches!(self.mode, ScrollMode::Trackpad);
         self.push_with_multiplier(direction, BASE_MULTIPLIER)
     }
 }
@@ -238,5 +270,22 @@ mod tests {
         let (normalizer, _) = normalizer.push_at(0, ScrollDirection::Down);
         let (_, delta) = normalizer.push_at(5, ScrollDirection::Down);
         assert_eq!(delta, 1);
+    }
+
+    #[test]
+    fn auto_mode_promotes_a_slow_multi_event_stream_to_trackpad_pricing() {
+        let normalizer = ScrollNormalizer::default();
+        let (normalizer, _) = normalizer.push_at(0, ScrollDirection::Down);
+        let (normalizer, _) = normalizer.push_at(20, ScrollDirection::Down);
+        let (_, delta) = normalizer.push_at(40, ScrollDirection::Down);
+        assert_eq!(delta, 1);
+    }
+
+    #[test]
+    fn auto_mode_keeps_a_fast_tick_in_wheel_acceleration_band() {
+        let normalizer = ScrollNormalizer::default();
+        let (normalizer, _) = normalizer.push_at(0, ScrollDirection::Down);
+        let (_, delta) = normalizer.push_at(5, ScrollDirection::Down);
+        assert_eq!(delta, 2);
     }
 }

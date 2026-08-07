@@ -1,0 +1,13 @@
+name: visual-scroll-trackpad
+description: Slow auto-mode scroll streams use Grok trackpad pricing.
+initial_prompt: "scroll"
+events:
+  - start
+  - text_delta: "line one\nline two\nline three\nline four\nline five\nline six\nline seven\nline eight\nline nine\nline ten\nline eleven\nline twelve\nline thirteen"
+  - done: { stop_reason: stop }
+  - scroll_input: { at_ms: 0, direction: up, mode: auto, speed: 50, inverted: false }
+  - scroll_input: { at_ms: 20, direction: up, mode: auto, speed: 50, inverted: false }
+  - scroll_input: { at_ms: 40, direction: up, mode: auto, speed: 50, inverted: false }
+assertions:
+  state:
+    scroll_offset: 6
