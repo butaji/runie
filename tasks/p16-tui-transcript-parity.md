@@ -7,6 +7,13 @@ state-only dense threshold therefore must not be treated as full-screen proof;
 the remaining work is to align the fixture's actual collapsed interaction
 state with Grok and then assert the marker at screen-cell level.
 
+**Viewport evidence (2026-08-08):** The marker is emitted before the visible
+tail, but the current 80×30 replay clips it because each completed bash call
+also contributes a result row. The fixture therefore intentionally asserts
+only the visible tail until the collapsed projection removes or folds those
+rows; adding a marker assertion now would accept a non-observable state rather
+than prove screen parity.
+
 **Latest parity note (2026-08-05):** Grouped activity now retains Grok's
 failure suffix (`· N failed`) after failed directory/file/command tools
 complete. `visual-tool-error.yaml` exercises the contract through the YAML
