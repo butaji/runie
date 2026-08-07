@@ -27,7 +27,7 @@ Source: `crates/runie-tui/src/event_renderer.rs`, `EventRenderer` fields and
 | `thinking_elapsed_ms` | terminal thinking duration | `StatusState`/core assistant terminal event |
 | activity counters and `activity_group_open` | Grok activity-group aggregation | `FeedState` activity aggregate |
 | `active_tool_count`, `in_tool_exec` | pending tool lifecycle | core state pending-tool projection / feed reducer |
-| `turn_started` | whether terminal summary is due | core lifecycle state or feed reducer |
+| `turn_started` | whether terminal summary is due | `FeedState` / `FeedSnapshot` (migrated) |
 
 The legacy synchronous constructors may retain a compatibility adapter during
 the migration, but production must have one owner for each field. A field is
@@ -65,10 +65,9 @@ the compatibility reducer remains available for synchronous tests.
 The baseline `visual-hey.yaml` fixture now asserts the final `false` value
 directly from the feed snapshot.
 
-The live metadata bridge no longer writes the compatibility `turn_started`
-field at all when actors are attached. A regression test proves that the live
-renderer remains stateless for this lifecycle fact; the field is retained only
-for synchronous compatibility reducers.
+The live metadata bridge no longer writes a renderer `turn_started` field. The
+compatibility path also reduces `TurnStart`/`TurnEnd` through the `Scrollback`
+model, so the renderer has no duplicate turn-lifecycle field.
 
 Turn lifecycle ownership increment (2026-08-07): the compatibility renderer no
 longer keeps a duplicate `turn_started` field. `TurnStart`/`TurnEnd` reduce the
