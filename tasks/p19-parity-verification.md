@@ -1492,3 +1492,16 @@ full-cell capture evidence.
 settlement, theme preservation, and explicit clearing of thinking duration.
 This closes reset-state evidence, but does not change the two authoritative
 full-parity gaps above.
+
+**Fresh truecolor capture audit (2026-08-07):** The tmux/asciinema helper now
+recognizes the current Grok 0.2.118 working prompt (`Grok 4.5` plus `❯`); the
+previous readiness probe waited for a removed welcome marker and could hang
+indefinitely. A bounded 80×24 paired capture with
+`TERM=xterm-256color COLORTERM=truecolor` completes and preserves raw, settled
+ANSI, cast metadata, and Grok doctor output. The first comparison is not a
+parity proof: it reports 788 differing cells (4 glyph, 784 style-only), and
+the Grok capture includes a current consent surface plus a different live
+response/timing. These are now explicit capture-state mismatches rather than
+silently treating a stale cast as a color oracle. Strict 100% requires paired
+captures with equivalent consent/session state and deterministic provider
+output before changing theme tokens.

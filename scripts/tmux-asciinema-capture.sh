@@ -77,7 +77,9 @@ for _ in $(seq 1 "$probe_iterations"); do
     # still be labeled as a settled scenario run.
     if printf '%s' "$screen" | grep -Fq 'Shift+Tab' \
         || printf '%s' "$screen" | grep -Fq 'Enter:send' \
-        || printf '%s' "$screen" | grep -Fq 'Type your message'; then
+        || printf '%s' "$screen" | grep -Fq 'Type your message' \
+        || { printf '%s' "$screen" | grep -Fq 'Grok 4.5' \
+             && printf '%s' "$screen" | grep -Fq '❯'; }; then
         ready=1
         break
     fi
