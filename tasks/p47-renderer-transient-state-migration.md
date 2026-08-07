@@ -480,3 +480,21 @@ The mouse-event classification itself is a pure tested function: terminal
 coordinates are translated against the actor-delivered scrollback origin, and
 only selection intents cross into the main mailbox. This keeps async input
 plumbing thin and replayable.
+
+## Compatibility mirror call-site audit (2026-08-08)
+
+The remaining `EventRenderer` mirror is reachable only from the replay adapter
+helpers, not from `App::spawn_renderer` or the live `with_live_actors` path.
+The exact residual branches are the fallback arms in `assistant_stream_open`,
+`thinking_elapsed_ms`, `handle_tool_start`, `handle_tool_update`,
+`handle_tool_end`, message lifecycle handling, status/error handling, and
+snapshot rehydration. All current YAML and unit callers construct
+`EventRenderer::with_actors`, so the actor-backed path is the authoritative
+replay path as well; the fallback branches are retained solely because the
+helper signatures still encode the historical adapter shape.
+
+The next migration must remove one helper family at a time, first deleting its
+fallback branch and then its obsolete `Projection` access, with a YAML event
+sequence and actor snapshot assertion for each family. Removing the entire
+mirror in one edit would either discard replay coverage or create a second
+mutable feed model, both of which violate the SSOT boundary.
