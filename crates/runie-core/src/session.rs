@@ -171,6 +171,7 @@ impl SessionSnapshot {
 
 enum Command {
     Append(Box<AgentMessage>, oneshot::Sender<()>),
+    Import(SessionSnapshot, oneshot::Sender<()>),
     Reset(oneshot::Sender<()>),
     Flush(oneshot::Sender<()>),
 }
@@ -184,6 +185,10 @@ pub struct SessionActor {
 }
 
 impl SessionActor {
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the actor constructor keeps its complete mailbox reduction loop visible"
+    )]
     pub fn new() -> Self {
         let (snapshot_tx, snapshot) = watch::channel(SessionSnapshot::default());
         let (tx, owner) = spawn_actor_worker!(32, |mut rx: mpsc::Receiver<Command>| async move {
@@ -204,6 +209,19 @@ impl SessionActor {
                         };
                         state.leaf_id = Some(id);
                         state.entries.push(entry);
+                        let _ = snapshot_tx.send(state.clone());
+                        let _ = reply.send(());
+                    }
+                    Command::Import(imported, reply) => {
+                        next_id = imported
+                            .entries
+                            .iter()
+                            .filter_map(|entry| entry.id.strip_prefix("entry-"))
+                            .filter_map(|value| value.parse::<u64>().ok())
+                            .max()
+                            .unwrap_or(imported.sequence)
+                            .saturating_add(1);
+                        state = imported;
                         let _ = snapshot_tx.send(state.clone());
                         let _ = reply.send(());
                     }
@@ -277,6 +295,21 @@ impl SessionActor {
         if self.tx.send(Command::Reset(reply)).await.is_ok() {
             let _ = done.await;
         }
+    }
+
+    /// Restore a validated Pi JSONL message lane through the actor mailbox.
+    /// Parsing is pure; replacing the owned journal and publishing its
+    /// snapshot are performed only by the actor worker.
+    pub async fn restore_jsonl(&self, input: &str) -> Result<(String, String), String> {
+        let (session_id, cwd, snapshot) = SessionSnapshot::from_jsonl(input)?;
+        let (reply, done) = oneshot::channel();
+        self.tx
+            .send(Command::Import(snapshot, reply))
+            .await
+            .map_err(|_| "session actor is closed".to_owned())?;
+        done.await
+            .map_err(|_| "session actor restore was not acknowledged".to_owned())?;
+        Ok((session_id, cwd))
     }
 
     pub fn snapshot(&self) -> SessionSnapshot {
@@ -366,6 +399,25 @@ mod tests {
         assert_eq!(session_id, "session-1");
         assert_eq!(cwd, "/workspace");
         assert_eq!(imported, original);
+    }
+
+    #[tokio::test]
+    async fn actor_restores_jsonl_and_continues_owned_entry_ids() {
+        let source = SessionActor::new();
+        source.append(user("one")).await;
+        source.append(user("two")).await;
+        let jsonl = source.snapshot().to_jsonl("session-1", 5, "/workspace");
+
+        let restored = SessionActor::new();
+        assert_eq!(
+            restored.restore_jsonl(&jsonl).await.expect("restore"),
+            ("session-1".to_owned(), "/workspace".to_owned())
+        );
+        restored.append(user("three")).await;
+        let snapshot = restored.snapshot();
+        assert_eq!(snapshot.sequence, 3);
+        assert_eq!(snapshot.entries[2].id, "entry-3");
+        assert_eq!(snapshot.entries[2].parent_id.as_deref(), Some("entry-2"));
     }
 
     #[test]

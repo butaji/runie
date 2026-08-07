@@ -24,7 +24,12 @@ Runie now has a minimal session-tree foundation in `runie-core::session`:
   sequence numbers, and parent links, and rejects unsupported entry kinds
   instead of silently importing partial state. Export/import round-trip and
   malformed-input tests exercise these invariants.
+- `SessionActor::restore_jsonl` delivers that validated snapshot through an
+  actor mailbox and publishes it as the new immutable state. Subsequent
+  appends continue owned `entry-N` identities after the restored sequence;
+  callers never replace the actor's state directly.
 
-This is intentionally the journal seam, not a claim that Pi JSONL storage,
+This is intentionally the journal seam, not a claim that Pi JSONL filesystem
+storage,
 forking, compaction, labels, or durable filesystem recovery are complete.
 Those follow-up contracts must build on this actor and preserve event ordering.
