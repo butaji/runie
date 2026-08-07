@@ -45,7 +45,9 @@ Not yet implemented behaviorally:
 
 - custom fetch is represented by the injected `HttpActor`; no browser-style
   fetch callback is needed at this Rust boundary.
-- telemetry context remains unsupported.
+- telemetry context remains unsupported because Pi's value is a live span
+  capability (`startSpan`), not serializable request data; it requires a
+  concrete telemetry backend and lifecycle contract before promotion.
 - transport selection is now typed and carried through `HttpRequest`; concrete
   WebSocket adapters are still unsupported, so selecting one is observable but
   cannot yet open a WebSocket.
