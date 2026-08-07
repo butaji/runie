@@ -66,3 +66,10 @@ The private session produced valid cast/raw/settled/manifest artifacts and
 `100×24` at 500 ms). This proves the resize schedule and observation plumbing;
 paired Grok-vs-Runie cell comparisons during the same schedule remain the
 final parity evidence.
+
+Paired schedule probe (2026-08-08): both Runie and Grok independently recorded
+the same two observed geometries. Runie reached its settled frame; Grok's
+settled-response probe timed out after the resize, so its cast is marked
+invalid and was not used for a cell comparison. This isolates the remaining
+issue to obtaining a settled Grok frame under the resize schedule, not to the
+resize event or observation path.
