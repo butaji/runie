@@ -785,3 +785,10 @@ settling paths now emit `<cast>.invalid.json` plus an ANSI pane dump with a
 machine-readable reason (`grok_consent_surface`, `input_prompt_timeout`, or
 `settled_turn_timeout`). Matrix tooling can therefore distinguish missing
 reference evidence from a genuine cell mismatch without parsing shell logs.
+
+Prompt-input validation increment (2026-08-07): paired capture testing found
+that tmux/crossterm input can lose trailing characters while still reaching a
+settled footer. The helper now captures the pane after literal prompt
+injection and rejects the run as `prompt_injection_mismatch` unless the exact
+declared prompt is visible before Enter. Partial-input casts can no longer be
+mistaken for application parity evidence.

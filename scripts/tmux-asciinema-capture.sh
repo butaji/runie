@@ -138,6 +138,10 @@ while IFS= read -r -n 1 character; do
         sleep 0.03
     fi
 done <<< "$prompt"
+injected_screen=$(tmux capture-pane -p -t "$session" 2>/dev/null || true)
+if ! printf '%s' "$injected_screen" | grep -Fq "$prompt"; then
+    reject_capture "prompt_injection_mismatch"
+fi
 tmux send-keys -t "$session" Enter
 # Wait for both the completed-turn marker and the settled input footer so the
 # cast does not stop on the first feed update while the status actor is still
