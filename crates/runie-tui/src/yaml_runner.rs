@@ -330,6 +330,9 @@ pub enum EventSpec {
     SessionLabel {
         session_label: SessionLabelSpec,
     },
+    SessionName {
+        session_name: String,
+    },
     BranchSummary {
         branch_summary: BranchSummarySpec,
     },
@@ -726,6 +729,7 @@ impl EventSpec {
             Self::ThinkingLevel { .. } => None,
             Self::ActiveTools { .. } => None,
             Self::SessionLabel { .. } => None,
+            Self::SessionName { .. } => None,
             Self::BranchSummary { .. } => None,
             Self::CustomEntry { .. } => None,
             Self::Compaction { .. } => None,
@@ -788,6 +792,9 @@ impl EventSpec {
             Self::SessionLabel { session_label } => Some(AgentEvent::SessionLabelChanged {
                 target_id: session_label.target_id.clone(),
                 label: session_label.label.clone(),
+            }),
+            Self::SessionName { session_name } => Some(AgentEvent::SessionNameChanged {
+                name: session_name.clone(),
             }),
             Self::BranchSummary { branch_summary } => Some(AgentEvent::BranchSummaryCreated {
                 from_id: branch_summary.from_id.clone(),
@@ -1014,6 +1021,7 @@ pub struct StateAssertions {
     pub session_config_records: Option<Vec<String>>,
     /// Effective Pi labels after replaying ordered label facts.
     pub session_labels: Option<BTreeMap<String, String>>,
+    pub session_name: Option<String>,
     /// Ordered admitted Pi operation-lane record kinds.
     pub session_lane_records: Option<Vec<String>>,
     /// Ordered actor-owned assistant step operation IDs.
@@ -2853,6 +2861,9 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
                     "active_tools_change".to_owned()
                 }
                 runie_core::session::SessionConfigRecord::LabelChanged { .. } => "label".to_owned(),
+                runie_core::session::SessionConfigRecord::NameChanged { .. } => {
+                    "session_name".to_owned()
+                }
                 runie_core::session::SessionConfigRecord::BranchSummaryCreated { .. } => {
                     "branch_summary".to_owned()
                 }
@@ -2878,6 +2889,11 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         expected.session_labels.clone(),
         outcome.session.labels(),
         "session_labels"
+    );
+    assert_yaml_eq!(
+        expected.session_name.clone(),
+        outcome.session.name().unwrap_or_default(),
+        "session_name"
     );
     if let Some(expected_records) = &expected.session_lane_records {
         let actual_records = outcome
@@ -3842,6 +3858,7 @@ fn event_kind(event: &runie_core::types::AgentEvent) -> &'static str {
         ModelChanged { .. } => "model_changed",
         ActiveToolsChanged { .. } => "active_tools_changed",
         SessionLabelChanged { .. } => "session_label_changed",
+        SessionNameChanged { .. } => "session_name_changed",
         BranchSummaryCreated { .. } => "branch_summary_created",
         CustomSessionEntryCreated { .. } => "custom_session_entry_created",
         CompactionCreated { .. } => "compaction_created",

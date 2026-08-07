@@ -200,6 +200,9 @@ impl AgentStateActor {
             AgentEvent::SessionLabelChanged { .. } => {
                 // SessionActor owns label journal facts.
             }
+            AgentEvent::SessionNameChanged { .. } => {
+                // SessionActor owns session metadata facts.
+            }
             AgentEvent::BranchSummaryCreated { .. } => {
                 // SessionActor owns branch-summary journal records.
             }

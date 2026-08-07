@@ -986,6 +986,10 @@ pub enum AgentEvent {
         target_id: String,
         label: Option<String>,
     },
+    /// Pi-compatible session name fact, applied by the session actor.
+    SessionNameChanged {
+        name: String,
+    },
     /// Application-owned session branch summary; navigation identity is kept
     /// in the event so the journal cannot reduce an anonymous summary.
     BranchSummaryCreated {

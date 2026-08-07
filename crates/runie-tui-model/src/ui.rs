@@ -44,6 +44,7 @@ pub fn ui_messages_for_event(event: &AgentEvent) -> Vec<UiMsg> {
         | AgentEvent::ModelChanged { .. }
         | AgentEvent::ActiveToolsChanged { .. }
         | AgentEvent::SessionLabelChanged { .. }
+        | AgentEvent::SessionNameChanged { .. }
         | AgentEvent::BranchSummaryCreated { .. }
         | AgentEvent::CustomSessionEntryCreated { .. }
         | AgentEvent::CompactionCreated { .. }

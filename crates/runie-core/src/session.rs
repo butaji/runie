@@ -35,6 +35,9 @@ pub enum SessionConfigRecord {
         target_id: String,
         label: Option<String>,
     },
+    NameChanged {
+        name: String,
+    },
     BranchSummaryCreated {
         from_id: String,
         summary: String,
@@ -80,6 +83,9 @@ macro_rules! session_config_record {
                     target_id: target_id.clone(),
                     label: label.clone(),
                 })
+            }
+            AgentEvent::SessionNameChanged { name } => {
+                Some(SessionConfigRecord::NameChanged { name: name.clone() })
             }
             AgentEvent::BranchSummaryCreated {
                 from_id,
@@ -165,6 +171,7 @@ impl SessionEntryRecord {
                 SessionConfigRecord::ThinkingLevelChanged { .. } => "thinking_level_change",
                 SessionConfigRecord::ActiveToolsChanged { .. } => "active_tools_change",
                 SessionConfigRecord::LabelChanged { .. } => "label",
+                SessionConfigRecord::NameChanged { .. } => "session_name",
                 SessionConfigRecord::BranchSummaryCreated { .. } => "branch_summary",
                 SessionConfigRecord::CustomSessionEntryCreated { .. } => "custom",
                 SessionConfigRecord::CompactionCreated { .. } => "compaction",
@@ -528,6 +535,17 @@ impl CompactionContextProjection {
 }
 
 impl SessionSnapshot {
+    /// Reduce ordered Pi session-name facts to the latest name.
+    pub fn name(&self) -> Option<String> {
+        self.config_records.iter().rev().find_map(|entry| {
+            if let SessionConfigRecord::NameChanged { name } = &entry.record {
+                Some(name.clone())
+            } else {
+                None
+            }
+        })
+    }
+
     /// Reduce ordered Pi label facts into the effective label map. This is a
     /// pure read projection; the session actor remains the only writer.
     pub fn labels(&self) -> BTreeMap<String, String> {
@@ -1761,6 +1779,15 @@ impl SessionSnapshot {
                             ),
                         },
                     },
+                    "session_name" => SessionConfigRecord::NameChanged {
+                        name: value
+                            .get("name")
+                            .and_then(serde_json::Value::as_str)
+                            .ok_or_else(|| {
+                                format!("session entry {} is missing name", line_index + 2)
+                            })?
+                            .to_owned(),
+                    },
                     "branch_summary" => SessionConfigRecord::BranchSummaryCreated {
                         from_id: value
                             .get("fromId")
@@ -1967,6 +1994,10 @@ impl SessionSnapshot {
                 SessionConfigRecord::LabelChanged { target_id, label } => (
                     "label",
                     serde_json::json!({ "targetId": target_id, "label": label }),
+                ),
+                SessionConfigRecord::NameChanged { name } => (
+                    "session_name",
+                    serde_json::json!({ "name": name }),
                 ),
                 SessionConfigRecord::BranchSummaryCreated {
                     from_id,
@@ -2795,6 +2826,13 @@ mod tests {
             .await
             .expect("label removal");
         assert!(actor.snapshot().labels().is_empty());
+        actor
+            .apply_event(&AgentEvent::SessionNameChanged {
+                name: "demo".into(),
+            })
+            .await
+            .expect("name admission");
+        assert_eq!(actor.snapshot().name().as_deref(), Some("demo"));
         let error = actor
             .apply_event(&AgentEvent::SessionLabelChanged {
                 target_id: "missing".into(),

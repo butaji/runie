@@ -203,6 +203,7 @@ pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
         | AgentEvent::ThinkingLevelChanged { .. }
         | AgentEvent::ActiveToolsChanged { .. }
         | AgentEvent::SessionLabelChanged { .. }
+        | AgentEvent::SessionNameChanged { .. }
         | AgentEvent::BranchSummaryCreated { .. }
         | AgentEvent::CustomSessionEntryCreated { .. }
         | AgentEvent::CompactionCreated { .. }

@@ -40,6 +40,7 @@ macro_rules! agent_event_kind {
             $crate::types::AgentEvent::ModelChanged { .. } => "ModelChanged",
             $crate::types::AgentEvent::ActiveToolsChanged { .. } => "ActiveToolsChanged",
             $crate::types::AgentEvent::SessionLabelChanged { .. } => "SessionLabelChanged",
+            $crate::types::AgentEvent::SessionNameChanged { .. } => "SessionNameChanged",
             $crate::types::AgentEvent::BranchSummaryCreated { .. } => "BranchSummaryCreated",
             $crate::types::AgentEvent::CustomSessionEntryCreated { .. } => {
                 "CustomSessionEntryCreated"
