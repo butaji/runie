@@ -1,12 +1,9 @@
 //! Small deterministic replay provider for recorded SSE traces.
 
-use std::{
-    fs,
-    path::Path,
-    sync::{
-        atomic::{AtomicUsize, Ordering},
-        Arc,
-    },
+use std::path::Path;
+use std::sync::{
+    atomic::{AtomicUsize, Ordering},
+    Arc,
 };
 
 use crate::types::{
@@ -32,8 +29,10 @@ pub struct ReplayProvider {
 }
 
 impl ReplayProvider {
-    pub fn from_sse(path: impl AsRef<Path>) -> Result<Self, StreamError> {
-        let input = fs::read_to_string(path).map_err(|e| StreamError::Invalid(e.to_string()))?;
+    pub async fn from_sse(path: impl AsRef<Path>) -> Result<Self, StreamError> {
+        let input = tokio::fs::read_to_string(path)
+            .await
+            .map_err(|e| StreamError::Invalid(e.to_string()))?;
         Self::from_sse_body(&input)
     }
 

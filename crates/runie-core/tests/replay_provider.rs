@@ -452,7 +452,7 @@ async fn every_trace_uses_its_yaml_expectations_and_runs_through_core() {
             );
             continue;
         }
-        let replay = match ReplayHttpActor::from_sse(&trace_path) {
+        let replay = match ReplayHttpActor::from_sse(&trace_path).await {
             Ok(http) => ReplayProvider::from_http(Arc::new(http)).await,
             Err(error) => Err(error),
         };
@@ -674,7 +674,7 @@ async fn every_trace_uses_its_yaml_expectations_and_runs_through_core() {
 #[tokio::test]
 async fn replay_http_actor_feeds_provider_before_core_loop() {
     let path = root().join("openai/opencode_go_deepseek_v4_flash_simple.sse");
-    let http: Arc<dyn HttpActor> = Arc::new(ReplayHttpActor::from_sse(path).unwrap());
+    let http: Arc<dyn HttpActor> = Arc::new(ReplayHttpActor::from_sse(path).await.unwrap());
     let provider = Arc::new(ReplayProvider::from_http(http).await.unwrap());
     let test = common::TestLoopBuilder::new(provider).build();
     let output = test

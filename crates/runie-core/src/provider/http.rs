@@ -1,6 +1,6 @@
 //! Minimal transport boundary used by concrete providers and replay tests.
 
-use std::{fs, path::Path};
+use std::path::Path;
 
 use super::stream_fn::StreamError;
 use crate::types::{
@@ -222,8 +222,10 @@ pub struct ReplayHttpActor {
 }
 
 impl ReplayHttpActor {
-    pub fn from_sse(path: impl AsRef<Path>) -> Result<Self, StreamError> {
-        let body = fs::read_to_string(path).map_err(|e| StreamError::Network(e.to_string()))?;
+    pub async fn from_sse(path: impl AsRef<Path>) -> Result<Self, StreamError> {
+        let body = tokio::fs::read_to_string(path)
+            .await
+            .map_err(|e| StreamError::Network(e.to_string()))?;
         Ok(Self {
             response: HttpResponse {
                 status: 200,
