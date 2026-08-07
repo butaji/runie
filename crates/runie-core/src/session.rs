@@ -1611,6 +1611,15 @@ impl SessionSnapshot {
             }
             fork.config_records.push(copy);
         }
+        // Pi forks publish a fresh main-lane pointer after the copied entry
+        // prefix. Lane facts from the source are not copied verbatim; the
+        // fork receives one authoritative pointer for its new tree.
+        sequence += 1;
+        fork.lane_facts.push(SessionLaneFact {
+            seq: sequence,
+            lane: "main".into(),
+            leaf_id: Some(target_id.to_owned()),
+        });
         fork.sequence = sequence;
         Ok(fork)
     }
@@ -3799,7 +3808,7 @@ mod tests {
             ..SessionSnapshot::default()
         };
         let fork = snapshot.fork_at_message("message-2").expect("fork");
-        assert_eq!(fork.sequence, 2);
+        assert_eq!(fork.sequence, 3);
         assert_eq!(fork.leaf_id.as_deref(), Some("message-2"));
         assert_eq!(
             fork.entries
@@ -3815,6 +3824,7 @@ mod tests {
                 .collect::<Vec<_>>(),
             [1, 2]
         );
+        assert_eq!(fork.lanes().get("main"), Some(&Some("message-2".into())));
         assert!(snapshot.fork_at_message("missing").is_err());
     }
 
@@ -4098,7 +4108,7 @@ mod tests {
             .await
             .expect("fork publish");
         let (_, _, forked) = storage.load_snapshot(&fork_path).await.expect("fork load");
-        assert_eq!(forked.sequence, 1);
+        assert_eq!(forked.sequence, 2);
         assert_eq!(forked.leaf_id.as_deref(), Some("entry-1"));
         assert!(!tokio::fs::try_exists(format!("{path_string}.tmp"))
             .await

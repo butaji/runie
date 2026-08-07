@@ -29,7 +29,10 @@ core regression covers create, persistence, and invalid-target immutability.
 `state.session_lanes` through the runtime replay harness. JSONL serialization
 sorts message, configuration, lane, and operation records by their shared
 sequence before writing; an interleaved lane/configuration regression pins
-that ordering and round-trip behavior.
+that ordering and round-trip behavior. `fork_at_message` now follows Pi’s
+fork mutation contract by publishing a fresh `main` lane pointer after the
+copied branch prefix; the branch regression asserts the new lane head and
+sequence.
 
 The lane projection must remain separate from `operation_kinds` and
 `active_operations`; those are Pi operation records, not session tree facts.
