@@ -7,6 +7,11 @@ with `maxRetryDelayMs` (defaulting to Pi's provider retry policy). Runie's
 current `HttpActor` retries transport failures immediately, and
 `StreamError::Api` does not retain `Retry-After` or provider retry metadata.
 
+The authoritative Pi policy is `packages/ai/src/utils/provider-retry.ts`:
+retryable statuses include 408, 409, 429, and 5xx (unless provider headers
+override the decision); `retry-after-ms` and `retry-after` take precedence,
+then exponential backoff is used. Pi also makes the delay abortable.
+
 Adding `max_retry_delay_ms` to `SimpleStreamOptions` now would be cosmetic:
 there is no delay input to clamp and no provider response/error metadata to
 preserve. The correct next boundary is an owned transport error carrying
