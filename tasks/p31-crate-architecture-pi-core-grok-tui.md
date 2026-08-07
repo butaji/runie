@@ -88,11 +88,12 @@ animation frame, and tool display modes. The legacy `Scrollback` snapshot is
 still retained for compatibility rendering; the actor-level model snapshot
 test proves the new read path is fed by the same reducer.
 
-The remaining reducer extraction is tracked explicitly in `tasks/p35-*`:
-`ScrollbackActor` still reduces through the widget adapter, even though it
-publishes only `FeedSnapshot`. This is an architecture gap, not a parity
-claim; completion requires model-owned `FeedState` transitions and YAML
-coverage for every command family.
+The remaining renderer migration is tracked explicitly in `tasks/p35-*`:
+`ScrollbackActor` now reduces directly through model-owned `FeedState` and
+publishes only `FeedSnapshot`. The remaining compatibility surface is the
+local `Scrollback` rehydration/render adapter and its test-only legacy helper;
+this is renderer extraction work, not a second production reducer. Model and
+YAML coverage remains required for every command family.
 
 ## Projection seam audit (2026-08-06)
 
