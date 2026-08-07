@@ -61,6 +61,13 @@ Grok pager presentation of those behaviors.
 No GitHub CI is part of this plan; verification is local through `just ci` and
 runtime YAML/asciinema replay.
 
+**Tool-alias scope audit (2026-08-06):** Grok's registry also has a `skill`
+alias, but that maps to Grok's application/session `Other` block rather than
+an exported Pi agent-core tool. It is intentionally excluded under the
+governing “Pi core features only” scope. The Pi-relevant Grok aliases are
+covered in Runie's model/header projections and replay fixtures; this
+exclusion is a scope decision, not an untracked classifier gap.
+
 ## Source inventory
 
 The source scan enumerated:
