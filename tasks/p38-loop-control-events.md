@@ -1,6 +1,6 @@
 # p38 — Move loop control state behind events
 
-Status: in progress
+Status: substantially complete; production actor boundary verified (2026-08-08)
 
 ## Evidence
 
@@ -9,10 +9,9 @@ Status: in progress
 `tokio::sync::Mutex` fields. Queue contents are actor-owned, but the public
 mode setters still write those control fields directly.
 
-`crates/runie-tui/src/event_renderer.rs` remains a compatibility adapter and
-mutates legacy status/scrollback widget state while consuming events. The
-actor-owned model path is already event-driven; this is the remaining
-stateful compatibility boundary.
+`crates/runie-tui/src/event_renderer.rs` is an event-to-actor delivery
+boundary. It sends typed messages to the owning actors and does not retain
+mutable widget projections.
 
 ## First slice (2026-08-06)
 
@@ -63,30 +62,26 @@ and remain sleep-free.
 
 ## Remaining design
 
-The loop-control reducer itself is now mailbox-owned and acknowledged; it
-emits typed control snapshots without changing Pi's closed `AgentEvent` wire
-contract. The remaining boundary here is migrating the compatibility widget
-adapter to pure event-to-view projection fed by actor snapshots.
+The loop-control reducer is mailbox-owned and acknowledged; it emits typed
+control snapshots without changing Pi's closed `AgentEvent` wire contract.
+The production UI boundary is event-to-actor delivery followed by pure
+snapshot-to-view projection.
 
 ## Production renderer boundary (2026-08-06)
 
-`EventRenderer` now separates its legacy compatibility adapter from the live
-path. Live and replay actor paths use `apply_actor_metadata` only for ephemeral
-event sequencing metadata; status/feed changes are delivered as acknowledged
-actor messages and rendered from snapshots. The old `apply_event` method still
-exists for focused legacy-widget tests, but production actor projections no
-longer call it or mutate compatibility widgets. This keeps the migration
-incremental without creating a second production state owner.
+Live and replay actor paths use `apply_actor_metadata` only for ephemeral event
+sequencing metadata; status/feed changes are delivered as acknowledged actor
+messages and rendered from snapshots. No legacy renderer mutation adapter is
+used by production.
 
-The remaining work is retiring the legacy adapter and moving any focused tests
-that still require it onto actor-backed replay fixtures.
+The remaining work is broader parity coverage; no legacy renderer mutation
+call site remains in the production source path.
 
-**Call-site audit (2026-08-08):** Production has no synchronous
+**Call-site audit (2026-08-08):** Production has no
 `EventRenderer::apply_event` call sites. `App::spawn_renderer` uses the live
 actor-backed `EventRenderer::run`, and YAML replay uses `apply_actor_event`.
-The remaining `apply_event` calls are confined to `event_renderer` unit tests
-that exercise the quarantined compatibility widgets. Retirement can therefore
-be staged as test migration, with no live delivery-path change.
+The remaining `apply_event` identifiers are actor mailbox methods, not a
+renderer-owned mutation path.
 
 ## Prompt admission remains reactive (2026-08-08)
 
