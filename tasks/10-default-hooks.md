@@ -1,6 +1,6 @@
 # Step 10: Default hooks
 
-**Status:** pending
+**Status:** implemented (2026-08-07)
 **Depends on:** 09
 
 ## Goal

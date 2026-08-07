@@ -1,6 +1,6 @@
 # Step 12: Behavioural tests
 
-**Status:** pending
+**Status:** implemented; parity expansion remains active (2026-08-07)
 **Depends on:** 11
 
 ## Goal

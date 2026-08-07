@@ -1,6 +1,6 @@
 # Step 09: LoopActor + driver
 
-**Status:** pending
+**Status:** implemented; broader provider adapters remain separate (2026-08-07)
 **Depends on:** 08
 
 ## Goal

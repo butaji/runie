@@ -1,6 +1,6 @@
 # Step 05: AgentStateActor + snapshot
 
-**Status:** pending
+**Status:** implemented (2026-08-07)
 **Depends on:** 04
 
 ## Goal

@@ -1,6 +1,6 @@
 # Step 04: Event bus + subscribe barriers
 
-**Status:** pending
+**Status:** implemented (2026-08-07)
 **Depends on:** 03
 
 ## Goal

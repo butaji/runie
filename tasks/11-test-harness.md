@@ -1,6 +1,6 @@
 # Step 11: MockStreamFn + fixture harness
 
-**Status:** pending
+**Status:** implemented; runtime YAML replay is the preferred fixture path (2026-08-07)
 **Depends on:** 10
 
 ## Goal

@@ -1,6 +1,6 @@
 # Step 14: Top-of-crate docs + project README
 
-**Status:** pending
+**Status:** implemented; living parity inventories remain active (2026-08-07)
 **Depends on:** 13
 
 ## Goal

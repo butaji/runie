@@ -1,6 +1,6 @@
 # Step 07: Key handling
 
-**Status:** pending
+**Status:** implemented; remaining Grok-only overlays stay out of Pi scope (2026-08-07)
 **Depends on:** 06
 
 ## Goal

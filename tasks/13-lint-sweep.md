@@ -1,6 +1,6 @@
 # Step 13: fmt + clippy + lint-check sweep
 
-**Status:** pending
+**Status:** complete (2026-08-07)
 **Depends on:** 12
 
 ## Goal

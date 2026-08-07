@@ -1,6 +1,6 @@
 # Step 06: Status bar
 
-**Status:** pending
+**Status:** implemented; Grok metric/effect expansion remains (2026-08-07)
 **Depends on:** 05
 
 ## Goal

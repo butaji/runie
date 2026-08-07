@@ -1,6 +1,6 @@
 # Step 03: EventRenderer
 
-**Status:** pending
+**Status:** implemented; compatibility projection retirement remains (2026-08-07)
 **Depends on:** 02
 
 ## Goal
