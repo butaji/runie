@@ -2965,11 +2965,27 @@ mod tests {
             .record_lane("feature".into(), Some("entry-1".into()))
             .await
             .expect("lane admission");
+        actor
+            .record_config(SessionConfigRecord::NameChanged {
+                name: "after-lane".into(),
+            })
+            .await
+            .expect("config after lane");
         assert_eq!(
             actor.snapshot().lanes().get("feature"),
             Some(&Some("entry-1".into()))
         );
         let jsonl = actor.snapshot().to_jsonl("s", 1, "/tmp");
+        let serialized: Vec<u64> = jsonl
+            .lines()
+            .skip(1)
+            .map(|line| {
+                serde_json::from_str::<serde_json::Value>(line).unwrap()["seq"]
+                    .as_u64()
+                    .unwrap()
+            })
+            .collect();
+        assert_eq!(serialized, vec![1, 2, 3]);
         let (_, _, imported) = SessionSnapshot::from_jsonl(&jsonl).expect("lane JSONL");
         assert_eq!(imported.lanes(), actor.snapshot().lanes());
         assert!(actor

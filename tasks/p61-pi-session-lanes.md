@@ -1,6 +1,6 @@
 # P61 — Pi session lane projection
 
-Status: implemented and YAML-replay verified.
+Status: implemented and fully replay-verified.
 
 Pi Core’s `SessionMutation` union has a distinct `lane` mutation carrying
 `seq`, `lane`, and `leafId`. It is not an operation-lane record and must not be
@@ -25,10 +25,11 @@ must add:
 Implemented increment: lane facts now have an actor mailbox API, validation,
 pure latest-leaf projection, and `kind: "lane"` JSONL round-trip. The focused
 core regression covers create, persistence, and invalid-target immutability.
-`session-lanes.yaml` now covers create/move-to-null and asserts
-`state.session_lanes` through the runtime replay harness. Reset behavior is
-still a small follow-up assertion because reset currently clears the whole
-session projection rather than emitting a lane-specific fact.
+`session-lanes.yaml` now covers create/move-to-null/reset and asserts
+`state.session_lanes` through the runtime replay harness. JSONL serialization
+sorts message, configuration, lane, and operation records by their shared
+sequence before writing; an interleaved lane/configuration regression pins
+that ordering and round-trip behavior.
 
 The lane projection must remain separate from `operation_kinds` and
 `active_operations`; those are Pi operation records, not session tree facts.

@@ -10,7 +10,7 @@ events:
   - session_lane:
       lane: feature
       leaf_id: null
+  - reset
 assertions:
   state:
-    session_lanes:
-      feature: null
+    session_lanes: {}
