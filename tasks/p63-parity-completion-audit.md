@@ -67,3 +67,9 @@ Response failure evidence (2026-08-08): the replay parser now rejects Pi
 `error.code` plus `error.message` (or `incomplete_details.reason`). The
 regression runs through the provider replay boundary and the full `just ci`
 matrix; live provider transport behavior remains a separate open contract.
+
+Response incomplete evidence (2026-08-08): `response.incomplete` with
+`incomplete_details.reason: max_output_tokens` now reduces to
+`StopReason::MaxTokens`; other incomplete reasons reduce to `Error`, matching
+Pi's `mapStopReason`. The 183-trace replay matrix was rerun after preserving
+the legacy chat-completions tool ordering contract.

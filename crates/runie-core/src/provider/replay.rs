@@ -54,11 +54,13 @@ impl ReplayProvider {
         Self::from_sse_body(&response.body)
     }
 
+    #[allow(clippy::too_many_lines)]
     fn from_sse_body(input: &str) -> Result<Self, StreamError> {
         let mut events = vec![AssistantMessageEvent::Start {
             partial: AssistantMessage::default(),
         }];
         let mut finished = false;
+        let mut stop_reason = StopReason::Stop;
         let mut tool_calls = std::collections::BTreeMap::<usize, (String, String, String)>::new();
         for line in input.lines() {
             if let Some(raw_error) = line.strip_prefix("error:").map(str::trim_start) {
@@ -85,12 +87,15 @@ impl ReplayProvider {
             }
             finished |= append_text_events(&value, &mut events);
             collect_tool_calls(&value, &mut tool_calls);
-            finished |= has_terminal_marker(&value);
+            if has_terminal_marker(&value) {
+                finished = true;
+                stop_reason = response_stop_reason(&value);
+            }
         }
         if !finished {
             return Err(StreamError::Invalid("trace has no terminal event".into()));
         }
-        finish_replay_events(&mut events, tool_calls);
+        finish_replay_events(&mut events, tool_calls, stop_reason);
         Ok(Self {
             events,
             calls: AtomicUsize::new(0),
@@ -117,9 +122,29 @@ fn response_error_message(value: &serde_json::Value) -> String {
     }
 }
 
+fn response_stop_reason(value: &serde_json::Value) -> StopReason {
+    match value.get("type").and_then(|v| v.as_str()) {
+        Some("response.incomplete") => {
+            let reason = value
+                .pointer("/response/incomplete_details/reason")
+                .and_then(|v| v.as_str());
+            if reason == Some("max_output_tokens") {
+                StopReason::MaxTokens
+            } else {
+                StopReason::Error
+            }
+        }
+        // Keep the legacy chat-completions replay contract unchanged. Its
+        // tool-call completion reason is finalized by the reconstructed
+        // content path; Responses status mapping is handled above.
+        _ => StopReason::Stop,
+    }
+}
+
 fn finish_replay_events(
     events: &mut Vec<AssistantMessageEvent>,
     tool_calls: std::collections::BTreeMap<usize, (String, String, String)>,
+    stop_reason: StopReason,
 ) {
     for (_, (id, name, arguments)) in tool_calls {
         let args = serde_json::from_str(&arguments)
@@ -136,7 +161,7 @@ fn finish_replay_events(
         });
     }
     events.push(AssistantMessageEvent::Done {
-        stop_reason: StopReason::Stop,
+        stop_reason,
         usage: Usage::default(),
         message: None,
     });
@@ -479,6 +504,33 @@ mod tests {
         assert!(matches!(
             error,
             StreamError::Api(message) if message == "rate_limit: try later"
+        ));
+    }
+
+    #[tokio::test]
+    async fn responses_incomplete_max_output_maps_to_length() {
+        let provider = ReplayProvider::from_sse_body(
+            "data: {\"type\":\"response.incomplete\",\"response\":{\"status\":\"incomplete\",\"incomplete_details\":{\"reason\":\"max_output_tokens\"}}}\n",
+        )
+        .expect("incomplete Responses trace");
+        let mut events = provider
+            .stream(
+                &Model::default(),
+                &crate::types::AgentContext::default(),
+                None,
+            )
+            .await
+            .expect("replay stream");
+        assert!(matches!(
+            events.next().await,
+            Some(AssistantMessageEvent::Start { .. })
+        ));
+        assert!(matches!(
+            events.next().await,
+            Some(AssistantMessageEvent::Done {
+                stop_reason: StopReason::MaxTokens,
+                ..
+            })
         ));
     }
 }
