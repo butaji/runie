@@ -6,4 +6,4 @@ pub mod actor;
 pub mod snapshot;
 
 pub use actor::{AgentStateActor, StateCommand};
-pub use snapshot::{AgentStateSnapshot, WorkflowSnapshot};
+pub use snapshot::{AgentStateSnapshot, BackgroundWorkSnapshot, WorkflowSnapshot};

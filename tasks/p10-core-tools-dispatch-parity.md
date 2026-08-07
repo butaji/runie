@@ -91,6 +91,16 @@ Result order: parallel completion order for events; source order for messages.
 ## Acceptance
 
 - New tests: block via `before_tool_call` yields the exact pi error text; `terminate` AND semantics (one non-terminated result → batch not terminated); parallel completion-order != source-order when tools finish out of order; sequential-vs-parallel dispatch selection incl. per-tool override; abort mid-batch stops remaining calls.
+
+Background lifecycle projection (2026-08-06): the core state actor now
+reduces Pi/Grok `background_work_started`, `background_work_progress`,
+`background_work_finished`, and `background_work_cancelled` events into an
+immutable `background_work` snapshot keyed by work ID. Previously these
+events were accepted at the event boundary but discarded by the core SSOT,
+leaving consumers unable to observe the lifecycle. The actor test exercises
+start → progress → successful finish through the real mailbox. Error and
+cancelled terminal variants remain covered by the existing TUI YAML fixtures
+and should be promoted to core exact-state fixtures next.
 - `cargo test -p runie-core` green.
 
 ## Progress

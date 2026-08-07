@@ -11,7 +11,7 @@ use tokio::sync::{mpsc, oneshot, watch};
 use crate::events::EventBus;
 use crate::types::{AgentEvent, AgentMessage, AgentTool, Model, ThinkingLevel};
 
-use super::snapshot::{AgentStateSnapshot, WorkflowSnapshot};
+use super::snapshot::{AgentStateSnapshot, BackgroundWorkSnapshot, WorkflowSnapshot};
 use crate::task_owner::{spawn_actor_worker, TaskOwner};
 
 /// Maximum number of in-flight commands the actor accepts before backpressure
@@ -187,6 +187,7 @@ impl AgentStateActor {
 
     #[allow(
         clippy::too_many_lines,
+        clippy::cognitive_complexity,
         reason = "the event reducer keeps every state transition explicit"
     )]
     fn apply_event_to_state(state: &mut AgentStateSnapshot, event: AgentEvent) {
@@ -259,6 +260,54 @@ impl AgentStateActor {
                     workflow.elapsed_ms = elapsed_ms;
                 }
             }
+            AgentEvent::BackgroundWorkStarted {
+                work_id,
+                description,
+                background,
+            } => {
+                state.background_work.insert(
+                    work_id,
+                    BackgroundWorkSnapshot {
+                        description,
+                        background,
+                        status: "running".into(),
+                        ..BackgroundWorkSnapshot::default()
+                    },
+                );
+            }
+            AgentEvent::BackgroundWorkProgress {
+                work_id,
+                description,
+                activity,
+            } => {
+                let work = state.background_work.entry(work_id).or_default();
+                work.description = description;
+                work.activity = Some(activity);
+                work.status = "running".into();
+            }
+            AgentEvent::BackgroundWorkFinished {
+                work_id,
+                description,
+                is_error,
+                elapsed_ms,
+                error,
+            } => {
+                let work = state.background_work.entry(work_id).or_default();
+                work.description = description;
+                work.status = if is_error { "failed" } else { "done" }.into();
+                work.elapsed_ms = elapsed_ms;
+                work.error = error;
+            }
+            AgentEvent::BackgroundWorkCancelled {
+                work_id,
+                description,
+                elapsed_ms,
+            } => {
+                let work = state.background_work.entry(work_id).or_default();
+                work.description = description;
+                work.status = "cancelled".into();
+                work.elapsed_ms = elapsed_ms;
+            }
             AgentEvent::Error { message } => {
                 state.is_streaming = false;
                 state.streaming_message = None;
@@ -278,11 +327,7 @@ impl AgentStateActor {
             | AgentEvent::Waiting { .. }
             | AgentEvent::ThemeChanged { .. }
             | AgentEvent::ToolDisplayModeChanged { .. }
-            | AgentEvent::ToolExecutionUpdate { .. }
-            | AgentEvent::BackgroundWorkStarted { .. }
-            | AgentEvent::BackgroundWorkProgress { .. }
-            | AgentEvent::BackgroundWorkFinished { .. }
-            | AgentEvent::BackgroundWorkCancelled { .. } => {}
+            | AgentEvent::ToolExecutionUpdate { .. } => {}
             AgentEvent::AgentEnd { .. } => {
                 state.is_streaming = false;
                 state.streaming_message = None;
@@ -447,6 +492,42 @@ mod tests {
         assert_eq!(workflow.active_agents, 2);
         assert_eq!(workflow.status, "done");
         assert_eq!(workflow.elapsed_ms, Some(1_200));
+    }
+
+    #[tokio::test]
+    async fn background_work_lifecycle_is_owned_by_core_snapshot() {
+        let actor = AgentStateActor::new();
+        actor
+            .apply_event(&AgentEvent::BackgroundWorkStarted {
+                work_id: "bg-1".into(),
+                description: "index files".into(),
+                background: true,
+            })
+            .await;
+        actor
+            .apply_event(&AgentEvent::BackgroundWorkProgress {
+                work_id: "bg-1".into(),
+                description: "index files".into(),
+                activity: "scanning src".into(),
+            })
+            .await;
+        actor
+            .apply_event(&AgentEvent::BackgroundWorkFinished {
+                work_id: "bg-1".into(),
+                description: "index files".into(),
+                is_error: false,
+                elapsed_ms: Some(900),
+                error: None,
+            })
+            .await;
+        actor.sync().await;
+        let work = actor.snapshot().background_work.remove("bg-1").unwrap();
+        assert_eq!(work.description, "index files");
+        assert_eq!(work.activity.as_deref(), Some("scanning src"));
+        assert!(work.background);
+        assert_eq!(work.status, "done");
+        assert_eq!(work.elapsed_ms, Some(900));
+        assert_eq!(work.error, None);
     }
 
     #[tokio::test]
