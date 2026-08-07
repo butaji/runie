@@ -563,6 +563,19 @@ attribute mismatch is reproducible in the current capture environment, so
 strict cell-attribute comparison remains disabled until Runie and Grok are
 captured under the same terminal color mode.
 
+### Grok capability evidence (2026-08-06)
+
+`env -u NO_COLOR TERM=xterm-256color COLORTERM=truecolor FORCE_COLOR=1 grok
+doctor --json` was run in the capture environment. Its authoritative report
+returned `multiplexer.kind: herdr`, `ssh: true`, `color.level.status:
+unavailable`, `availableThemes: []`, and `probeNotes.terminal.color.status:
+unavailable`. Therefore the absence of RGB SGR in the checked-in Grok cast is
+an environment capability failure, not evidence that Grok's theme tokens are
+terminal-default. The next strict attribute capture must run in a local
+color-capable PTY (or a verified SSH color wrapper) and record the doctor JSON
+beside both casts. `exact_attributes` must remain disabled for captures whose
+doctor report says color unavailable.
+
 ANSI comparator hardening (2026-08-06): `scripts/compare-ansi-frames.py` now
 retains inverse state and compares ANSI-16, indexed-256, and RGB foreground
 and background colors, including their reset forms. The comparator's previous
