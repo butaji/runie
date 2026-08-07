@@ -5,6 +5,8 @@ description: >-
 initial_prompt: "Hey"
 prompt_timestamp: "9:27 PM"
 provider_options:
+  thinking_budgets:
+    high: 512
   sampling_params:
     temperature: 0.2
   session_id: parity-hey
@@ -24,6 +26,8 @@ events:
 assertions:
   provider_options:
     session_id: parity-hey
+    thinking_budgets:
+      high: 512
     sampling_params:
       temperature: 0.2
   exact_events:

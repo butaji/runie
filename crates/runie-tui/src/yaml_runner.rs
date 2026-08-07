@@ -65,6 +65,8 @@ pub struct ProviderOptionsSpec {
     #[serde(default)]
     pub session_id: Option<String>,
     #[serde(default)]
+    pub thinking_budgets: Option<runie_core::types::ThinkingBudgets>,
+    #[serde(default)]
     pub timeout_ms: Option<u64>,
     #[serde(default)]
     pub max_retries: Option<u32>,
@@ -76,6 +78,7 @@ impl ProviderOptionsSpec {
     fn stream_options(&self) -> runie_core::types::SimpleStreamOptions {
         runie_core::types::SimpleStreamOptions {
             session_id: self.session_id.clone(),
+            thinking_budgets: self.thinking_budgets.clone(),
             timeout_ms: self.timeout_ms,
             max_retries: self.max_retries,
             sampling_params: self.sampling_params.clone(),
@@ -658,6 +661,7 @@ pub struct Assertions {
 #[derive(Debug, Deserialize, Default, Clone)]
 pub struct ProviderOptionsAssertions {
     pub session_id: Option<String>,
+    pub thinking_budgets: Option<runie_core::types::ThinkingBudgets>,
     pub timeout_ms: Option<u64>,
     pub max_retries: Option<u32>,
     pub sampling_params: Option<std::collections::HashMap<String, serde_json::Value>>,
@@ -1619,6 +1623,10 @@ pub async fn assert_scenario_async(
     Ok(())
 }
 
+#[allow(
+    clippy::too_many_lines,
+    reason = "provider option oracle stays declarative and grouped"
+)]
 fn assert_provider_options(outcome: &ScenarioOutcome, scenario: &Scenario) -> Result<(), String> {
     let Some(expected) = &scenario.assertions.provider_options else {
         return Ok(());
@@ -1656,6 +1664,14 @@ fn assert_provider_options(outcome: &ScenarioOutcome, scenario: &Scenario) -> Re
             return Err(format!(
                 "provider sampling params mismatch: expected {value:?}, got {:?}",
                 actual.sampling_params
+            ));
+        }
+    }
+    if let Some(value) = &expected.thinking_budgets {
+        if actual.thinking_budgets.as_ref() != Some(value) {
+            return Err(format!(
+                "provider thinking budgets mismatch: expected {value:?}, got {:?}",
+                actual.thinking_budgets
             ));
         }
     }

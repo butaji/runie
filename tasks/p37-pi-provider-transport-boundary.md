@@ -28,13 +28,15 @@ Implemented end-to-end through the owned provider request snapshot:
 - abort signal
 - API key
 - session ID
+- thinking budgets
 - model `samplingParams` plus per-request `sampling_params` merge
 - `timeoutMs`
 - `maxRetries`
 - payload and response hooks
 
 The YAML runner exposes these effective options at runtime; `visual-hey.yaml`
-now declares and asserts `session_id` as well as sampling parameters.
+now declares and asserts `session_id`, thinking budgets, and sampling
+parameters.
 
 Not yet implemented behaviorally:
 

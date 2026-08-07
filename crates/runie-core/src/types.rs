@@ -632,7 +632,7 @@ impl std::fmt::Debug for SimpleStreamOptions {
     }
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ThinkingBudgets {
     pub minimal: Option<u64>,
     pub low: Option<u64>,
