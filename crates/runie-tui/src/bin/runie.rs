@@ -184,7 +184,7 @@ fn render_header(area: Rect, buf: &mut Buffer, meter: &str, theme: runie_core::t
         meter,
         // The context meter is primary header chrome in Grok, not muted
         // transcript text; the value itself remains actor-owned.
-        runie_tui::appearance::base_style_for(theme),
+        runie_tui::appearance::header_meter_style_for(theme),
     );
 }
 

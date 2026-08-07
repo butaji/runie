@@ -32,6 +32,7 @@ prompt_border = "#505058"
 footer_key = "#c8c8c8"
 assistant_body = "#c8c8c8"
 header_path = "#585858"
+header_meter = "#e0e0e0"
 model_caption = "#808080"
 diff_delete = "#420e14"
 diff_insert = "#063806"
@@ -53,6 +54,7 @@ warning = "yellow"
 "text.footer_key" = "footer_key"
 "text.assistant" = "assistant_body"
 "text.header_path" = "header_path"
+"text.header_meter" = "header_meter"
 "text.model" = "model_caption"
 "bg.diff_delete" = "diff_delete"
 "bg.diff_insert" = "diff_insert"
@@ -86,6 +88,7 @@ prompt_border = "#b9b9be"
 footer_key = "#262626"
 assistant_body = "#262626"
 header_path = "#767676"
+header_meter = "#262626"
 model_caption = "#606060"
 diff_delete = "#f5dade"
 diff_insert = "#daf2dc"
@@ -106,6 +109,7 @@ warning = "yellow"
 "text.footer_key" = "footer_key"
 "text.assistant" = "assistant_body"
 "text.header_path" = "header_path"
+"text.header_meter" = "header_meter"
 "text.model" = "model_caption"
 "bg.diff_delete" = "diff_delete"
 "bg.diff_insert" = "diff_insert"
@@ -232,6 +236,10 @@ pub fn header_path_style_for(theme: ThemeKind) -> Style {
 
 pub fn model_caption_style_for(theme: ThemeKind) -> Style {
     base_style_for(theme).fg(token_color(theme, ThemeToken::TextModel))
+}
+
+pub fn header_meter_style_for(theme: ThemeKind) -> Style {
+    base_style_for(theme).fg(token_color(theme, ThemeToken::TextHeaderMeter))
 }
 
 pub fn base_style() -> Style {

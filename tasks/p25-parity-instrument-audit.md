@@ -845,3 +845,11 @@ contract is now asserted by `visual-hey.yaml` at a concrete rendered cell
 test. The fixture still drives the complete event sequence and four geometry
 replays, so this styling guarantee is checked without recompilation and is not
 dependent on a live provider response.
+
+Header meter token correction (2026-08-08): the cell dump showed Grok's
+context meter uses `#e0e0e0` while Runie's primary text token was `#e1e1e1`.
+Runie now exposes that distinction as the semantic Opaline token
+`text.header_meter`; the live header consumes it through the appearance
+adapter. A fresh 62×32 strict comparison reduced the baseline from 138 to 128
+different cells (41 glyph, 87 attributes), removing ten header-meter color
+deltas without introducing a raw widget color.
