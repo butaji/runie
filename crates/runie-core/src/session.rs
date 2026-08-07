@@ -555,9 +555,12 @@ impl SessionSnapshot {
     pub fn lanes(&self) -> BTreeMap<String, Option<String>> {
         let mut changes = vec![(0_u64, "main".to_owned(), None)];
         for entry in &self.entries {
-            if let Some(lane) = self.entry_lanes.get(&entry.id) {
-                changes.push((entry.seq, lane.clone(), Some(entry.id.clone())));
-            }
+            let lane = self
+                .entry_lanes
+                .get(&entry.id)
+                .cloned()
+                .unwrap_or_else(|| "main".into());
+            changes.push((entry.seq, lane, Some(entry.id.clone())));
         }
         changes.extend(
             self.lane_facts
@@ -1560,6 +1563,15 @@ impl SessionSnapshot {
     /// Return the selected branch from oldest to newest journal node.
     /// Message and configuration records share the same parent/id namespace.
     pub fn branch_entry_ids(&self) -> Vec<String> {
+        self.branch_entry_ids_from_leaf(self.leaf_id.clone())
+    }
+
+    /// Return the selected branch for one Pi session lane.
+    pub fn branch_entry_ids_for_lane(&self, lane: &str) -> Vec<String> {
+        self.branch_entry_ids_from_leaf(self.lanes().get(lane).cloned().flatten())
+    }
+
+    fn branch_entry_ids_from_leaf(&self, leaf_id: Option<String>) -> Vec<String> {
         let mut parents = BTreeMap::new();
         for entry in &self.entries {
             parents.insert(entry.id.clone(), entry.parent_id.clone());
@@ -1568,7 +1580,7 @@ impl SessionSnapshot {
             parents.insert(entry.id.clone(), entry.parent_id.clone());
         }
         let mut path = Vec::new();
-        let mut current = self.leaf_id.clone();
+        let mut current = leaf_id;
         while let Some(id) = current {
             if path.iter().any(|seen| seen == &id) {
                 break;
@@ -1615,6 +1627,9 @@ impl SessionSnapshot {
             sequence += 1;
             let mut copy = entry.clone();
             copy.seq = sequence;
+            if let Some(lane) = self.entry_lanes.get(&entry.id) {
+                fork.entry_lanes.insert(copy.id.clone(), lane.clone());
+            }
             fork.entries.push(copy);
         }
         for entry in &self.config_records {
@@ -3165,6 +3180,10 @@ mod tests {
         assert_eq!(snapshot.entries.len(), 2);
         assert_eq!(snapshot.entry_lane("entry-2"), Some("feature"));
         assert_eq!(snapshot.entries[1].parent_id.as_deref(), Some("entry-1"));
+        assert_eq!(
+            snapshot.branch_entry_ids_for_lane("feature"),
+            vec!["entry-1", "entry-2"]
+        );
         assert_eq!(
             snapshot.lanes().get("feature"),
             Some(&Some("entry-2".into()))

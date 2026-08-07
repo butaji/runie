@@ -38,3 +38,7 @@ replay this path without compiled fixture code. The checked-in fixtures cover
 non-main append, lane reset, and state assertions. Remaining work is to make
 all branch/query/fork consumers use lane-aware entries directly rather than
 the compatibility `entry_lanes` side projection.
+
+The branch projection increment now exposes `branch_entry_ids_for_lane` and
+forks preserve `entry_lanes` for copied entries. Focused regressions verify a
+feature-lane branch path and the existing main-lane fork contract.
