@@ -324,6 +324,11 @@ renderer-independent regression test. Diff hunk rendering,
 syntax highlighting, and foldable member navigation remain separate parity
 work; this slice only closes the Pi-core tool identity boundary.
 
+List-dir alias closure (2026-08-06): Grok maps the `ls` tool name to the
+`ListDirToolCallBlock`. Runie now carries that alias through activity metrics,
+semantic card classification, headers, and completion entry cardinality.
+`visual-list-dir-alias.yaml` exercises the full event/replay/screen path.
+
 Status chrome theme propagation (2026-08-06): `TurnStatus` and the status
 footer now resolve spinner, label, shortcut, and loading styles from the
 actor-selected theme. A GrokDay regression renders both the footer and active

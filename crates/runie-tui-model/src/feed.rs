@@ -332,7 +332,9 @@ impl ToolCardKind {
             || lower.starts_with("strreplace ")
         {
             Self::Edit
-        } else if matches!(lower.as_str(), "list_dir" | "list_files") || lower.starts_with("list ")
+        } else if matches!(lower.as_str(), "list_dir" | "list_files" | "ls")
+            || lower.starts_with("list ")
+            || lower.starts_with("ls ")
         {
             Self::ListDir
         } else if matches!(lower.as_str(), "web_search" | "web-search")
@@ -412,6 +414,12 @@ mod tests {
         ] {
             assert_eq!(ToolCardKind::from_header(header), ToolCardKind::Edit);
         }
+    }
+
+    #[test]
+    fn ls_alias_matches_groks_list_dir_card_family() {
+        assert_eq!(ToolCardKind::from_header("ls"), ToolCardKind::ListDir);
+        assert_eq!(ToolCardKind::from_header("ls src"), ToolCardKind::ListDir);
     }
 
     #[test]

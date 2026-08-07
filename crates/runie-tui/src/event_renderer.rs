@@ -794,7 +794,7 @@ impl EventRenderer {
             self.activity_group_open = true;
         }
         self.in_tool_exec = true;
-        if matches!(tool_name.as_str(), "list_dir" | "list_files") {
+        if matches!(tool_name.as_str(), "list_dir" | "list_files" | "ls") {
             self.activity_dirs += 1;
         } else if matches!(tool_name.as_str(), "read" | "read_file") {
             self.activity_files += 1;
@@ -1283,7 +1283,7 @@ fn local_clock_parts(timestamp: i64) -> Option<(i64, i64)> {
 )]
 pub(crate) fn tool_header(tool_name: &str, args: &serde_json::Value) -> String {
     match tool_name {
-        "list_dir" | "list_files" => {
+        "list_dir" | "list_files" | "ls" => {
             let path = args
                 .get("path")
                 .and_then(serde_json::Value::as_str)
@@ -1435,7 +1435,7 @@ pub(crate) fn completed_tool_header(
 ) -> String {
     let output = tool_result_text(result);
     match tool_name {
-        "list_dir" | "list_files" => {
+        "list_dir" | "list_files" | "ls" => {
             let entries = output
                 .lines()
                 .filter(|line| !line.trim().is_empty())

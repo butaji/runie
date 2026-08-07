@@ -1,0 +1,22 @@
+name: visual-list-dir-alias
+description: Grok maps the Pi-compatible ls tool to the ListDir card family.
+initial_prompt: "List the source"
+tools:
+  - name: ls
+    kind: list_dir
+events:
+  - start
+  - tool_call:
+      name: ls
+      args: { path: "src" }
+  - done: { stop_reason: tool_use }
+assertions:
+  state:
+    tool_blocks: 1
+    tool_kinds: [list_dir]
+    tool_headers: ["List src (3 entries)"]
+  visual:
+    cols: 80
+    rows: 24
+    screen_text:
+      - "List src"
