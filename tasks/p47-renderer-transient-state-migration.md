@@ -295,6 +295,11 @@ as `RUNIE_SCROLL_SPEED` and `RUNIE_INVERT_SCROLL`, while tests exercise clamped
 and inverted projections without environment mutation. Trackpad mode and
 remaining profile overrides are still open.
 
+Mode boundary slice (2026-08-07): `ScrollMode::{Auto,Wheel,Trackpad}` is now a
+typed model input. `RUNIE_SCROLL_MODE` selects it in the owned input worker;
+explicit trackpad mode suppresses wheel acceleration while the dedicated
+fractional trackpad detector/accumulator remains to be implemented.
+
 Mouse capture lifecycle closure (2026-08-07): the interactive terminal now
 enables crossterm mouse capture together with the alternate screen and disables
 it during restoration. This makes the already-owned mouse event path reachable

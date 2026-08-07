@@ -7,6 +7,13 @@ pub enum ScrollDirection {
     Down,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScrollMode {
+    Auto,
+    Wheel,
+    Trackpad,
+}
+
 /// Converts raw events into whole-line deltas without terminal or clock state.
 /// Grok's default is three lines per three raw events; retaining the remainder
 /// makes non-default profiles deterministic as well.
@@ -18,6 +25,7 @@ pub struct ScrollNormalizer {
     last_event_ms: Option<u64>,
     speed_tenths: i32,
     inverted: bool,
+    mode: ScrollMode,
     pending_units: i32,
 }
 
@@ -49,6 +57,7 @@ impl ScrollNormalizer {
             last_event_ms: None,
             speed_tenths: 10,
             inverted: false,
+            mode: ScrollMode::Auto,
             pending_units: 0,
         }
     }
@@ -92,6 +101,11 @@ impl ScrollNormalizer {
         self
     }
 
+    pub const fn with_mode(mut self, mode: ScrollMode) -> Self {
+        self.mode = mode;
+        self
+    }
+
     pub const fn push(self, direction: ScrollDirection) -> (Self, i32) {
         self.push_with_multiplier(direction, BASE_MULTIPLIER)
     }
@@ -124,7 +138,9 @@ impl ScrollNormalizer {
                 self.pending_units = 0;
             }
             let interval = at_ms.saturating_sub(last);
-            let multiplier = if interval < 8 {
+            let multiplier = if matches!(self.mode, ScrollMode::Trackpad) {
+                BASE_MULTIPLIER
+            } else if interval < 8 {
                 FAST_MULTIPLIER
             } else if interval < 20 {
                 MEDIUM_MULTIPLIER
@@ -141,7 +157,7 @@ impl ScrollNormalizer {
 
 #[cfg(test)]
 mod tests {
-    use super::{ScrollDirection, ScrollNormalizer};
+    use super::{ScrollDirection, ScrollMode, ScrollNormalizer};
 
     #[test]
     fn grok_default_emits_three_lines_across_three_raw_events() {
@@ -214,5 +230,13 @@ mod tests {
                 .1,
             -1
         );
+    }
+
+    #[test]
+    fn explicit_trackpad_mode_disables_wheel_acceleration() {
+        let normalizer = ScrollNormalizer::default().with_mode(ScrollMode::Trackpad);
+        let (normalizer, _) = normalizer.push_at(0, ScrollDirection::Down);
+        let (_, delta) = normalizer.push_at(5, ScrollDirection::Down);
+        assert_eq!(delta, 1);
     }
 }

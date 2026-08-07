@@ -402,10 +402,16 @@ async fn run_app(
         let inverted = std::env::var("RUNIE_INVERT_SCROLL")
             .ok()
             .is_some_and(|value| matches!(value.as_str(), "1" | "true" | "yes"));
+        let scroll_mode = match std::env::var("RUNIE_SCROLL_MODE").ok().as_deref() {
+            Some("wheel") => runie_tui_model::ScrollMode::Wheel,
+            Some("trackpad") => runie_tui_model::ScrollMode::Trackpad,
+            _ => runie_tui_model::ScrollMode::Auto,
+        };
         let mut scroll_normalizer =
             runie_tui_model::ScrollNormalizer::for_terminal_context(&terminal_brand, remuxed)
                 .with_speed(scroll_speed)
-                .with_inversion(inverted);
+                .with_inversion(inverted)
+                .with_mode(scroll_mode);
         let scroll_epoch = Instant::now();
         while let Some(result) = input.next().await {
             let event = match result {
