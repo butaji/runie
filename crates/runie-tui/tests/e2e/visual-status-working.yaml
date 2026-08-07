@@ -5,6 +5,7 @@ description: |
 events:
   - start
   - thinking_level: high
+  - context_window: 1000
   - active_tools: [read, bash]
   - branch_summary:
       from_id: entry-1
@@ -47,6 +48,10 @@ assertions:
       - compaction
     compaction_context_entry_ids: []
     compaction_context_roles: [compactionSummary]
+    compaction_context_tokens: 901
+    compaction_reserve_tokens: 100
+    compaction_enabled: true
+    compaction_should_run: true
     active_operations:
       op-1: started
   visual:

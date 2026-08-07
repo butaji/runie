@@ -206,6 +206,26 @@ pub struct CompactionPreparation {
     pub cut_point: CompactionCutPoint,
 }
 
+/// Pi's automatic-compaction threshold settings.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CompactionSettings {
+    pub enabled: bool,
+    pub reserve_tokens: u64,
+    pub keep_recent_tokens: u64,
+}
+
+/// Return whether Pi's harness should begin automatic compaction.
+///
+/// The summarizer and publication remain asynchronous actor-owned operations;
+/// this function only makes the source-backed threshold decision.
+pub fn should_compact(
+    context_tokens: u64,
+    context_window: u64,
+    settings: CompactionSettings,
+) -> bool {
+    settings.enabled && context_tokens > context_window.saturating_sub(settings.reserve_tokens)
+}
+
 /// Pure provider-context boundary after the newest Pi compaction record.
 ///
 /// The summary remains journal metadata until the provider-specific message
@@ -2046,6 +2066,34 @@ mod tests {
         assert_eq!(cut.first_kept_entry_index, 1);
         assert_eq!(cut.turn_start_index, Some(0));
         assert!(cut.is_split_turn);
+    }
+
+    #[test]
+    fn compaction_threshold_matches_pi_enabled_and_strict_boundary() {
+        let settings = CompactionSettings {
+            enabled: true,
+            reserve_tokens: 100,
+            keep_recent_tokens: 20,
+        };
+        assert!(!should_compact(900, 1_000, settings));
+        assert!(!should_compact(100, 1_000, settings));
+        assert!(should_compact(901, 1_000, settings));
+        assert!(!should_compact(
+            901,
+            1_000,
+            CompactionSettings {
+                enabled: false,
+                ..settings
+            }
+        ));
+        assert!(should_compact(
+            u64::MAX,
+            10,
+            CompactionSettings {
+                reserve_tokens: u64::MAX,
+                ..settings
+            }
+        ));
     }
 
     #[test]

@@ -996,6 +996,10 @@ pub struct StateAssertions {
     pub compaction_turn_prefix_indices: Option<Vec<usize>>,
     pub compaction_retained_indices: Option<Vec<usize>>,
     pub compaction_tokens_before: Option<u64>,
+    pub compaction_context_tokens: Option<u64>,
+    pub compaction_reserve_tokens: Option<u64>,
+    pub compaction_enabled: Option<bool>,
+    pub compaction_should_run: Option<bool>,
     /// Termination metadata on the latest actor-owned session entry.
     pub session_last_terminate: Option<bool>,
     pub tool_count: Option<usize>,
@@ -2925,6 +2929,35 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
                 preparation.tokens_before,
                 "compaction_tokens_before"
             );
+        }
+    }
+    if expected.compaction_context_tokens.is_some()
+        || expected.compaction_reserve_tokens.is_some()
+        || expected.compaction_enabled.is_some()
+        || expected.compaction_should_run.is_some()
+    {
+        let context_tokens = expected
+            .compaction_context_tokens
+            .ok_or_else(|| "compaction_context_tokens is required".to_owned())?;
+        let reserve_tokens = expected
+            .compaction_reserve_tokens
+            .ok_or_else(|| "compaction_reserve_tokens is required".to_owned())?;
+        let enabled = expected.compaction_enabled.unwrap_or(true);
+        let actual = runie_core::session::should_compact(
+            context_tokens,
+            outcome.status.context_window.unwrap_or_default(),
+            runie_core::session::CompactionSettings {
+                enabled,
+                reserve_tokens,
+                keep_recent_tokens: 0,
+            },
+        );
+        if let Some(expected) = expected.compaction_should_run {
+            if expected != actual {
+                return Err(format!(
+                    "compaction_should_run mismatch: expected {expected}, got {actual}"
+                ));
+            }
         }
     }
     assert_yaml_eq!(

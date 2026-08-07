@@ -229,6 +229,17 @@ provider conversion separately. The remaining compaction gap is narrowed to
 Pi's live summarization owner and publication timing; no direct snapshot
 mutation or provider-side synthetic message is used.
 
+### Completed pure threshold increment (2026-08-08)
+
+`runie_core::session::should_compact` now mirrors Pi's strict automatic
+threshold decision: disabled settings never compact, otherwise compaction is
+requested only when `contextTokens > contextWindow - reserveTokens`. The
+subtraction is saturating for malformed oversized reserves, while the strict
+comparison remains unchanged. YAML state assertions expose the decision with
+runtime-declared context tokens, reserve, enabled flag, and expected result;
+the working-state fixture exercises the over-threshold path. Boundary tests
+cover equality, disabled settings, and oversized reserves.
+
 ### Completed slice (2026-08-07, compaction context boundary)
 
 `SessionSnapshot::compaction_context_projection` is now a pure projection of
