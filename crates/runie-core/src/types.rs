@@ -617,6 +617,8 @@ pub struct SimpleStreamOptions {
     pub metadata: Option<std::collections::HashMap<String, serde_json::Value>>,
     /// Preferred Pi transport (`sse`, `websocket`, `websocket-cached`, or `auto`).
     pub transport: Option<ProviderTransport>,
+    /// Pi prompt-cache retention preference for provider adapters.
+    pub cache_retention: Option<CacheRetention>,
     pub signal: Option<tokio::sync::watch::Receiver<bool>>,
     pub thinking_budgets: Option<ThinkingBudgets>,
     /// Explicit Pi stream temperature, kept separate from arbitrary sampling
@@ -654,6 +656,13 @@ pub enum ProviderTransport {
     Auto,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CacheRetention {
+    None,
+    Short,
+    Long,
+}
+
 impl std::fmt::Debug for SimpleStreamOptions {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
@@ -664,6 +673,7 @@ impl std::fmt::Debug for SimpleStreamOptions {
             .field("env", &self.env)
             .field("metadata", &self.metadata)
             .field("transport", &self.transport)
+            .field("cache_retention", &self.cache_retention)
             .field("signal", &self.signal.is_some())
             .field("thinking_budgets", &self.thinking_budgets)
             .field("temperature", &self.temperature)

@@ -23,7 +23,7 @@ use runie_core::tools::executor::ToolExecHooks;
 use runie_core::tools::{ToolExecutorActor, ToolRegistry};
 use runie_core::types::{
     AgentContext, AgentEvent, AgentMessage, AgentTool, AgentToolResult, AssistantMessage,
-    AssistantMessageEvent, Model, SimpleStreamOptions, StopReason, ThinkingLevel,
+    AssistantMessageEvent, CacheRetention, Model, SimpleStreamOptions, StopReason, ThinkingLevel,
     ToolExecutionMode, ToolResultContent, Usage, UserContent, UserMessage, WaitingReason,
 };
 use serde::Deserialize;
@@ -79,6 +79,8 @@ pub struct ProviderOptionsSpec {
     #[serde(default)]
     pub transport: Option<String>,
     #[serde(default)]
+    pub cache_retention: Option<String>,
+    #[serde(default)]
     pub thinking_budgets: Option<runie_core::types::ThinkingBudgets>,
     #[serde(default)]
     pub temperature: Option<f64>,
@@ -102,6 +104,7 @@ impl ProviderOptionsSpec {
             env: self.env.clone(),
             metadata: self.metadata.clone(),
             transport: self.transport.as_deref().map(parse_provider_transport),
+            cache_retention: self.cache_retention.as_deref().map(parse_cache_retention),
             thinking_budgets: self.thinking_budgets.clone(),
             temperature: self.temperature,
             max_tokens: self.max_tokens,
@@ -124,12 +127,29 @@ fn parse_provider_transport(value: &str) -> runie_core::types::ProviderTransport
     }
 }
 
+fn parse_cache_retention(value: &str) -> CacheRetention {
+    match value {
+        "none" => CacheRetention::None,
+        "short" => CacheRetention::Short,
+        "long" => CacheRetention::Long,
+        other => panic!("unknown cache retention: {other}"),
+    }
+}
+
 fn provider_transport_name(value: runie_core::types::ProviderTransport) -> &'static str {
     match value {
         runie_core::types::ProviderTransport::Sse => "sse",
         runie_core::types::ProviderTransport::Websocket => "websocket",
         runie_core::types::ProviderTransport::WebsocketCached => "websocket-cached",
         runie_core::types::ProviderTransport::Auto => "auto",
+    }
+}
+
+fn cache_retention_name(value: CacheRetention) -> &'static str {
+    match value {
+        CacheRetention::None => "none",
+        CacheRetention::Short => "short",
+        CacheRetention::Long => "long",
     }
 }
 
@@ -711,6 +731,7 @@ pub struct ProviderOptionsAssertions {
     pub env: Option<std::collections::HashMap<String, String>>,
     pub metadata: Option<std::collections::HashMap<String, serde_json::Value>>,
     pub transport: Option<String>,
+    pub cache_retention: Option<String>,
     pub thinking_budgets: Option<runie_core::types::ThinkingBudgets>,
     pub temperature: Option<f64>,
     pub max_tokens: Option<u64>,
@@ -1776,6 +1797,14 @@ fn assert_provider_options(outcome: &ScenarioOutcome, scenario: &Scenario) -> Re
         if actual_transport != Some(value.as_str()) {
             return Err(format!(
                 "provider transport mismatch: expected {value:?}, got {actual_transport:?}"
+            ));
+        }
+    }
+    if let Some(value) = &expected.cache_retention {
+        let actual_retention = actual.cache_retention.map(cache_retention_name);
+        if actual_retention != Some(value.as_str()) {
+            return Err(format!(
+                "provider cache retention mismatch: expected {value:?}, got {actual_retention:?}"
             ));
         }
     }

@@ -41,6 +41,7 @@ Implemented end-to-end through the owned provider request snapshot:
 - model `maxTokens` propagated as the default request output limit, with an
   explicit request value taking precedence
 - explicit `temperature` carried separately from arbitrary sampling parameters
+- typed cache-retention preference carried to the owned HTTP request boundary
 
 The YAML runner exposes these effective options at runtime; `visual-hey.yaml`
 now declares and asserts `session_id`, thinking budgets, and sampling
@@ -54,6 +55,9 @@ The same fixture declares model `maxTokens: 128` and request `max_tokens: 64`,
 asserting the request-level value wins in the effective provider options.
 It also asserts the distinct request temperature field rather than inferring it
 from `sampling_params`.
+The fixture now carries and asserts `cache_retention: long`; provider-specific
+prompt-cache marker generation remains adapter-owned and is not fabricated by
+the generic HTTP actor.
 
 Not yet implemented behaviorally:
 

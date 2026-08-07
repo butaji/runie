@@ -3,7 +3,9 @@
 use std::{fs, path::Path};
 
 use super::stream_fn::StreamError;
-use crate::types::{Model, ProviderResponse, ProviderTransport, SimpleStreamOptions};
+use crate::types::{
+    CacheRetention, Model, ProviderResponse, ProviderTransport, SimpleStreamOptions,
+};
 
 const DEFAULT_MAX_RETRY_DELAY_MS: u64 = 60_000;
 
@@ -21,6 +23,7 @@ pub struct HttpRequest {
     pub env: std::collections::HashMap<String, String>,
     pub metadata: std::collections::HashMap<String, serde_json::Value>,
     pub transport: Option<ProviderTransport>,
+    pub cache_retention: Option<CacheRetention>,
 }
 
 #[async_trait::async_trait]
@@ -84,6 +87,7 @@ pub trait HttpActor: Send + Sync + 'static {
                     env: env.clone(),
                     metadata: metadata.clone(),
                     transport: options.as_ref().and_then(|options| options.transport),
+                    cache_retention: options.as_ref().and_then(|options| options.cache_retention),
                 },
                 options.as_ref().and_then(|o| o.timeout_ms),
             )

@@ -14,6 +14,7 @@ provider_options:
     x-shared: request
   max_tokens: 64
   temperature: 0.6
+  cache_retention: long
   thinking_budgets:
     high: 512
   sampling_params:
@@ -41,6 +42,7 @@ assertions:
       x-shared: request
     max_tokens: 64
     temperature: 0.6
+    cache_retention: long
     thinking_budgets:
       high: 512
     sampling_params:
