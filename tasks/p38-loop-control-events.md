@@ -133,6 +133,14 @@ regressions assert that interleaved updates remain attached to their tool-call
 rows and that structured output rows are reduced into the feed snapshot; both
 legacy lock-based tests were removed.
 
+**Eighth compatibility migration (2026-08-08):** Non-consecutive activity
+groups now replay through actor-backed user/tool events. This exposed a real
+reducer mismatch: activity replacement searched across earlier user-message
+segments and merged labels that Grok keeps separate. `FeedState` now replaces
+only the latest activity row after the latest user boundary and appends a new
+row otherwise; the event-mapping projection also resets activity counters on
+user-message start.
+
 ## Verification
 
 - event sequences prove mode changes, busy rejection, abort, and completion

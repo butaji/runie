@@ -2009,13 +2009,21 @@ impl FeedState {
         let Some(activity) = activity else {
             return;
         };
-        if let Some(line) = self
+        let latest_user = self
             .lines
-            .iter_mut()
+            .iter()
+            .rposition(|line| line.kind == LineKind::User);
+        let latest_activity = self
+            .lines
+            .iter()
+            .enumerate()
             .rev()
-            .find(|line| line.kind == LineKind::Activity)
+            .find(|(_, line)| line.kind == LineKind::Activity)
+            .map(|(index, _)| index);
+        if let Some(index) =
+            latest_activity.filter(|index| latest_user.is_none_or(|user_index| *index > user_index))
         {
-            line.text = activity;
+            self.lines[index].text = activity;
         } else {
             self.append(Line::new(LineKind::Activity, activity));
         }

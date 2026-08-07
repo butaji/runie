@@ -37,9 +37,10 @@ pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
                 })
                 .collect::<Vec<_>>()
                 .join("");
-            let mut messages = vec![ScrollbackMsg::Append(
-                Line::new(LineKind::User, text).with_vpad(true),
-            )];
+            let mut messages = vec![
+                ScrollbackMsg::ActivityReset,
+                ScrollbackMsg::Append(Line::new(LineKind::User, text).with_vpad(true)),
+            ];
             if user.timestamp >= LIVE_TIMESTAMP_SECONDS_MIN {
                 messages.push(ScrollbackMsg::SetPromptTimestamp(Some(
                     format_clock_timestamp(user.timestamp),
@@ -2123,7 +2124,7 @@ mod tests {
         });
         assert!(matches!(
             user.as_slice(),
-            [ScrollbackMsg::Append(line)]
+            [ScrollbackMsg::ActivityReset, ScrollbackMsg::Append(line)]
                 if line.kind == LineKind::User && line.text == "hello"
         ));
         assert_eq!(
@@ -2688,35 +2689,43 @@ mod tests {
         );
     }
 
-    #[test]
-    fn activity_groups_do_not_merge_non_consecutive_tool_batches() {
-        let (mut renderer, scrollback, _) = new_renderer();
+    #[tokio::test]
+    async fn actor_activity_groups_do_not_merge_non_consecutive_tool_batches() {
+        let scrollback = ScrollbackActor::new();
+        let status = StatusActor::new();
+        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status, false);
         for (id, name) in [("first", "list_dir"), ("second", "read")] {
             if id == "second" {
-                renderer.apply_event(AgentEvent::MessageStart {
-                    message: AgentMessage::User(UserMessage {
-                        content: vec![UserContent::Text {
-                            text: "next".into(),
-                        }],
-                        timestamp: 0,
-                    }),
-                });
+                renderer
+                    .apply_actor_event(AgentEvent::MessageStart {
+                        message: AgentMessage::User(UserMessage {
+                            content: vec![UserContent::Text {
+                                text: "next".into(),
+                            }],
+                            timestamp: 0,
+                        }),
+                    })
+                    .await;
             }
-            renderer.apply_event(AgentEvent::ToolExecutionStart {
-                tool_call_id: id.into(),
-                tool_name: name.into(),
-                args: serde_json::json!({}),
-            });
-            renderer.apply_event(AgentEvent::ToolExecutionEnd {
-                tool_call_id: id.into(),
-                tool_name: name.into(),
-                result: serde_json::json!({}),
-                is_error: false,
-            });
+            renderer
+                .apply_actor_event(AgentEvent::ToolExecutionStart {
+                    tool_call_id: id.into(),
+                    tool_name: name.into(),
+                    args: serde_json::json!({}),
+                })
+                .await;
+            renderer
+                .apply_actor_event(AgentEvent::ToolExecutionEnd {
+                    tool_call_id: id.into(),
+                    tool_name: name.into(),
+                    result: serde_json::json!({}),
+                    is_error: false,
+                })
+                .await;
         }
 
-        let rendered = scrollback.lock();
-        let activities = rendered
+        let snapshot = scrollback.snapshot();
+        let activities = snapshot
             .lines()
             .iter()
             .filter(|line| line.kind == LineKind::Activity)
