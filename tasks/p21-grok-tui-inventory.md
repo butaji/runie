@@ -350,6 +350,11 @@ foldable member geometry and interaction behavior. Mouse/text-selection UI is
 outside Pi agent-core scope and must not be used to inflate the Runie feature
 target.
 
+Dense-group geometry oracle (2026-08-06): the twelve-member fixture now
+asserts expanded Grok geometry directly (`Run one`, `Run eleven`, and
+`Run twelve` are all visible). Collapsed hidden-prefix behavior remains
+isolated in the truncated-group fixture.
+
 Status chrome theme propagation (2026-08-06): `TurnStatus` and the status
 footer now resolve spinner, label, shortcut, and loading styles from the
 actor-selected theme. A GrokDay regression renders both the footer and active

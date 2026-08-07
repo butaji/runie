@@ -34,4 +34,5 @@ assertions:
     steps: [Down, Down, Down, Down, Down, Down, Down, Down, Down, Down, Down]
     screen_text:
       - "Run one"
+      - "Run eleven"
       - "Run twelve"
