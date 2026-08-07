@@ -994,6 +994,7 @@ pub enum AgentEvent {
     SessionLaneChanged {
         lane: String,
         leaf_id: Option<String>,
+        create: bool,
     },
     /// Application-owned session branch summary; navigation identity is kept
     /// in the event so the journal cannot reduce an anonymous summary.

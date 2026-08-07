@@ -493,6 +493,12 @@ pub struct SessionLaneSpec {
     pub lane: String,
     #[serde(default)]
     pub leaf_id: Option<String>,
+    #[serde(default = "default_lane_create")]
+    pub create: bool,
+}
+
+fn default_lane_create() -> bool {
+    true
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -810,6 +816,7 @@ impl EventSpec {
             Self::SessionLane { session_lane } => Some(AgentEvent::SessionLaneChanged {
                 lane: session_lane.lane.clone(),
                 leaf_id: session_lane.leaf_id.clone(),
+                create: session_lane.create,
             }),
             Self::BranchSummary { branch_summary } => Some(AgentEvent::BranchSummaryCreated {
                 from_id: branch_summary.from_id.clone(),

@@ -2222,6 +2222,7 @@ enum Command {
     Lane {
         lane: String,
         leaf_id: Option<String>,
+        create: bool,
         reply: oneshot::Sender<Result<(), String>>,
     },
     Import(SessionSnapshot, oneshot::Sender<()>),
@@ -2681,6 +2682,7 @@ impl SessionActor {
                     Command::Lane {
                         lane,
                         leaf_id,
+                        create,
                         reply,
                     } => {
                         if lane.is_empty() {
@@ -2693,6 +2695,18 @@ impl SessionActor {
                                     reply.send(Err(format!("lane leaf does not exist: {leaf_id}")));
                                 continue;
                             }
+                        }
+                        let exists = state.lanes().contains_key(&lane);
+                        if create == exists {
+                            let action = if create { "create" } else { "move" };
+                            let reason = if create {
+                                "already exists"
+                            } else {
+                                "does not exist"
+                            };
+                            let _ =
+                                reply.send(Err(format!("cannot {action} lane {lane}: {reason}")));
+                            continue;
                         }
                         state.sequence += 1;
                         state.lane_facts.push(SessionLaneFact {
@@ -2838,12 +2852,18 @@ impl SessionActor {
             .map_err(|_| "session actor response was dropped".to_owned())?
     }
 
-    pub async fn record_lane(&self, lane: String, leaf_id: Option<String>) -> Result<(), String> {
+    pub async fn record_lane(
+        &self,
+        lane: String,
+        leaf_id: Option<String>,
+        create: bool,
+    ) -> Result<(), String> {
         let (reply_tx, reply_rx) = oneshot::channel();
         self.tx
             .send(Command::Lane {
                 lane,
                 leaf_id,
+                create,
                 reply: reply_tx,
             })
             .await
@@ -2863,8 +2883,14 @@ impl SessionActor {
     pub async fn apply_event(&self, event: &AgentEvent) -> Result<(), String> {
         if let Some(record) = session_config_record!(event) {
             self.record_config(record).await
-        } else if let AgentEvent::SessionLaneChanged { lane, leaf_id } = event {
-            self.record_lane(lane.clone(), leaf_id.clone()).await
+        } else if let AgentEvent::SessionLaneChanged {
+            lane,
+            leaf_id,
+            create,
+        } = event
+        {
+            self.record_lane(lane.clone(), leaf_id.clone(), *create)
+                .await
         } else if matches!(event, AgentEvent::Reset) {
             self.reset().await;
             Ok(())
@@ -3014,11 +3040,12 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::too_many_lines)]
     async fn lane_events_are_validated_projected_and_jsonl_round_tripped() {
         let actor = SessionActor::new();
         actor.append(user("one")).await;
         actor
-            .record_lane("feature".into(), Some("entry-1".into()))
+            .record_lane("feature".into(), Some("entry-1".into()), true)
             .await
             .expect("lane admission");
         actor
@@ -3045,7 +3072,15 @@ mod tests {
         let (_, _, imported) = SessionSnapshot::from_jsonl(&jsonl).expect("lane JSONL");
         assert_eq!(imported.lanes(), actor.snapshot().lanes());
         assert!(actor
-            .record_lane("feature".into(), Some("missing".into()))
+            .record_lane("feature".into(), Some("entry-1".into()), true)
+            .await
+            .is_err());
+        assert!(actor
+            .record_lane("missing-lane".into(), None, false)
+            .await
+            .is_err());
+        assert!(actor
+            .record_lane("feature".into(), Some("missing".into()), false)
             .await
             .is_err());
         assert_eq!(actor.snapshot().lane_facts.len(), 1);

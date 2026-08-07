@@ -36,5 +36,9 @@ sequence. Fork metadata now also re-emits the effective session name and
 labels for retained entries, matching Pi’s `createForkMutations` behavior
 even when those facts were recorded after the branch point.
 
+Admission now distinguishes `create` from `move`: duplicate creation and
+moving a missing lane are rejected inside the actor before snapshot publication.
+The YAML lane event exposes this distinction declaratively.
+
 The lane projection must remain separate from `operation_kinds` and
 `active_operations`; those are Pi operation records, not session tree facts.
