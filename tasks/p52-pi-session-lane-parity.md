@@ -299,6 +299,16 @@ The JSON payload remains lossless at the wire edge; this increment removes a
 caller-side identity guess without pretending that all Pi payload variants
 are already Rust structs.
 
+### Queue lifecycle admission (2026-08-08)
+
+The session actor now validates Pi's queue linkage before admitting a lane
+event. `queue_enqueued` requires a provisioned `target.id`; `queue_cancelled`
+requires a matching earlier enqueue and matching `runId` when the enqueue is
+operation-owned. The validation is pure and runs before the actor appends the
+lossless lane fact, so malformed events cannot create state. The lane-family
+YAML fixture now carries a real provisioned target, and a core event test
+covers missing targets, successful cancellation, and mismatched operations.
+
 ### Queue emission audit (2026-08-07)
 
 Pi's `queue_enqueued` record is not just a notification: it carries the queue

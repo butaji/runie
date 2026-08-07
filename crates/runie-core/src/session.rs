@@ -676,7 +676,55 @@ pub fn validate_session_lane_record(
             operation_id.expect("checked above")
         ));
     }
+    validate_queue_lane_record(snapshot, kind, data)?;
     Ok(kind)
+}
+
+fn validate_queue_lane_record(
+    snapshot: &SessionSnapshot,
+    kind: SessionLaneRecordKind,
+    data: &serde_json::Value,
+) -> Result<(), String> {
+    if kind == SessionLaneRecordKind::QueueEnqueued {
+        let has_target_id = data
+            .get("target")
+            .and_then(|target| target.get("id"))
+            .and_then(serde_json::Value::as_str)
+            .is_some_and(|value| !value.is_empty());
+        return has_target_id
+            .then_some(())
+            .ok_or_else(|| "queue_enqueued is missing target.id".into());
+    }
+    if kind != SessionLaneRecordKind::QueueCancelled {
+        return Ok(());
+    }
+    let entry_id = data
+        .get("entryId")
+        .and_then(serde_json::Value::as_str)
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| "queue_cancelled is missing entryId".to_owned())?;
+    let enqueue = snapshot.lane_records.iter().find(|record| {
+        record.record_type == "queue_enqueued"
+            && record
+                .data
+                .get("target")
+                .and_then(|target| target.get("id"))
+                .and_then(serde_json::Value::as_str)
+                == Some(entry_id)
+    });
+    let Some(enqueue) = enqueue else {
+        return Err(format!(
+            "queue_cancelled references unknown entry {entry_id:?}"
+        ));
+    };
+    let enqueue_run_id = enqueue
+        .data
+        .get("runId")
+        .and_then(serde_json::Value::as_str);
+    let cancel_run_id = data.get("runId").and_then(serde_json::Value::as_str);
+    (enqueue_run_id == cancel_run_id)
+        .then_some(())
+        .ok_or_else(|| format!("queue_cancelled entry {entry_id:?} has mismatched runId"))
 }
 
 /// Validate Pi's storage metadata when a wire record carries it. Compatibility
@@ -2112,6 +2160,44 @@ mod tests {
             &snapshot,
             "operation_finished",
             &serde_json::json!({"outcome": "completed"})
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn queue_lane_records_require_a_linked_provisioned_target() {
+        let mut snapshot = SessionSnapshot::default();
+        assert!(validate_session_lane_record(
+            &snapshot,
+            "queue_enqueued",
+            &serde_json::json!({"id": "queue-1", "queue": "steer"})
+        )
+        .is_err());
+        let enqueue = serde_json::json!({
+            "id": "queue-1",
+            "runId": "run-1",
+            "queue": "steer",
+            "target": {"id": "entry-1", "role": "user", "content": "hello"}
+        });
+        assert!(validate_session_lane_record(&snapshot, "queue_enqueued", &enqueue).is_ok());
+        snapshot.lane_records.push(SessionLaneRecordSnapshot {
+            record_type: "queue_enqueued".into(),
+            id: "queue-1".into(),
+            lane: None,
+            seq: None,
+            timestamp: None,
+            data: enqueue,
+        });
+        assert!(validate_session_lane_record(
+            &snapshot,
+            "queue_cancelled",
+            &serde_json::json!({"id": "cancel-1", "runId": "run-1", "entryId": "entry-1"})
+        )
+        .is_ok());
+        assert!(validate_session_lane_record(
+            &snapshot,
+            "queue_cancelled",
+            &serde_json::json!({"id": "cancel-2", "runId": "run-2", "entryId": "entry-1"})
         )
         .is_err());
     }
