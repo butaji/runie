@@ -53,3 +53,18 @@ actor path aligned while the renderer is being retired as a state owner.
 The capture helper remains an external instrument, not production state. Its
 bounded polling is intentionally limited to detecting terminal readiness and
 settled output; it does not mutate Runie's state.
+
+## Async ownership audit (2026-08-06)
+
+All production task creation is owned:
+
+- `LoopActor` stores the active loop `JoinHandle` until `wait_for_idle`/prompt
+  completion consumes it.
+- Core actor workers and event subscriber bridges retain `TaskOwner` handles.
+- `App::spawn_renderer` returns the renderer `JoinHandle` to its caller.
+- YAML recorder and pending-run tasks are joined before their scenario returns.
+- The source lint rejects unannotated `tokio::spawn` sites; intentional test or
+  orchestration sites carry an adjacent `OWNER` declaration.
+
+This audit preserves the invariant that dropping an actor or scenario cannot
+leave an orphaned task mutating shared state.
