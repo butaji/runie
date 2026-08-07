@@ -1403,6 +1403,25 @@ impl SessionActor {
                             .unwrap_or(false);
                         tool_termination.insert(tool_call_id, terminate);
                     }
+                    AgentEvent::ToolExecutionStart {
+                        tool_call_id,
+                        tool_name,
+                        args,
+                    } => {
+                        let data = serde_json::json!({
+                            "id": tool_call_id.clone(),
+                            "toolCallId": tool_call_id,
+                            "toolName": tool_name,
+                            "args": args,
+                        });
+                        let record = SessionConfigRecord::OperationRecordCreated {
+                            record_type: "tool_started".to_owned(),
+                            data,
+                        };
+                        if !mailbox_ack!(tx, |reply| Command::Config(record, reply)) {
+                            break;
+                        }
+                    }
                     AgentEvent::Reset if !mailbox_ack!(tx, Command::Reset) => break,
                     AgentEvent::Reset => {}
                     _ => {
@@ -1992,6 +2011,11 @@ mod tests {
     async fn bus_tool_termination_is_attached_to_the_owned_session_entry() {
         let bus = EventBus::new();
         let actor = SessionActor::new_with_bus(&bus);
+        bus.publish(AgentEvent::ToolExecutionStart {
+            tool_call_id: "call-1".into(),
+            tool_name: "stop".into(),
+            args: serde_json::json!({"reason": "test"}),
+        });
         bus.publish(AgentEvent::ToolExecutionEnd {
             tool_call_id: "call-1".into(),
             tool_name: "stop".into(),
@@ -2009,6 +2033,7 @@ mod tests {
             }),
         });
         actor.flush().await;
+        assert_eq!(actor.snapshot().lane_records[0].record_type, "tool_started");
         assert!(actor.snapshot().entries[0].terminate);
     }
 

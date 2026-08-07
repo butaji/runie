@@ -154,6 +154,16 @@ the terminal operation projection, so changing this scenario does not require
 recompiling Rust tests. The fixture is included in automatic discovery and
 passes the complete YAML replay suite.
 
+## Completed slice (2026-08-07, live tool-start emission)
+
+The session bus bridge now projects the authoritative `ToolExecutionStart`
+event into a `tool_started` lane fact through the `SessionActor` mailbox. The
+record keeps the tool call identity, name, and arguments losslessly in the Pi
+JSON payload; no tool or renderer code mutates session state. A session actor
+test verifies the event arrives before the terminating tool result, and the
+existing YAML all-family fixture remains the replay oracle for the same lane
+family.
+
 ## Current Runie mapping
 
 `runie-core/src/session.rs` owns parent-linked message/config entries and
