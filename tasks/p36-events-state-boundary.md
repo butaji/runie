@@ -153,3 +153,7 @@ Prompt mailbox consolidation (2026-08-06): prompt clear/mode/theme/caption/
 search/event mutations now use the shared acknowledgement DSL, while key
 handling retains its typed outcome reply. No prompt widget state crosses the
 actor boundary directly.
+
+Loop control consolidation (2026-08-06): steering/follow-up mode and run
+lifecycle commands share the acknowledgement DSL, preserving the loop actor
+as the sole owner of control state and keeping event reduction observable.

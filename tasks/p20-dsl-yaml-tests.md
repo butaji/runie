@@ -310,3 +310,7 @@ removes repeated acknowledgement plumbing.
 `PromptActor` unit mutations now share the same acknowledgement helper and
 `mailbox_ack!`; the typed `handle_key` result remains a separate explicit
 mailbox path because it returns `PromptOutcome` rather than a unit ack.
+
+`LoopActor::reduce_control` now uses `mailbox_ack!` for mode, lifecycle, and
+abort control events; acknowledgement settles after the control snapshot is
+reduced.

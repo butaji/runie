@@ -13,7 +13,7 @@ use crate::r#loop::driver::{
     run_loop, ApiKeyResolver, ConvertToLlm, RunLoopDeps, RunLoopOutcome, TransformContext,
 };
 use crate::state::AgentStateActor;
-use crate::task_owner::{spawn_owned_worker, TaskOwner};
+use crate::task_owner::{mailbox_ack, spawn_owned_worker, TaskOwner};
 use crate::tools::executor::ToolExecHooks;
 use crate::tools::ToolExecutorActor;
 use crate::types::{AgentContext, AgentEvent, AgentMessage, QueueMode, ToolExecutionMode};
@@ -398,16 +398,9 @@ impl LoopActor {
     }
 
     async fn reduce_control(&self, event: LoopControlEvent) {
-        let (reply, done) = oneshot::channel();
-        if self
-            .inner
-            .control_commands
-            .send(LoopControlCommand::Reduce(event, reply))
-            .await
-            .is_ok()
-        {
-            let _ = done.await;
-        }
+        let _ = mailbox_ack!(self.inner.control_commands, |reply| {
+            LoopControlCommand::Reduce(event, reply)
+        });
     }
 
     pub fn control_snapshot(&self) -> LoopControlSnapshot {
