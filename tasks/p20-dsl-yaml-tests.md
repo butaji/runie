@@ -356,3 +356,5 @@ It also asserts the resulting `added_tool_names` on the core actor snapshot,
 so the metadata is validated as state rather than only as transport.
 The same scenario asserts the structured Pi `details` payload on the latest
 tool result, closing both deterministic metadata paths through the actor.
+It also declares and asserts Pi token `usage`, including the camelCase wire
+field `totalTokens`, through the same runtime replay path.

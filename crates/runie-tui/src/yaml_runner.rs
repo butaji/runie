@@ -211,6 +211,9 @@ pub struct ToolSpec {
     pub output: Option<String>,
     #[serde(default)]
     pub details: Option<serde_json::Value>,
+    /// Optional Pi-compatible token usage returned by the deterministic tool.
+    #[serde(default)]
+    pub usage: Option<Usage>,
     #[serde(default)]
     pub error: Option<String>,
     #[serde(default)]
@@ -814,6 +817,8 @@ pub struct StateAssertions {
     pub tool_result_added_tool_names: Option<Vec<String>>,
     /// `details` from the latest Pi tool result.
     pub tool_result_details: Option<serde_json::Value>,
+    /// `usage` from the latest Pi tool result.
+    pub tool_result_usage: Option<Usage>,
     pub session_entries: Option<usize>,
     pub tool_count: Option<usize>,
     pub streaming_contains: Option<String>,
@@ -1284,6 +1289,7 @@ pub struct ReplayTool {
     output: String,
     error: bool,
     details: serde_json::Value,
+    usage: Option<Usage>,
     media: Option<String>,
     terminate: bool,
     added_tool_names: Vec<String>,
@@ -1296,6 +1302,7 @@ impl ReplayTool {
             output: output.into(),
             error: false,
             details: serde_json::Value::Null,
+            usage: None,
             media: None,
             terminate: false,
             added_tool_names: Vec::new(),
@@ -1308,6 +1315,7 @@ impl ReplayTool {
             output: output.into(),
             error: true,
             details: serde_json::Value::Null,
+            usage: None,
             media: None,
             terminate: false,
             added_tool_names: Vec::new(),
@@ -1320,16 +1328,22 @@ impl ReplayTool {
             output: output.into(),
             error: false,
             details: serde_json::Value::Null,
+            usage: None,
             media: None,
             terminate: false,
             added_tool_names: Vec::new(),
         }
     }
 
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "the deterministic YAML tool keeps each Pi result field explicit"
+    )]
     fn configured(
         name: &str,
         output: String,
         details: serde_json::Value,
+        usage: Option<Usage>,
         error: bool,
         media: Option<String>,
         terminate: bool,
@@ -1340,6 +1354,7 @@ impl ReplayTool {
             output,
             error,
             details,
+            usage,
             media,
             terminate,
             added_tool_names,
@@ -1387,7 +1402,7 @@ impl AgentTool for ReplayTool {
         Ok(AgentToolResult {
             content,
             details: self.details.clone(),
-            usage: None,
+            usage: self.usage.clone(),
             added_tool_names: self.added_tool_names.clone(),
             terminate: self.terminate,
         })
@@ -1805,6 +1820,7 @@ fn register_scenario_tool(
 ) -> Result<(), ScenarioError> {
     if tool.output.is_some()
         || tool.details.is_some()
+        || tool.usage.is_some()
         || tool.error.is_some()
         || tool.media.is_some()
         || tool.terminate
@@ -1814,6 +1830,7 @@ fn register_scenario_tool(
             &tool.name,
             tool.output.clone().unwrap_or_default(),
             tool.details.clone().unwrap_or(serde_json::Value::Null),
+            tool.usage.clone(),
             tool.error.is_some(),
             tool.media.clone(),
             tool.terminate,
@@ -2098,6 +2115,22 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
             actual_details,
             "tool_result_details"
         );
+    }
+    if let Some(expected_usage) = &expected.tool_result_usage {
+        let actual_usage = actual
+            .messages
+            .iter()
+            .rev()
+            .find_map(|message| match message {
+                AgentMessage::ToolResult(result) => result.usage.clone(),
+                _ => None,
+            });
+        if actual_usage.as_ref() != Some(expected_usage) {
+            return Err(format!(
+                "state tool_result_usage mismatch: expected {:?}, got {:?}",
+                expected_usage, actual_usage
+            ));
+        }
     }
     assert_yaml_eq!(
         expected

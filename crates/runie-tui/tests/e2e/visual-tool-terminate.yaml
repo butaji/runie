@@ -5,6 +5,7 @@ tools:
   - name: echo
     output: "terminal result"
     details: { source: replay, exit_code: 0 }
+    usage: { input: 3, output: 2, totalTokens: 5 }
     terminate: true
     added_tool_names: ["runtime_tool"]
 events:
@@ -15,6 +16,7 @@ assertions:
   state:
     tool_result_added_tool_names: [runtime_tool]
     tool_result_details: { source: replay, exit_code: 0 }
+    tool_result_usage: { input: 3, output: 2, totalTokens: 5 }
   pi_events:
     - agent_start
     - turn_start
