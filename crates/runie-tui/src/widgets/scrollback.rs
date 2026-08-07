@@ -687,7 +687,33 @@ impl Scrollback {
 
     /// Export only immutable model facts; Ratatui rendering caches and
     /// reducer-only bookkeeping never cross the model boundary.
+    #[allow(
+        clippy::too_many_lines,
+        reason = "compatibility snapshot rehydrates the complete renderer-neutral feed projection"
+    )]
     pub fn model_snapshot(&self) -> FeedSnapshot {
+        let selected_member_index = self.navigation.selected_entry.and_then(|entry| {
+            let selected_id = self.lines.get(entry)?.tool_call_id.as_ref()?;
+            let mut indices = HashMap::new();
+            let mut next = 0usize;
+            for line in &self.lines {
+                let Some(id) = line.tool_call_id.as_ref() else {
+                    continue;
+                };
+                let index = if let Some(index) = indices.get(id) {
+                    *index
+                } else {
+                    let index = next;
+                    next += 1;
+                    indices.insert(id.clone(), index);
+                    index
+                };
+                if id == selected_id {
+                    return Some(index);
+                }
+            }
+            None
+        });
         FeedSnapshot {
             lines: self.lines.clone(),
             tool_blocks: self.tool_blocks(),
@@ -700,6 +726,7 @@ impl Scrollback {
             follow_latest_user: self.navigation.follow_latest_user,
             selected_tool_id: self.navigation.selected_tool_id.clone(),
             selected_entry: self.navigation.selected_entry,
+            selected_member_index,
             theme: self.navigation.theme,
             animation_frame: self.navigation.animation_frame,
             tool_modes: self.navigation.tool_modes.clone(),

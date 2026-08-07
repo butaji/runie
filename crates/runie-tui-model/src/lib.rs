@@ -198,6 +198,7 @@ mod tests {
             follow_latest_user: true,
             selected_tool_id: None,
             selected_entry: None,
+            selected_member_index: None,
             theme: ThemeKind::GrokNight,
             animation_frame: 0,
             tool_modes: std::collections::HashMap::new(),

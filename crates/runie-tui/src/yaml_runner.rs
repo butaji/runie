@@ -796,6 +796,7 @@ pub struct StateAssertions {
     pub tool_kinds: Option<Vec<crate::widgets::ToolCardKind>>,
     pub selected_tool_id: Option<String>,
     pub selected_entry: Option<usize>,
+    pub selected_member_index: Option<usize>,
     pub autoscroll: Option<bool>,
     pub scroll_offset: Option<usize>,
     pub thinking_level: Option<ThinkingLevel>,
@@ -1989,6 +1990,14 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
             return Err(format!(
                 "state selected_entry mismatch: expected {expected:?}, got {:?}",
                 outcome.feed.selected_entry
+            ));
+        }
+    }
+    if let Some(expected) = expected.selected_member_index {
+        if outcome.feed.selected_member_index != Some(expected) {
+            return Err(format!(
+                "state selected_member_index mismatch: expected {expected:?}, got {:?}",
+                outcome.feed.selected_member_index
             ));
         }
     }

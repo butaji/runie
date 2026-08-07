@@ -718,3 +718,11 @@ Member-index correction (2026-08-06): the ordinal is now assigned once per
 logical tool call and shared by all of that member's header/content/status rows;
 it is no longer a physical-row counter. The mixed fixture caught and pins this
 distinction (`[0, 1, 0, 0, 0, 1]` for two interleaved projected members).
+
+Selected-member projection (2026-08-06): the immutable feed snapshot now
+derives `selected_member_index` from the actor-owned selected transcript entry
+when that entry belongs to a tool member. Non-tool selections intentionally
+project `None`; no renderer-side cursor state is introduced. YAML supports the
+assertion field, while a fixture that ends on a non-tool entry confirms the
+negative case. Tool-selected member assertions remain the next navigation
+fixture slice.

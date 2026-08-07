@@ -64,6 +64,7 @@ pub struct FeedSnapshot {
     pub follow_latest_user: bool,
     pub selected_tool_id: Option<String>,
     pub selected_entry: Option<usize>,
+    pub selected_member_index: Option<usize>,
     pub theme: ThemeKind,
     pub animation_frame: usize,
     pub tool_modes: HashMap<String, ToolDisplayMode>,
@@ -896,6 +897,7 @@ pub struct FeedState {
 
 impl FeedState {
     pub fn snapshot(&self) -> FeedSnapshot {
+        let selected_member_index = self.selected_member_index();
         FeedSnapshot {
             lines: self.lines.clone(),
             tool_blocks: project_tool_blocks(
@@ -919,10 +921,35 @@ impl FeedState {
             follow_latest_user: self.navigation.follow_latest_user,
             selected_tool_id: self.navigation.selected_tool_id.clone(),
             selected_entry: self.navigation.selected_entry,
+            selected_member_index,
             theme: self.navigation.theme,
             animation_frame: self.navigation.animation_frame,
             tool_modes: self.navigation.tool_modes.clone(),
         }
+    }
+
+    fn selected_member_index(&self) -> Option<usize> {
+        let entry = self.navigation.selected_entry?;
+        let selected_id = self.lines.get(entry)?.tool_call_id.as_ref()?;
+        let mut indices = HashMap::new();
+        let mut next = 0usize;
+        for line in &self.lines {
+            let Some(id) = line.tool_call_id.as_ref() else {
+                continue;
+            };
+            let index = if let Some(index) = indices.get(id) {
+                *index
+            } else {
+                let index = next;
+                next += 1;
+                indices.insert(id.clone(), index);
+                index
+            };
+            if id == selected_id {
+                return Some(index);
+            }
+        }
+        None
     }
 
     #[allow(
