@@ -7,6 +7,7 @@ prompt_timestamp: "9:27 PM"
 provider_options:
   sampling_params:
     temperature: 0.2
+  session_id: parity-hey
 capture:
   prompt: "Hey"
   quit_key: C-q
@@ -22,6 +23,7 @@ events:
   - tool_select: entry_next
 assertions:
   provider_options:
+    session_id: parity-hey
     sampling_params:
       temperature: 0.2
   exact_events:

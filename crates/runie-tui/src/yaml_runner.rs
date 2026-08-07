@@ -63,6 +63,8 @@ pub struct Scenario {
 #[derive(Debug, Deserialize, Default, Clone)]
 pub struct ProviderOptionsSpec {
     #[serde(default)]
+    pub session_id: Option<String>,
+    #[serde(default)]
     pub timeout_ms: Option<u64>,
     #[serde(default)]
     pub max_retries: Option<u32>,
@@ -73,6 +75,7 @@ pub struct ProviderOptionsSpec {
 impl ProviderOptionsSpec {
     fn stream_options(&self) -> runie_core::types::SimpleStreamOptions {
         runie_core::types::SimpleStreamOptions {
+            session_id: self.session_id.clone(),
             timeout_ms: self.timeout_ms,
             max_retries: self.max_retries,
             sampling_params: self.sampling_params.clone(),
@@ -654,6 +657,7 @@ pub struct Assertions {
 
 #[derive(Debug, Deserialize, Default, Clone)]
 pub struct ProviderOptionsAssertions {
+    pub session_id: Option<String>,
     pub timeout_ms: Option<u64>,
     pub max_retries: Option<u32>,
     pub sampling_params: Option<std::collections::HashMap<String, serde_json::Value>>,
@@ -1623,6 +1627,14 @@ fn assert_provider_options(outcome: &ScenarioOutcome, scenario: &Scenario) -> Re
         .provider_options
         .first()
         .ok_or_else(|| "provider options assertion saw no provider call".to_string())?;
+    if let Some(value) = &expected.session_id {
+        if actual.session_id.as_ref() != Some(value) {
+            return Err(format!(
+                "provider session id mismatch: expected {value:?}, got {:?}",
+                actual.session_id
+            ));
+        }
+    }
     if let Some(value) = expected.timeout_ms {
         if actual.timeout_ms != Some(value) {
             return Err(format!(
