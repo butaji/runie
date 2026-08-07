@@ -679,6 +679,7 @@ pub fn validate_session_lane_record(
     validate_operation_lane_record(snapshot, kind, data)?;
     validate_operation_finished_record(kind, data)?;
     validate_step_attempt_record(kind, data)?;
+    validate_tool_started_record(snapshot, kind, data)?;
     validate_queue_lane_record(snapshot, kind, data)?;
     Ok(kind)
 }
@@ -742,6 +743,95 @@ fn validate_step_attempt_record(
         ("compaction", _) => return Err("compaction step has invalid compactionReason".into()),
         (_, Some(_)) => return Err("non-compaction step has compactionReason".into()),
         _ => {}
+    }
+    Ok(())
+}
+
+#[allow(
+    clippy::too_many_lines,
+    reason = "the Pi tool-start contract keeps all linkage validation together"
+)]
+fn validate_tool_started_record(
+    snapshot: &SessionSnapshot,
+    kind: SessionLaneRecordKind,
+    data: &serde_json::Value,
+) -> Result<(), String> {
+    if kind != SessionLaneRecordKind::ToolStarted {
+        return Ok(());
+    }
+    // Legacy provider events are retained until the bridge can supply the
+    // actor-owned assistant/result linkage. Complete Pi-shaped records take
+    // the strict path below.
+    let Some(assistant_id) = data
+        .get("assistantEntryId")
+        .and_then(serde_json::Value::as_str)
+    else {
+        return Ok(());
+    };
+    let tool_index = data
+        .get("toolIndex")
+        .and_then(serde_json::Value::as_u64)
+        .ok_or_else(|| "tool_started is missing toolIndex".to_owned())?;
+    let tool_call_id = data
+        .get("toolCallId")
+        .and_then(serde_json::Value::as_str)
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| "tool_started is missing toolCallId".to_owned())?;
+    let tool_name = data
+        .get("toolName")
+        .and_then(serde_json::Value::as_str)
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| "tool_started is missing toolName".to_owned())?;
+    let has_result = data
+        .get("resultEntryId")
+        .and_then(serde_json::Value::as_str)
+        .is_some_and(|value| !value.is_empty());
+    if !has_result {
+        return Err("tool_started is missing resultEntryId".into());
+    }
+    if !matches!(
+        data.get("replay").and_then(serde_json::Value::as_str),
+        Some("never" | "safe")
+    ) {
+        return Err("tool_started has invalid replay policy".into());
+    }
+    let Some(entry) = snapshot
+        .entries
+        .iter()
+        .find(|entry| entry.id == assistant_id)
+    else {
+        return Err(format!(
+            "tool_started references unknown assistant {assistant_id:?}"
+        ));
+    };
+    let AgentMessage::Assistant(assistant) = &entry.message else {
+        return Err("tool_started assistantEntryId is not an assistant".into());
+    };
+    let Some(crate::types::AssistantContent::ToolCall(call)) =
+        assistant.content.get(tool_index as usize)
+    else {
+        return Err(format!("tool_started has invalid toolIndex {tool_index}"));
+    };
+    if call.id != tool_call_id || call.name != tool_name {
+        return Err("tool_started tool call identity does not match assistant entry".into());
+    }
+    let duplicate = snapshot.lane_records.iter().any(|record| {
+        record.record_type == "tool_started"
+            && record
+                .data
+                .get("assistantEntryId")
+                .and_then(serde_json::Value::as_str)
+                == Some(assistant_id)
+            && record
+                .data
+                .get("toolIndex")
+                .and_then(serde_json::Value::as_u64)
+                == Some(tool_index)
+    });
+    if duplicate {
+        return Err(format!(
+            "tool invocation {assistant_id}:{tool_index} is duplicated"
+        ));
     }
     Ok(())
 }
@@ -1528,6 +1618,12 @@ impl SessionSnapshot {
 
 enum Command {
     Append(Box<AgentMessage>, bool, oneshot::Sender<()>),
+    ToolStarted {
+        tool_call_id: String,
+        tool_name: String,
+        args: serde_json::Value,
+        reply: oneshot::Sender<()>,
+    },
     Config(SessionConfigRecord, oneshot::Sender<()>),
     Import(SessionSnapshot, oneshot::Sender<()>),
     Reset(oneshot::Sender<()>),
@@ -1732,12 +1828,25 @@ impl SessionActor {
         let (tx, owner) = spawn_actor_worker!(32, |mut rx: mpsc::Receiver<Command>| async move {
             let mut state = SessionSnapshot::default();
             let mut next_id = 1_u64;
+            let mut tool_result_ids = HashMap::<String, String>::new();
             while let Some(command) = rx.recv().await {
                 match command {
                     Command::Append(message, terminate, reply) => {
                         state.sequence += 1;
-                        let id = format!("entry-{}", next_id);
-                        next_id += 1;
+                        let id = match message.as_ref() {
+                            AgentMessage::ToolResult(result) => tool_result_ids
+                                .remove(&result.tool_call_id)
+                                .unwrap_or_else(|| {
+                                    let id = format!("entry-{next_id}");
+                                    next_id += 1;
+                                    id
+                                }),
+                            _ => {
+                                let id = format!("entry-{next_id}");
+                                next_id += 1;
+                                id
+                            }
+                        };
                         let assistant = match message.as_ref() {
                             AgentMessage::Assistant(assistant) => Some(assistant.clone()),
                             _ => None,
@@ -1803,6 +1912,80 @@ impl SessionActor {
                         let _ = snapshot_tx.send(state.clone());
                         let _ = reply.send(());
                     }
+                    Command::ToolStarted {
+                        tool_call_id,
+                        tool_name,
+                        args,
+                        reply,
+                    } => {
+                        let assistant = state.entries.iter().rev().find_map(|entry| {
+                            if let AgentMessage::Assistant(message) = &entry.message {
+                                Some((entry.id.clone(), message.clone()))
+                            } else {
+                                None
+                            }
+                        });
+                        let Some((assistant_entry_id, assistant)) = assistant else {
+                            let data = serde_json::json!({
+                                "id": tool_call_id,
+                                "toolCallId": tool_call_id,
+                                "toolName": tool_name,
+                                "args": args,
+                            });
+                            reduce_operation_record(&mut state, "tool_started", &data);
+                            let _ = snapshot_tx.send(state.clone());
+                            let _ = reply.send(());
+                            continue;
+                        };
+                        let Some((tool_index, _)) =
+                            assistant.content.iter().enumerate().find(|(_, content)| {
+                                matches!(
+                                    content,
+                                    crate::types::AssistantContent::ToolCall(call)
+                                        if call.id == tool_call_id
+                                )
+                            })
+                        else {
+                            let data = serde_json::json!({
+                                "id": tool_call_id,
+                                "toolCallId": tool_call_id,
+                                "toolName": tool_name,
+                                "args": args,
+                            });
+                            reduce_operation_record(&mut state, "tool_started", &data);
+                            let _ = snapshot_tx.send(state.clone());
+                            let _ = reply.send(());
+                            continue;
+                        };
+                        let Some(run_id) = latest_active_operation(&state) else {
+                            let data = serde_json::json!({
+                                "id": tool_call_id,
+                                "toolCallId": tool_call_id,
+                                "toolName": tool_name,
+                                "args": args,
+                            });
+                            reduce_operation_record(&mut state, "tool_started", &data);
+                            let _ = snapshot_tx.send(state.clone());
+                            let _ = reply.send(());
+                            continue;
+                        };
+                        let result_entry_id = format!("entry-{next_id}");
+                        next_id += 1;
+                        tool_result_ids.insert(tool_call_id.clone(), result_entry_id.clone());
+                        let data = serde_json::json!({
+                            "runId": run_id,
+                            "assistantEntryId": assistant_entry_id,
+                            "toolIndex": tool_index,
+                            "toolCallId": tool_call_id,
+                            "toolName": tool_name,
+                            "effectiveArgs": args,
+                            "resultEntryId": result_entry_id,
+                            "replay": "never",
+                        });
+                        reduce_operation_record(&mut state, "tool_started", &data);
+                        let _ = snapshot_tx.send(state.clone());
+                        let _ = reply.send(());
+                    }
                     Command::Config(record, reply) => {
                         if let SessionConfigRecord::OperationRecordCreated { record_type, data } =
                             &record
@@ -1846,6 +2029,7 @@ impl SessionActor {
                     Command::Reset(reply) => {
                         state = SessionSnapshot::default();
                         next_id = 1;
+                        tool_result_ids.clear();
                         let _ = snapshot_tx.send(state.clone());
                         let _ = reply.send(());
                     }
@@ -1916,17 +2100,12 @@ impl SessionActor {
                         tool_name,
                         args,
                     } => {
-                        let data = serde_json::json!({
-                            "id": tool_call_id.clone(),
-                            "toolCallId": tool_call_id,
-                            "toolName": tool_name,
-                            "args": args,
-                        });
-                        let record = SessionConfigRecord::OperationRecordCreated {
-                            record_type: "tool_started".to_owned(),
-                            data,
-                        };
-                        if !mailbox_ack!(tx, |reply| Command::Config(record, reply)) {
+                        if !mailbox_ack!(tx, |reply| Command::ToolStarted {
+                            tool_call_id,
+                            tool_name,
+                            args,
+                            reply,
+                        }) {
                             break;
                         }
                     }
@@ -2033,8 +2212,8 @@ mod tests {
     use super::*;
     use crate::events::EventBus;
     use crate::types::{
-        AssistantMessage, DeferredHandle, StopReason, ToolResultContent, ToolResultMessage, Usage,
-        UserContent, UserMessage,
+        AssistantContent, AssistantMessage, DeferredHandle, StopReason, ToolCall,
+        ToolResultContent, ToolResultMessage, Usage, UserContent, UserMessage,
     };
 
     fn user(text: &str) -> AgentMessage {
@@ -2060,6 +2239,12 @@ mod tests {
     async fn bus_message_end_and_reset_are_the_only_projection_inputs() {
         let bus = EventBus::new();
         let actor = SessionActor::new_with_bus(&bus);
+        actor
+            .record_config(SessionConfigRecord::OperationRecordCreated {
+                record_type: "operation_started".into(),
+                data: serde_json::json!({"id": "run-1"}),
+            })
+            .await;
         bus.publish(AgentEvent::MessageEnd {
             message: user("one"),
         });
@@ -2338,6 +2523,48 @@ mod tests {
         assert!(validate_operation_finished_record(
             SessionLaneRecordKind::OperationFinished,
             &serde_json::json!({"outcome": "failed", "error": {"code": "provider"}})
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn tool_started_records_validate_actor_linkage() {
+        let mut snapshot = SessionSnapshot::default();
+        snapshot.entries.push(SessionEntry {
+            id: "assistant-1".into(),
+            seq: 1,
+            parent_id: None,
+            timestamp: 0,
+            message: AgentMessage::Assistant(AssistantMessage {
+                content: vec![AssistantContent::ToolCall(ToolCall {
+                    id: "call-1".into(),
+                    name: "read".into(),
+                    arguments: serde_json::json!({"path": "Cargo.toml"}),
+                    thought_signature: None,
+                })],
+                ..Default::default()
+            }),
+            terminate: false,
+        });
+        let valid = serde_json::json!({
+            "assistantEntryId": "assistant-1", "toolIndex": 0,
+            "toolCallId": "call-1", "toolName": "read",
+            "resultEntryId": "result-1", "replay": "never"
+        });
+        assert!(validate_tool_started_record(
+            &snapshot,
+            SessionLaneRecordKind::ToolStarted,
+            &valid
+        )
+        .is_ok());
+        assert!(validate_tool_started_record(
+            &snapshot,
+            SessionLaneRecordKind::ToolStarted,
+            &serde_json::json!({
+                "assistantEntryId": "assistant-1", "toolIndex": 1,
+                "toolCallId": "call-1", "toolName": "read",
+                "resultEntryId": "result-1", "replay": "never"
+            })
         )
         .is_err());
     }
@@ -2816,11 +3043,23 @@ mod tests {
     async fn bus_tool_termination_is_attached_to_the_owned_session_entry() {
         let bus = EventBus::new();
         let actor = SessionActor::new_with_bus(&bus);
+        actor
+            .append(AgentMessage::Assistant(AssistantMessage {
+                content: vec![AssistantContent::ToolCall(ToolCall {
+                    id: "call-1".into(),
+                    name: "stop".into(),
+                    arguments: serde_json::json!({"reason": "test"}),
+                    thought_signature: None,
+                })],
+                ..Default::default()
+            }))
+            .await;
         bus.publish(AgentEvent::ToolExecutionStart {
             tool_call_id: "call-1".into(),
             tool_name: "stop".into(),
             args: serde_json::json!({"reason": "test"}),
         });
+        actor.flush().await;
         bus.publish(AgentEvent::ToolExecutionEnd {
             tool_call_id: "call-1".into(),
             tool_name: "stop".into(),
@@ -2838,8 +3077,8 @@ mod tests {
             }),
         });
         actor.flush().await;
-        assert_eq!(actor.snapshot().lane_records[0].record_type, "tool_started");
-        assert!(actor.snapshot().entries[0].terminate);
+        assert_eq!(actor.snapshot().lane_records[1].record_type, "tool_started");
+        assert!(actor.snapshot().entries[1].terminate);
     }
 
     #[tokio::test]

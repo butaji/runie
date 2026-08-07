@@ -3,6 +3,22 @@
 Status: planned — source contract audited; implementation remains open
 (2026-08-08)
 
+## First implementation slice (2026-08-08)
+
+`ToolExecutionStart` now crosses the `SessionActor` mailbox as raw provider
+facts. When the actor has the assistant/tool context and an active operation,
+it derives `assistantEntryId`, `toolIndex`, `runId`, `effectiveArgs`, reserves
+the result entry ID, and emits the complete Pi-shaped lane record. A matching
+tool result consumes that reservation. Complete records validate assistant
+identity, tool index/call identity, result identity, replay policy, and
+duplicate invocation.
+
+The bridge retains an explicit compatibility fallback for an event that
+arrives before the required context is available. It preserves the old
+lossless partial record, but is not claimed as Pi parity; removing that
+fallback requires an event-order barrier or a source-equivalent deferred
+admission policy.
+
 ## Source contract
 
 Pi's `ToolStartedRecord` contains:
@@ -54,4 +70,3 @@ fabricating those fields in the bridge would violate SSOT ownership.
 - JSONL round-trip preserves every field and replay policy.
 - The bridge no longer constructs a session lane record directly.
 - `just ci` remains green and no test uses `sleep()`.
-
