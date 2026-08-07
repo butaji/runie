@@ -57,6 +57,8 @@ The renderer must never own spans or infer telemetry from status text.
    deterministic `end_sequence`, matching Pi's detached in-memory recordings.
    Child creation under a settled parent is rejected inside the actor, matching
    Pi's no-op settled-span context behavior.
+   `TelemetrySpan::with_child` now provides the corresponding nested
+   callback-scoped API with automatic settlement.
 4. Add a YAML runtime fixture with declared span commands and ordered snapshot
    assertions. **Done:** `TelemetryAction`, `TelemetryScenario`, and the
    runtime-discovered `tests/telemetry_replay.rs` execute YAML actions through

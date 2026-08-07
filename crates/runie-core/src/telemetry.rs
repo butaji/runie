@@ -444,6 +444,22 @@ impl TelemetrySpan {
     ) -> Option<Self> {
         self.actor.start_span(Some(self.id), name, attributes).await
     }
+
+    /// Run a nested callback-scoped span through the owning actor.
+    pub async fn with_child<F, Fut, T, E>(
+        &self,
+        name: impl Into<String>,
+        attributes: HashMap<String, serde_json::Value>,
+        callback: F,
+    ) -> Option<Result<T, E>>
+    where
+        F: FnOnce(TelemetrySpan) -> Fut,
+        Fut: Future<Output = Result<T, E>>,
+    {
+        self.actor
+            .with_span(Some(self.id), name, attributes, callback)
+            .await
+    }
 }
 
 #[cfg(test)]
@@ -454,15 +470,20 @@ mod tests {
     async fn nested_spans_and_terminal_state_are_actor_owned() {
         let actor = TelemetryActor::new();
         let root = actor.start_span(None, "run", HashMap::new()).await.unwrap();
-        let child = root.child("request", HashMap::new()).await.unwrap();
-        child.event("headers", HashMap::new()).await;
-        child.status(SpanStatus::Ok).await;
-        child.end().await;
+        let child = root
+            .with_child("request", HashMap::new(), |child| async move {
+                child.event("headers", HashMap::new()).await;
+                Ok::<_, &'static str>(child.id)
+            })
+            .await
+            .unwrap()
+            .unwrap();
         let snapshot = actor.snapshot();
         assert_eq!(snapshot.spans[1].parent_id, Some(root.id));
         assert_eq!(snapshot.spans[1].events[0].name, "headers");
         assert_eq!(snapshot.spans[1].status, SpanStatus::Ok);
         assert!(snapshot.spans[1].ended);
+        assert_eq!(child, snapshot.spans[1].id);
     }
 
     #[tokio::test]
