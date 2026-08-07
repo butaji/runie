@@ -2854,6 +2854,17 @@ impl SessionActor {
                     }
                     AgentEvent::Reset if !mailbox_ack!(tx, Command::Reset) => break,
                     AgentEvent::Reset => {}
+                    AgentEvent::SessionEntryAppended { lane, message } => {
+                        let (reply_tx, reply_rx) = oneshot::channel();
+                        if tx
+                            .send(Command::Append(lane, Box::new(message), false, reply_tx))
+                            .await
+                            .is_err()
+                            || reply_rx.await.is_err()
+                        {
+                            break;
+                        }
+                    }
                     _ => {
                         if let Some(record) = session_config_record!(&event) {
                             let (reply_tx, reply_rx) = oneshot::channel();
@@ -2927,6 +2938,7 @@ impl SessionActor {
     /// snapshot or manufacture message entries.
     #[allow(
         clippy::too_many_lines,
+        clippy::cognitive_complexity,
         reason = "session event dispatch keeps each journal variant explicit"
     )]
     pub async fn apply_event(&self, event: &AgentEvent) -> Result<(), String> {
@@ -2940,6 +2952,8 @@ impl SessionActor {
         {
             self.record_lane(lane.clone(), leaf_id.clone(), *create)
                 .await
+        } else if let AgentEvent::SessionEntryAppended { lane, message } = event {
+            self.append_to_lane(lane.clone(), message.clone()).await
         } else if matches!(event, AgentEvent::Reset) {
             self.reset().await;
             Ok(())

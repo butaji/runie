@@ -336,6 +336,9 @@ pub enum EventSpec {
     SessionLane {
         session_lane: SessionLaneSpec,
     },
+    SessionAppend {
+        session_append: SessionAppendSpec,
+    },
     BranchSummary {
         branch_summary: BranchSummarySpec,
     },
@@ -495,6 +498,12 @@ pub struct SessionLaneSpec {
     pub leaf_id: Option<String>,
     #[serde(default = "default_lane_create")]
     pub create: bool,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct SessionAppendSpec {
+    pub lane: String,
+    pub text: String,
 }
 
 fn default_lane_create() -> bool {
@@ -747,6 +756,7 @@ impl EventSpec {
             Self::SessionLabel { .. } => None,
             Self::SessionName { .. } => None,
             Self::SessionLane { .. } => None,
+            Self::SessionAppend { .. } => None,
             Self::BranchSummary { .. } => None,
             Self::CustomEntry { .. } => None,
             Self::Compaction { .. } => None,
@@ -817,6 +827,15 @@ impl EventSpec {
                 lane: session_lane.lane.clone(),
                 leaf_id: session_lane.leaf_id.clone(),
                 create: session_lane.create,
+            }),
+            Self::SessionAppend { session_append } => Some(AgentEvent::SessionEntryAppended {
+                lane: session_append.lane.clone(),
+                message: AgentMessage::User(UserMessage {
+                    content: vec![UserContent::Text {
+                        text: session_append.text.clone(),
+                    }],
+                    timestamp: 0,
+                }),
             }),
             Self::BranchSummary { branch_summary } => Some(AgentEvent::BranchSummaryCreated {
                 from_id: branch_summary.from_id.clone(),
@@ -3888,6 +3907,7 @@ fn event_kind(event: &runie_core::types::AgentEvent) -> &'static str {
         SessionLabelChanged { .. } => "session_label_changed",
         SessionNameChanged { .. } => "session_name_changed",
         SessionLaneChanged { .. } => "session_lane_changed",
+        SessionEntryAppended { .. } => "session_entry_appended",
         BranchSummaryCreated { .. } => "branch_summary_created",
         CustomSessionEntryCreated { .. } => "custom_session_entry_created",
         CompactionCreated { .. } => "compaction_created",

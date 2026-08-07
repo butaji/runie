@@ -1,0 +1,15 @@
+name: session-lane-append
+description: Replays a message append into a non-main Pi session lane.
+initial_prompt: "seed the session"
+events:
+  - session_lane:
+      lane: feature
+      leaf_id: entry-1
+  - session_append:
+      lane: feature
+      text: "feature message"
+assertions:
+  state:
+    session_lanes:
+      main: entry-2
+      feature: entry-3

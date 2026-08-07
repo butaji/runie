@@ -7,6 +7,9 @@ events:
   - session_lane:
       lane: feature
       leaf_id: entry-1
+  - session_append:
+      lane: feature
+      text: "feature message"
   - session_lane:
       lane: feature
       leaf_id: null
