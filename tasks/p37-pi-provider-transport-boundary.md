@@ -205,3 +205,8 @@ commands. `StreamFn` supplies explicit default unsupported errors for adapters
 without these capabilities. Successful deferred fetches use the same
 actor-owned, joined stream pump as normal requests; no task is detached and
 generic HTTP is not reinterpreted as deferred-provider behavior.
+
+The runtime YAML state oracle now also asserts the final assistant's deferred
+stop reason and complete handle fields. `deferred-response.yaml` therefore
+proves the full event sequence → actor snapshot contract, not just wire
+serialization or event cardinality.

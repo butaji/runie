@@ -37,5 +37,13 @@ assertions:
     is_streaming: false
     pending_tool_calls: 0
     messages: 2
+    assistant_stop_reason: deferred
+    assistant_deferred:
+      provider: replay
+      modelId: model-1
+      api: replay-api
+      id: deferred-1
+      pollAfterMs: 250
+      data: { batch: deferred-1 }
   transcript_contains:
     - "defer this"

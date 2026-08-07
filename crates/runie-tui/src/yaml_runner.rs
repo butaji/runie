@@ -835,6 +835,10 @@ pub struct StateAssertions {
     pub is_streaming: Option<bool>,
     pub pending_tool_calls: Option<usize>,
     pub messages: Option<usize>,
+    /// Stop reason on the latest actor-owned assistant message.
+    pub assistant_stop_reason: Option<StopReasonSpec>,
+    /// Deferred handle on the latest actor-owned assistant message.
+    pub assistant_deferred: Option<DeferredHandle>,
     /// `addedToolNames` from the latest Pi tool result.
     pub tool_result_added_tool_names: Option<Vec<String>>,
     /// `details` from the latest Pi tool result.
@@ -2182,6 +2186,35 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         "animation_demand"
     );
     assert_yaml_eq!(expected.is_streaming, actual.is_streaming, "is_streaming");
+    let latest_assistant = || {
+        actual
+            .messages
+            .iter()
+            .rev()
+            .find_map(|message| match message {
+                AgentMessage::Assistant(assistant) => Some(assistant),
+                _ => None,
+            })
+    };
+    if let Some(expected_reason) = &expected.assistant_stop_reason {
+        let actual_reason = latest_assistant().and_then(|message| message.stop_reason);
+        let expected_reason = StopReason::from(expected_reason);
+        if actual_reason != Some(expected_reason) {
+            return Err(format!(
+                "assistant stop reason mismatch: expected {:?}, got {:?}",
+                expected_reason, actual_reason
+            ));
+        }
+    }
+    if let Some(expected_handle) = &expected.assistant_deferred {
+        let actual_handle = latest_assistant().and_then(|message| message.deferred.clone());
+        if actual_handle.as_ref() != Some(expected_handle) {
+            return Err(format!(
+                "assistant deferred handle mismatch: expected {:?}, got {:?}",
+                expected_handle, actual_handle
+            ));
+        }
+    }
     let latest_tool_result = || {
         actual
             .messages
