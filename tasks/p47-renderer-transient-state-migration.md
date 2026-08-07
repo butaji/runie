@@ -342,3 +342,34 @@ promotes slow multi-event streams to trackpad pricing while retaining the
 fast wheel acceleration band; forced wheel/trackpad modes remain explicit.
 `visual-scroll-trackpad.yaml` replays the slow stream at runtime. Full Grok
 flush-cadence/backlog caps and terminal-specific heuristic tuning remain open.
+
+## Grok scroll flush contract audit (2026-08-07)
+
+The authoritative implementation and tests in
+`~/Code/agents/grok-build/crates/codegen/xai-grok-pager/src/input/mouse.rs`
+and `src/input/mouse/tests.rs` make the remaining gap concrete:
+
+- raw events accumulate into a stream separated by an 80 ms gap;
+- redraw delivery is coalesced on a 16 ms cadence rather than applying an
+  unbounded delta synchronously for every input event;
+- every flush is capped by `max(6, viewport_height / 2)` lines (the viewport
+  proportional floor is the source's `MIN_DELTA_PER_FLUSH` contract);
+- excess whole-line movement remains as backlog and drains over subsequent
+  cadence ticks, with non-increasing tail flushes;
+- stream finalization after the gap reports remaining backlog without emitting
+  a final uncapped burst; the source distinguishes flushed movement from
+  dropped movement.
+
+Runie's current `ScrollNormalizer::push_at` is pure and replayable, but it
+returns a delta immediately and has no viewport, cadence, backlog, flush, or
+finalize state. Consequently the existing scroll YAML fixtures prove event
+ordering and aggregate offsets only; they cannot yet prove Grok's visible
+motion profile under a wheel flood or a starved redraw loop.
+
+The next implementation slice must introduce an actor-input-owned, pure
+`ScrollFlushState` (or equivalent) with explicit `ScrollInput` and
+`ScrollFlush`/`ScrollFinalize` events. YAML should declare timestamps,
+viewport height, and flush boundaries; assertions must cover each emitted
+delta, backlog after each flush, and the finalization record. No wall-clock
+wait or renderer-local mutation is acceptable. This is a source-backed parity
+gap, not an out-of-scope feature.
