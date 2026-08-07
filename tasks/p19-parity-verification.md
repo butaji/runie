@@ -55,6 +55,13 @@ capture instrument is producing RGB backgrounds on both sides, while exact
 parity remains open pending deterministic clock/usage inputs and a
 width-specific decision for the thought-summary rail.
 
+**Thought-summary gutter correction (2026-08-06):** Grok source inspection
+confirmed that the thinking block owns its diamond bullet; the `❙` rail is
+activity-group chrome. Removed Runie's special-case `❙` prefix for settled
+`◆ Thought` summaries and changed the reasoning YAML oracle to require the
+five-space full-mode gutter. A fresh capture and the visual suite are the
+validation boundary for the remaining timestamp and telemetry differences.
+
 **Latest parity note (2026-08-05):** `LoopActor::continue_run` now drains
 queued steering before follow-up messages when the context ends in an
 assistant, matching pi's continuation behavior; `LastIsAssistant` remains the
