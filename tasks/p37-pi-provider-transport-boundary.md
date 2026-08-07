@@ -40,6 +40,7 @@ Implemented end-to-end through the owned provider request snapshot:
   precedence, matching Pi's provider construction
 - model `maxTokens` propagated as the default request output limit, with an
   explicit request value taking precedence
+- explicit `temperature` carried separately from arbitrary sampling parameters
 
 The YAML runner exposes these effective options at runtime; `visual-hey.yaml`
 now declares and asserts `session_id`, thinking budgets, and sampling
@@ -51,6 +52,8 @@ recompilation.
 
 The same fixture declares model `maxTokens: 128` and request `max_tokens: 64`,
 asserting the request-level value wins in the effective provider options.
+It also asserts the distinct request temperature field rather than inferring it
+from `sampling_params`.
 
 Not yet implemented behaviorally:
 

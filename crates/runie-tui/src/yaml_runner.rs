@@ -81,6 +81,8 @@ pub struct ProviderOptionsSpec {
     #[serde(default)]
     pub thinking_budgets: Option<runie_core::types::ThinkingBudgets>,
     #[serde(default)]
+    pub temperature: Option<f64>,
+    #[serde(default)]
     pub max_tokens: Option<u64>,
     #[serde(default)]
     pub timeout_ms: Option<u64>,
@@ -101,6 +103,7 @@ impl ProviderOptionsSpec {
             metadata: self.metadata.clone(),
             transport: self.transport.as_deref().map(parse_provider_transport),
             thinking_budgets: self.thinking_budgets.clone(),
+            temperature: self.temperature,
             max_tokens: self.max_tokens,
             timeout_ms: self.timeout_ms,
             max_retries: self.max_retries,
@@ -709,6 +712,7 @@ pub struct ProviderOptionsAssertions {
     pub metadata: Option<std::collections::HashMap<String, serde_json::Value>>,
     pub transport: Option<String>,
     pub thinking_budgets: Option<runie_core::types::ThinkingBudgets>,
+    pub temperature: Option<f64>,
     pub max_tokens: Option<u64>,
     pub timeout_ms: Option<u64>,
     pub max_retries: Option<u32>,
@@ -1780,6 +1784,14 @@ fn assert_provider_options(outcome: &ScenarioOutcome, scenario: &Scenario) -> Re
             return Err(format!(
                 "provider timeout mismatch: expected {value}, got {:?}",
                 actual.timeout_ms
+            ));
+        }
+    }
+    if let Some(value) = expected.temperature {
+        if actual.temperature != Some(value) {
+            return Err(format!(
+                "provider temperature mismatch: expected {value}, got {:?}",
+                actual.temperature
             ));
         }
     }

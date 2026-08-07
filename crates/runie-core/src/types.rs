@@ -619,6 +619,9 @@ pub struct SimpleStreamOptions {
     pub transport: Option<ProviderTransport>,
     pub signal: Option<tokio::sync::watch::Receiver<bool>>,
     pub thinking_budgets: Option<ThinkingBudgets>,
+    /// Explicit Pi stream temperature, kept separate from arbitrary sampling
+    /// parameters because providers may map the two contracts differently.
+    pub temperature: Option<f64>,
     /// Effective provider output limit (pi: `maxTokens`).
     pub max_tokens: Option<u64>,
     /// Provider request timeout in milliseconds (pi: `timeoutMs`).
@@ -663,6 +666,7 @@ impl std::fmt::Debug for SimpleStreamOptions {
             .field("transport", &self.transport)
             .field("signal", &self.signal.is_some())
             .field("thinking_budgets", &self.thinking_budgets)
+            .field("temperature", &self.temperature)
             .field("timeout_ms", &self.timeout_ms)
             .field("max_retries", &self.max_retries)
             .field("max_retry_delay_ms", &self.max_retry_delay_ms)
