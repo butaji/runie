@@ -173,3 +173,13 @@ stream that never resolves. The test asserts mailbox acceptance within a
 bounded timeout while the owned submission actor continues awaiting provider
 work. This proves the terminal input path does not await provider latency and
 uses no sleep-based timing assumption.
+
+## Mailbox-ack snapshot publication closure (2026-08-08)
+
+`crates/runie-core/tests/loop_entry.rs::control_setters_publish_snapshot_before_returning`
+pins the setter→snapshot ordering contract: after `set_steering_mode(All)`,
+`set_follow_up_mode(All)`, and `abort()`, reading `control_snapshot()` on the
+returning task observes the new projection. This proves the unified control
+mailbox publishes the immutable `LoopControlSnapshot` through `watch::Sender`
+before its `reducer` reply is sent, so no caller can observe a stale mode or
+abort intent from the actor boundary.
