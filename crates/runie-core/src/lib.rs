@@ -38,6 +38,7 @@ pub mod tools;
 pub mod hooks;
 
 pub mod task_owner;
+pub mod telemetry;
 
 pub use pi_event::PiAgentEvent;
 pub use types::{

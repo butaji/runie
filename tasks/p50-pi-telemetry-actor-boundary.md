@@ -1,7 +1,7 @@
 # p50 — Pi telemetry actor boundary
 
-Status: research complete; implementation pending a concrete backend contract
-(2026-08-07)
+Status: actor-owned in-memory lifecycle implemented; provider integration and
+YAML runtime adapter remain (2026-08-07)
 
 ## Source-backed Pi contract
 
@@ -37,7 +37,10 @@ The renderer must never own spans or infer telemetry from status text.
 ## Implementation plan
 
 1. Add a `TelemetryActor` with an owned mailbox, nested span IDs, parent IDs,
-   status, attributes, events, and deterministic completion ordering.
+   status, attributes, events, and deterministic completion ordering. **Done:**
+   `crates/runie-core/src/telemetry.rs` provides acknowledged lifecycle
+   commands, immutable watch snapshots, nested spans, and late-mutation
+   rejection tests.
 2. Define a capability-oriented `TelemetryContext` adapter for provider
    actors; keep it separate from `HttpRequest` serialization.
 3. Emit core lifecycle events for span start, event, exception, and end. All

@@ -1,0 +1,255 @@
+//! Actor-owned telemetry capability for Pi-compatible span lifecycles.
+
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use serde::{Deserialize, Serialize};
+use tokio::sync::{mpsc, oneshot, watch};
+
+use crate::task_owner::{spawn_actor_worker, TaskOwner};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum SpanStatus {
+    Unset,
+    Ok,
+    Error,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SpanSnapshot {
+    pub id: u64,
+    pub parent_id: Option<u64>,
+    pub name: String,
+    pub attributes: HashMap<String, serde_json::Value>,
+    pub events: Vec<String>,
+    pub status: SpanStatus,
+    pub ended: bool,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TelemetrySnapshot {
+    pub next_id: u64,
+    pub spans: Vec<SpanSnapshot>,
+}
+
+enum TelemetryCommand {
+    Start {
+        parent_id: Option<u64>,
+        name: String,
+        attributes: HashMap<String, serde_json::Value>,
+        reply: oneshot::Sender<u64>,
+    },
+    Event {
+        id: u64,
+        name: String,
+        reply: oneshot::Sender<()>,
+    },
+    Status {
+        id: u64,
+        status: SpanStatus,
+        reply: oneshot::Sender<()>,
+    },
+    End {
+        id: u64,
+        reply: oneshot::Sender<()>,
+    },
+}
+
+#[derive(Clone)]
+pub struct TelemetryActor {
+    tx: mpsc::Sender<TelemetryCommand>,
+    snapshot: watch::Receiver<TelemetrySnapshot>,
+    _owner: Arc<TaskOwner>,
+}
+
+impl TelemetryActor {
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the actor reducer keeps the complete span lifecycle in one explicit boundary"
+    )]
+    pub fn new() -> Self {
+        let (snapshot_tx, snapshot) = watch::channel(TelemetrySnapshot::default());
+        let (tx, owner) = spawn_actor_worker!(32, move |mut rx: mpsc::Receiver<
+            TelemetryCommand,
+        >| async move {
+            let mut state = TelemetrySnapshot::default();
+            while let Some(command) = rx.recv().await {
+                match command {
+                    TelemetryCommand::Start {
+                        parent_id,
+                        name,
+                        attributes,
+                        reply,
+                    } => {
+                        let id = state.next_id;
+                        state.next_id = state.next_id.wrapping_add(1);
+                        state.spans.push(SpanSnapshot {
+                            id,
+                            parent_id,
+                            name,
+                            attributes,
+                            events: Vec::new(),
+                            status: SpanStatus::Unset,
+                            ended: false,
+                        });
+                        let _ = snapshot_tx.send(state.clone());
+                        let _ = reply.send(id);
+                    }
+                    TelemetryCommand::Event { id, name, reply } => {
+                        if let Some(span) = state
+                            .spans
+                            .iter_mut()
+                            .find(|span| span.id == id && !span.ended)
+                        {
+                            span.events.push(name);
+                            let _ = snapshot_tx.send(state.clone());
+                        }
+                        let _ = reply.send(());
+                    }
+                    TelemetryCommand::Status { id, status, reply } => {
+                        if let Some(span) = state
+                            .spans
+                            .iter_mut()
+                            .find(|span| span.id == id && !span.ended)
+                        {
+                            span.status = status;
+                            let _ = snapshot_tx.send(state.clone());
+                        }
+                        let _ = reply.send(());
+                    }
+                    TelemetryCommand::End { id, reply } => {
+                        if let Some(span) = state
+                            .spans
+                            .iter_mut()
+                            .find(|span| span.id == id && !span.ended)
+                        {
+                            span.ended = true;
+                            let _ = snapshot_tx.send(state.clone());
+                        }
+                        let _ = reply.send(());
+                    }
+                }
+            }
+        });
+        Self {
+            tx,
+            snapshot,
+            _owner: owner,
+        }
+    }
+
+    pub fn snapshot(&self) -> TelemetrySnapshot {
+        self.snapshot.borrow().clone()
+    }
+
+    pub async fn start_span(
+        &self,
+        parent_id: Option<u64>,
+        name: impl Into<String>,
+        attributes: HashMap<String, serde_json::Value>,
+    ) -> Option<TelemetrySpan> {
+        let (reply, result) = oneshot::channel();
+        self.tx
+            .send(TelemetryCommand::Start {
+                parent_id,
+                name: name.into(),
+                attributes,
+                reply,
+            })
+            .await
+            .ok()?;
+        Some(TelemetrySpan {
+            actor: self.clone(),
+            id: result.await.ok()?,
+        })
+    }
+}
+
+impl Default for TelemetryActor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Clone)]
+pub struct TelemetrySpan {
+    actor: TelemetryActor,
+    pub id: u64,
+}
+
+impl TelemetrySpan {
+    pub async fn event(&self, name: impl Into<String>) {
+        let (reply, acknowledged) = oneshot::channel();
+        let _ = self
+            .actor
+            .tx
+            .send(TelemetryCommand::Event {
+                id: self.id,
+                name: name.into(),
+                reply,
+            })
+            .await;
+        let _ = acknowledged.await;
+    }
+
+    pub async fn status(&self, status: SpanStatus) {
+        let (reply, acknowledged) = oneshot::channel();
+        let _ = self
+            .actor
+            .tx
+            .send(TelemetryCommand::Status {
+                id: self.id,
+                status,
+                reply,
+            })
+            .await;
+        let _ = acknowledged.await;
+    }
+
+    pub async fn end(&self) {
+        let (reply, acknowledged) = oneshot::channel();
+        let _ = self
+            .actor
+            .tx
+            .send(TelemetryCommand::End { id: self.id, reply })
+            .await;
+        let _ = acknowledged.await;
+    }
+
+    pub async fn child(
+        &self,
+        name: impl Into<String>,
+        attributes: HashMap<String, serde_json::Value>,
+    ) -> Option<Self> {
+        self.actor.start_span(Some(self.id), name, attributes).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn nested_spans_and_terminal_state_are_actor_owned() {
+        let actor = TelemetryActor::new();
+        let root = actor.start_span(None, "run", HashMap::new()).await.unwrap();
+        let child = root.child("request", HashMap::new()).await.unwrap();
+        child.event("headers").await;
+        child.status(SpanStatus::Ok).await;
+        child.end().await;
+        let snapshot = actor.snapshot();
+        assert_eq!(snapshot.spans[1].parent_id, Some(root.id));
+        assert_eq!(snapshot.spans[1].events, vec!["headers"]);
+        assert_eq!(snapshot.spans[1].status, SpanStatus::Ok);
+        assert!(snapshot.spans[1].ended);
+    }
+
+    #[tokio::test]
+    async fn ended_spans_ignore_late_mutations() {
+        let actor = TelemetryActor::new();
+        let span = actor.start_span(None, "run", HashMap::new()).await.unwrap();
+        span.end().await;
+        span.event("late").await;
+        assert!(actor.snapshot().spans[0].events.is_empty());
+    }
+}
