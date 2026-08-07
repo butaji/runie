@@ -81,6 +81,13 @@ incremental without creating a second production state owner.
 The remaining work is retiring the legacy adapter and moving any focused tests
 that still require it onto actor-backed replay fixtures.
 
+**Call-site audit (2026-08-08):** Production has no synchronous
+`EventRenderer::apply_event` call sites. `App::spawn_renderer` uses the live
+actor-backed `EventRenderer::run`, and YAML replay uses `apply_actor_event`.
+The remaining `apply_event` calls are confined to `event_renderer` unit tests
+that exercise the quarantined compatibility widgets. Retirement can therefore
+be staged as test migration, with no live delivery-path change.
+
 ## Verification
 
 - event sequences prove mode changes, busy rejection, abort, and completion
