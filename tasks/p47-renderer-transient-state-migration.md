@@ -75,6 +75,14 @@ compatibility `Scrollback` model through `ScrollbackMsg`, and finalization
 reads the same model snapshot used by the actor path. This removes one
 renderer-side lifecycle mirror while preserving replay behavior.
 
+Assistant stream lifecycle increment (2026-08-07): `FeedState` now owns the
+`assistant_stream_open` fact. `AssistantStreamStart` and `AssistantStreamEnd`
+are explicit reducer messages emitted by the event-to-feed mapping; the
+compatibility adapter applies the same messages to its model. Delta handling
+therefore reads one actor snapshot predicate instead of a renderer boolean,
+and reset clears the lifecycle fact. A pure reducer test covers the complete
+start/end/clear sequence.
+
 Thinking-duration ownership increment (2026-08-07): the compatibility
 `StatusBar` now retains `thinking_elapsed_ms` in its renderer-independent
 snapshot, exactly like `StatusState`. `EventRenderer` no longer keeps a

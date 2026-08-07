@@ -69,6 +69,7 @@ pub struct FeedSnapshot {
     pub animation_frame: usize,
     pub tool_modes: HashMap<String, ToolDisplayMode>,
     pub turn_started: bool,
+    pub assistant_stream_open: bool,
     /// Last renderer measurement delivered through `LayoutMeasured`.
     pub measured_content_rows: usize,
     pub measured_viewport_rows: usize,
@@ -98,6 +99,7 @@ pub struct FeedNavigation {
     pub live_grok_layout: bool,
     pub next_tool_row_id: u64,
     pub turn_started: bool,
+    pub assistant_stream_open: bool,
     pub measured_content_rows: usize,
     pub measured_viewport_rows: usize,
     pub measured_anchor_row: Option<usize>,
@@ -126,6 +128,7 @@ impl Default for FeedNavigation {
             live_grok_layout: false,
             next_tool_row_id: 0,
             turn_started: false,
+            assistant_stream_open: false,
             measured_content_rows: 0,
             measured_viewport_rows: 0,
             measured_anchor_row: None,
@@ -519,8 +522,20 @@ mod tests {
         let mut state = FeedState::default();
         state.reduce(super::ScrollbackMsg::TurnStart);
         assert!(state.snapshot().turn_started);
+        state.reduce(super::ScrollbackMsg::AssistantStreamStart);
+        assert!(state.snapshot().assistant_stream_open);
         state.reduce(super::ScrollbackMsg::Clear);
         assert!(!state.snapshot().turn_started);
+        assert!(!state.snapshot().assistant_stream_open);
+    }
+
+    #[test]
+    fn assistant_stream_lifecycle_is_reducer_owned() {
+        let mut state = FeedState::default();
+        state.reduce(super::ScrollbackMsg::AssistantStreamStart);
+        assert!(state.snapshot().assistant_stream_open);
+        state.reduce(super::ScrollbackMsg::AssistantStreamEnd);
+        assert!(!state.snapshot().assistant_stream_open);
     }
 
     #[test]
@@ -931,6 +946,8 @@ pub enum ScrollbackMsg {
     AppendTurnSummary(String),
     TurnStart,
     TurnEnd,
+    AssistantStreamStart,
+    AssistantStreamEnd,
     Clear,
     SetTheme(ThemeKind),
     AdvanceAnimation,
@@ -1054,6 +1071,7 @@ impl FeedState {
             animation_frame: self.navigation.animation_frame,
             tool_modes: self.navigation.tool_modes.clone(),
             turn_started: self.navigation.turn_started,
+            assistant_stream_open: self.navigation.assistant_stream_open,
             measured_content_rows: self.navigation.measured_content_rows,
             measured_viewport_rows: self.navigation.measured_viewport_rows,
             measured_anchor_row: self.navigation.measured_anchor_row,
@@ -1081,6 +1099,8 @@ impl FeedState {
             }
             ScrollbackMsg::TurnStart => self.navigation.turn_started = true,
             ScrollbackMsg::TurnEnd => self.navigation.turn_started = false,
+            ScrollbackMsg::AssistantStreamStart => self.navigation.assistant_stream_open = true,
+            ScrollbackMsg::AssistantStreamEnd => self.navigation.assistant_stream_open = false,
             ScrollbackMsg::Clear => self.clear(),
             ScrollbackMsg::SetTheme(theme) => self.navigation.theme = theme,
             ScrollbackMsg::AdvanceAnimation => self.navigation.advance_animation(),
@@ -1393,6 +1413,7 @@ impl FeedState {
         self.navigation.scroll_offset = 0;
         self.navigation.follow_latest_user = false;
         self.navigation.turn_started = false;
+        self.navigation.assistant_stream_open = false;
     }
 
     fn replace_tool(&mut self, id: &str, text: String) {

@@ -298,7 +298,10 @@ impl Scrollback {
             ScrollbackMsg::AppendTurnSummary(text) => {
                 return Some(self.append(Line::new(LineKind::TurnSummary, text)));
             }
-            ScrollbackMsg::TurnStart | ScrollbackMsg::TurnEnd => {}
+            ScrollbackMsg::TurnStart
+            | ScrollbackMsg::TurnEnd
+            | ScrollbackMsg::AssistantStreamStart
+            | ScrollbackMsg::AssistantStreamEnd => self.reduce_model(message),
             ScrollbackMsg::Clear => {
                 self.clear();
             }
@@ -734,6 +737,7 @@ impl Scrollback {
             live_grok_layout: self.navigation.live_grok_layout,
             next_tool_row_id: self.navigation.next_tool_row_id,
             turn_started: self.navigation.turn_started,
+            assistant_stream_open: self.navigation.assistant_stream_open,
             measured_content_rows: self.navigation.measured_content_rows,
             measured_viewport_rows: self.navigation.measured_viewport_rows,
             measured_anchor_row: self.navigation.measured_anchor_row,

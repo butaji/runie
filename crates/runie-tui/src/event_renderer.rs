@@ -51,6 +51,7 @@ pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
         AgentEvent::MessageStart {
             message: runie_core::types::AgentMessage::Assistant(_),
         } => vec![
+            ScrollbackMsg::AssistantStreamStart,
             ScrollbackMsg::Append(Line::new(LineKind::Separator, "")),
             ScrollbackMsg::Append(Line::new(LineKind::ThinkingStatus, "◆ Thinking…")),
             ScrollbackMsg::Append(Line::new(LineKind::Separator, "")),
@@ -71,6 +72,9 @@ pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
             delta.clone(),
         )],
         AgentEvent::Reset => vec![ScrollbackMsg::Clear],
+        AgentEvent::MessageEnd {
+            message: runie_core::types::AgentMessage::Assistant(_),
+        } => vec![ScrollbackMsg::AssistantStreamEnd],
         AgentEvent::ThemeChanged { theme } => vec![ScrollbackMsg::SetTheme(*theme)],
         AgentEvent::ModelChanged { .. } => Vec::new(),
         AgentEvent::ToolDisplayModeChanged { tool_call_id, mode } => {
@@ -277,8 +281,6 @@ pub struct EventRenderer {
     /// update and finish in a different order than they started.
     tool_rows: HashMap<String, usize>,
     pending_tools: HashMap<String, PendingTool>,
-    /// True between MessageStart(assistant) and MessageEnd(assistant).
-    in_assistant_stream: bool,
     activity_dirs: usize,
     activity_files: usize,
     activity_commands: usize,
@@ -297,6 +299,17 @@ pub struct EventRenderer {
 }
 
 impl EventRenderer {
+    fn assistant_stream_open(&self) -> bool {
+        if let Some(actor) = &self.scrollback_actor {
+            actor.model_snapshot().assistant_stream_open
+        } else {
+            self.scrollback
+                .lock()
+                .model_snapshot()
+                .assistant_stream_open
+        }
+    }
+
     #[cfg(test)]
     pub fn new(scrollback: Arc<Mutex<Scrollback>>, status: Arc<Mutex<StatusBar>>) -> Self {
         Self::with_welcome(scrollback, status, false)
@@ -331,7 +344,6 @@ impl EventRenderer {
             status_actor,
             tool_rows: HashMap::new(),
             pending_tools: HashMap::new(),
-            in_assistant_stream: false,
             activity_dirs: 0,
             activity_files: 0,
             activity_commands: 0,
@@ -788,9 +800,7 @@ impl EventRenderer {
                     self.scrollback.lock().apply(ScrollbackMsg::TurnStart);
                 }
             }
-            AgentEvent::Reset => {
-                self.in_assistant_stream = false;
-            }
+            AgentEvent::Reset => {}
             AgentEvent::MessageStart { message } => self.handle_message_start(message),
             AgentEvent::MessageUpdate { event, .. } => self.handle_message_update(event),
             AgentEvent::MessageEnd { message } => self.handle_message_end(message),
@@ -1139,7 +1149,6 @@ impl EventRenderer {
         }
         self.tool_rows.clear();
         self.pending_tools.clear();
-        self.in_assistant_stream = false;
         self.activity_dirs = 0;
         self.activity_files = 0;
         self.activity_commands = 0;
@@ -1151,6 +1160,7 @@ impl EventRenderer {
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     fn handle_message_start(&mut self, message: runie_core::types::AgentMessage) {
         use runie_core::types::AgentMessage;
         match message {
@@ -1178,7 +1188,11 @@ impl EventRenderer {
             }
             AgentMessage::Assistant(_) => {
                 self.activity_group_open = false;
-                self.in_assistant_stream = true;
+                if self.scrollback_actor.is_none() {
+                    self.scrollback
+                        .lock()
+                        .apply(ScrollbackMsg::AssistantStreamStart);
+                }
                 if self.scrollback_actor.is_none() {
                     let mut scrollback = self.scrollback.lock();
                     scrollback.append(Line::new(LineKind::Separator, ""));
@@ -1194,7 +1208,11 @@ impl EventRenderer {
     #[allow(clippy::cognitive_complexity)]
     fn handle_message_end(&mut self, message: runie_core::types::AgentMessage) {
         if let runie_core::types::AgentMessage::Assistant(assistant) = message {
-            self.in_assistant_stream = false;
+            if self.scrollback_actor.is_none() {
+                self.scrollback
+                    .lock()
+                    .apply(ScrollbackMsg::AssistantStreamEnd);
+            }
             if self.scrollback_actor.is_none() {
                 let mut scrollback = self.scrollback.lock();
                 let has_reasoning = scrollback
@@ -1243,7 +1261,7 @@ impl EventRenderer {
     #[allow(clippy::cognitive_complexity)]
     fn handle_message_update(&mut self, event: AssistantMessageEvent) {
         match event {
-            AssistantMessageEvent::TextDelta { delta, .. } if self.in_assistant_stream => {
+            AssistantMessageEvent::TextDelta { delta, .. } if self.assistant_stream_open() => {
                 if self.status_actor.is_none() {
                     self.status.lock().set(Status::Streaming);
                 }
@@ -1251,7 +1269,7 @@ impl EventRenderer {
                     self.append_assistant_delta(&delta);
                 }
             }
-            AssistantMessageEvent::ThinkingDelta { delta, .. } if self.in_assistant_stream => {
+            AssistantMessageEvent::ThinkingDelta { delta, .. } if self.assistant_stream_open() => {
                 if self.status_actor.is_none() {
                     self.status.lock().set(Status::Thinking);
                 }
@@ -1946,6 +1964,7 @@ mod tests {
         reason = "keeps the pure feed mapping table together"
     )]
     #[test]
+    #[allow(clippy::cognitive_complexity)]
     fn feed_event_mapping_is_pure_and_explicit() {
         let reset = scrollback_messages_for_event(&AgentEvent::Reset);
         assert_eq!(reset, vec![ScrollbackMsg::Clear]);
@@ -1986,7 +2005,13 @@ mod tests {
                 message: AgentMessage::Assistant(Default::default()),
             })
             .len(),
-            4
+            5
+        );
+        assert_eq!(
+            scrollback_messages_for_event(&AgentEvent::MessageEnd {
+                message: AgentMessage::Assistant(Default::default()),
+            }),
+            vec![ScrollbackMsg::AssistantStreamEnd]
         );
         let delta = scrollback_messages_for_event(&AgentEvent::MessageUpdate {
             event: AssistantMessageEvent::TextDelta {
@@ -2089,7 +2114,7 @@ mod tests {
                 partial: Default::default(),
             },
         });
-        assert!(!renderer.in_assistant_stream);
+        assert!(!renderer.assistant_stream_open());
     }
 
     #[test]
