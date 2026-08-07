@@ -11,6 +11,12 @@
   },
   "steps": [
     {
+      "id": "p36",
+      "file": "p36-events-state-boundary.md",
+      "status": "in_progress",
+      "title": "Architecture: transfer every observable state change through owned actor events"
+    },
+    {
       "id": "p35",
       "file": "p35-scrollback-model-reducer.md",
       "status": "done",

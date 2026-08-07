@@ -84,13 +84,13 @@ cast-dump LEFT RIGHT:
     cargo run -q -p runie-tui --bin cast_compare -- --dump {{LEFT}} {{RIGHT}}
 
 # Capture one application over the four parity reference geometries.
-capture-matrix DIR COMMAND QUIT_KEY ENV="":
-    scripts/capture-matrix.sh {{DIR}} {{COMMAND}} {{QUIT_KEY}} {{ENV}}
+capture-matrix DIR COMMAND QUIT_KEY PROMPT="Hey" ENV="":
+    scripts/capture-matrix.sh {{DIR}} {{COMMAND}} {{QUIT_KEY}} {{PROMPT}} {{ENV}}
 
 # Capture Runie's deterministic Hey matrix with the parity clock used by the
 # frozen Grok reference. Override CLOCK when recording a new reference pair.
 capture-hey-runie DIR="/tmp/runie-hey-matrix" CLOCK="1785990000,38":
-    scripts/capture-matrix.sh {{DIR}} target/debug/runie C-q "RUNIE_PARITY_CLOCK={{CLOCK}}"
+    scripts/capture-matrix.sh {{DIR}} target/debug/runie C-q Hey "RUNIE_PARITY_CLOCK={{CLOCK}}"
 
 # Compare Grok and Runie casts at every supported geometry.
 compare-matrix GROK_DIR RUNIE_DIR:
