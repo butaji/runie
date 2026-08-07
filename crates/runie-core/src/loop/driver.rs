@@ -590,11 +590,29 @@ async fn stream_options(model: &Model, deps: &RunLoopDeps) -> Option<SimpleStrea
     let mut options = deps.stream_options.clone();
     options.api_key = api_key;
     options.signal = deps.abort.clone();
+    options.headers = merge_headers(&model.headers, options.headers.take());
     options.sampling_params = merge_sampling_params(
         model.sampling_params.as_ref(),
         options.sampling_params.take(),
     );
     Some(options)
+}
+
+/// Pi merges model/provider headers first and lets request headers override
+/// matching keys. Keep the merge pure so replay can assert the effective
+/// request without constructing a transport.
+fn merge_headers(
+    model: &std::collections::HashMap<String, String>,
+    request: Option<std::collections::HashMap<String, String>>,
+) -> Option<std::collections::HashMap<String, String>> {
+    if model.is_empty() && request.is_none() {
+        return None;
+    }
+    let mut merged = model.clone();
+    if let Some(request) = request {
+        merged.extend(request);
+    }
+    Some(merged)
 }
 
 /// Merge model defaults with per-request overrides using Pi's precedence:
@@ -972,6 +990,26 @@ mod event_reconstruction_tests {
         let merged = merge_sampling_params(Some(&model), Some(request)).unwrap();
         assert_eq!(merged["temperature"], serde_json::json!(0.7));
         assert_eq!(merged["top_p"], serde_json::json!(0.9));
+    }
+
+    #[test]
+    fn headers_merge_request_values_over_model_defaults() {
+        let model = [
+            ("x-model".into(), "model".into()),
+            ("x-shared".into(), "model".into()),
+        ]
+        .into_iter()
+        .collect();
+        let request = [
+            ("x-request".into(), "request".into()),
+            ("x-shared".into(), "request".into()),
+        ]
+        .into_iter()
+        .collect();
+        let merged = merge_headers(&model, Some(request)).expect("headers are preserved");
+        assert_eq!(merged["x-model"], "model");
+        assert_eq!(merged["x-request"], "request");
+        assert_eq!(merged["x-shared"], "request");
     }
 
     #[test]

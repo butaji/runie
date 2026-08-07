@@ -36,10 +36,17 @@ Implemented end-to-end through the owned provider request snapshot:
 - request headers carried to the transport boundary
 - provider environment and metadata carried to the transport boundary
 - preferred transport carried to the transport boundary
+- model headers merged into request headers with request values taking
+  precedence, matching Pi's provider construction
 
 The YAML runner exposes these effective options at runtime; `visual-hey.yaml`
 now declares and asserts `session_id`, thinking budgets, and sampling
 parameters.
+
+The model/request header merge is a pure core option reducer with focused
+coverage; promoting a fixture that supplies model headers still requires a
+YAML model-description field rather than silently treating request headers as
+model defaults.
 
 Not yet implemented behaviorally:
 
