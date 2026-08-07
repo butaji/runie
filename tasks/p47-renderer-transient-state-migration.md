@@ -305,6 +305,11 @@ now feeds the same pure normalizer used by the interactive input worker.
 `visual-scroll.yaml` exercises this event-to-scrollback-actor path without
 compilation or wall-clock timing.
 
+YAML variant slice (2026-08-07): `scroll_input` also accepts optional `mode`,
+`speed`, and `inverted` fields. Replay updates the actor-input normalizer from
+those declarative values before reducing the timestamped event, enabling
+runtime-editable coverage for the remaining scroll variants.
+
 Mouse capture lifecycle closure (2026-08-07): the interactive terminal now
 enables crossterm mouse capture together with the alternate screen and disables
 it during restoration. This makes the already-owned mouse event path reachable

@@ -1748,6 +1748,12 @@ pub struct SelectionRangeSpec {
 pub struct ScrollInputSpec {
     pub at_ms: u64,
     pub direction: String,
+    #[serde(default)]
+    pub mode: Option<String>,
+    #[serde(default)]
+    pub speed: Option<u8>,
+    #[serde(default)]
+    pub inverted: Option<bool>,
 }
 
 fn declared_tool_seeds(scenario: &Scenario) -> Vec<ScrollbackMsg> {
@@ -1778,6 +1784,7 @@ fn declared_scrolls(scenario: &Scenario) -> Vec<ScrollbackMsg> {
         match event {
             EventSpec::Scroll { scroll } => messages.push(ScrollbackMsg::ScrollBy(*scroll)),
             EventSpec::ScrollInput { scroll_input } => {
+                normalizer = configure_scroll_normalizer(normalizer, scroll_input);
                 let direction = match scroll_input.direction.as_str() {
                     "up" => runie_tui_model::ScrollDirection::Up,
                     "down" => runie_tui_model::ScrollDirection::Down,
@@ -1799,6 +1806,26 @@ fn declared_scrolls(scenario: &Scenario) -> Vec<ScrollbackMsg> {
         }
     }
     messages
+}
+
+fn configure_scroll_normalizer(
+    mut normalizer: runie_tui_model::ScrollNormalizer,
+    input: &ScrollInputSpec,
+) -> runie_tui_model::ScrollNormalizer {
+    if let Some(mode) = input.mode.as_deref() {
+        normalizer = normalizer.with_mode(match mode {
+            "wheel" => runie_tui_model::ScrollMode::Wheel,
+            "trackpad" => runie_tui_model::ScrollMode::Trackpad,
+            _ => runie_tui_model::ScrollMode::Auto,
+        });
+    }
+    if let Some(speed) = input.speed {
+        normalizer = normalizer.with_speed(speed);
+    }
+    if let Some(inverted) = input.inverted {
+        normalizer = normalizer.with_inversion(inverted);
+    }
+    normalizer
 }
 
 async fn record_and_run_scenario(
