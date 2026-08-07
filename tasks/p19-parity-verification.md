@@ -1568,3 +1568,10 @@ accepts an actor-owned deterministic timestamp, and YAML scenarios can declare
 `tool_result_timestamp` plus assert the resulting `ToolResultMessage`. The
 default remains zero for existing callers; live runtime clock injection and
 provider-specific timestamp semantics remain separate follow-up work.
+
+**First-cell comparator diagnostics (2026-08-08):**
+`scripts/compare-ansi-frames.py` now reports the first differing fixed-grid
+cell, including 1-based coordinates, glyphs, foreground/background/style
+tuples, and separate glyph/style difference flags. Aggregate counts and exit
+semantics are unchanged; this makes full-color capture mismatches directly
+actionable without manually scanning the dumps.

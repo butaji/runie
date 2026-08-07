@@ -84,6 +84,7 @@ def main():
     width = args.cols or max((len(row) for row in left + right), default=0)
     glyphs = styles = 0
     hotspots = []
+    first_mismatch = None
     for y in range(height):
         lrow = left[y] if y < len(left) else []
         rrow = right[y] if y < len(right) else []
@@ -93,6 +94,15 @@ def main():
             rc = rrow[x] if x < len(rrow) else (" ", DEFAULT)
             glyph_diff = lc[0] != rc[0]
             style_diff = lc[1] != rc[1]
+            if (glyph_diff or style_diff) and first_mismatch is None:
+                first_mismatch = {
+                    "x": x + 1,
+                    "y": y + 1,
+                    "left": {"glyph": lc[0], "style": lc[1]},
+                    "right": {"glyph": rc[0], "style": rc[1]},
+                    "glyph_different": glyph_diff,
+                    "style_different": style_diff,
+                }
             if style_diff:
                 styles += 1
                 row_diff += 1
@@ -108,6 +118,7 @@ def main():
         "different_glyphs": glyphs,
         "different_styles_only": styles,
         "top_rows": [{"row": row, "different_cells": count} for count, row in sorted(hotspots, reverse=True)[:10]],
+        "first_mismatch": first_mismatch,
         "exact": differences == 0,
     }
     print(json.dumps(result, indent=2))
