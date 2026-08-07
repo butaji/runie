@@ -59,6 +59,18 @@ ordered kind after the same event sequence that drives the TUI status.
 replay coverage, and JSONL round-trip coverage. Compaction, branch-summary,
 custom entries, and operation-lane records remain separate follow-up work.
 
+## Branch-summary boundary audit (2026-08-07)
+
+Pi's `BranchSummaryEntry` carries `fromId`, `summary`, optional `details`, and
+the normal entry base. The source reducer couples it to a `navigation` intent
+(`targetId`, `summarize`, optional `summaryEntryId`) and uses the summary entry
+when reconstructing the selected branch context. A standalone summary event
+without navigation identity would therefore lose observable Pi behavior. The
+next implementation must introduce an actor-owned navigation event and keep
+the summary record's parent/leaf invariants in the same ordered journal; this
+is intentionally not approximated by adding a summary string to a message
+entry.
+
 ## Explicitly separate
 
 Compaction/branch navigation, custom entries, and operation-lane records remain
