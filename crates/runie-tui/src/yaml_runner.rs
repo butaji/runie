@@ -811,6 +811,8 @@ pub struct StateAssertions {
     /// YAML owns the expected state; the runner only performs generic field
     /// comparison so workflow fixtures stay recompilation-free.
     pub workflows: Option<BTreeMap<String, WorkflowStateAssertion>>,
+    /// Exact actor-owned background-work projections keyed by work ID.
+    pub background_work: Option<BTreeMap<String, BackgroundWorkStateAssertion>>,
 }
 
 #[derive(Debug, Deserialize, Default, Clone)]
@@ -822,6 +824,16 @@ pub struct WorkflowStateAssertion {
     pub active_agents: Option<u32>,
     pub status: Option<String>,
     pub elapsed_ms: Option<u64>,
+}
+
+#[derive(Debug, Deserialize, Default, Clone)]
+pub struct BackgroundWorkStateAssertion {
+    pub description: Option<String>,
+    pub activity: Option<String>,
+    pub background: Option<bool>,
+    pub status: Option<String>,
+    pub elapsed_ms: Option<u64>,
+    pub error: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Default, Clone)]
@@ -1997,6 +2009,7 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
     }
     assert_feed_state_expectations(outcome, expected)?;
     assert_workflow_expectations(outcome, expected)?;
+    assert_background_work_expectations(outcome, expected)?;
     Ok(())
 }
 
@@ -2050,6 +2063,72 @@ fn assert_workflow_expectations(
             return Err(format!("state workflow missing run_id {run_id:?}"));
         };
         assert_workflow_fields(run_id, assertion, actual)?;
+    }
+    Ok(())
+}
+
+#[allow(
+    clippy::too_many_lines,
+    reason = "declarative background lifecycle diagnostics stay grouped by work ID"
+)]
+fn assert_background_work_expectations(
+    outcome: &ScenarioOutcome,
+    expected: &StateAssertions,
+) -> Result<(), String> {
+    let Some(expected) = &expected.background_work else {
+        return Ok(());
+    };
+    if outcome.state.background_work.len() != expected.len() {
+        return Err(format!(
+            "state background_work mismatch: expected keys {:?}, got {:?}",
+            expected.keys().collect::<Vec<_>>(),
+            outcome.state.background_work.keys().collect::<Vec<_>>()
+        ));
+    }
+    for (work_id, assertion) in expected {
+        let Some(actual) = outcome.state.background_work.get(work_id) else {
+            return Err(format!("state background work missing work_id {work_id:?}"));
+        };
+        assert_optional_eq(
+            &assertion.description,
+            &actual.description,
+            "background work description",
+            work_id,
+        )?;
+        assert_optional_option_eq(
+            &assertion.activity,
+            &actual.activity,
+            "background work activity",
+            work_id,
+        )?;
+        if let Some(expected) = assertion.background {
+            if actual.background != expected {
+                return Err(format!(
+                    "state background work {work_id:?} background mismatch: expected {expected}, got {}",
+                    actual.background
+                ));
+            }
+        }
+        assert_optional_eq(
+            &assertion.status,
+            &actual.status,
+            "background work status",
+            work_id,
+        )?;
+        if let Some(expected) = assertion.elapsed_ms {
+            if actual.elapsed_ms != Some(expected) {
+                return Err(format!(
+                    "state background work {work_id:?} elapsed_ms mismatch: expected {expected}, got {:?}",
+                    actual.elapsed_ms
+                ));
+            }
+        }
+        assert_optional_option_eq(
+            &assertion.error,
+            &actual.error,
+            "background work error",
+            work_id,
+        )?;
     }
     Ok(())
 }

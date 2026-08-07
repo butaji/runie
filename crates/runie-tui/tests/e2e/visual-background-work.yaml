@@ -53,6 +53,24 @@ assertions:
     is_streaming: false
     messages: 2
     tool_blocks: 3
+    background_work:
+      worker-1:
+        description: "inspect the repository"
+        activity: "Reading files"
+        background: true
+        status: done
+        elapsed_ms: 900
+      worker-2:
+        description: "run the checks"
+        background: true
+        status: failed
+        elapsed_ms: 1200
+        error: "provider stopped"
+      worker-3:
+        description: "stop the watcher"
+        background: true
+        status: cancelled
+        elapsed_ms: 1500
   visual:
     cols: 80
     rows: 24

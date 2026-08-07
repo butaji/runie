@@ -101,6 +101,13 @@ leaving consumers unable to observe the lifecycle. The actor test exercises
 start → progress → successful finish through the real mailbox. Error and
 cancelled terminal variants remain covered by the existing TUI YAML fixtures
 and should be promoted to core exact-state fixtures next.
+
+YAML state promotion (2026-08-06): `StateAssertions.background_work` now
+compares the actor-owned core projection by work ID, including description,
+latest activity, background flag, terminal status, elapsed duration, and
+provider error. `visual-background-work.yaml` declares all three terminal
+variants (done, failed, cancelled), so changing the fixture exercises the
+same reducer without recompiling the runner.
 - `cargo test -p runie-core` green.
 
 ## Progress
