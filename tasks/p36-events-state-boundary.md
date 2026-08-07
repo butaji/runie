@@ -1,6 +1,6 @@
 # p36 — Events are the state-transfer boundary
 
-Status: in progress — actor/event boundary audited; compatibility renderer retirement and strict color proof remain
+Status: in progress — actor/event boundary audited and closure criteria recorded; compatibility renderer retirement and strict color proof remain (2026-08-07)
 
 Runie keeps mutable state inside its owning actor. Commands are actor-local
 requests; durable state changes are transferred through `AgentEvent` (core)
@@ -17,6 +17,9 @@ snapshots only and never mutate another actor's state.
 - YAML replay already drives the same event path used by functional tests.
 - Direct widget mutation is confined to actor workers (`PromptWidget` and the
   pure `FeedState` reducer); application code sends actor messages.
+
+The detailed audit and per-change acceptance checklist are recorded in
+[p48](p48-event-delivery-audit.md).
 
 ## Remaining work
 
