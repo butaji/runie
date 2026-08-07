@@ -1831,6 +1831,20 @@ fn styled_line_for(kind: LineKind, text: &str, theme: ThemeKind) -> RatLine<'sta
                 ]);
             }
         }
+        for label in ["Read", "List", "Edit"] {
+            let Some(path) = body
+                .strip_prefix(label)
+                .and_then(|rest| rest.strip_prefix(' '))
+            else {
+                continue;
+            };
+            return RatLine::from(vec![
+                Span::styled(prefix.to_owned(), style),
+                Span::styled(label.to_owned(), style.add_modifier(Modifier::BOLD)),
+                Span::styled(" ", style),
+                Span::styled(path.to_owned(), appearance::header_path_style_for(theme)),
+            ]);
+        }
         let name_end = body.find(|c: char| c.is_whitespace()).unwrap_or(body.len());
         let name = &body[..name_end];
         let rest = &body[name_end..];
@@ -2507,6 +2521,19 @@ mod tests {
                 .contains(Modifier::BOLD));
             assert_eq!(rendered.spans[1].content.as_ref(), label);
         }
+    }
+
+    #[test]
+    fn file_tool_headers_resolve_paths_through_theme_tokens() {
+        let rendered = styled_line_for(LineKind::Tool, "   ◆ Read src/lib.rs", ThemeKind::GrokDay);
+        assert_eq!(
+            rendered.spans[3].style.fg,
+            appearance::header_path_style_for(ThemeKind::GrokDay).fg
+        );
+        assert!(rendered.spans[1]
+            .style
+            .add_modifier
+            .contains(Modifier::BOLD));
     }
 
     #[test]

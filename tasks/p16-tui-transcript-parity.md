@@ -652,3 +652,8 @@ Specialized header typography (2026-08-06): source inspection of Grok's
 label is one bold span. Runie now preserves the full `Web Search`, `Memory
 Search`, and `Search Tools` labels as bold spans while keeping query/details in
 the normal theme-token style. Focused span tests cover the distinction.
+
+Path-span typography (2026-08-06): Grok's file-oriented cards use the
+dedicated path token for `Read`, `List`, and `Edit` header operands. Runie now
+splits those headers into bold action, separator, and theme-resolved path
+spans, with a GrokDay token assertion; no RGB values are owned by the widget.
