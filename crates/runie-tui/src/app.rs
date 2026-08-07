@@ -378,6 +378,17 @@ impl App {
         self.ui.send(UiMsg::ToggleShortcuts).await;
     }
 
+    /// Resolve provider discovery asynchronously, then admit only the result
+    /// through the catalog actor. TUI rendering never performs provider I/O.
+    pub async fn refresh_models(&self) {
+        let result = self
+            .loop_actor
+            .list_models()
+            .await
+            .map_err(|error| error.to_string());
+        self.model_catalog.refresh(result).await;
+    }
+
     /// Route a parsed Pi command through the owning actor boundary shared by
     /// live input and YAML replay. Process termination is deliberately left to
     /// the binary; every stateful command is reduced here through an event or

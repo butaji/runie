@@ -144,6 +144,14 @@ pub trait StreamFn: Send + Sync + 'static {
         ))
     }
 
+    /// Optional Pi model-catalog capability. Providers own discovery and
+    /// authentication; the model actor owns admission of the result.
+    async fn list_models(&self) -> Result<Vec<Model>, StreamError> {
+        Err(StreamError::Invalid(
+            "provider does not support model discovery".into(),
+        ))
+    }
+
     /// Optional Pi deferred-response polling capability.
     async fn fetch_deferred(
         &self,

@@ -442,6 +442,17 @@ impl LoopActor {
             .map_err(|error| LoopError::Provider(error.to_string()))
     }
 
+    /// Discover models through the provider actor; the loop never performs
+    /// provider I/O directly or mutates the catalog actor.
+    pub async fn list_models(&self) -> Result<Vec<crate::types::Model>, LoopError> {
+        self.inner
+            .deps
+            .provider
+            .list_models()
+            .await
+            .map_err(|error| LoopError::Provider(error.to_string()))
+    }
+
     /// Replace the owned conversation context through the state actor
     /// mailbox. Session restore and replay adapters use this instead of
     /// reaching into `AgentStateActor` behind the loop boundary.

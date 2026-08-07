@@ -48,6 +48,9 @@ pub enum ProviderCommand {
             Result<crate::session::CompactionSummary, crate::provider::stream_fn::StreamError>,
         >,
     },
+    ListModels {
+        reply: oneshot::Sender<Result<Vec<Model>, crate::provider::stream_fn::StreamError>>,
+    },
 }
 
 #[derive(Clone)]
@@ -161,6 +164,19 @@ impl ProviderActor {
                 request: Box::new(request),
                 reply: reply_tx,
             })
+            .await;
+        reply_rx.await.unwrap_or_else(|_| {
+            Err(crate::provider::stream_fn::StreamError::Invalid(
+                "provider actor stopped".into(),
+            ))
+        })
+    }
+
+    pub async fn list_models(&self) -> Result<Vec<Model>, crate::provider::stream_fn::StreamError> {
+        let (reply_tx, reply_rx) = oneshot::channel();
+        let _ = self
+            .tx
+            .send(ProviderCommand::ListModels { reply: reply_tx })
             .await;
         reply_rx.await.unwrap_or_else(|_| {
             Err(crate::provider::stream_fn::StreamError::Invalid(
@@ -298,6 +314,10 @@ async fn run_provider_worker(
                 let result = stream_fn.summarize_compaction(&request).await;
                 let _ = reply.send(result);
             }
+            ProviderCommand::ListModels { reply } => {
+                let result = stream_fn.list_models().await;
+                let _ = reply.send(result);
+            }
         }
     }
 }
@@ -424,6 +444,15 @@ mod tests {
                 usage: None,
                 details: Some(serde_json::json!({"adapter": "test"})),
             })
+        }
+
+        async fn list_models(&self) -> Result<Vec<Model>, StreamError> {
+            Ok(vec![Model {
+                provider: "test".into(),
+                id: "catalog-model".into(),
+                name: "Catalog Model".into(),
+                ..Model::default()
+            }])
         }
     }
 
@@ -670,5 +699,12 @@ mod tests {
             summary.details,
             Some(serde_json::json!({"adapter": "test"}))
         );
+    }
+
+    #[tokio::test]
+    async fn model_discovery_uses_owned_provider_capability() {
+        let actor = ProviderActor::new(Arc::new(SummarizerFn));
+        let models = actor.list_models().await.expect("model discovery");
+        assert_eq!(models[0].id, "catalog-model");
     }
 }
