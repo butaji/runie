@@ -4,6 +4,7 @@
 //! shell — the loop will publish events but no real LLM stream will drive
 //! it. A `StreamFn` adapter is a follow-up task.
 
+use std::collections::VecDeque;
 use std::io::{self, Stdout};
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
@@ -516,14 +517,17 @@ async fn run_app(
     });
 
     let mut tick = tokio::time::interval(Duration::from_millis(50));
-    let mut pending_key = None;
+    // Preserve every key delivered by the owned input actor. A single
+    // pending-key slot loses fast multi-character prompts before the render
+    // tick can route them (for example, `Hey` became only `y`).
+    let mut pending_keys = VecDeque::new();
 
     loop {
         tokio::select! {
             input = input_rx.recv() => {
                 let Some(input) = input else { return Ok(AppExit::Quit) };
                 match input {
-                    InputEvent::Key(key) => pending_key = Some(key),
+                    InputEvent::Key(key) => pending_keys.push_back(key),
                     InputEvent::Mouse(delta) => app.scroll_scrollback_by(delta).await,
                     InputEvent::MouseSelectionStart(row, column) => {
                         app.mouse_selection_start(runie_tui::widgets::CellPosition { row, column }).await;
@@ -538,7 +542,7 @@ async fn run_app(
             _ = tick.tick() => {
                 // Input has already crossed the owned async input actor's
                 // mailbox; rendering never touches the terminal reader.
-                if let Some(key) = pending_key.take() {
+                if let Some(key) = pending_keys.pop_front() {
                         if key.kind == KeyEventKind::Press {
                             if app.ui.snapshot().command_palette_open
                                 && key.code == KeyCode::Esc

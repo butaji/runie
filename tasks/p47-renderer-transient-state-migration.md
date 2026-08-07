@@ -2,6 +2,17 @@
 
 Status: in progress — live tool/assistant/turn ownership migrated; compatibility cleanup remains (2026-08-07)
 
+## Interactive input delivery correction (2026-08-08)
+
+The interactive binary had a lossy mailbox boundary after the owned
+`EventStream` worker: the main loop stored only one `pending_key`, so a fast
+multi-character prompt could overwrite earlier `KeyEvent` values before the
+50 ms render tick handled them. This violated the event-delivery invariant and
+made capture evidence appear to show a TUI input/parity problem. The pending
+slot is now an owned FIFO `VecDeque<KeyEvent>`; each delivered key is processed
+in order, while rendering remains a pure snapshot projection. The capture
+driver separately rejects any prompt that is not observed exactly.
+
 ## Single live feed subscription (2026-08-07)
 
 `App` now constructs `ScrollbackActor::new()` and leaves interactive bus
