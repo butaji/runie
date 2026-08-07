@@ -143,6 +143,7 @@ mod tests {
                 turn_usage: None,
                 turn_stop_reason: None,
                 context_window: None,
+                thinking_elapsed_ms: None,
             },
         };
         assert!(!snapshot.ui.show_welcome);
@@ -160,6 +161,7 @@ mod tests {
             turn_usage: None,
             turn_stop_reason: None,
             context_window: None,
+            thinking_elapsed_ms: None,
         };
         assert_eq!(snapshot.header_meter(), "0 / 500K");
     }

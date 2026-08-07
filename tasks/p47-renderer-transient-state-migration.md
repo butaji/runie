@@ -47,6 +47,14 @@ mailbox.
 5. Delete the production `Projection<Scrollback>` compatibility branch. Keep
    only test/replay adapters until all callers use actor snapshots.
 
+### First increment complete (2026-08-06)
+
+Thinking duration now follows `ThinkingEnd`/assistant terminal events into the
+actor-owned `StatusSnapshot`. Production finalization reads that snapshot for
+the Grok `Thought for …` label; only the compatibility test renderer retains a
+test-scoped fallback. `visual-reasoning.yaml` asserts the duration from YAML,
+so changing the event sequence does not require recompilation.
+
 ## Acceptance evidence
 
 - Every migrated field is present in `FeedSnapshot` or a core actor snapshot;

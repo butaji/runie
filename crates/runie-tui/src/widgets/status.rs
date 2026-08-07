@@ -246,6 +246,7 @@ impl StatusBar {
             }
             StatusMsg::SetTheme(theme) => self.theme = theme,
             StatusMsg::SetContextWindow(window) => self.context_window = window,
+            StatusMsg::SetThinkingElapsed(_) => {}
             StatusMsg::AdvanceAnimation => {
                 if matches!(
                     self.state,
@@ -337,6 +338,7 @@ impl StatusBar {
             turn_usage: self.turn_usage.clone(),
             turn_stop_reason: self.turn_stop_reason,
             context_window: self.context_window,
+            thinking_elapsed_ms: None,
         }
     }
 

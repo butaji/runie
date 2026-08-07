@@ -37,6 +37,7 @@ pub enum StatusMsg {
     FinishTurn(Usage, StopReason),
     SetTheme(ThemeKind),
     SetContextWindow(Option<u64>),
+    SetThinkingElapsed(Option<u64>),
     AdvanceAnimation,
 }
 
@@ -49,6 +50,7 @@ pub struct StatusSnapshot {
     pub turn_usage: Option<Usage>,
     pub turn_stop_reason: Option<StopReason>,
     pub context_window: Option<u64>,
+    pub thinking_elapsed_ms: Option<u64>,
 }
 
 impl StatusSnapshot {
@@ -85,6 +87,7 @@ impl StatusSnapshot {
             }
             StatusMsg::SetTheme(theme) => self.theme = theme,
             StatusMsg::SetContextWindow(window) => self.context_window = window,
+            StatusMsg::SetThinkingElapsed(elapsed_ms) => self.thinking_elapsed_ms = elapsed_ms,
             StatusMsg::AdvanceAnimation => {
                 if matches!(
                     self.state,

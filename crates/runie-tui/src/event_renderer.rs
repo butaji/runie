@@ -278,6 +278,7 @@ pub struct EventRenderer {
     in_assistant_stream: bool,
     in_reasoning: bool,
     reasoning_buffer: String,
+    #[cfg(test)]
     thinking_elapsed_ms: Option<u64>,
     /// True between ToolExecutionStart and ToolExecutionEnd.
     in_tool_exec: bool,
@@ -337,6 +338,7 @@ impl EventRenderer {
             in_assistant_stream: false,
             in_reasoning: false,
             reasoning_buffer: String::new(),
+            #[cfg(test)]
             thinking_elapsed_ms: None,
             in_tool_exec: false,
             activity_dirs: 0,
@@ -423,7 +425,6 @@ impl EventRenderer {
                             // status transition rather than racing a second
                             // bus-owned projection.
                             status_actor.apply_event(&event).await;
-                            self.record_thinking_elapsed(&event);
                             let actor_tool_start = match &event {
                                 AgentEvent::ToolExecutionStart {
                                     tool_call_id,
@@ -493,8 +494,8 @@ impl EventRenderer {
                                 feed_messages.push(ScrollbackMsg::FinalizeAssistant {
                                     has_reasoning: !self.reasoning_buffer.is_empty(),
                                     reasoning_expanded: scrollback_actor.snapshot().reasoning_expanded(),
-                                    summary: thinking_summary(self.thinking_elapsed_ms),
-                                    settled_no_tool_phase: self.thinking_elapsed_ms.is_some()
+                                    summary: thinking_summary(self.thinking_elapsed_ms()),
+                                    settled_no_tool_phase: self.thinking_elapsed_ms().is_some()
                                         && self.tool_rows.is_empty(),
                                 });
                             }
@@ -562,7 +563,6 @@ impl EventRenderer {
         reason = "actor replay keeps one event-to-projection transaction explicit"
     )]
     pub async fn apply_actor_event(&mut self, event: AgentEvent) {
-        self.record_thinking_elapsed(&event);
         let status_actor = self
             .status_actor
             .clone()
@@ -609,8 +609,8 @@ impl EventRenderer {
             messages.push(ScrollbackMsg::FinalizeAssistant {
                 has_reasoning: !self.reasoning_buffer.is_empty(),
                 reasoning_expanded: scrollback_actor.snapshot().reasoning_expanded(),
-                summary: thinking_summary(self.thinking_elapsed_ms),
-                settled_no_tool_phase: self.thinking_elapsed_ms.is_some()
+                summary: thinking_summary(self.thinking_elapsed_ms()),
+                settled_no_tool_phase: self.thinking_elapsed_ms().is_some()
                     && self.tool_rows.is_empty(),
             });
         }
@@ -746,6 +746,10 @@ impl EventRenderer {
     /// production path has already delivered the event to the status and
     /// scrollback actors, while the legacy `apply_event` adapter remains
     /// available only to compatibility tests.
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the exhaustive compatibility metadata table keeps event ownership auditable"
+    )]
     fn apply_actor_metadata(&mut self, event: AgentEvent) {
         match event {
             AgentEvent::AgentStart => {
@@ -758,7 +762,10 @@ impl EventRenderer {
                 self.turn_started = true;
             }
             AgentEvent::Reset => {
-                self.thinking_elapsed_ms = None;
+                #[cfg(test)]
+                {
+                    self.thinking_elapsed_ms = None;
+                }
                 self.turn_started = false;
                 self.in_assistant_stream = false;
                 self.in_reasoning = false;
@@ -789,22 +796,43 @@ impl EventRenderer {
     }
 
     fn record_thinking_elapsed(&mut self, event: &AgentEvent) {
-        if let AgentEvent::MessageUpdate {
-            event: AssistantMessageEvent::ThinkingEnd { elapsed_ms, .. },
-            ..
-        } = event
+        #[cfg(not(test))]
+        let _ = event;
+        #[cfg(test)]
         {
-            self.thinking_elapsed_ms = *elapsed_ms;
+            if let AgentEvent::MessageUpdate {
+                event: AssistantMessageEvent::ThinkingEnd { elapsed_ms, .. },
+                ..
+            } = event
+            {
+                self.thinking_elapsed_ms = *elapsed_ms;
+            }
+            if let AgentEvent::MessageEnd {
+                message: runie_core::types::AgentMessage::Assistant(assistant),
+            } = event
+            {
+                self.thinking_elapsed_ms = assistant.thinking_elapsed_ms;
+            }
+            if matches!(event, AgentEvent::AgentStart | AgentEvent::Reset) {
+                self.thinking_elapsed_ms = None;
+            }
         }
-        if let AgentEvent::MessageEnd {
-            message: runie_core::types::AgentMessage::Assistant(assistant),
-        } = event
-        {
-            self.thinking_elapsed_ms = assistant.thinking_elapsed_ms;
-        }
-        if matches!(event, AgentEvent::AgentStart | AgentEvent::Reset) {
-            self.thinking_elapsed_ms = None;
-        }
+    }
+
+    fn thinking_elapsed_ms(&self) -> Option<u64> {
+        self.status_actor
+            .as_ref()
+            .map(|actor| actor.model_snapshot().thinking_elapsed_ms)
+            .unwrap_or_else(|| {
+                #[cfg(test)]
+                {
+                    self.thinking_elapsed_ms
+                }
+                #[cfg(not(test))]
+                {
+                    None
+                }
+            })
     }
 
     fn handle_reset(&mut self) {
@@ -1186,7 +1214,7 @@ impl EventRenderer {
                 } else if !self.reasoning_buffer.is_empty() {
                     if let Some(thinking) = scrollback.last_mut_by_kind(LineKind::ThinkingStatus) {
                         thinking.kind = LineKind::TurnSummary;
-                        thinking.text = thinking_summary(self.thinking_elapsed_ms);
+                        thinking.text = thinking_summary(self.thinking_elapsed_ms());
                     }
                     scrollback.remove_kind(LineKind::Reasoning);
                 } else {
