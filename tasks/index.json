@@ -47,6 +47,12 @@
       "title": "Reject reset while a Pi-compatible run is active"
     },
     {
+      "id": "p42",
+      "file": "p42-async-turn-hooks.md",
+      "status": "in_progress",
+      "title": "Await Pi-compatible asynchronous turn hooks before queue polling"
+    },
+    {
       "id": "p35",
       "file": "p35-scrollback-model-reducer.md",
       "status": "done",

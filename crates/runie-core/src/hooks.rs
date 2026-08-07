@@ -2,6 +2,8 @@
 
 use std::sync::Arc;
 
+use futures::future::BoxFuture;
+
 use crate::types::{
     AgentContext, AgentMessage, AssistantMessage, BeforeToolCallContext, BeforeToolCallResult,
     Model, ThinkingLevel, ToolResultMessage,
@@ -24,6 +26,11 @@ pub struct ShouldStopAfterTurnContext {
 /// `prepareNextTurn` input is the same shape (pi `PrepareNextTurnContext`).
 pub type PrepareNextTurnContext = ShouldStopAfterTurnContext;
 
+pub type AsyncPrepareNextTurn =
+    Arc<dyn Fn(PrepareNextTurnContext) -> BoxFuture<'static, Option<TurnUpdate>> + Send + Sync>;
+pub type AsyncShouldStopAfterTurn =
+    Arc<dyn Fn(ShouldStopAfterTurnContext) -> BoxFuture<'static, bool> + Send + Sync>;
+
 /// Returned by `prepareNextTurn` (pi `AgentLoopTurnUpdate`, types.ts:133).
 #[derive(Clone, Default)]
 pub struct TurnUpdate {
@@ -43,6 +50,9 @@ pub struct TurnHooks {
     /// (before the steering/follow-up poll).
     pub should_stop_after_turn:
         Option<Arc<dyn Fn(ShouldStopAfterTurnContext) -> bool + Send + Sync>>,
+    /// Async Pi-compatible variants; these are awaited before queue polling.
+    pub prepare_next_turn_async: Option<AsyncPrepareNextTurn>,
+    pub should_stop_after_turn_async: Option<AsyncShouldStopAfterTurn>,
 }
 
 #[cfg(test)]

@@ -18,7 +18,7 @@ use runie_core::types::{
     SimpleStreamOptions, StopReason, ToolCall, Usage, UserContent, UserMessage, WireMessage,
 };
 
-use common::{echo_tool, TestLoopBuilder};
+use common::{echo_tool, MockStreamFn, TestLoopBuilder};
 
 /// Stream that records the model id given to each call. Turn 1 requests a
 /// tool call (`tool_use`); later turns return a plain `stop` so the loop
@@ -99,6 +99,8 @@ async fn prepare_next_turn_swaps_model_for_next_turn() {
             })
         })),
         should_stop_after_turn: None,
+        prepare_next_turn_async: None,
+        should_stop_after_turn_async: None,
     };
     let mut builder = TestLoopBuilder::new(stream.clone());
     builder = builder.tool(echo_tool()).turn_hooks(hooks);
@@ -141,6 +143,8 @@ async fn should_stop_after_turn_ends_the_agent_early() {
             true
         })),
         prepare_next_turn: None,
+        prepare_next_turn_async: None,
+        should_stop_after_turn_async: None,
     };
     let mut builder = TestLoopBuilder::new(stream.clone());
     builder = builder.tool(echo_tool()).turn_hooks(hooks);
@@ -320,4 +324,25 @@ async fn convert_to_llm_replaces_wire_messages_after_transform() {
         .unwrap();
 
     assert_eq!(&*stream.texts.lock(), &["converted".to_string()]);
+}
+
+#[tokio::test]
+async fn async_should_stop_hook_is_awaited_before_queue_polling() {
+    let test = TestLoopBuilder::new(Arc::new(MockStreamFn::hello()))
+        .turn_hooks(TurnHooks {
+            prepare_next_turn: None,
+            should_stop_after_turn: None,
+            prepare_next_turn_async: None,
+            should_stop_after_turn_async: Some(Arc::new(|_ctx| Box::pin(async { true }))),
+        })
+        .build();
+
+    let output = test
+        .actor
+        .prompt(user(), AgentContext::default())
+        .await
+        .expect("async hook run succeeds");
+    assert!(output
+        .iter()
+        .any(|message| matches!(message, AgentMessage::Assistant(_))));
 }

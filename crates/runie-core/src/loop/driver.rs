@@ -359,18 +359,26 @@ async fn apply_turn_hooks(
     override_model: &mut Option<Model>,
     override_ctx: &mut Option<AgentContext>,
 ) -> bool {
-    if deps
-        .turn_hooks
-        .should_stop_after_turn
-        .as_ref()
-        .is_some_and(|stop| stop(hook_ctx.clone()))
-    {
+    let should_stop = if let Some(stop) = &deps.turn_hooks.should_stop_after_turn_async {
+        stop(hook_ctx.clone()).await
+    } else {
+        deps.turn_hooks
+            .should_stop_after_turn
+            .as_ref()
+            .is_some_and(|stop| stop(hook_ctx.clone()))
+    };
+    if should_stop {
         return true;
     }
-    let Some(prepare) = &deps.turn_hooks.prepare_next_turn else {
-        return false;
+    let update = if let Some(prepare) = &deps.turn_hooks.prepare_next_turn_async {
+        prepare(hook_ctx.clone()).await
+    } else {
+        deps.turn_hooks
+            .prepare_next_turn
+            .as_ref()
+            .and_then(|prepare| prepare(hook_ctx))
     };
-    let Some(update) = prepare(hook_ctx) else {
+    let Some(update) = update else {
         return false;
     };
     if let Some(context) = update.context {
