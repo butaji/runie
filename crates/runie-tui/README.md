@@ -134,7 +134,7 @@ cargo install cargo-insta   # one-time
 cargo insta review          # interactively accept/reject
 ```
 
-Example (`event_renderer::tests::welcome_modal_snapshot`):
+Example (`widgets::welcome::tests::welcome_modal_snapshot`):
 
 ```rust
 #[test]
@@ -150,7 +150,7 @@ fn welcome_modal_snapshot() {
 | Pattern | Source in grok-build | Adopted in runie-tui |
 |---|---|---|
 | In-process `TestBackend` render with substring assertions | pty-driven `tests/pty_e2e/*` (the in-process equivalent) | `render_visual()` in `src/yaml_runner.rs` + `assertions.visual` in YAML |
-| `insta::assert_snapshot!` of pure-function output | `src/app/status_blocks.rs`, `src/scrollback/blocks/tool/edit.rs` | `event_renderer::tests::welcome_modal_snapshot` |
+| `insta::assert_snapshot!` of pure-function output | `src/app/status_blocks.rs`, `src/scrollback/blocks/tool/edit.rs` | `widgets::welcome::tests::welcome_modal_snapshot` |
 | YAML-defined test fixtures (load at runtime, no rebuild) | — (grok uses Rust fixtures) | `tests/e2e/*.yaml` + `runie-tui-e2e` binary |
 | Synchronous event replay (sidesteps runtime scheduling) | n/a — this was a fix needed in runie | recorder + oneshot stop signal in `yaml_runner.rs` |
 

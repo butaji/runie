@@ -3,10 +3,11 @@
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Alignment, Rect};
 use ratatui::style::{Modifier, Style};
-use ratatui::text::{Line, Span};
+use ratatui::text::{Line as RatLine, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget};
 
 use crate::appearance;
+use crate::widgets::scrollback::{Line, LineKind};
 use runie_core::types::ThemeKind;
 
 /// The full-mode welcome surface shown before the first prompt is submitted.
@@ -71,17 +72,17 @@ impl WelcomeWidget {
             height: 10,
         };
         let lines = vec![
-            Line::from(Span::styled(
+            RatLine::from(Span::styled(
                 "Runie",
                 appearance::accent_style_for(theme).add_modifier(Modifier::BOLD),
             )),
-            Line::from(version_badge(VersionBadgeVariant::HeroInline)),
-            Line::from("Model · runie-core"),
-            Line::from(""),
-            Line::from("New session"),
-            Line::from("/help for commands"),
-            Line::from("Ctrl+D / Ctrl+Q · quit"),
-            Line::from("◆ session_start"),
+            RatLine::from(version_badge(VersionBadgeVariant::HeroInline)),
+            RatLine::from("Model · runie-core"),
+            RatLine::from(""),
+            RatLine::from("New session"),
+            RatLine::from("/help for commands"),
+            RatLine::from("Ctrl+D / Ctrl+Q · quit"),
+            RatLine::from("◆ session_start"),
         ];
         Paragraph::new(lines)
             .alignment(Alignment::Center)
@@ -116,7 +117,7 @@ impl WelcomeWidget {
         let bold = Style::default().add_modifier(Modifier::BOLD);
         let x = area.x.saturating_add(13);
         let action = |label: &str, shortcut: &str| {
-            Line::from(vec![
+            RatLine::from(vec![
                 Span::styled(label.to_owned(), bold),
                 Span::raw(" ".repeat(45usize.saturating_sub(label.len()))),
                 Span::raw(shortcut.to_owned()),
@@ -125,7 +126,7 @@ impl WelcomeWidget {
         Paragraph::new(vec![
             action("New worktree", "ctrl+w"),
             action("Resume session", "ctrl+s"),
-            Line::from(Span::styled("Changelog", bold)),
+            RatLine::from(Span::styled("Changelog", bold)),
             // Match Grok's full-mode welcome copy; Ctrl+D remains supported
             // by the input handler but is intentionally not duplicated here.
             action("Quit", "ctrl+q"),
@@ -135,14 +136,14 @@ impl WelcomeWidget {
             buf,
         );
         Paragraph::new(vec![
-            Line::from(Span::styled("Workflows are here!", bold)),
-            Line::from("Try them out using /workflows."),
+            RatLine::from(Span::styled("Workflows are here!", bold)),
+            RatLine::from("Try them out using /workflows."),
         ])
         .render(
             Rect::new(x, area.y + 8, area.width.saturating_sub(13), 2),
             buf,
         );
-        Paragraph::new(Line::from(vec![
+        Paragraph::new(RatLine::from(vec![
             Span::styled("Tip: ", bold),
             Span::raw("Use Ctrl+Enter to interject messages. Or just Enter to queue messages."),
         ]))
@@ -165,19 +166,19 @@ fn render_wide_hero_copy(area: Rect, buf: &mut Buffer) {
         "⠀⢀⠞⠁⠠⢶⣶⣶⣶⠿⠋⠀⠀⠀",
         "⠐⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀",
     ];
-    Paragraph::new(logo.into_iter().map(Line::from).collect::<Vec<_>>())
+    Paragraph::new(logo.into_iter().map(RatLine::from).collect::<Vec<_>>())
         .render(Rect::new(area.x + 3, area.y + 2, 32, 7), buf);
     Paragraph::new(vec![
-        Line::from(Span::styled(
+        RatLine::from(Span::styled(
             "Grok Build Beta  0.2.118",
             Style::default().add_modifier(Modifier::BOLD),
         )),
-        Line::from(""),
-        Line::from(Span::styled(
+        RatLine::from(""),
+        RatLine::from(Span::styled(
             "Grok 4.5 is here!",
             Style::default().add_modifier(Modifier::BOLD),
         )),
-        Line::from("Select 'Grok 4.5' under /model."),
+        RatLine::from("Select 'Grok 4.5' under /model."),
     ])
     .render(Rect::new(area.x + 20, area.y + 2, 46, 4), buf);
 }
@@ -194,7 +195,7 @@ fn render_wide_hero_actions(area: Rect, buf: &mut Buffer) {
     {
         let y = area.y + 7 + offset as u16;
         let text = format!("{label:>85}{shortcut:>10}");
-        Paragraph::new(Line::from(Span::styled(
+        Paragraph::new(RatLine::from(Span::styled(
             text,
             Style::default().add_modifier(Modifier::BOLD),
         )))
@@ -203,6 +204,23 @@ fn render_wide_hero_actions(area: Rect, buf: &mut Buffer) {
             buf,
         );
     }
+}
+
+/// Pure function: returns the welcome-modal lines (matches grok-build's
+/// minimal-mode chrome). Adopts grok's `insta::assert_snapshot!` pattern:
+/// the function is a pure formatter, the test pins its output to a snapshot.
+/// The widget owns its own idle prompt text so the formatter lives with the
+/// surface that renders it.
+pub fn welcome_modal_lines() -> Vec<Line> {
+    let version = env!("CARGO_PKG_VERSION");
+    vec![
+        Line::new(LineKind::System, format!("╭─ Runie  v{version} ─")),
+        Line::new(LineKind::System, String::from("│ main runie")),
+        Line::new(LineKind::System, String::from("│ Model · runie-core")),
+        Line::new(LineKind::System, String::from("│ /help for commands")),
+        Line::new(LineKind::System, String::from("╰─")),
+        Line::new(LineKind::System, String::from("◆ session_start")),
+    ]
 }
 
 #[cfg(test)]
@@ -327,5 +345,18 @@ mod tests {
         ] {
             assert!(text.contains(marker), "wide hero lacks {marker:?}");
         }
+    }
+
+    /// Pure-function snapshot (adopted from grok-build's `insta` pattern).
+    /// The welcome modal is a deterministic formatter; the test pins its
+    /// text to a saved snapshot so accidental layout drift gets caught.
+    #[test]
+    fn welcome_modal_snapshot() {
+        let text: String = super::welcome_modal_lines()
+            .iter()
+            .map(|l| l.text.clone())
+            .collect::<Vec<_>>()
+            .join("\n");
+        insta::assert_snapshot!("welcome_modal", text);
     }
 }

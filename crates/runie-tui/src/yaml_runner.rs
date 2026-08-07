@@ -1988,7 +1988,7 @@ async fn replay_scenario_events(
     // session would emit, matching the live `App::new_with_welcome`
     // surface. The renderer no longer owns this policy.
     if scenario.initial_prompt.is_none() {
-        for line in crate::event_renderer::welcome_modal_lines() {
+        for line in crate::widgets::welcome_modal_lines() {
             scrollback_actor.apply(ScrollbackMsg::Append(line)).await;
         }
     }
@@ -4980,7 +4980,7 @@ pub async fn render_visual_buffer(
     // so the visual frame matches the live idle chrome. The renderer no
     // longer carries renderer-local welcome state.
     if scenario.initial_prompt.is_none() {
-        for line in crate::event_renderer::welcome_modal_lines() {
+        for line in crate::widgets::welcome_modal_lines() {
             app.apply_scrollback(ScrollbackMsg::Append(line)).await;
         }
     }

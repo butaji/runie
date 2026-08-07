@@ -572,3 +572,16 @@ updated from `11` to `14` to reflect the new pre-injection + session-start
 projection (the welcome modal pre-injection replaces the renderer's
 `AgentStart` welcome emission, adding three extra session-start lines).
 This closes the compatibility-retirement slice for the renderer.
+
+**Welcome formatter relocation (2026-08-08):** The compatibility
+`welcome_modal_lines()` helper and its `welcome_modal_snapshot` regression
+have moved out of `event_renderer.rs` and into `widgets/welcome.rs`. The
+widget module now owns the idle prompt text and the `LineKind::System`
+projections that populate the pre-injection mailbox, while the renderer
+no longer defines the formatter. The `widgets` module re-exports
+`welcome_modal_lines` so the YAML runner and the renderer's pre-injection
+test call it through `crate::widgets::welcome_modal_lines()`. The
+`runie_tui__event_renderer__tests__welcome_modal.snap` snapshot was moved
+to `runie_tui__widgets__welcome__tests__welcome_modal.snap` to match the
+new test home. No behavior change; this is a code-ownership cleanup that
+keeps the idle chrome formatter next to the widget that renders it.

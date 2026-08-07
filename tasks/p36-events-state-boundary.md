@@ -97,6 +97,20 @@ remain separate. The full `just ci` (fmt-check, clippy, lint, test,
 parity, source inventory, Pi event contract, and feed-actor boundary
 validators) is green.
 
+**Pre-injection helper relocation (2026-08-08):** The
+`welcome_modal_lines()` helper and its `welcome_modal_snapshot` regression
+now live in `widgets::welcome` rather than `event_renderer`. The YAML
+runner and the renderer's pre-injection test both call it through
+`crate::widgets::welcome_modal_lines()`, and the snapshot moved with the
+test to `runie_tui__widgets__welcome__tests__welcome_modal.snap`. The
+pre-injection event-to-state contract is unchanged: the idle chrome lines
+still reach the `ScrollbackActor` mailbox before `AgentStart` when the
+scenario omits an initial prompt, and the actor-owned scrollback still
+reflects the same idle chrome a fresh session would emit. This is a
+code-ownership cleanup only; the `ScrollbackMsg::Append` delivery path,
+the renderer/actor boundary, and the actor snapshot consumer are
+identical.
+
 The first two historical bullets are now closed. Production scroll, selection,
 palette, and prompt transitions have named owner-local messages, and replay
 assertions already support ordered `exact_events`, closed-contract `pi_events`,

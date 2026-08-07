@@ -1332,21 +1332,6 @@ fn append_failure_suffix(mut text: String, failures: usize, running: bool) -> St
     text
 }
 
-/// Pure function: returns the welcome-modal lines (matches grok-build's
-/// minimal-mode chrome). Adopts grok's `insta::assert_snapshot!` pattern:
-/// the function is a pure formatter, the test pins its output to a snapshot.
-pub fn welcome_modal_lines() -> Vec<Line> {
-    let version = env!("CARGO_PKG_VERSION");
-    vec![
-        Line::new(LineKind::System, format!("╭─ Runie  v{version} ─")),
-        Line::new(LineKind::System, String::from("│ main runie")),
-        Line::new(LineKind::System, String::from("│ Model · runie-core")),
-        Line::new(LineKind::System, String::from("│ /help for commands")),
-        Line::new(LineKind::System, String::from("╰─")),
-        Line::new(LineKind::System, String::from("◆ session_start")),
-    ]
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1572,7 +1557,7 @@ mod tests {
         let scrollback = ScrollbackActor::new();
         let status = StatusActor::new();
         let mut renderer = EventRenderer::with_actors(scrollback.clone(), status.clone());
-        for line in welcome_modal_lines() {
+        for line in crate::widgets::welcome_modal_lines() {
             scrollback.apply(ScrollbackMsg::Append(line)).await;
         }
         renderer.apply_actor_event(AgentEvent::AgentStart).await;
@@ -2058,18 +2043,5 @@ mod tests {
             .map(|line| line.text.as_str())
             .collect::<Vec<_>>();
         assert_eq!(activities, ["◈ Listed 1 dir", "◈ Read 1 file"]);
-    }
-
-    /// Pure-function snapshot (adopted from grok-build's `insta` pattern).
-    /// The welcome modal is a deterministic formatter; the test pins its
-    /// text to a saved snapshot so accidental layout drift gets caught.
-    #[test]
-    fn welcome_modal_snapshot() {
-        let text: String = super::welcome_modal_lines()
-            .iter()
-            .map(|l| l.text.clone())
-            .collect::<Vec<_>>()
-            .join("\n");
-        insta::assert_snapshot!("welcome_modal", text);
     }
 }

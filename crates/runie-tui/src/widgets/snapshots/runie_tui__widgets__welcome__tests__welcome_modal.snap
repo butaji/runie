@@ -1,5 +1,5 @@
 ---
-source: crates/runie-tui/src/event_renderer.rs
+source: crates/runie-tui/src/widgets/welcome.rs
 assertion_line: 362
 expression: text
 ---

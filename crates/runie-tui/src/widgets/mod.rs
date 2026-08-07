@@ -23,4 +23,4 @@ pub use status::{
     braille_spinner_frames, Status, StatusBar, StatusMsg, StatusSnapshot, TurnStatus,
     TurnStatusPhase,
 };
-pub use welcome::{version_badge, VersionBadgeVariant, WelcomeWidget};
+pub use welcome::{version_badge, welcome_modal_lines, VersionBadgeVariant, WelcomeWidget};
