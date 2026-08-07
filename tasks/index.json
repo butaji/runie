@@ -31,7 +31,7 @@
     {
       "id": "p32",
       "file": "p32-tool-row-ownership.md",
-      "status": "in_progress",
+      "status": "done",
       "title": "Architecture: actor-owned live tool-row identity across YAML and live adapters"
     },
     {

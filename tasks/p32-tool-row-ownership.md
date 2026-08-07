@@ -1,6 +1,17 @@
 # p32 — Actor-owned tool-row identity
 
-Status: in_progress (2026-08-06)
+Status: done (2026-08-06)
+
+## Completion audit (2026-08-06)
+
+The acceptance boundary is now complete: `FeedState` assigns opaque row
+identity on live starts, updates and ends resolve that identity rather than
+provider call ID, and compatibility-seeded rows remain unowned. The
+`visual-tool-row-identity.yaml` fixture asserts retained IDs and active
+eligibility, while the duplicate-provider-ID unit test covers newest-first
+and older-row settlement. The focused reducer test, YAML replay, workspace
+visual suite, and actor-boundary validator all pass. No renderer-side owner
+map remains.
 
 ## Fresh replay audit (2026-08-06)
 
