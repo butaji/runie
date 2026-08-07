@@ -91,6 +91,8 @@ for _ in $(seq 1 "$probe_iterations"); do
     sleep 0.1
 done
 if (( ! ready )); then
+    tmux capture-pane -e -p -t "$session" -S 0 -E "$((rows - 1))" \
+        > "${cast%.cast}.timeout.ansi" 2>/dev/null || true
     echo "timed out waiting for input prompt in ${cols}x${rows}: ${cast}" >&2
     exit 1
 fi
@@ -118,6 +120,8 @@ for _ in $(seq 1 "$probe_iterations"); do
     sleep 0.1
 done
 if (( ! settled )); then
+    tmux capture-pane -e -p -t "$session" -S 0 -E "$((rows - 1))" \
+        > "${cast%.cast}.timeout.ansi" 2>/dev/null || true
     echo "timed out waiting for completed turn in ${cols}x${rows}: ${cast}" >&2
     exit 1
 fi

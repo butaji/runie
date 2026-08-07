@@ -1395,6 +1395,15 @@ those differences are not promoted into the deterministic Pi-core oracle.
   independently of cast timing and teardown frames. Missing pairs fail loudly;
   this is the preferred oracle once Grok and Runie share a deterministic
   scenario.
+
+- **Matrix failure diagnostics (2026-08-07):** The capture matrix now attempts
+  every geometry even when one size fails, returns a nonzero aggregate status,
+  and preserves `${size}.timeout.ansi` for readiness/completion failures.
+  A fresh run captured both `62×32` and `80×24`; Runie timed out at `100×30`.
+  The completed settled-frame comparisons reported 404 differing cells at
+  `62×32` and 788 at `80×24` (mostly style-only at 80×24). These are valid
+  evidence of non-equivalent live states, not a 100% parity claim; the timeout
+  frame is retained for diagnosing the responsive runtime boundary.
 - **Settled chrome correction (2026-08-05):** A valid 62×32 cast comparison
   isolated an extra header space and the completed footer shortcut mismatch;
   both live projections are now corrected. Feed wrapping, timing text, and

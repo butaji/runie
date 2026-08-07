@@ -19,9 +19,13 @@ mkdir -p "$prefix"
 # The matrix intentionally spans narrow, normal, wide, and the Herdr-sized
 # viewport. Width-dependent wrapping and height-dependent chrome must agree.
 sizes=("62 32" "80 24" "100 30" "120 36")
+failed=0
 for size in "${sizes[@]}"; do
     read -r cols rows <<<"$size"
     stem="${prefix}/${cols}x${rows}"
-    scripts/tmux-asciinema-capture.sh "$cols" "$rows" "${stem}.cast" \
-        "$command_line" "$prompt" "$quit_key" "$env_assignments"
+    if ! scripts/tmux-asciinema-capture.sh "$cols" "$rows" "${stem}.cast" \
+        "$command_line" "$prompt" "$quit_key" "$env_assignments"; then
+        failed=1
+    fi
 done
+exit "$failed"
