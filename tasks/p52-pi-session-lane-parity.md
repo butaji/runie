@@ -197,6 +197,31 @@ message, and does not admit a compaction operation through the live loop.
 Those are the concrete next boundaries; the existing generic JSON payload
 must not be mistaken for full Pi compaction parity.
 
+### Event/schema boundary audit (2026-08-08)
+
+The upstream context projector calls `createCompactionSummaryMessage`, which
+emits a distinct `role: "compactionSummary"` message carrying `summary`,
+`tokensBefore`, and `timestamp`, followed by the retained tail. Runie's
+`AgentMessage` union currently contains only user, assistant, and tool-result
+roles. The existing `CompactionCreated` event therefore stops at the
+actor-owned journal boundary; it must not be coerced into a user message or
+constructed by a provider/TUI caller.
+
+The required next increment is an explicit core event and typed message
+variant (or an equivalently typed provider-context projection), reduced by
+the session actor and consumed by the provider context adapter. The event
+must carry the persisted compaction identity and preserve ordering with the
+retained tail. YAML replay must drive `CompactionCreated` through the actor
+mailbox and assert the resulting context message sequence; no caller may
+mutate a session snapshot or append a synthetic message directly. Until that
+schema exists, compaction context parity remains open and the current
+projection is journal-boundary evidence only.
+
+This audit also confirms the general state-transfer rule: every state change
+at this boundary is delivered as a typed event/message to the owning actor;
+renderers and provider adapters may only consume immutable snapshots or
+context projections.
+
 ### Completed slice (2026-08-07, compaction context boundary)
 
 `SessionSnapshot::compaction_context_projection` is now a pure projection of
