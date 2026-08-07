@@ -795,6 +795,11 @@ pub struct VisualAssertions {
     pub screen_text: Vec<String>,
     #[serde(default)]
     pub screen_excludes: Vec<String>,
+    /// Optional cell-level semantic oracle. Each field is independently
+    /// optional so YAML can pin only the glyph, palette role, or modifier that
+    /// matters for a scenario without duplicating a complete screen dump.
+    #[serde(default)]
+    pub cell_assertions: Vec<CellAssertion>,
     /// Generic actor-owned UI projection assertions. These are evaluated
     /// after declarative key steps have gone through the UiActor mailbox.
     #[serde(default)]
@@ -842,6 +847,19 @@ pub struct VisualAssertions {
     /// supplies the generic dump decoder.
     #[serde(default)]
     pub reference: Option<DumpReference>,
+}
+
+#[derive(Debug, Deserialize, Default, Clone)]
+pub struct CellAssertion {
+    pub col: u16,
+    pub row: u16,
+    pub symbol: Option<String>,
+    pub fg: Option<String>,
+    pub bg: Option<String>,
+    pub bold: Option<bool>,
+    pub italic: Option<bool>,
+    pub underline: Option<bool>,
+    pub inverse: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Default, Clone)]
@@ -2327,6 +2345,7 @@ async fn assert_visual_expectations(
             ));
         }
     }
+    assert_cell_expectations(&buffer, &visual.cell_assertions)?;
     if let Some(reference) = &visual.reference {
         assert_dump_reference(&buffer, reference)?;
     }
@@ -2336,6 +2355,87 @@ async fn assert_visual_expectations(
                 .to_owned()
                 + "tmux/asciinema capture or disable `pty` rather than accepting a false pass",
         );
+    }
+    Ok(())
+}
+
+#[allow(
+    clippy::too_many_lines,
+    reason = "the YAML cell oracle reports each optional terminal attribute precisely"
+)]
+fn assert_cell_expectations(
+    buffer: &ratatui::buffer::Buffer,
+    assertions: &[CellAssertion],
+) -> Result<(), String> {
+    for expected in assertions {
+        let Some(cell) = buffer.cell((expected.col, expected.row)) else {
+            return Err(format!(
+                "cell assertion is outside frame: ({}, {}) in {:?}",
+                expected.col, expected.row, buffer.area
+            ));
+        };
+        let actual_symbol = cell_symbol_key(cell.symbol());
+        if let Some(symbol) = &expected.symbol {
+            let expected_symbol = cell_symbol_key(symbol);
+            if actual_symbol != expected_symbol {
+                return Err(format!(
+                    "cell ({}, {}) symbol mismatch: expected {:?}, got {:?}",
+                    expected.col, expected.row, expected_symbol, actual_symbol
+                ));
+            }
+        }
+        let actual_fg = ratatui_color_key(cell.fg);
+        if expected
+            .fg
+            .as_deref()
+            .is_some_and(|value| value != actual_fg)
+        {
+            return Err(format!(
+                "cell ({}, {}) foreground mismatch: expected {:?}, got {:?}",
+                expected.col, expected.row, expected.fg, actual_fg
+            ));
+        }
+        let actual_bg = ratatui_color_key(cell.bg);
+        if expected
+            .bg
+            .as_deref()
+            .is_some_and(|value| value != actual_bg)
+        {
+            return Err(format!(
+                "cell ({}, {}) background mismatch: expected {:?}, got {:?}",
+                expected.col, expected.row, expected.bg, actual_bg
+            ));
+        }
+        let modifiers = [
+            (
+                "bold",
+                expected.bold,
+                cell.modifier.contains(ratatui::style::Modifier::BOLD),
+            ),
+            (
+                "italic",
+                expected.italic,
+                cell.modifier.contains(ratatui::style::Modifier::ITALIC),
+            ),
+            (
+                "underline",
+                expected.underline,
+                cell.modifier.contains(ratatui::style::Modifier::UNDERLINED),
+            ),
+            (
+                "inverse",
+                expected.inverse,
+                cell.modifier.contains(ratatui::style::Modifier::REVERSED),
+            ),
+        ];
+        for (name, expected_value, actual_value) in modifiers {
+            if expected_value.is_some_and(|value| value != actual_value) {
+                return Err(format!(
+                    "cell ({}, {}) {name} mismatch: expected {:?}, got {actual_value}",
+                    expected.col, expected.row, expected_value
+                ));
+            }
+        }
     }
     Ok(())
 }

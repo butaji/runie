@@ -8,6 +8,13 @@ log that describe this family as open are historical and superseded. The
 remaining verification gap is exhaustive full-screen Grok comparison,
 including terminal attributes and dynamic telemetry.
 
+**YAML cell oracle (2026-08-06):** Visual fixtures now support optional
+cell-level assertions for glyphs, foreground/background token projections,
+and terminal modifiers. The assertions are field-selective, runtime-loaded,
+and checked against the same TestBackend frame as screen text and cast
+references, allowing color/style regressions to be added without recompiling
+the runner or duplicating full-screen dumps.
+
 **Feed attribute-oracle audit (2026-08-06):** Attempting to promote the
 legacy `grok-rich.cast` feed frame to `exact_attributes: true` produced 518
 differences beginning at the session row: the cast contains terminal-default

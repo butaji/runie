@@ -83,6 +83,8 @@ assertions:
   visual:
     cols: 100
     rows: 30
+    cell_assertions:
+      - { col: 0, row: 0, symbol: " ", bg: "default" }
     screen_text:
       - "Workflow verify failed in 2.3s: validate the release  [checks ○]"
       - "Workflow publish ◌ cancelled after 0.9s: publish the release  [upload ● · cleanup ○]"
