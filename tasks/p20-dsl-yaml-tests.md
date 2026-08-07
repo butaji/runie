@@ -65,6 +65,13 @@ behavior fixtures editable without recompiling Rust.
   worker. The reducer and acknowledgement protocol remain explicit, while
   one more production actor no longer duplicates channel/task ownership setup.
 
+- **Async ownership audit (2026-08-07):** all production reducer mailboxes
+  (state, queues, tools, provider, session, loop, UI, prompt, feed, and
+  status) now use `spawn_actor_worker!`. The interactive terminal reader is
+  intentionally only an owned stream-forwarder into the input loop; it has no
+  actor-owned mutable state or reducer mailbox, so it remains on the thinner
+  `spawn_owned_worker!` path.
+
 - **Subscriber ownership DSL reuse (2026-08-06):** The core loop's event
   subscriber bridge now uses `spawn_owned_worker!` instead of manually wrapping
   its `tokio::spawn` in `TaskOwner`. The loop run handle remains explicit
