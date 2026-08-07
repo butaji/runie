@@ -17,6 +17,7 @@ events:
       data:
         id: op-yaml
         lane: main
+        outcome: aborted
 assertions:
   state:
     session_config_records:
@@ -24,3 +25,5 @@ assertions:
       - abort_requested
       - operation_finished
     active_operations: {}
+    operation_outcomes:
+      op-yaml: aborted

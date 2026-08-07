@@ -144,6 +144,10 @@ pub struct SessionSnapshot {
     /// Reducer-owned operation lifecycle projection keyed by Pi operation ID.
     /// Values are `started` or `aborted`; finished operations are removed.
     pub active_operations: BTreeMap<String, String>,
+    /// Terminal Pi outcomes keyed by operation ID. This remains separate from
+    /// active operations so completion is observable without retaining a
+    /// finished operation in the active projection.
+    pub operation_outcomes: BTreeMap<String, String>,
     /// Last admitted Pi navigation intent. This is deliberately a projection
     /// only; branch context reconstruction remains owned by the session tree.
     pub navigation: Option<NavigationSnapshot>,
@@ -381,6 +385,19 @@ impl SessionSnapshot {
                                 .and_then(|value| value.as_str())
                                 .map(str::to_owned),
                         });
+                    }
+                }
+                if entry_type == "operation_finished" {
+                    if let (Some(operation_id), Some(outcome)) = (
+                        value
+                            .get("id")
+                            .or_else(|| value.get("runId"))
+                            .and_then(serde_json::Value::as_str),
+                        value.get("outcome").and_then(serde_json::Value::as_str),
+                    ) {
+                        snapshot
+                            .operation_outcomes
+                            .insert(operation_id.to_owned(), outcome.to_owned());
                     }
                 }
                 snapshot.config_records.push(SessionConfigEntry {
@@ -645,6 +662,13 @@ impl SessionActor {
                                     }
                                     "operation_finished" => {
                                         state.active_operations.remove(&operation_id);
+                                        if let Some(outcome) =
+                                            data.get("outcome").and_then(serde_json::Value::as_str)
+                                        {
+                                            state
+                                                .operation_outcomes
+                                                .insert(operation_id, outcome.to_owned());
+                                        }
                                     }
                                     _ => {}
                                 }
@@ -883,10 +907,11 @@ mod tests {
         assert_eq!(actor.snapshot().active_operations["op-1"], "aborted");
         bus.publish(AgentEvent::OperationRecordCreated {
             record_type: "operation_finished".into(),
-            data: serde_json::json!({"id": "op-1"}),
+            data: serde_json::json!({"id": "op-1", "outcome": "aborted"}),
         });
         actor.flush().await;
         assert!(actor.snapshot().active_operations.is_empty());
+        assert_eq!(actor.snapshot().operation_outcomes["op-1"], "aborted");
     }
 
     #[tokio::test]
@@ -973,6 +998,7 @@ mod tests {
             }],
             config_records: Vec::new(),
             active_operations: BTreeMap::new(),
+            operation_outcomes: BTreeMap::new(),
             navigation: None,
         };
         let jsonl = snapshot.to_jsonl("session-1", 5, "/workspace");
@@ -1008,6 +1034,7 @@ mod tests {
                 },
             ],
             active_operations: BTreeMap::new(),
+            operation_outcomes: BTreeMap::new(),
             navigation: None,
         };
         let jsonl = snapshot.to_jsonl("session-1", 5, "/workspace");

@@ -938,6 +938,8 @@ pub struct StateAssertions {
     pub active_operations: Option<BTreeMap<String, String>>,
     /// Last Pi navigation intent reduced by the session actor.
     pub navigation: Option<NavigationAssertion>,
+    /// Terminal Pi operation outcomes keyed by operation ID.
+    pub operation_outcomes: Option<BTreeMap<String, String>>,
     /// Ordered Pi session configuration-record kinds from the actor journal.
     pub session_config_records: Option<Vec<String>>,
     /// Termination metadata on the latest actor-owned session entry.
@@ -2542,6 +2544,11 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         &expected.active_operations,
         &outcome.session.active_operations,
         "active_operations"
+    );
+    assert_yaml_eq!(
+        &expected.operation_outcomes,
+        &outcome.session.operation_outcomes,
+        "operation_outcomes"
     );
     if let Some(expected_navigation) = &expected.navigation {
         let actual_navigation =

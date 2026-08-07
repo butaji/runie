@@ -93,6 +93,9 @@ operation-lane task.
 
 `visual-operation-lifecycle.yaml` now exercises start → abort → finish and
 asserts the final empty `active_operations` projection entirely at runtime.
+It also asserts the terminal Pi outcome through the actor-owned
+`operation_outcomes` projection, preserving completion semantics after the
+active operation is removed.
 
 ## Navigation intent projection (2026-08-07)
 
