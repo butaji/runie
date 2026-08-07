@@ -100,6 +100,10 @@ coverage now drives `MessageStart`/`MessageUpdate` through
 message-update test was removed; production and replay delivery remain on the
 same actor path.
 
+**Third compatibility migration (2026-08-08):** Streaming-status coverage
+now uses actor-backed `MessageStart`/`MessageUpdate` delivery and asserts the
+`StatusActor` snapshot. The legacy status-lock test was removed.
+
 ## Verification
 
 - event sequences prove mode changes, busy rejection, abort, and completion

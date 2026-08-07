@@ -2299,34 +2299,40 @@ mod tests {
             .is_some());
     }
 
-    #[test]
-    fn text_delta_enters_streaming_status() {
-        let (mut r, _, st) = new_renderer();
-        r.apply_event(AgentEvent::AgentStart);
-        r.apply_event(AgentEvent::MessageStart {
-            message: AgentMessage::Assistant(runie_core::types::AssistantMessage {
-                content: vec![],
-                stop_reason: None,
-                model: "t".into(),
-                timestamp: 0,
-                ..runie_core::types::AssistantMessage::default()
-            }),
-        });
-        r.apply_event(AgentEvent::MessageUpdate {
-            message: AgentMessage::Assistant(runie_core::types::AssistantMessage {
-                content: vec![],
-                stop_reason: None,
-                model: "t".into(),
-                timestamp: 0,
-                ..runie_core::types::AssistantMessage::default()
-            }),
-            event: AssistantMessageEvent::TextDelta {
-                index: 0,
-                delta: "partial".into(),
-                partial: runie_core::types::AssistantMessage::default(),
-            },
-        });
-        assert_eq!(st.lock().current(), &Status::Streaming);
+    #[tokio::test]
+    async fn actor_text_delta_enters_streaming_status() {
+        let scrollback = ScrollbackActor::new();
+        let status = StatusActor::new();
+        let mut renderer = EventRenderer::with_actors(scrollback, status.clone(), false);
+        renderer.apply_actor_event(AgentEvent::AgentStart).await;
+        renderer
+            .apply_actor_event(AgentEvent::MessageStart {
+                message: AgentMessage::Assistant(runie_core::types::AssistantMessage {
+                    content: vec![],
+                    stop_reason: None,
+                    model: "t".into(),
+                    timestamp: 0,
+                    ..runie_core::types::AssistantMessage::default()
+                }),
+            })
+            .await;
+        renderer
+            .apply_actor_event(AgentEvent::MessageUpdate {
+                message: AgentMessage::Assistant(runie_core::types::AssistantMessage {
+                    content: vec![],
+                    stop_reason: None,
+                    model: "t".into(),
+                    timestamp: 0,
+                    ..runie_core::types::AssistantMessage::default()
+                }),
+                event: AssistantMessageEvent::TextDelta {
+                    index: 0,
+                    delta: "partial".into(),
+                    partial: runie_core::types::AssistantMessage::default(),
+                },
+            })
+            .await;
+        assert_eq!(status.snapshot().current(), &Status::Streaming);
     }
 
     #[test]
