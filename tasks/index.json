@@ -55,8 +55,8 @@
     {
       "id": "p43",
       "file": "p43-provider-retry-metadata.md",
-      "status": "in_progress",
-      "title": "Preserve provider retry metadata before implementing max retry delay"
+      "status": "done",
+      "title": "Preserve Pi provider retry metadata, delay, abort, and jitter parity"
     },
     {
       "id": "p44",

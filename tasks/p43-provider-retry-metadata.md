@@ -1,6 +1,6 @@
 # p43 — Preserve provider retry metadata before `maxRetryDelayMs`
 
-Status: in progress
+Status: done
 
 Pi's retry helper derives a delay from provider error metadata and clamps it
 with `maxRetryDelayMs` (defaulting to Pi's provider retry policy). Runie's
