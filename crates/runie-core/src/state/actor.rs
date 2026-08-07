@@ -25,23 +25,24 @@ fn is_assistant(message: &AgentMessage) -> bool {
 /// State-mutating commands. The actor owns the only `Sender`; the rest of
 /// the codebase sends through handles.
 pub enum StateCommand {
-    SetSystemPrompt(String),
-    SetModel(Model),
-    SetThinkingLevel(ThinkingLevel),
+    SetSystemPrompt(String, oneshot::Sender<()>),
+    SetModel(Model, oneshot::Sender<()>),
+    SetThinkingLevel(ThinkingLevel, oneshot::Sender<()>),
     PushMessage(AgentMessage, Option<oneshot::Sender<()>>),
     ReplaceMessages(Vec<AgentMessage>, oneshot::Sender<()>),
-    SetTools(Vec<Arc<dyn AgentTool>>),
-    MarkStreaming(bool),
-    SetStreamingMessage(Option<AgentMessage>),
+    SetTools(Vec<Arc<dyn AgentTool>>, oneshot::Sender<()>),
+    MarkStreaming(bool, oneshot::Sender<()>),
+    SetStreamingMessage(Option<AgentMessage>, oneshot::Sender<()>),
     SetStreamingState {
         streaming: bool,
         message: Option<AgentMessage>,
+        ack: oneshot::Sender<()>,
     },
     AddPendingToolCall(String, Option<oneshot::Sender<()>>),
     RemovePendingToolCall(String, Option<oneshot::Sender<()>>),
     SetError(Option<String>, Option<oneshot::Sender<()>>),
     ApplyEvent(Box<AgentEvent>, oneshot::Sender<()>),
-    Reset,
+    Reset(oneshot::Sender<()>),
 }
 
 /// Handle to the state actor. Cheap to clone (one mpsc sender).
@@ -71,19 +72,51 @@ impl AgentStateActor {
     }
 
     pub async fn set_system_prompt(&self, s: String) {
-        let _ = self.tx.send(StateCommand::SetSystemPrompt(s)).await;
+        let (ack_tx, ack_rx) = oneshot::channel();
+        if self
+            .tx
+            .send(StateCommand::SetSystemPrompt(s, ack_tx))
+            .await
+            .is_ok()
+        {
+            let _ = ack_rx.await;
+        }
     }
 
     pub async fn set_model(&self, m: Model) {
-        let _ = self.tx.send(StateCommand::SetModel(m)).await;
+        let (ack_tx, ack_rx) = oneshot::channel();
+        if self
+            .tx
+            .send(StateCommand::SetModel(m, ack_tx))
+            .await
+            .is_ok()
+        {
+            let _ = ack_rx.await;
+        }
     }
 
     pub async fn set_thinking_level(&self, t: ThinkingLevel) {
-        let _ = self.tx.send(StateCommand::SetThinkingLevel(t)).await;
+        let (ack_tx, ack_rx) = oneshot::channel();
+        if self
+            .tx
+            .send(StateCommand::SetThinkingLevel(t, ack_tx))
+            .await
+            .is_ok()
+        {
+            let _ = ack_rx.await;
+        }
     }
 
     pub async fn push_message(&self, m: AgentMessage) {
-        let _ = self.tx.send(StateCommand::PushMessage(m, None)).await;
+        let (ack_tx, ack_rx) = oneshot::channel();
+        if self
+            .tx
+            .send(StateCommand::PushMessage(m, Some(ack_tx)))
+            .await
+            .is_ok()
+        {
+            let _ = ack_rx.await;
+        }
     }
 
     pub async fn replace_messages(&self, msgs: Vec<AgentMessage>) {
@@ -99,22 +132,52 @@ impl AgentStateActor {
     }
 
     pub async fn set_tools(&self, tools: Vec<Arc<dyn AgentTool>>) {
-        let _ = self.tx.send(StateCommand::SetTools(tools)).await;
+        let (ack_tx, ack_rx) = oneshot::channel();
+        if self
+            .tx
+            .send(StateCommand::SetTools(tools, ack_tx))
+            .await
+            .is_ok()
+        {
+            let _ = ack_rx.await;
+        }
     }
 
     pub async fn mark_streaming(&self, on: bool) {
-        let _ = self.tx.send(StateCommand::MarkStreaming(on)).await;
+        let (ack_tx, ack_rx) = oneshot::channel();
+        if self
+            .tx
+            .send(StateCommand::MarkStreaming(on, ack_tx))
+            .await
+            .is_ok()
+        {
+            let _ = ack_rx.await;
+        }
     }
 
     pub async fn set_streaming_message(&self, m: Option<AgentMessage>) {
-        let _ = self.tx.send(StateCommand::SetStreamingMessage(m)).await;
+        let (ack_tx, ack_rx) = oneshot::channel();
+        if self
+            .tx
+            .send(StateCommand::SetStreamingMessage(m, ack_tx))
+            .await
+            .is_ok()
+        {
+            let _ = ack_rx.await;
+        }
     }
 
     pub async fn set_streaming_state(&self, streaming: bool, message: Option<AgentMessage>) {
+        let (ack_tx, ack_rx) = oneshot::channel();
         let _ = self
             .tx
-            .send(StateCommand::SetStreamingState { streaming, message })
+            .send(StateCommand::SetStreamingState {
+                streaming,
+                message,
+                ack: ack_tx,
+            })
             .await;
+        let _ = ack_rx.await;
     }
 
     pub async fn add_pending_tool_call(&self, id: String) {
@@ -154,7 +217,10 @@ impl AgentStateActor {
     }
 
     pub async fn reset(&self) {
-        let _ = self.tx.send(StateCommand::Reset).await;
+        let (ack_tx, ack_rx) = oneshot::channel();
+        if self.tx.send(StateCommand::Reset(ack_tx)).await.is_ok() {
+            let _ = ack_rx.await;
+        }
     }
 
     /// Apply a published agent event to the actor-owned projection.
@@ -384,20 +450,43 @@ async fn run_worker(
 )]
 fn apply(state: &mut AgentStateSnapshot, cmd: StateCommand) {
     match cmd {
-        StateCommand::SetSystemPrompt(s) => state.system_prompt = s,
-        StateCommand::SetModel(m) => state.model = m,
-        StateCommand::SetThinkingLevel(t) => state.thinking_level = t,
+        StateCommand::SetSystemPrompt(s, ack) => {
+            state.system_prompt = s;
+            let _ = ack.send(());
+        }
+        StateCommand::SetModel(m, ack) => {
+            state.model = m;
+            let _ = ack.send(());
+        }
+        StateCommand::SetThinkingLevel(t, ack) => {
+            state.thinking_level = t;
+            let _ = ack.send(());
+        }
         StateCommand::PushMessage(m, ack) => apply_push_message(state, m, ack),
         StateCommand::ReplaceMessages(msgs, ack) => {
             state.messages = msgs;
             let _ = ack.send(());
         }
-        StateCommand::SetTools(tools) => state.tools = tools,
-        StateCommand::MarkStreaming(on) => state.is_streaming = on,
-        StateCommand::SetStreamingMessage(m) => state.streaming_message = m,
-        StateCommand::SetStreamingState { streaming, message } => {
+        StateCommand::SetTools(tools, ack) => {
+            state.tools = tools;
+            let _ = ack.send(());
+        }
+        StateCommand::MarkStreaming(on, ack) => {
+            state.is_streaming = on;
+            let _ = ack.send(());
+        }
+        StateCommand::SetStreamingMessage(m, ack) => {
+            state.streaming_message = m;
+            let _ = ack.send(());
+        }
+        StateCommand::SetStreamingState {
+            streaming,
+            message,
+            ack,
+        } => {
             state.is_streaming = streaming;
             state.streaming_message = message;
+            let _ = ack.send(());
         }
         StateCommand::AddPendingToolCall(id, ack) => {
             if !state.pending_tool_calls.contains(&id) {
@@ -423,8 +512,9 @@ fn apply(state: &mut AgentStateSnapshot, cmd: StateCommand) {
             AgentStateActor::apply_event_to_state(state, *event);
             let _ = ack.send(());
         }
-        StateCommand::Reset => {
+        StateCommand::Reset(ack) => {
             *state = AgentStateSnapshot::default();
+            let _ = ack.send(());
         }
     }
 }
