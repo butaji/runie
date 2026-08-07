@@ -120,6 +120,7 @@ fn finish_replay_events(
     });
 }
 
+#[allow(clippy::too_many_lines)]
 fn append_text_events(value: &serde_json::Value, events: &mut Vec<AssistantMessageEvent>) -> bool {
     for (pointer, thinking) in [
         ("/choices/0/delta/content", false),
@@ -147,6 +148,37 @@ fn append_text_events(value: &serde_json::Value, events: &mut Vec<AssistantMessa
                 }
             });
         }
+    }
+    // OpenAI Responses/Codex emits typed events whose payload is
+    // `{delta: ...}`, rather than the chat-completions delta shape.
+    match value.get("type").and_then(|v| v.as_str()) {
+        Some("response.output_text.delta") | Some("response.refusal.delta") => {
+            if let Some(text) = value
+                .get("delta")
+                .and_then(|v| v.as_str())
+                .filter(|s| !s.is_empty())
+            {
+                events.push(AssistantMessageEvent::TextDelta {
+                    index: 0,
+                    delta: text.into(),
+                    partial: AssistantMessage::default(),
+                });
+            }
+        }
+        Some("response.reasoning_summary_text.delta") | Some("response.reasoning_text.delta") => {
+            if let Some(text) = value
+                .get("delta")
+                .and_then(|v| v.as_str())
+                .filter(|s| !s.is_empty())
+            {
+                events.push(AssistantMessageEvent::ThinkingDelta {
+                    index: 1,
+                    delta: text.into(),
+                    partial: AssistantMessage::default(),
+                });
+            }
+        }
+        _ => {}
     }
     false
 }
@@ -218,6 +250,8 @@ fn collect_openai_tool_calls(
 
 fn has_terminal_marker(value: &serde_json::Value) -> bool {
     value.get("type").and_then(|v| v.as_str()) == Some("message_stop")
+        || value.get("type").and_then(|v| v.as_str()) == Some("response.completed")
+        || value.get("type").and_then(|v| v.as_str()) == Some("response.incomplete")
         || value
             .pointer("/delta/stop_reason")
             .is_some_and(|v| !v.is_null())
@@ -250,5 +284,44 @@ impl StreamFn for ReplayProvider {
             }])));
         }
         Ok(Box::pin(stream::iter(self.events.clone())))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use futures::StreamExt;
+
+    #[tokio::test]
+    async fn responses_trace_maps_text_delta_and_completion_to_pi_events() {
+        let provider = ReplayProvider::from_sse_body(
+            "data: {\"type\":\"response.created\",\"response\":{\"id\":\"r1\"}}\n\
+             data: {\"type\":\"response.output_text.delta\",\"delta\":\"hello\"}\n\
+             data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\"}}\n",
+        )
+        .expect("Responses trace");
+        let mut events = provider
+            .stream(
+                &Model::default(),
+                &crate::types::AgentContext::default(),
+                None,
+            )
+            .await
+            .expect("replay stream");
+        assert!(matches!(
+            events.next().await,
+            Some(AssistantMessageEvent::Start { .. })
+        ));
+        assert!(matches!(
+            events.next().await,
+            Some(AssistantMessageEvent::TextDelta { delta, .. }) if delta == "hello"
+        ));
+        assert!(matches!(
+            events.next().await,
+            Some(AssistantMessageEvent::Done {
+                stop_reason: StopReason::Stop,
+                ..
+            })
+        ));
     }
 }
