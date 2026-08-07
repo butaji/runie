@@ -339,6 +339,11 @@ pub enum EventSpec {
     SessionAppend {
         session_append: SessionAppendSpec,
     },
+    /// Await the session actor after the preceding declared event.
+    /// This is a replay barrier, not a Pi wire event.
+    SessionFlush {
+        session_flush: bool,
+    },
     BranchSummary {
         branch_summary: BranchSummarySpec,
     },
@@ -757,6 +762,7 @@ impl EventSpec {
             Self::SessionName { .. } => None,
             Self::SessionLane { .. } => None,
             Self::SessionAppend { .. } => None,
+            Self::SessionFlush { .. } => None,
             Self::BranchSummary { .. } => None,
             Self::CustomEntry { .. } => None,
             Self::Compaction { .. } => None,
@@ -1890,9 +1896,20 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
     session.flush().await;
     let declared_events = declared_control_events(scenario);
     events_from_task.extend(declared_events.iter().cloned());
-    for event in &declared_events {
-        actor_snapshot.apply_event(event).await;
-        let _ = session.apply_event(event).await;
+    for declared in &scenario.events {
+        if matches!(
+            declared,
+            EventSpec::SessionFlush {
+                session_flush: true
+            }
+        ) {
+            session.flush().await;
+            continue;
+        }
+        if let Some(event) = declared.waiting_event() {
+            actor_snapshot.apply_event(&event).await;
+            let _ = session.apply_event(&event).await;
+        }
     }
 
     let (scrollback, status) = replay_scenario_events(
