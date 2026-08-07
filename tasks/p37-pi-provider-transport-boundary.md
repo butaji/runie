@@ -67,9 +67,9 @@ Not yet implemented behaviorally:
 - `maxRetryDelayMs`: retry delay is capped by the option, with provider
   `retry-after` metadata taking precedence before the cap and injectable
   delay/jitter hooks keeping replay deterministic.
-- named temperature/max-tokens/cache-retention fields: Runie's current
-  provider boundary does not construct provider-specific payloads, so adding
-  them to `SimpleStreamOptions` would create cosmetic parity only.
+- named temperature/cache-retention fields: Runie's current provider boundary
+  does not construct provider-specific payloads, so promoting them requires a
+  concrete adapter contract rather than merely deserializing unused fields.
 
 ## Next implementation slice
 
