@@ -108,6 +108,16 @@ boundary rather than through renderer-only state or direct actor reads.
   document produced for the frame; the pre-draw readiness check remains an
   event-loop decision, outside painting.
 
+### Boundary audit (2026-08-06)
+
+Re-audited both live draw paths after the feed-model migration. The binary
+acquires one `TuiSnapshot`, derives one immutable `ViewDocument`, and passes
+only document props into the terminal adapter. Prompt intrinsic height comes
+from `PromptSnapshot`; feed/status widgets are rehydrated from actor snapshots;
+no renderer reads actor state or asks a compatibility widget to measure layout.
+The remaining p26 items are broader declarative reflow and terminal-independent
+style-intent coverage, not an active duplicate state or measurement path.
+
 ## Next boundaries
 
 1. Replace remaining compatibility widget-derived overlay/layout measurements
