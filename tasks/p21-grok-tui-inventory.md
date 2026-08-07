@@ -584,6 +584,14 @@ presentation cannot be reclassified by provider call ID. `ToolBlock.is_running`
 is asserted during the event-renderer lifecycle test and through the YAML
 `tool_running` projection oracle; completion settles the same opaque row.
 
+Open-item reconciliation (2026-08-06): the earlier notes describing ordinary
+running-state identity, dense-group truncation, and viewport centering as open
+are historical and superseded by the reducer checkpoints above. The remaining
+authoritative TUI gap is the full Grok typed block/member model: per-card row
+identity, fold/navigation semantics across every member, and cast-wide frame
+reconciliation. Future work must target that model or a verified cast delta;
+reopening the closed ID/truncation paths would regress the actor boundary.
+
 Workflow status formatter audit (2026-08-06): compared against Grok's
 `WorkflowBlockStatus` renderer and added exact tests for `failed`, `cancelled`,
 and `paused` elapsed wording. Cancelled/paused statuses now use `after 1.2s`
