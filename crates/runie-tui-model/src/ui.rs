@@ -1,5 +1,7 @@
 //! Renderer-independent UI actor messages.
 
+use runie_core::types::AgentEvent;
+
 runie_core::typed_action_registry! {
     pub enum PaletteAction {
         NewSession => "New Session",
@@ -25,6 +27,15 @@ pub enum UiMsg {
     CommandPaletteEscape,
     ActivateCommandPalette,
     Reset,
+}
+
+/// Translate core lifecycle events into UI-owned reducer messages.
+/// Unsupported core events intentionally produce no UI transition.
+pub fn ui_messages_for_event(event: &AgentEvent) -> Vec<UiMsg> {
+    match event {
+        AgentEvent::Reset => vec![UiMsg::Reset],
+        _ => Vec::new(),
+    }
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

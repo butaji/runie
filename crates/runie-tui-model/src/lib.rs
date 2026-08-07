@@ -22,7 +22,7 @@ pub use memory::{memory_display_lines, parse_memory_results, MemoryResult};
 pub use prompt::{InputMode, PromptOutcome, PromptSnapshot};
 pub use status::{Status, StatusMsg, StatusSnapshot};
 pub use theme::ThemeToken;
-pub use ui::{PaletteAction, UiCommand, UiMsg, UiState};
+pub use ui::{ui_messages_for_event, PaletteAction, UiCommand, UiMsg, UiState};
 
 /// Immutable aggregate of actor-owned TUI projections for a single view pass.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -93,7 +93,7 @@ mod tests {
         FeedSnapshot, PromptSnapshot, ScrollState, Status, StatusSnapshot, TuiSnapshot, UiMsg,
         UiState,
     };
-    use runie_core::types::ThemeKind;
+    use runie_core::types::{AgentEvent, ThemeKind};
 
     #[test]
     fn following_feed_tracks_appended_content() {
@@ -174,6 +174,15 @@ mod tests {
 
         let state = state.update(UiMsg::CommandPaletteEscape);
         assert!(!state.command_palette_open);
+    }
+
+    #[test]
+    fn ui_core_event_mapping_is_explicit_and_pure() {
+        assert_eq!(
+            super::ui_messages_for_event(&AgentEvent::Reset),
+            vec![UiMsg::Reset]
+        );
+        assert!(super::ui_messages_for_event(&AgentEvent::AgentStart).is_empty());
     }
 
     fn empty_feed() -> FeedSnapshot {

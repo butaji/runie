@@ -20,7 +20,7 @@ use crate::widgets::{
     FeedSnapshot, PromptOutcome, PromptSnapshot, PromptWidget, Scrollback, Status, StatusBar,
     StatusSnapshot, TuiSnapshot,
 };
-pub use runie_tui_model::{UiCommand, UiMsg, UiState};
+pub use runie_tui_model::{ui_messages_for_event, UiCommand, UiMsg, UiState};
 
 #[derive(Debug)]
 pub enum AppExit {
@@ -85,8 +85,10 @@ impl UiActor {
                         let _ = applied.send(());
                     }
                     event = events.recv() => {
-                        if matches!(event, Ok(AgentEvent::Reset)) {
-                            state = state.update(UiMsg::Reset);
+                        if let Ok(event) = event {
+                            for message in ui_messages_for_event(&event) {
+                                state = state.update(message);
+                            }
                             let _ = snapshot_tx.send(state.clone());
                         }
                     }

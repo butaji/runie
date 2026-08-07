@@ -154,6 +154,13 @@ actor; `visual-activity-mixed.yaml` asserts the resulting visible `⌄` marker f
   cannot observe completion before the worker acknowledges reduction.
 ## Macro/DSL audit (2026-08-06)
 
+- **Core-event UI mapping (2026-08-06):** `ui_messages_for_event` is now the
+  pure SSOT mapping from `AgentEvent` to UI reducer messages. `UiActor` folds
+  that mapping through `UiState::update` instead of embedding a special-case
+  reset mutation in its worker. The event mapping has a model test; this keeps
+  state delivery event-based while leaving the actor mailbox and acknowledgement
+  protocol explicit.
+
 - **Actor workflow state oracle (2026-08-06):** YAML `state.workflows` now
   compares the complete actor-owned workflow projection (identity, objective,
   phase/state, active-agent count, terminal status, and elapsed time) by stable
