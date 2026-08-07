@@ -421,16 +421,21 @@ Interactive ownership slice (2026-08-07): the owned crossterm input worker
 now feeds raw mouse events into `ScrollFlushState` and emits `InputEvent::Mouse`
 only from its owned 16 ms cadence. Keyboard events remain on the same bounded
 input mailbox, and worker shutdown finalizes the stream without an uncapped
-catch-up event. The worker currently uses the fixed initial 24-row viewport;
-delivering live layout measurements to this worker and modeling the source's
-post-gap backlog drain are the remaining production refinements.
+catch-up event. The worker initially used a fixed 24-row viewport; the live
+layout mailbox below now replaces that fallback after the first measurement.
 
 Live viewport event slice (2026-08-07): the render/layout boundary now sends
 the computed scrollback height to the owned input worker through a bounded
 `InputConfig::ScrollViewport` mailbox event. Resizes therefore update the
 flush cap without mutating the worker from the renderer. The worker keeps its
-24-row fallback only until the first layout measurement arrives; post-gap
-backlog drain and an explicit runtime test of resize timing remain open.
+24-row fallback only until the first layout measurement arrives.
+
+Source reconciliation (2026-08-08): post-gap backlog drain is implemented by
+the live worker's repeated 16 ms `flush_at` calls; each call preserves the
+bounded remainder and later ticks drain it, while shutdown `finalize` emits no
+uncapped burst. The remaining item is evidence only: a PTY/asciinema runtime
+fixture that changes terminal height during a flooded mouse stream and observes
+the cap transition. The pure YAML flush oracle already covers the reducer.
 
 Flush-observation oracle slice (2026-08-07): `ScenarioOutcome` now carries
 the ordered pure scroll flush trace, and `StateAssertions.scroll_flushes`
