@@ -137,6 +137,15 @@ family choice while retaining Pi's JSON payload shape; unknown strings cannot
 be created through this DSL. A test constructs every family and verifies the
 wire names.
 
+## Completed slice (2026-08-07, typed internal lane boundary)
+
+`SessionLaneRecord` now decodes the nine Pi operation-lane families into a
+closed internal enum before admission and reduction. Each variant retains the
+lossless JSON payload, so forward-compatible Pi fields still survive JSONL
+round trips while Rust code cannot silently branch on an unknown family. The
+reducer uses this typed value for lifecycle matching, and unit coverage checks
+both family identity and payload preservation.
+
 ## Current Runie mapping
 
 `runie-core/src/session.rs` owns parent-linked message/config entries and
@@ -146,27 +155,29 @@ terminated message metadata are covered by replay tests.
 
 The following are not yet exact Pi parity:
 
-- operation records are generic `(record_type, data)` rather than typed lane
-  records with admission and sequence validation;
-- there is no durable actor-owned JSONL storage backend, atomic publish, torn
-  tail repair, or fork writer;
-- queue, deferred-write, tool-start, step-attempt, and usage records are not
-  emitted as their own session events;
-- compaction is journaled when supplied by an event, but Runie does not yet
-  implement Pi's context-building and summary/retained-tail algorithm.
+- the public wire boundary still carries operation records as generic
+  `(record_type, data)` values; the macro constrains Rust call sites, but the
+  persisted representation is not a typed Rust record union;
+- queue, deferred-write, tool-start, step-attempt, and usage records are
+  admitted and replayed when supplied as events, but the live Pi adapter does
+  not yet emit each family from its corresponding operation transition;
+- compaction is journaled when supplied by an event, and deterministic cut
+  preparation is actor-owned, but Runie does not yet implement Pi's complete
+  context-building, summarization, and `CompactionCreated` result publication
+  boundary.
 
 ## Implementation order
 
-1. Add a typed `SessionLaneRecord` event DSL while retaining the Pi wire event
-   boundary; each variant must reduce through `SessionActor` only.
-2. Add pure record admission/sequence/parent validation and YAML fixtures for
-   every lane family, including duplicate-open-operation rejection.
-3. Add an async owned JSONL storage actor with atomic temp-file publication,
-   torn-tail repair, load/export, and fork operations.
-4. Add compaction context/result events and replay assertions for summary,
-   retained tail, tokens, usage, and details.
-5. Add YAML state assertions for ordered records and restart/recovery state;
-   only then promote the session inventory row to covered.
+1. Replace the generic Rust operation-record payload with a typed internal
+   lane-record union while retaining lossless Pi JSONL compatibility.
+2. Emit queue, deferred-write, tool-start, step-attempt, and usage records at
+   their owning Pi operation transitions; each must reduce through
+   `SessionActor` only.
+3. Add the actor-owned compaction context/summarization result boundary and
+   publish `CompactionCreated` through an event, with replay assertions for
+   summary, retained tail, tokens, usage, and details.
+4. Extend YAML state assertions to cover live emission and restart/recovery
+   equivalence for every lane family.
 
 ## Acceptance
 

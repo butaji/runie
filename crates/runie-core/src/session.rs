@@ -322,6 +322,54 @@ pub enum SessionLaneRecordKind {
     Usage,
 }
 
+/// Typed internal representation of a Pi operation-lane fact. The payload is
+/// deliberately retained losslessly because Pi may add fields without a
+/// Runie release; only the family is closed over here.
+#[derive(Debug, Clone, PartialEq)]
+pub enum SessionLaneRecord {
+    OperationStarted(serde_json::Value),
+    AbortRequested(serde_json::Value),
+    OperationFinished(serde_json::Value),
+    StepAttempt(serde_json::Value),
+    ToolStarted(serde_json::Value),
+    QueueEnqueued(serde_json::Value),
+    QueueCancelled(serde_json::Value),
+    WriteDeferred(serde_json::Value),
+    Usage(serde_json::Value),
+}
+
+impl SessionLaneRecord {
+    pub fn decode(record_type: &str, data: &serde_json::Value) -> Result<Self, String> {
+        let payload = data.clone();
+        match session_lane_record_kind(record_type) {
+            Some(SessionLaneRecordKind::OperationStarted) => Ok(Self::OperationStarted(payload)),
+            Some(SessionLaneRecordKind::AbortRequested) => Ok(Self::AbortRequested(payload)),
+            Some(SessionLaneRecordKind::OperationFinished) => Ok(Self::OperationFinished(payload)),
+            Some(SessionLaneRecordKind::StepAttempt) => Ok(Self::StepAttempt(payload)),
+            Some(SessionLaneRecordKind::ToolStarted) => Ok(Self::ToolStarted(payload)),
+            Some(SessionLaneRecordKind::QueueEnqueued) => Ok(Self::QueueEnqueued(payload)),
+            Some(SessionLaneRecordKind::QueueCancelled) => Ok(Self::QueueCancelled(payload)),
+            Some(SessionLaneRecordKind::WriteDeferred) => Ok(Self::WriteDeferred(payload)),
+            Some(SessionLaneRecordKind::Usage) => Ok(Self::Usage(payload)),
+            None => Err(format!("unknown session lane record type {record_type:?}")),
+        }
+    }
+
+    pub fn kind(&self) -> SessionLaneRecordKind {
+        match self {
+            Self::OperationStarted(_) => SessionLaneRecordKind::OperationStarted,
+            Self::AbortRequested(_) => SessionLaneRecordKind::AbortRequested,
+            Self::OperationFinished(_) => SessionLaneRecordKind::OperationFinished,
+            Self::StepAttempt(_) => SessionLaneRecordKind::StepAttempt,
+            Self::ToolStarted(_) => SessionLaneRecordKind::ToolStarted,
+            Self::QueueEnqueued(_) => SessionLaneRecordKind::QueueEnqueued,
+            Self::QueueCancelled(_) => SessionLaneRecordKind::QueueCancelled,
+            Self::WriteDeferred(_) => SessionLaneRecordKind::WriteDeferred,
+            Self::Usage(_) => SessionLaneRecordKind::Usage,
+        }
+    }
+}
+
 pub fn session_lane_record_kind(record_type: &str) -> Option<SessionLaneRecordKind> {
     Some(match record_type {
         "operation_started" => SessionLaneRecordKind::OperationStarted,
@@ -415,6 +463,9 @@ fn reduce_operation_record(
     record_type: &str,
     data: &serde_json::Value,
 ) {
+    let Ok(record) = SessionLaneRecord::decode(record_type, data) else {
+        return;
+    };
     if validate_session_lane_record(snapshot, record_type, data).is_err() {
         return;
     }
@@ -438,7 +489,7 @@ fn reduce_operation_record(
         timestamp: data.get("timestamp").and_then(serde_json::Value::as_i64),
         data: data.clone(),
     });
-    if record_type == "operation_started"
+    if record.kind() == SessionLaneRecordKind::OperationStarted
         && data
             .get("intent")
             .and_then(|intent| intent.get("kind"))
@@ -469,8 +520,8 @@ fn reduce_operation_record(
     else {
         return;
     };
-    match record_type {
-        "operation_started" => {
+    match record {
+        SessionLaneRecord::OperationStarted(_) => {
             if let Some(kind) = data
                 .get("intent")
                 .and_then(|intent| intent.get("kind"))
@@ -484,12 +535,12 @@ fn reduce_operation_record(
                 .active_operations
                 .insert(operation_id.to_owned(), "started".into());
         }
-        "abort_requested" => {
+        SessionLaneRecord::AbortRequested(_) => {
             snapshot
                 .active_operations
                 .insert(operation_id.to_owned(), "aborted".into());
         }
-        "operation_finished" => {
+        SessionLaneRecord::OperationFinished(_) => {
             snapshot.active_operations.remove(operation_id);
             if let Some(outcome) = data.get("outcome").and_then(serde_json::Value::as_str) {
                 snapshot
@@ -1592,6 +1643,16 @@ mod tests {
             &serde_json::json!({"id": "record-1"})
         )
         .is_err());
+    }
+
+    #[test]
+    fn typed_lane_record_decode_preserves_family_and_payload() {
+        let payload = serde_json::json!({"runId": "op-1", "seq": 3});
+        let record =
+            SessionLaneRecord::decode("tool_started", &payload).expect("known Pi lane family");
+        assert_eq!(record.kind(), SessionLaneRecordKind::ToolStarted);
+        assert!(matches!(record, SessionLaneRecord::ToolStarted(value) if value == payload));
+        assert!(SessionLaneRecord::decode("unknown", &payload).is_err());
     }
 
     #[test]
