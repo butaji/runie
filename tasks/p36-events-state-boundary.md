@@ -245,3 +245,12 @@ DSL.
 Provider cancellation consolidation (2026-08-06): cancellation acknowledgement
 now uses `mailbox_ack!`, retaining provider pump ownership and the settled
 abort boundary without duplicating oneshot plumbing.
+
+Continuation audit (2026-08-07): the remaining `LoopActor` mutex protects only
+the actor-owned in-flight `JoinHandle` used by `wait_for_idle`; it is
+coordination state, not a domain snapshot or cross-actor projection. Run
+lifecycle transitions still enter through acknowledged `LoopControlEvent`
+messages, and the run task is awaited before completion. Remaining production
+`tokio::spawn` sites are actor-worker macro expansions, an actor-owned provider
+pump, or renderer workers whose owners are retained and shut down. No new
+direct state-transfer mutation was found in this audit.
