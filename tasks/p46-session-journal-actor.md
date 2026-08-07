@@ -14,6 +14,9 @@ Runie now has a minimal session-tree foundation in `runie-core::session`:
   timers or sleeps.
 - `hello-streaming.yaml` asserts the resulting entry count through the real
   loop, bus, and actor path at runtime.
+- `App::new` and `App::new_with_welcome` now attach the same actor-owned
+  journal to the live event bus, and expose snapshot/flush accessors without
+  making rendering responsible for session state.
 
 This is intentionally the journal seam, not a claim that Pi JSONL storage,
 forking, compaction, labels, or durable filesystem recovery are complete.

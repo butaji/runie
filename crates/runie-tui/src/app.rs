@@ -20,6 +20,7 @@ use crate::widgets::{
     FeedSnapshot, PromptOutcome, PromptSnapshot, PromptWidget, Scrollback, Status, StatusBar,
     StatusSnapshot, TuiSnapshot,
 };
+use runie_core::session::{SessionActor, SessionSnapshot};
 pub use runie_tui_model::{ui_messages_for_event, UiCommand, UiMsg, UiState};
 
 #[derive(Debug)]
@@ -289,6 +290,7 @@ pub struct App {
     pub prompt: PromptActor,
     pub status_actor: StatusActor,
     pub scrollback_actor: ScrollbackActor,
+    pub session_actor: SessionActor,
     pub loop_actor: LoopActor,
     pub bus: EventBus,
     pub ui: UiActor,
@@ -301,6 +303,7 @@ impl App {
             prompt: PromptActor::new(&bus),
             status_actor: StatusActor::new(),
             scrollback_actor: ScrollbackActor::new(),
+            session_actor: SessionActor::new_with_bus(&bus),
             loop_actor,
             bus,
             ui,
@@ -313,6 +316,7 @@ impl App {
             prompt: PromptActor::new(&bus),
             status_actor: StatusActor::new(),
             scrollback_actor: ScrollbackActor::new(),
+            session_actor: SessionActor::new_with_bus(&bus),
             loop_actor,
             bus,
             ui,
@@ -499,6 +503,14 @@ impl App {
 
     pub fn scrollback_snapshot(&self) -> Scrollback {
         self.scrollback_actor.snapshot()
+    }
+
+    pub async fn flush_session(&self) {
+        self.session_actor.flush().await;
+    }
+
+    pub fn session_snapshot(&self) -> SessionSnapshot {
+        self.session_actor.snapshot()
     }
 
     /// Read the renderer-independent feed model. New projections and
