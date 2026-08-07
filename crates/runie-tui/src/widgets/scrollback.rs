@@ -1896,7 +1896,7 @@ fn styled_line_for(kind: LineKind, text: &str, theme: ThemeKind) -> RatLine<'sta
                     Span::styled("Result ", appearance::muted_style_for(theme)),
                     Span::styled(
                         format!("{number} · {score} · {source} · "),
-                        appearance::muted_style_for(theme),
+                        appearance::muted_style_for(theme).add_modifier(Modifier::DIM),
                     ),
                     Span::styled(
                         path.to_owned(),
@@ -2631,6 +2631,7 @@ mod tests {
             ThemeKind::GrokNight,
         );
         assert_eq!(rendered.spans.len(), 3);
+        assert!(rendered.spans[1].style.add_modifier.contains(Modifier::DIM));
         assert!(rendered.spans[2]
             .style
             .add_modifier

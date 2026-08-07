@@ -118,6 +118,9 @@ Transcript block states:
 - **Grok activity labels (2026-08-05):** Added exact unit coverage for the
   recorded rich-cast labels `Listing/Reading` while running and
   `Listed/Read` after completion, including pluralization.
+- **Memory result typography (2026-08-06):** Memory result metadata now uses
+  Grok's dim token while the result path remains a bold primary span; the
+  distinction is covered by a focused renderer test.
 - **Mixed verb grouping (2026-08-05):** Activity folding now tracks directory,
   file, and command tools independently, producing Grok-style mixed headers
   such as `◈ Listed 1 dir, Ran 1 command` while retaining each tool member row.
