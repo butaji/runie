@@ -403,6 +403,30 @@ mod tests {
         }
     }
 
+    struct SummarizerFn;
+    #[async_trait::async_trait]
+    impl StreamFn for SummarizerFn {
+        async fn stream(
+            &self,
+            _model: &Model,
+            _context: &crate::types::AgentContext,
+            _options: Option<SimpleStreamOptions>,
+        ) -> Result<AssistantMessageEventStream, StreamError> {
+            Err(StreamError::Invalid("stream unused".into()))
+        }
+
+        async fn summarize_compaction(
+            &self,
+            request: &crate::session::CompactionSummaryRequest,
+        ) -> Result<crate::session::CompactionSummary, StreamError> {
+            Ok(crate::session::CompactionSummary {
+                summary: format!("{} tokens", request.tokens_before),
+                usage: None,
+                details: Some(serde_json::json!({"adapter": "test"})),
+            })
+        }
+    }
+
     #[tokio::test]
     async fn websocket_transport_uses_only_the_injected_provider_adapter() {
         let provider =
@@ -548,5 +572,25 @@ mod tests {
             Err(StreamError::Invalid(message))
                 if message == "provider cannot cancel deferred responses"
         ));
+    }
+
+    #[tokio::test]
+    async fn compaction_summary_uses_owned_provider_capability() {
+        let actor = ProviderActor::new(Arc::new(SummarizerFn));
+        let summary = actor
+            .summarize_compaction(crate::session::CompactionSummaryRequest {
+                history: vec![],
+                turn_prefix: vec![],
+                retained_tail: vec![],
+                tokens_before: 42,
+                previous_summary: None,
+            })
+            .await
+            .expect("summary capability");
+        assert_eq!(summary.summary, "42 tokens");
+        assert_eq!(
+            summary.details,
+            Some(serde_json::json!({"adapter": "test"}))
+        );
     }
 }
