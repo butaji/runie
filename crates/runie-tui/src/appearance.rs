@@ -22,6 +22,7 @@ fg = "#e1e1e1"
 muted = "#6c6c6c"
 magenta = "#bb9af7"
 blue = "#7aa2f7"
+thought_accent = "#685786"
 yellow = "#e0af68"
 green = "#9ece6a"
 red = "#f7768e"
@@ -42,6 +43,7 @@ selection_border = "#3c3c41"
 "text.muted" = "muted"
 "accent.primary" = "magenta"
 "accent.secondary" = "blue"
+"accent.thought" = "thought_accent"
 success = "green"
 error = "red"
 warning = "yellow"
@@ -74,6 +76,7 @@ fg = "#262626"
 muted = "#767676"
 magenta = "#7d4bc6"
 blue = "#2f64d2"
+thought_accent = "#b59cda"
 yellow = "#a27612"
 green = "#378e23"
 red = "#cd3048"
@@ -179,6 +182,10 @@ pub fn muted_style_for(theme: ThemeKind) -> Style {
 
 pub fn accent_style_for(theme: ThemeKind) -> Style {
     base_style_for(theme).fg(token_color(theme, ThemeToken::AccentPrimary))
+}
+
+pub fn thought_accent_style_for(theme: ThemeKind) -> Style {
+    base_style_for(theme).fg(token_color(theme, ThemeToken::AccentThought))
 }
 
 pub fn success_style_for(theme: ThemeKind) -> Style {

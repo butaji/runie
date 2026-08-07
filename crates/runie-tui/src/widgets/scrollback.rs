@@ -2129,7 +2129,7 @@ fn styled_thought_summary(text: &str, style: Style, theme: ThemeKind) -> RatLine
     let rail_len = text.strip_prefix('❙').map_or(0, |_| '❙'.len_utf8());
     let (rail, gutter) = text.split_at(rail_len);
     RatLine::from(vec![
-        Span::styled(rail.to_owned(), appearance::accent_style_for(theme)),
+        Span::styled(rail.to_owned(), appearance::thought_accent_style_for(theme)),
         Span::styled(
             gutter[..bold_start.saturating_sub(rail_len)].to_owned(),
             style,
@@ -3012,7 +3012,9 @@ mod tests {
         assert_eq!(buffer.cell((0, 0)).expect("thought rail").symbol(), "❙");
         assert_eq!(
             buffer.cell((0, 0)).expect("thought rail").fg,
-            Color::Rgb(187, 154, 247)
+            appearance::thought_accent_style_for(ThemeKind::GrokNight)
+                .fg
+                .expect("thought accent token")
         );
         assert_eq!(buffer.cell((3, 0)).expect("thought marker").symbol(), "◆");
     }

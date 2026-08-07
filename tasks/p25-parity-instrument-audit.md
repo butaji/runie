@@ -754,6 +754,13 @@ a cell-level prompt regression covering all three roles. This closes the
 caption's style-boundary mismatch; dynamic header values and the remaining
 full-screen capture deltas stay separately tracked below.
 
+Settled-thought rail increment (2026-08-07): a fresh 80×24 settled comparison
+isolated the `❙` rail as a stable color-only delta: Grok uses the accent
+blended with the base surface (`#685786` in GrokNight), while the live spinner
+continues using the bright accent. Runie now models this as the semantic
+`accent.thought` Opaline token and resolves the settled rail through it; the
+renderer test asserts the token boundary without hardcoding widget colors.
+
 Capture provenance increment (2026-08-06): `tmux-asciinema-capture.sh` now
 writes `<capture>.grok-doctor.json` and references it from the capture manifest.
 Both paired reports must show an available color capability before a strict
