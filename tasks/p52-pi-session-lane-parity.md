@@ -13,6 +13,15 @@ behavior and operation-kind filtering. The actor mailbox remains the only
 mutation path; a future storage actor can use the same query value for
 filesystem-backed reads.
 
+## Completed slice (2026-08-08, declarative entry queries)
+
+`SessionEntryQuery` and `SessionSnapshot::find_entries` now mirror Pi's
+`findEntries` read contract across both the message and configuration lanes.
+The result is a typed `SessionEntryRecord` union, ordered by journal sequence,
+with type, custom-type, cursor, newest-first, and limit filters. The query is
+pure and does not create synthetic messages or mutate the actor-owned journal.
+Regression coverage verifies mixed-lane order and custom-entry filtering.
+
 ## Completed slice (2026-08-07)
 
 `runie-core` now classifies all nine Pi operation-lane record families with

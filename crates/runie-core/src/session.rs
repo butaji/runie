@@ -132,6 +132,47 @@ pub struct SessionEntry {
     pub terminate: bool,
 }
 
+/// One ordered Pi session entry returned by the declarative entry query.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SessionEntryRecord {
+    Message(Box<SessionEntry>),
+    Config(Box<SessionConfigEntry>),
+}
+
+impl SessionEntryRecord {
+    fn seq(&self) -> u64 {
+        match self {
+            Self::Message(entry) => entry.seq,
+            Self::Config(entry) => entry.seq,
+        }
+    }
+
+    fn record_type(&self) -> &'static str {
+        match self {
+            Self::Message(_) => "message",
+            Self::Config(entry) => match &entry.record {
+                SessionConfigRecord::ModelChanged { .. } => "model_change",
+                SessionConfigRecord::ThinkingLevelChanged { .. } => "thinking_level_change",
+                SessionConfigRecord::ActiveToolsChanged { .. } => "active_tools_change",
+                SessionConfigRecord::BranchSummaryCreated { .. } => "branch_summary",
+                SessionConfigRecord::CustomSessionEntryCreated { .. } => "custom",
+                SessionConfigRecord::CompactionCreated { .. } => "compaction",
+                SessionConfigRecord::OperationRecordCreated { .. } => "record",
+            },
+        }
+    }
+}
+
+/// Declarative equivalent of Pi's `EntryQuery`.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SessionEntryQuery {
+    pub record_type: Option<String>,
+    pub custom_type: Option<String>,
+    pub after_seq: Option<u64>,
+    pub newest_first: bool,
+    pub limit: Option<usize>,
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct SessionSnapshot {
     pub sequence: u64,
@@ -385,6 +426,50 @@ impl CompactionContextProjection {
 }
 
 impl SessionSnapshot {
+    /// Find ordered message/config entries using Pi's EntryQuery semantics.
+    pub fn find_entries(&self, query: &SessionEntryQuery) -> Vec<SessionEntryRecord> {
+        let mut entries = self
+            .entries
+            .iter()
+            .cloned()
+            .map(|entry| SessionEntryRecord::Message(Box::new(entry)))
+            .chain(
+                self.config_records
+                    .iter()
+                    .cloned()
+                    .map(|entry| SessionEntryRecord::Config(Box::new(entry))),
+            )
+            .filter(|entry| {
+                query
+                    .record_type
+                    .as_deref()
+                    .is_none_or(|record_type| entry.record_type() == record_type)
+                    && query.after_seq.is_none_or(|after| entry.seq() > after)
+                    && query.custom_type.as_deref().is_none_or(|custom_type| {
+                        matches!(
+                            entry,
+                            SessionEntryRecord::Config(entry)
+                                if matches!(
+                                    &entry.record,
+                                    SessionConfigRecord::CustomSessionEntryCreated {
+                                        custom_type: value,
+                                        ..
+                                    } if value == custom_type
+                                )
+                        )
+                    })
+            })
+            .collect::<Vec<_>>();
+        entries.sort_by_key(SessionEntryRecord::seq);
+        if query.newest_first {
+            entries.reverse();
+        }
+        if let Some(limit) = query.limit {
+            entries.truncate(limit);
+        }
+        entries
+    }
+
     /// Find admitted operation-lane records using Pi's ordered query rules.
     pub fn find_lane_records(&self, query: &SessionLaneQuery) -> Vec<SessionLaneRecordSnapshot> {
         let mut records = self
@@ -2567,6 +2652,46 @@ mod tests {
             ..SessionLaneQuery::default()
         });
         assert_eq!(compactions[0].id, "run-2");
+    }
+
+    #[test]
+    fn entry_query_returns_message_and_config_lanes_in_pi_order() {
+        let snapshot = SessionSnapshot {
+            entries: vec![SessionEntry {
+                id: "entry-1".into(),
+                seq: 1,
+                parent_id: None,
+                timestamp: 7,
+                message: user("hello"),
+                terminate: false,
+            }],
+            config_records: vec![SessionConfigEntry {
+                id: "entry-2".into(),
+                seq: 2,
+                parent_id: Some("entry-1".into()),
+                timestamp: 7,
+                record: SessionConfigRecord::CustomSessionEntryCreated {
+                    custom_type: "note".into(),
+                    data: Some(serde_json::json!({"ok": true})),
+                },
+            }],
+            ..SessionSnapshot::default()
+        };
+        let entries = snapshot.find_entries(&SessionEntryQuery {
+            after_seq: Some(0),
+            ..SessionEntryQuery::default()
+        });
+        assert!(matches!(entries[0], SessionEntryRecord::Message(_)));
+        assert!(matches!(entries[1], SessionEntryRecord::Config(_)));
+        let custom = snapshot.find_entries(&SessionEntryQuery {
+            record_type: Some("custom".into()),
+            custom_type: Some("note".into()),
+            newest_first: true,
+            limit: Some(1),
+            ..SessionEntryQuery::default()
+        });
+        assert_eq!(custom.len(), 1);
+        assert!(matches!(custom[0], SessionEntryRecord::Config(_)));
     }
 
     #[test]
