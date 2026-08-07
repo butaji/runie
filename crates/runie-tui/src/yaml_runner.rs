@@ -1000,6 +1000,12 @@ pub struct StateAssertions {
     pub compaction_reserve_tokens: Option<u64>,
     pub compaction_enabled: Option<bool>,
     pub compaction_should_run: Option<bool>,
+    /// Runtime-only messages for Pi context-token estimation coverage.
+    pub context_usage_messages: Option<Vec<String>>,
+    pub context_usage_tokens: Option<u64>,
+    pub context_usage_reported_tokens: Option<u64>,
+    pub context_usage_trailing_tokens: Option<u64>,
+    pub context_usage_last_index: Option<usize>,
     /// Termination metadata on the latest actor-owned session entry.
     pub session_last_terminate: Option<bool>,
     pub tool_count: Option<usize>,
@@ -2958,6 +2964,48 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
                     "compaction_should_run mismatch: expected {expected}, got {actual}"
                 ));
             }
+        }
+    }
+    if let Some(message_texts) = &expected.context_usage_messages {
+        let messages = message_texts
+            .iter()
+            .map(|text| {
+                runie_core::types::AgentMessage::User(runie_core::types::UserMessage {
+                    content: vec![runie_core::types::UserContent::Text { text: text.clone() }],
+                    timestamp: 0,
+                })
+            })
+            .collect::<Vec<_>>();
+        let actual = runie_core::session::estimate_context_tokens(&messages);
+        if let Some(expected) = expected.context_usage_tokens {
+            if expected != actual.tokens {
+                return Err(format!(
+                    "context_usage_tokens mismatch: expected {expected}, got {}",
+                    actual.tokens
+                ));
+            }
+        }
+        if let Some(expected) = expected.context_usage_reported_tokens {
+            if expected != actual.usage_tokens {
+                return Err(format!(
+                    "context_usage_reported_tokens mismatch: expected {expected}, got {}",
+                    actual.usage_tokens
+                ));
+            }
+        }
+        if let Some(expected) = expected.context_usage_trailing_tokens {
+            if expected != actual.trailing_tokens {
+                return Err(format!(
+                    "context_usage_trailing_tokens mismatch: expected {expected}, got {}",
+                    actual.trailing_tokens
+                ));
+            }
+        }
+        if expected.context_usage_last_index != actual.last_usage_index {
+            return Err(format!(
+                "context_usage_last_index mismatch: expected {:?}, got {:?}",
+                expected.context_usage_last_index, actual.last_usage_index
+            ));
         }
     }
     assert_yaml_eq!(

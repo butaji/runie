@@ -256,6 +256,11 @@ The estimator now counts UTF-16 code units, matching JavaScript `String.length`
 for non-ASCII/astral Unicode text; a three-emoji regression prevents a silent
 UTF-8-byte-count drift from Pi.
 
+`StateAssertions` now exposes the same estimator through runtime YAML fields
+(`context_usage_messages` and the four expected result fields). The
+`hello-streaming.yaml` fixture exercises the Unicode path without compiling a
+new Rust scenario.
+
 ### Completed slice (2026-08-07, compaction context boundary)
 
 `SessionSnapshot::compaction_context_projection` is now a pure projection of

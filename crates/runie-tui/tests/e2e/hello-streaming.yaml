@@ -55,6 +55,11 @@ assertions:
     compaction_turn_prefix_indices: [0]
     compaction_retained_indices: [1]
     compaction_tokens_before: 80
+    context_usage_messages: ["😀😀😀"]
+    context_usage_tokens: 2
+    context_usage_reported_tokens: 0
+    context_usage_trailing_tokens: 2
+    context_usage_last_index: null
   transcript_contains:
     - "Hello world"
     - "say hi"
