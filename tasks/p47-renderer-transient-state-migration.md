@@ -254,3 +254,20 @@ scroll intents and delivered through `App::scroll_scrollback_by`, which sends
 the acknowledged `ScrollbackMsg::ScrollBy` to the feed actor. Other mouse
 events remain inert until Grok-compatible coordinate selection and clipboard
 contracts are modeled. A focused binary test pins the pure wheel mapping.
+
+## Grok scroll-normalization acceptance contract (2026-08-07)
+
+Source audit of `grok-build/src/input/mouse.rs` records the remaining exact
+behavior required before this slice can be marked parity-complete:
+
+- default wheel throughput is 3 lines per tick, with terminal-specific event-
+  per-tick profiles and optional `scroll_lines`/speed/inversion overrides;
+- events are grouped into streams with an 80 ms gap and flushed on a 16 ms
+  redraw cadence;
+- auto mode distinguishes wheel from trackpad using event density and timing,
+  retains fractional trackpad accumulation, and applies bounded acceleration;
+- direction, carry, duplicate terminal reports, stream caps, and viewport
+  bounds are normalized before the actor receives the final line delta.
+
+Runie's current ±3 mapping intentionally covers only the default wheel case;
+the normalizer and its YAML/event-sequence oracle remain open.
