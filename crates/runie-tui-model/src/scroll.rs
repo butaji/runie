@@ -19,6 +19,11 @@ pub struct ScrollNormalizer {
     pending_units: i32,
 }
 
+const FIXED_POINT: i32 = 10;
+const BASE_MULTIPLIER: i32 = 10;
+const MEDIUM_MULTIPLIER: i32 = 16;
+const FAST_MULTIPLIER: i32 = 25;
+
 impl Default for ScrollNormalizer {
     fn default() -> Self {
         Self::new(3, 3)
@@ -44,14 +49,23 @@ impl ScrollNormalizer {
         }
     }
 
-    pub const fn push(mut self, direction: ScrollDirection) -> (Self, i32) {
+    pub const fn push(self, direction: ScrollDirection) -> (Self, i32) {
+        self.push_with_multiplier(direction, BASE_MULTIPLIER)
+    }
+
+    const fn push_with_multiplier(
+        mut self,
+        direction: ScrollDirection,
+        multiplier: i32,
+    ) -> (Self, i32) {
         let sign = match direction {
             ScrollDirection::Up => -1,
             ScrollDirection::Down => 1,
         };
-        self.pending_units += sign * self.lines_per_tick;
-        let delta = self.pending_units / self.events_per_tick;
-        self.pending_units %= self.events_per_tick;
+        self.pending_units += sign * self.lines_per_tick * multiplier;
+        let denominator = self.events_per_tick * FIXED_POINT;
+        let delta = self.pending_units / denominator;
+        self.pending_units %= denominator;
         (self, delta)
     }
 
@@ -63,9 +77,19 @@ impl ScrollNormalizer {
             if at_ms.saturating_sub(last) > self.stream_gap_ms {
                 self.pending_units = 0;
             }
+            let interval = at_ms.saturating_sub(last);
+            let multiplier = if interval < 8 {
+                FAST_MULTIPLIER
+            } else if interval < 20 {
+                MEDIUM_MULTIPLIER
+            } else {
+                BASE_MULTIPLIER
+            };
+            self.last_event_ms = Some(at_ms);
+            return self.push_with_multiplier(direction, multiplier);
         }
         self.last_event_ms = Some(at_ms);
-        self.push(direction)
+        self.push_with_multiplier(direction, BASE_MULTIPLIER)
     }
 }
 
@@ -106,5 +130,18 @@ mod tests {
         let (normalizer, after_gap) = normalizer.push_at(101, ScrollDirection::Down);
         assert_eq!(after_gap, 1);
         assert_eq!(normalizer.last_event_ms, Some(101));
+    }
+
+    #[test]
+    fn injected_intervals_select_grok_acceleration_bands() {
+        let normalizer = ScrollNormalizer::default();
+        let (normalizer, base) = normalizer.push_at(0, ScrollDirection::Down);
+        let (_, medium) = normalizer.push_at(10, ScrollDirection::Down);
+        let normalizer = ScrollNormalizer::default();
+        let (normalizer, _) = normalizer.push_at(0, ScrollDirection::Down);
+        let (_, fast) = normalizer.push_at(5, ScrollDirection::Down);
+        assert_eq!(base, 1);
+        assert_eq!(medium, 1);
+        assert_eq!(fast, 2);
     }
 }

@@ -276,6 +276,12 @@ mouse events through that model before sending scroll messages. Stream timing,
 terminal profiles, and trackpad accumulation remain open; the reducer tests do
 not claim that the complete normalizer is finished.
 
+Acceleration slice (2026-08-07): injected intervals now select Grok's base,
+medium (1.6×), and fast (2.5×) bands using fixed-point arithmetic, preserving
+fractional carry without floating-point drift or sleeps. The interactive
+worker uses the same timestamped reducer; terminal-profile selection and
+trackpad-specific heuristics remain open.
+
 Mouse capture lifecycle closure (2026-08-07): the interactive terminal now
 enables crossterm mouse capture together with the alternate screen and disables
 it during restoration. This makes the already-owned mouse event path reachable
