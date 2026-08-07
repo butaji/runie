@@ -23,6 +23,9 @@ hiding the reducer or delivery boundary.
   actors publish acknowledged snapshots from owned mailbox reducers.
 - `scripts/validate-feed-actor-boundary.py` rejects terminal/widget imports in
   the feed actor and guards the renderer-independent feed ownership boundary.
+- The same validator rejects synchronous `EventRenderer::apply_event` and
+  mutex-owned legacy projection symbols, preventing the retired delivery path
+  from returning through a future compatibility change.
 - `visual-operation-admission.yaml` exercises malformed and duplicate lane
   events through the real session actor; invalid records do not enter the
   projection.
@@ -55,4 +58,3 @@ hiding the reducer or delivery boundary.
 - Rendering is pure and non-blocking.
 - State-changing tests use event/message sequences and state assertions.
 - `just ci` passes before each owned commit.
-
