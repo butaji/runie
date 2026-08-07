@@ -346,11 +346,7 @@ fn tool_update_messages(
         return Vec::new();
     };
     if !active_tools.contains(tool_call_id)
-        || (partial_result
-            .get("status")
-            .and_then(serde_json::Value::as_str)
-            .is_some()
-            && runie_tui_model::structured_update_text(partial_result).is_none())
+        || runie_tui_model::is_transport_only_update(partial_result)
     {
         return Vec::new();
     }

@@ -137,6 +137,15 @@ pub fn structured_update_text(result: &serde_json::Value) -> Option<String> {
         .map(str::to_owned)
 }
 
+/// Return `true` when a streaming tool-update envelope only carries
+/// lifecycle metadata (for example `{status: "running"}`) and no
+/// user-visible payload. Callers use this to short-circuit specialized
+/// card projections so transport-only events stay block state rather than
+/// transcript text.
+pub fn is_transport_only_update(partial_result: &serde_json::Value) -> bool {
+    partial_result.get("status").is_some() && structured_update_text(partial_result).is_none()
+}
+
 /// Extract the user-visible text from a Pi tool result without exposing its
 /// transport envelope to the feed actor.
 pub fn tool_result_text(result: &serde_json::Value) -> String {
@@ -952,9 +961,9 @@ impl ToolCardKind {
 #[cfg(test)]
 mod tests {
     use super::{
-        classify_activity_tool, default_tool_display_mode, project_tool_blocks,
-        project_tool_card_rows, structured_update_text, ActivityKind, FeedState, Line, LineKind,
-        ToolCardKind, ToolCardPaintIntent, ToolCardRow, ToolCardRowKind,
+        classify_activity_tool, default_tool_display_mode, is_transport_only_update,
+        project_tool_blocks, project_tool_card_rows, structured_update_text, ActivityKind,
+        FeedState, Line, LineKind, ToolCardKind, ToolCardPaintIntent, ToolCardRow, ToolCardRowKind,
     };
     use runie_core::types::ToolDisplayMode;
     use std::collections::HashMap;
@@ -1041,6 +1050,17 @@ mod tests {
         assert!(structured_update_text(&serde_json::json!({"output": 7})).is_none());
         assert!(structured_update_text(&serde_json::json!({"content": ["line"]})).is_none());
         assert!(structured_update_text(&serde_json::Value::Null).is_none());
+    }
+
+    #[test]
+    fn is_transport_only_update_flags_status_only_envelopes() {
+        assert!(is_transport_only_update(
+            &serde_json::json!({"status": "running"})
+        ));
+        assert!(!is_transport_only_update(
+            &serde_json::json!({"status": "running", "output": "hi"})
+        ));
+        assert!(!is_transport_only_update(&serde_json::json!({"step": 2})));
     }
 
     #[test]

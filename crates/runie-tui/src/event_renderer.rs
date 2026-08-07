@@ -594,12 +594,7 @@ impl EventRenderer {
         // Grok treats transport-only lifecycle updates (for example
         // `{status: "running"}`) as block state, not transcript text. Do not
         // leak those envelopes into a specialized card header.
-        if partial_result
-            .get("status")
-            .and_then(serde_json::Value::as_str)
-            .is_some()
-            && runie_tui_model::structured_update_text(&partial_result).is_none()
-        {
+        if runie_tui_model::is_transport_only_update(&partial_result) {
             return None;
         }
         if self

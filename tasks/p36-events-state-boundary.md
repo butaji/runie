@@ -60,6 +60,18 @@ implementation. Focused tests cover the `output`-over-`content` precedence
 and the non-string/`status`-only fallback; actor and renderer replay paths
 still pin the event → snapshot contract.
 
+Transport-only envelope predicate (2026-08-08): the
+`status`-present-but-no-payload short-circuit shared by `ScrollbackActor`'s
+update-projection filter and `EventRenderer`'s specialized card projection
+now lives in `runie-tui-model::is_transport_only_update`. Both call sites
+delegate the `status.is_some() && structured_update_text.is_none()` test
+to the model helper, so the `{status: "running"}` skip behavior and the
+`{status, output}` / unrelated-payload accept behavior share one
+renderer-independent implementation. A focused unit test pins the
+`status`-only true case alongside the `status + output` and `step: 2`
+false cases; actor and renderer replay paths continue to gate partial
+tool updates through the same event → snapshot contract.
+
 Output-result classifier extraction (2026-08-08): the
 `LineKind::ToolOutput` / `LineKind::ToolResult` decision for completed
 tools now lives in `runie-tui-model::is_output_tool`, which owns the
