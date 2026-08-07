@@ -1,6 +1,7 @@
 # p51 — Pi session configuration records
 
-Status: planned — source contract captured; implementation not yet started
+Status: in progress — actor-owned model/thinking records implemented; JSONL
+union and active-tools record remain open (2026-08-07)
 
 ## Source contract
 
@@ -25,15 +26,15 @@ would violate Pi's wire contract and the actor SSOT rule.
 
 ## Implementation boundary
 
-1. Add a renderer-independent `SessionRecord` sum type with the three
-   configuration variants and the existing message variant.
+1. Add a renderer-independent configuration record projection. The first
+   increment adds model and thinking records without fabricating messages.
 2. Preserve one ordered sequence/parent/leaf invariant across all records;
    message-only `entries` remains a compatibility projection until callers are
    migrated.
 3. Add explicit actor mailbox commands generated from `AgentEvent::ModelChanged`
    and `ThinkingLevelChanged`; active tool changes need a typed core event before
    the session actor can reduce them.
-4. Extend validated JSONL v4 import/export for these three record types.
+4. Extend validated JSONL v4 import/export for these record types.
 5. Add runtime YAML assertions for ordered record kinds and payloads; no
    fixture-specific Rust scenario code.
 
@@ -45,6 +46,14 @@ would violate Pi's wire contract and the actor SSOT rule.
 - Reset clears records through the session actor mailbox.
 - `just ci` and the session replay suite pass without sleeps or direct state
   mutation.
+
+## First implementation increment (2026-08-07)
+
+`SessionActor` now reduces `ModelChanged` and `ThinkingLevelChanged` through
+its owned mailbox into `SessionSnapshot::config_records`. The YAML
+`visual-status-working.yaml` fixture asserts the ordered kinds after the same
+event sequence that drives the TUI status. The records are not yet emitted by
+JSONL export; that is the next boundary and remains intentionally open.
 
 ## Explicitly separate
 

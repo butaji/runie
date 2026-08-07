@@ -11,7 +11,16 @@ use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::events::EventBus;
 use crate::task_owner::{mailbox_ack, spawn_actor_worker, spawn_owned_worker, TaskOwner};
-use crate::types::{AgentEvent, AgentMessage};
+use crate::types::{AgentEvent, AgentMessage, ThinkingLevel};
+
+/// Pi session configuration changes which are journal facts but not
+/// `AgentMessage` values. They are kept separate from the message projection
+/// until the complete JSONL record union is migrated.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SessionConfigRecord {
+    ModelChanged { provider: String, model_id: String },
+    ThinkingLevelChanged { level: ThinkingLevel },
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SessionEntry {
@@ -31,6 +40,10 @@ pub struct SessionSnapshot {
     pub sequence: u64,
     pub leaf_id: Option<String>,
     pub entries: Vec<SessionEntry>,
+    /// Ordered configuration records delivered through the session actor.
+    /// Message `entries` remains the compatibility projection for existing
+    /// callers; these records never become synthetic messages.
+    pub config_records: Vec<SessionConfigRecord>,
 }
 
 impl SessionSnapshot {
@@ -183,6 +196,7 @@ impl SessionSnapshot {
 
 enum Command {
     Append(Box<AgentMessage>, bool, oneshot::Sender<()>),
+    Config(SessionConfigRecord, oneshot::Sender<()>),
     Import(SessionSnapshot, oneshot::Sender<()>),
     Reset(oneshot::Sender<()>),
     Flush(oneshot::Sender<()>),
@@ -225,6 +239,11 @@ impl SessionActor {
                         let _ = snapshot_tx.send(state.clone());
                         let _ = reply.send(());
                     }
+                    Command::Config(record, reply) => {
+                        state.config_records.push(record);
+                        let _ = snapshot_tx.send(state.clone());
+                        let _ = reply.send(());
+                    }
                     Command::Import(imported, reply) => {
                         next_id = imported
                             .entries
@@ -258,6 +277,10 @@ impl SessionActor {
         }
     }
 
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the session bus bridge keeps event-to-record ownership explicit"
+    )]
     pub fn new_with_bus(bus: &EventBus) -> Self {
         let mut actor = Self::new();
         let events = bus.subscribe();
@@ -276,6 +299,29 @@ impl SessionActor {
                         };
                         if !mailbox_ack!(tx, |reply| {
                             Command::Append(Box::new(message), terminate, reply)
+                        }) {
+                            break;
+                        }
+                    }
+                    AgentEvent::ModelChanged { model } => {
+                        if !mailbox_ack!(tx, |reply| {
+                            Command::Config(
+                                SessionConfigRecord::ModelChanged {
+                                    provider: model.provider,
+                                    model_id: model.id,
+                                },
+                                reply,
+                            )
+                        }) {
+                            break;
+                        }
+                    }
+                    AgentEvent::ThinkingLevelChanged { level } => {
+                        if !mailbox_ack!(tx, |reply| {
+                            Command::Config(
+                                SessionConfigRecord::ThinkingLevelChanged { level },
+                                reply,
+                            )
                         }) {
                             break;
                         }
@@ -304,6 +350,32 @@ impl SessionActor {
         let _ = mailbox_ack!(self.tx, |reply| {
             Command::Append(Box::new(message), false, reply)
         });
+    }
+
+    /// Apply a session configuration fact through the owning mailbox.
+    pub async fn record_config(&self, record: SessionConfigRecord) {
+        let _ = mailbox_ack!(self.tx, |reply| Command::Config(record, reply));
+    }
+
+    /// Apply session-owned configuration facts from a replay event sequence.
+    /// The reducer remains the actor boundary; callers do not mutate the
+    /// snapshot or manufacture message entries.
+    pub async fn apply_event(&self, event: &AgentEvent) {
+        match event {
+            AgentEvent::ModelChanged { model } => {
+                self.record_config(SessionConfigRecord::ModelChanged {
+                    provider: model.provider.clone(),
+                    model_id: model.id.clone(),
+                })
+                .await;
+            }
+            AgentEvent::ThinkingLevelChanged { level } => {
+                self.record_config(SessionConfigRecord::ThinkingLevelChanged { level: *level })
+                    .await;
+            }
+            AgentEvent::Reset => self.reset().await,
+            _ => {}
+        }
     }
 
     pub async fn reset(&self) {
@@ -376,6 +448,35 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn bus_configuration_events_reduce_to_ordered_session_records() {
+        let bus = EventBus::new();
+        let actor = SessionActor::new_with_bus(&bus);
+        bus.publish(AgentEvent::ModelChanged {
+            model: crate::types::Model {
+                id: "model-1".into(),
+                provider: "provider-1".into(),
+                ..Default::default()
+            },
+        });
+        bus.publish(AgentEvent::ThinkingLevelChanged {
+            level: crate::types::ThinkingLevel::High,
+        });
+        actor.flush().await;
+        assert_eq!(
+            actor.snapshot().config_records,
+            vec![
+                SessionConfigRecord::ModelChanged {
+                    provider: "provider-1".into(),
+                    model_id: "model-1".into(),
+                },
+                SessionConfigRecord::ThinkingLevelChanged {
+                    level: crate::types::ThinkingLevel::High,
+                },
+            ]
+        );
+    }
+
+    #[tokio::test]
     async fn bus_tool_termination_is_attached_to_the_owned_session_entry() {
         let bus = EventBus::new();
         let actor = SessionActor::new_with_bus(&bus);
@@ -430,6 +531,7 @@ mod tests {
                 message: user("stop here"),
                 terminate: true,
             }],
+            config_records: Vec::new(),
         };
         let jsonl = snapshot.to_jsonl("session-1", 5, "/workspace");
         assert!(jsonl.contains("\"terminate\":true"));

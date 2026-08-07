@@ -856,6 +856,8 @@ pub struct StateAssertions {
     /// Arguments on the latest assistant tool call after preparation.
     pub tool_call_arguments: Option<serde_json::Value>,
     pub session_entries: Option<usize>,
+    /// Ordered Pi session configuration-record kinds from the actor journal.
+    pub session_config_records: Option<Vec<String>>,
     /// Termination metadata on the latest actor-owned session entry.
     pub session_last_terminate: Option<bool>,
     pub tool_count: Option<usize>,
@@ -1587,6 +1589,7 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
     events_from_task.extend(declared_events.iter().cloned());
     for event in &declared_events {
         actor_snapshot.apply_event(event).await;
+        session.apply_event(event).await;
     }
 
     let (scrollback, status) = replay_scenario_events(
@@ -2409,6 +2412,26 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         outcome.session.entries.len(),
         "session_entries"
     );
+    if let Some(expected_records) = &expected.session_config_records {
+        let actual_records = outcome
+            .session
+            .config_records
+            .iter()
+            .map(|record| match record {
+                runie_core::session::SessionConfigRecord::ModelChanged { .. } => {
+                    "model_change".to_owned()
+                }
+                runie_core::session::SessionConfigRecord::ThinkingLevelChanged { .. } => {
+                    "thinking_level_change".to_owned()
+                }
+            })
+            .collect::<Vec<_>>();
+        if actual_records.as_slice() != expected_records.as_slice() {
+            return Err(format!(
+                "session config records mismatch: expected {expected_records:?}, got {actual_records:?}"
+            ));
+        }
+    }
     if let Some(expected_terminate) = expected.session_last_terminate {
         let actual_terminate = outcome
             .session

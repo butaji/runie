@@ -12,6 +12,8 @@ assertions:
     is_streaming: false
     pending_tool_calls: 0
     messages: 1
+    session_config_records:
+      - thinking_level_change
   visual:
     cols: 80
     rows: 24
