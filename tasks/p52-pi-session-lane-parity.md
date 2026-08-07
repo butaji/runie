@@ -258,6 +258,16 @@ the Pi agent-start event and `operation_finished` before agent-end, while YAML
 exact Pi/UI traces intentionally exclude application-owned lane facts and
 lane-specific assertions verify them separately.
 
+## Completed slice (2026-08-07, deferred-write persistence event)
+
+When `SessionActor` commits an assistant message whose stop reason is
+`deferred`, the same mailbox reduction emits a `write_deferred` lane fact. Its
+target and deferred handle are copied from the assistant message, and its
+identity is the actor-issued journal entry ID. `deferred-response.yaml` now
+asserts the complete lane sequence: operation start, usage, deferred write,
+and operation finish. `step_attempt` remains open because Pi requires the
+eventual result-entry correlation before the attempt can be emitted faithfully.
+
 ## Implementation order
 
 1. Replace the generic Rust operation-record payload with a typed internal

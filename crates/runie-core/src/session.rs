@@ -14,7 +14,7 @@ use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::events::EventBus;
 use crate::task_owner::{mailbox_ack, spawn_actor_worker, spawn_owned_worker, TaskOwner};
-use crate::types::{AgentEvent, AgentMessage, ThinkingLevel};
+use crate::types::{AgentEvent, AgentMessage, StopReason, ThinkingLevel};
 
 /// Pi session configuration changes which are journal facts but not
 /// `AgentMessage` values. They are kept separate from the message projection
@@ -1325,11 +1325,8 @@ impl SessionActor {
                         };
                         state.leaf_id = Some(id.clone());
                         state.entries.push(entry);
-                        if let AgentMessage::Assistant(assistant) = &state
-                            .entries
-                            .last()
-                            .expect("message was just inserted")
-                            .message
+                        if let Some(AgentMessage::Assistant(assistant)) =
+                            state.entries.last().map(|entry| entry.message.clone())
                         {
                             let data = serde_json::json!({
                                 "entryId": id,
@@ -1337,6 +1334,18 @@ impl SessionActor {
                                     .unwrap_or(serde_json::Value::Null),
                             });
                             reduce_operation_record(&mut state, "usage", &data);
+                            if assistant.stop_reason == Some(StopReason::Deferred) {
+                                let data = serde_json::json!({
+                                    "entryId": id.clone(),
+                                    "target": {
+                                        "id": id.clone(),
+                                        "message": serde_json::to_value(&assistant)
+                                            .unwrap_or(serde_json::Value::Null),
+                                    },
+                                    "deferred": assistant.deferred,
+                                });
+                                reduce_operation_record(&mut state, "write_deferred", &data);
+                            }
                         }
                         let _ = snapshot_tx.send(state.clone());
                         let _ = reply.send(());
@@ -1571,7 +1580,8 @@ mod tests {
     use super::*;
     use crate::events::EventBus;
     use crate::types::{
-        AssistantMessage, ToolResultContent, ToolResultMessage, Usage, UserContent, UserMessage,
+        AssistantMessage, DeferredHandle, StopReason, ToolResultContent, ToolResultMessage, Usage,
+        UserContent, UserMessage,
     };
 
     fn user(text: &str) -> AgentMessage {
@@ -2099,6 +2109,34 @@ mod tests {
         actor.flush().await;
         assert_eq!(actor.snapshot().lane_records[0].record_type, "usage");
         assert_eq!(actor.snapshot().lane_records[0].id, "entry-1");
+    }
+
+    #[tokio::test]
+    async fn deferred_assistant_commit_emits_write_deferred_lane_record() {
+        let bus = EventBus::new();
+        let actor = SessionActor::new_with_bus(&bus);
+        let assistant = AssistantMessage {
+            stop_reason: Some(StopReason::Deferred),
+            deferred: Some(DeferredHandle {
+                provider: "replay".into(),
+                model_id: "model-1".into(),
+                api: "replay-api".into(),
+                id: "deferred-1".into(),
+                expires_at: None,
+                poll_after_ms: None,
+                data: None,
+            }),
+            ..Default::default()
+        };
+        bus.publish(AgentEvent::MessageEnd {
+            message: AgentMessage::Assistant(assistant),
+        });
+        actor.flush().await;
+        assert_eq!(
+            actor.snapshot().lane_records[1].record_type,
+            "write_deferred"
+        );
+        assert_eq!(actor.snapshot().lane_records[1].id, "entry-1");
     }
 
     #[tokio::test]

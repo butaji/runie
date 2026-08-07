@@ -45,5 +45,10 @@ assertions:
       id: deferred-1
       pollAfterMs: 250
       data: { batch: deferred-1 }
+    session_lane_records:
+      - operation_started
+      - usage
+      - write_deferred
+      - operation_finished
   transcript_contains:
     - "defer this"
