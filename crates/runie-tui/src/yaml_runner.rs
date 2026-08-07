@@ -4656,6 +4656,10 @@ pub async fn render_visual_buffer(
                 .await;
             continue;
         }
+        if step == "ModelSelectorEnter" {
+            let _ = app.activate_model_selector().await;
+            continue;
+        }
         if step == "Ctrl+X" {
             app.toggle_shortcuts().await;
             app.hide_welcome().await;

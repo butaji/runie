@@ -533,6 +533,23 @@ impl App {
         }
     }
 
+    /// Commit the selected catalog row through both owning actors. The UI
+    /// actor only closes its overlay; model selection remains catalog-owned
+    /// and the loop actor admits the resulting model through its mailbox.
+    pub async fn activate_model_selector(&self) -> Option<Model> {
+        let ui = self.ui.snapshot();
+        let model = self
+            .model_catalog
+            .snapshot()
+            .results
+            .get(ui.model_selector_index)
+            .cloned()?;
+        let selected = self.model_catalog.select(model).await?;
+        self.loop_actor.set_model(selected.clone()).await;
+        self.ui.send(UiMsg::ActivateModelSelector).await;
+        Some(selected)
+    }
+
     pub async fn command_palette_key(&self, msg: UiMsg) {
         self.ui.send(msg).await;
     }

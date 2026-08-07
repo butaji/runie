@@ -207,6 +207,16 @@ mod tests {
     }
 
     #[test]
+    fn model_selector_activation_closes_only_ui_projection() {
+        let state = UiState::new()
+            .update(UiMsg::ToggleModelSelector)
+            .update(UiMsg::ModelSelectorChar('g'))
+            .update(UiMsg::ActivateModelSelector);
+        assert!(!state.model_selector_open);
+        assert!(state.model_selector_query.is_empty());
+    }
+
+    #[test]
     fn ui_core_event_mapping_is_explicit_and_pure() {
         assert_eq!(
             super::ui_messages_for_event(&AgentEvent::Reset),

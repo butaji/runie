@@ -32,6 +32,7 @@ pub enum UiMsg {
     ModelSelectorMove(isize),
     ModelSelectorEscape,
     ModelSelectorToggleScope,
+    ActivateModelSelector,
     SetModelSelectorResultCount(usize),
     SetModelSelectorRows(Vec<String>),
     Reset,
@@ -119,6 +120,7 @@ impl UiState {
                 | UiMsg::ModelSelectorMove(_)
                 | UiMsg::ModelSelectorEscape
                 | UiMsg::ModelSelectorToggleScope
+                | UiMsg::ActivateModelSelector
         ) {
             return if matches!(
                 msg,
@@ -127,6 +129,7 @@ impl UiState {
                     | UiMsg::ModelSelectorMove(_)
                     | UiMsg::ModelSelectorEscape
                     | UiMsg::ModelSelectorToggleScope
+                    | UiMsg::ActivateModelSelector
             ) {
                 self.update_model_selector(msg)
                     .expect("selector message is handled by selector reducer")
@@ -172,7 +175,8 @@ impl UiState {
             | UiMsg::ModelSelectorBackspace
             | UiMsg::ModelSelectorMove(_)
             | UiMsg::ModelSelectorEscape
-            | UiMsg::ModelSelectorToggleScope => unreachable!("selector messages handled above"),
+            | UiMsg::ModelSelectorToggleScope
+            | UiMsg::ActivateModelSelector => unreachable!("selector messages handled above"),
             UiMsg::Reset => self = Self::new(),
         }
         self
@@ -243,6 +247,11 @@ impl UiState {
             }
             UiMsg::ModelSelectorToggleScope => {
                 self.model_selector_scoped_only = !self.model_selector_scoped_only;
+                self.model_selector_index = 0;
+            }
+            UiMsg::ActivateModelSelector => {
+                self.model_selector_open = false;
+                self.model_selector_query.clear();
                 self.model_selector_index = 0;
             }
             _ => return None,

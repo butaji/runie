@@ -1,6 +1,6 @@
 # P65 — Pi model selector and scoped-model contract
 
-Status: catalog semantics, provider discovery seam, async selector projection, concrete row labels, renderer overlay, Ctrl-L routing, and YAML state coverage implemented; selection commit remains (2026-08-08)
+Status: catalog semantics, provider discovery seam, async selector projection, concrete row labels, renderer overlay, Ctrl-L routing, YAML state coverage, and actor-to-actor selection commit implemented (2026-08-08)
 
 ## Source contract
 
@@ -41,10 +41,10 @@ result-count transitions through `UiMsg`; `App::toggle_model_selector` admits
 the catalog snapshot count through that mailbox before opening the selector.
 The declarative view tree exposes `ModelSelectorOverlay` with `UiActor`
 ownership. The terminal adapter renders it through theme tokens, and Pi's
-Ctrl-L binding routes to it. Catalog search results now cross into the UI as
-immutable actor messages; `visual-model-selector.yaml` covers opening and
-scope transitions. Remaining work is to commit the selected row through the
-catalog and loop actors.
+Ctrl-L binding routes to it. Catalog search results cross into the UI as
+immutable actor messages; `App::activate_model_selector` selects the row
+through `ModelCatalogActor`, commits it through `LoopActor`, then closes the
+UI overlay through `UiMsg`.
 
 ## Required implementation
 

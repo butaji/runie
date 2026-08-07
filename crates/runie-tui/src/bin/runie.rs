@@ -581,6 +581,7 @@ async fn run_app(
                                     KeyCode::Up => app.model_selector_key(runie_tui::app::UiMsg::ModelSelectorMove(-1)).await,
                                     KeyCode::Down => app.model_selector_key(runie_tui::app::UiMsg::ModelSelectorMove(1)).await,
                                     KeyCode::Tab => app.model_selector_key(runie_tui::app::UiMsg::ModelSelectorToggleScope).await,
+                                    KeyCode::Enter => { let _ = app.activate_model_selector().await; },
                                     KeyCode::Char(ch) if key.modifiers.is_empty() => app.model_selector_key(runie_tui::app::UiMsg::ModelSelectorChar(ch)).await,
                                     _ => {}
                                 }
