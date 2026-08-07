@@ -25,7 +25,6 @@ assertions:
   visual:
     cols: 80
     rows: 30
-    activity_expanded: true
+    activity_expanded: false
     screen_text:
-      - "Run seven"
-      - "Run twelve"
+      - "Ran 12 commands"

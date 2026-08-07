@@ -27,6 +27,13 @@ declarative `activity_expanded` value was not delivered. The check passes for
 the existing matrix, narrowing the remaining defect to physical-row
 projection or buffer composition rather than mailbox delivery.
 
+**Dense collapsed projection (2026-08-08):** Completed bash cards retain
+Grok's automatic `Expanded` tool mode in actor state, while collapsed activity
+now folds non-selected members of multi-tool groups at the physical-row
+boundary. Single-tool cards and the explicitly selected member remain visible.
+The complete YAML fixture discovery test validates dense, mixed, truncated,
+and default-mode scenarios together.
+
 **Latest parity note (2026-08-05):** Grouped activity now retains Grok's
 failure suffix (`· N failed`) after failed directory/file/command tools
 complete. `visual-tool-error.yaml` exercises the contract through the YAML

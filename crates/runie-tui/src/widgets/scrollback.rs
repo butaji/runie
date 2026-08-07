@@ -1651,8 +1651,12 @@ impl Scrollback {
                         | LineKind::ToolError
                 )
                 && line.text != "session_start"
-                && tool_mode_override_for_line(line, &self.navigation.tool_modes)
-                    .is_none_or(|mode| mode == runie_core::types::ToolDisplayMode::Collapsed)
+                && line
+                    .tool_call_id
+                    .as_deref()
+                    .and_then(|id| dense_groups.get(id))
+                    .is_some_and(|(_, size)| *size > 1)
+                && self.navigation.selected_tool_id.as_deref() != line.tool_call_id.as_deref()
             {
                 continue;
             }
@@ -3593,6 +3597,31 @@ mod tests {
                     .is_some_and(|cell| cell.symbol() == "›")
             })
         }));
+    }
+
+    #[test]
+    fn collapsed_activity_hides_default_truncated_tool_rows() {
+        let mut scrollback = Scrollback::new();
+        scrollback.set_activity_expanded(false);
+        scrollback.apply(ScrollbackMsg::SetToolName("bash-1".into(), "bash".into()));
+        scrollback.apply(ScrollbackMsg::ToolStart {
+            tool_call_id: "bash-1".into(),
+            header: "Run cargo test".into(),
+            activity: Some("Ran 2 commands".into()),
+        });
+        scrollback.apply(ScrollbackMsg::ToolStart {
+            tool_call_id: "bash-2".into(),
+            header: "Run cargo check".into(),
+            activity: None,
+        });
+        let rows = scrollback
+            .physical_rows(80, false, 30)
+            .into_iter()
+            .map(|(_, text, _)| text)
+            .collect::<Vec<_>>();
+        assert!(rows.iter().any(|row| row.contains("Ran 2 commands")));
+        assert!(!rows.iter().any(|row| row == "Run cargo test"));
+        assert!(!rows.iter().any(|row| row == "Run cargo check"));
     }
 
     fn selected_cell_row(buffer: &Buffer) -> u16 {
