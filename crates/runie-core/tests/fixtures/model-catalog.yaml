@@ -1,0 +1,15 @@
+available:
+  - { provider: openai, id: gpt-5, name: GPT Five, api: openai-responses }
+  - { provider: xai, id: grok, name: Grok, api: xai-chat }
+scoped:
+  - { provider: openai, id: gpt-5, name: GPT Five, thinking_level: high }
+  - { provider: missing, id: gone, name: Gone }
+  - { provider: xai, id: grok, name: Grok }
+search:
+  query: gpt
+  scoped_only: false
+  expected_ids: [gpt-5]
+cycle:
+  current: gpt-5
+  forward: grok
+  backward: grok

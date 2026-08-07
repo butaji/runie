@@ -25,6 +25,7 @@
 pub mod commands;
 pub mod convert;
 mod event_dsl;
+pub mod model_catalog;
 pub mod types;
 
 pub mod events;
