@@ -1065,7 +1065,13 @@ impl Scrollback {
                 styled_line_for(*kind, text, self.navigation.theme)
             };
             let mut line = line;
-            if let Some(intent) = self.tool_paint_intent(*kind, text) {
+            let occurrence = physical_rows[..start + row]
+                .iter()
+                .filter(|(previous_kind, previous_text, _)| {
+                    previous_kind == kind && previous_text == text
+                })
+                .count();
+            if let Some(intent) = self.tool_paint_intent(*kind, text, occurrence) {
                 let paint = match intent {
                     ToolCardPaintIntent::Header => PaintIntent::Base,
                     ToolCardPaintIntent::Content => PaintIntent::Base,
@@ -1283,18 +1289,27 @@ impl Scrollback {
         }
     }
 
-    fn tool_paint_intent(&self, kind: LineKind, text: &str) -> Option<ToolCardPaintIntent> {
+    fn tool_paint_intent(
+        &self,
+        kind: LineKind,
+        text: &str,
+        occurrence: usize,
+    ) -> Option<ToolCardPaintIntent> {
         if !matches!(
             kind,
             LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError | LineKind::ToolOutput
         ) {
             return None;
         }
-        let line = self.lines.iter().find(|line| {
-            line.kind == kind
-                && (line.text == text
-                    || (!text.trim().is_empty() && line.text.contains(text.trim())))
-        })?;
+        let line = self
+            .lines
+            .iter()
+            .filter(|line| {
+                line.kind == kind
+                    && (line.text == text
+                        || (!text.trim().is_empty() && line.text.contains(text.trim())))
+            })
+            .nth(occurrence)?;
         let id = line.tool_call_id.as_deref()?;
         let rows = project_tool_card_rows(
             &self.lines,

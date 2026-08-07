@@ -640,3 +640,9 @@ for wrapped segments when their source text is recoverable from the logical
 line. This extends semantic token resolution to common wrapped tool output
 without changing row geometry. Exact identity propagation through every
 reflow operation remains the stronger follow-up for duplicate-text cards.
+
+Duplicate-row disambiguation (2026-08-06): paint-intent lookup now includes
+the physical row's prior-occurrence index, selecting the corresponding nth
+logical source row when duplicate tool text appears. This removes the
+first-match ambiguity without changing actor-owned feed state or wrapping
+geometry.
