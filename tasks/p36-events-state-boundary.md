@@ -93,4 +93,6 @@ successful third attempt, without sleeps or detached tasks.
 The TUI replay schema now exposes `provider_options` for
 `timeout_ms`/`max_retries`/`sampling_params`; the `visual-hey.yaml` fixture
 uses the sampling field, proving these provider settings can be edited and
-replayed from YAML without recompiling the runner.
+replayed from YAML without recompiling the runner. Its `assertions` block now
+also verifies the effective options received by the provider stream, rather
+than merely validating YAML deserialization.

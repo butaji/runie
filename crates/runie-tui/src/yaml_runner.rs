@@ -645,6 +645,15 @@ pub struct Assertions {
     pub visual: Option<VisualAssertions>,
     #[serde(default)]
     pub state: Option<StateAssertions>,
+    #[serde(default)]
+    pub provider_options: Option<ProviderOptionsAssertions>,
+}
+
+#[derive(Debug, Deserialize, Default, Clone)]
+pub struct ProviderOptionsAssertions {
+    pub timeout_ms: Option<u64>,
+    pub max_retries: Option<u32>,
+    pub sampling_params: Option<std::collections::HashMap<String, serde_json::Value>>,
 }
 
 /// Small assertion DSL used by the YAML projection oracle. It keeps the
@@ -1002,7 +1011,10 @@ pub struct ScenarioStream {
     /// `Done{stop}` so the loop does not replay the same script forever.
     pub calls: Mutex<usize>,
     pub pending_after_first: bool,
+    pub options_seen: ProviderOptionsLog,
 }
+
+type ProviderOptionsLog = Arc<Mutex<Vec<SimpleStreamOptions>>>;
 
 #[async_trait::async_trait]
 impl StreamFn for ScenarioStream {
@@ -1010,9 +1022,10 @@ impl StreamFn for ScenarioStream {
         &self,
         _model: &Model,
         _context: &AgentContext,
-        _options: Option<SimpleStreamOptions>,
+        options: Option<SimpleStreamOptions>,
     ) -> Result<AssistantMessageEventStream, StreamError> {
         use futures::stream;
+        self.options_seen.lock().push(options.unwrap_or_default());
         let mut n = self.calls.lock();
         *n += 1;
         if *n > 1 && self.pending_after_first {
@@ -1191,6 +1204,7 @@ pub struct ScenarioOutcome {
     pub scroll_offset: usize,
     pub state: runie_core::state::AgentStateSnapshot,
     pub status: crate::widgets::StatusSnapshot,
+    pub provider_options: Vec<SimpleStreamOptions>,
 }
 
 pub struct ScenarioError(pub String);
@@ -1202,7 +1216,7 @@ impl std::fmt::Display for ScenarioError {
 }
 
 pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, ScenarioError> {
-    let (bus, actor) = build_scenario_loop(scenario)?;
+    let (bus, actor, options_seen) = build_scenario_loop(scenario)?;
 
     let actor_snapshot = actor.clone();
     let mut events_from_task = record_and_run_scenario(actor, bus, scenario).await;
@@ -1219,6 +1233,7 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
     )
     .await;
     let feed = scrollback.model_snapshot();
+    let provider_options = options_seen.lock().clone();
     Ok(ScenarioOutcome {
         events: events_from_task,
         scrollback: feed.lines.clone(),
@@ -1229,6 +1244,7 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
         feed,
         state: actor_snapshot.state_snapshot(),
         status,
+        provider_options,
     })
 }
 
@@ -1429,12 +1445,15 @@ async fn submit_scenario(actor: LoopActor, scenario: &Scenario) {
     }
 }
 
-fn build_scenario_loop(scenario: &Scenario) -> Result<(EventBus, LoopActor), ScenarioError> {
+fn build_scenario_loop(
+    scenario: &Scenario,
+) -> Result<(EventBus, LoopActor, ProviderOptionsLog), ScenarioError> {
     let bus = EventBus::new();
     let mut registry = ToolRegistry::new();
     for tool in &scenario.tools {
         register_scenario_tool(&mut registry, tool)?;
     }
+    let options_seen = Arc::new(Mutex::new(Vec::new()));
     let provider = ProviderActor::new(Arc::new(ScenarioStream {
         events: scenario
             .events
@@ -1447,6 +1466,7 @@ fn build_scenario_loop(scenario: &Scenario) -> Result<(EventBus, LoopActor), Sce
         // pending capture mode is exercised by `render_visual_buffer`, which
         // snapshots before joining the deliberately pending continuation.
         pending_after_first: false,
+        options_seen: options_seen.clone(),
     }));
     let deps = LoopDeps {
         state: AgentStateActor::new(),
@@ -1467,7 +1487,7 @@ fn build_scenario_loop(scenario: &Scenario) -> Result<(EventBus, LoopActor), Sce
         steering_mode: scenario.steering_mode.unwrap_or_default(),
         follow_up_mode: scenario.follow_up_mode.unwrap_or_default(),
     };
-    Ok((bus, LoopActor::new(deps)))
+    Ok((bus, LoopActor::new(deps), options_seen))
 }
 
 #[allow(
@@ -1557,9 +1577,45 @@ pub async fn assert_scenario_async(
 ) -> Result<(), String> {
     assert_event_expectations(outcome, scenario)?;
     assert_state_expectations(outcome, scenario)?;
+    assert_provider_options(outcome, scenario)?;
     assert_transcript_expectations(outcome, scenario)?;
     if let Some(visual) = &scenario.assertions.visual {
         assert_visual_expectations(scenario, visual).await?;
+    }
+    Ok(())
+}
+
+fn assert_provider_options(outcome: &ScenarioOutcome, scenario: &Scenario) -> Result<(), String> {
+    let Some(expected) = &scenario.assertions.provider_options else {
+        return Ok(());
+    };
+    let actual = outcome
+        .provider_options
+        .first()
+        .ok_or_else(|| "provider options assertion saw no provider call".to_string())?;
+    if let Some(value) = expected.timeout_ms {
+        if actual.timeout_ms != Some(value) {
+            return Err(format!(
+                "provider timeout mismatch: expected {value}, got {:?}",
+                actual.timeout_ms
+            ));
+        }
+    }
+    if let Some(value) = expected.max_retries {
+        if actual.max_retries != Some(value) {
+            return Err(format!(
+                "provider retries mismatch: expected {value}, got {:?}",
+                actual.max_retries
+            ));
+        }
+    }
+    if let Some(value) = &expected.sampling_params {
+        if actual.sampling_params.as_ref() != Some(value) {
+            return Err(format!(
+                "provider sampling params mismatch: expected {value:?}, got {:?}",
+                actual.sampling_params
+            ));
+        }
     }
     Ok(())
 }
@@ -2452,6 +2508,7 @@ pub async fn render_visual_buffer(
             .collect(),
         calls: Mutex::new(0),
         pending_after_first: scenario.capture_while_waiting,
+        options_seen: Arc::new(Mutex::new(Vec::new())),
     }));
     let deps = LoopDeps {
         state,
