@@ -1,14 +1,19 @@
 //! Small deterministic replay provider for recorded SSE traces.
 
-use std::{fs, path::Path, sync::Arc};
-
-use futures::stream;
-use parking_lot::Mutex;
+use std::{
+    fs,
+    path::Path,
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    },
+};
 
 use crate::types::{
     AssistantMessage, AssistantMessageEvent, Model, SimpleStreamOptions, StopReason, ToolCall,
     Usage,
 };
+use futures::stream;
 
 use super::{
     http::HttpActor,
@@ -23,7 +28,7 @@ pub struct ReplayProvider {
     /// Number of `stream()` calls. The first call replays the recorded trace;
     /// later calls (auto-continue after a tool batch) return a terminating
     /// `Done{stop}` so the loop does not re-replay the same trace forever.
-    calls: Mutex<usize>,
+    calls: AtomicUsize,
 }
 
 impl ReplayProvider {
@@ -86,7 +91,7 @@ impl ReplayProvider {
         finish_replay_events(&mut events, tool_calls);
         Ok(Self {
             events,
-            calls: Mutex::new(0),
+            calls: AtomicUsize::new(0),
         })
     }
 }
@@ -225,7 +230,7 @@ fn has_terminal_marker(value: &serde_json::Value) -> bool {
 impl ReplayProvider {
     /// Reset the turn counter so a fresh run replays the recorded trace again.
     pub fn reset_turns(&self) {
-        *self.calls.lock() = 0;
+        self.calls.store(0, Ordering::Release);
     }
 }
 
@@ -237,9 +242,8 @@ impl StreamFn for ReplayProvider {
         _context: &crate::types::AgentContext,
         _options: Option<SimpleStreamOptions>,
     ) -> Result<AssistantMessageEventStream, StreamError> {
-        let mut n = self.calls.lock();
-        *n += 1;
-        if *n > 1 {
+        let n = self.calls.fetch_add(1, Ordering::AcqRel) + 1;
+        if n > 1 {
             return Ok(Box::pin(stream::iter(vec![AssistantMessageEvent::Done {
                 stop_reason: StopReason::Stop,
                 usage: Usage::default(),

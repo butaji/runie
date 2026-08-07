@@ -50,6 +50,11 @@ cannot create a second production source of truth.
   compatibility collector. This removes production mutable shadow state
   without changing the event sequence or replay behavior.
 
+- **Replay provider counter (2026-08-08):** Replaced the replay adapter's
+  mutex-protected scalar turn counter with an atomic counter. Reset and
+  first/subsequent stream selection retain the same semantics without an
+  async blocking lock or mutable collection state.
+
 - **Subscriber registry ownership (2026-08-08):** Replaced the registry's
   `Arc<Mutex<RegistryInner>>` with an owned mailbox worker. Registration,
   unregistration, ordered application/Pi dispatch, and size queries now cross
