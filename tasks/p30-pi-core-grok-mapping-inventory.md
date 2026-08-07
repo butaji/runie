@@ -224,3 +224,13 @@ payloads). Runie preserves the field through the owned tool-result event and
 message snapshots; registry mutation would be incorrect. The remaining gap is
 provider-specific deferred-tool encoding, tracked with the provider boundary,
 not an actor state-transfer gap.
+
+## Session message termination metadata (2026-08-07)
+
+Pi's JSONL message entries can carry `terminate: true` independently of the
+`AgentMessage` payload. `SessionSnapshot` and `SessionActor` now preserve this
+fact as actor-owned `SessionEntry::terminate` metadata and round-trip it in the
+validated JSONL v4 projection. A focused regression proves the field survives
+export/import; the broader Pi operation-lane records (`write_deferred`, queue,
+usage, and compaction records) remain separate inventory gaps and are not
+claimed by this message-lane increment.

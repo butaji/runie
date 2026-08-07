@@ -20,6 +20,10 @@ pub struct SessionEntry {
     pub parent_id: Option<String>,
     pub timestamp: i64,
     pub message: AgentMessage,
+    /// Pi's message entry may terminate the current run without changing the
+    /// message payload. Keep this journal fact outside `AgentMessage` so the
+    /// wire message union remains unchanged.
+    pub terminate: bool,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -125,6 +129,10 @@ impl SessionSnapshot {
                         line_index + 2
                     )
                 })?;
+            let terminate = value
+                .get("terminate")
+                .and_then(serde_json::Value::as_bool)
+                .unwrap_or(false);
             snapshot.sequence = seq;
             snapshot.leaf_id = Some(id.clone());
             snapshot.entries.push(SessionEntry {
@@ -133,6 +141,7 @@ impl SessionSnapshot {
                 parent_id,
                 timestamp,
                 message,
+                terminate,
             });
         }
         Ok((session_id, cwd, snapshot))
@@ -152,18 +161,21 @@ impl SessionSnapshot {
             })
             .to_string(),
         );
-        lines.extend(self.entries.iter().map(|entry| {
-            serde_json::json!({
+        lines.extend(self.entries.iter().map(|session_entry| {
+            let mut entry = serde_json::json!({
                 "kind": "entry",
                 "lane": "main",
                 "type": "message",
-                "id": entry.id,
-                "parentId": entry.parent_id,
-                "seq": entry.seq,
-                "timestamp": entry.timestamp,
-                "message": entry.message,
-            })
-            .to_string()
+                "id": session_entry.id,
+                "parentId": session_entry.parent_id,
+                "seq": session_entry.seq,
+                "timestamp": session_entry.timestamp,
+                "message": session_entry.message,
+            });
+            if session_entry.terminate {
+                entry["terminate"] = serde_json::Value::Bool(true);
+            }
+            entry.to_string()
         }));
         format!("{}\n", lines.join("\n"))
     }
@@ -206,6 +218,7 @@ impl SessionActor {
                             parent_id: state.leaf_id.clone(),
                             timestamp: message.timestamp(),
                             message: *message,
+                            terminate: false,
                         };
                         state.leaf_id = Some(id);
                         state.entries.push(entry);
@@ -356,6 +369,26 @@ mod tests {
         assert_eq!(values[1]["parentId"], serde_json::Value::Null);
         assert_eq!(values[2]["parentId"], "entry-1");
         assert_eq!(values[2]["seq"], 2);
+    }
+
+    #[test]
+    fn jsonl_round_trip_preserves_pi_terminate_entry_metadata() {
+        let snapshot = SessionSnapshot {
+            sequence: 1,
+            leaf_id: Some("entry-1".into()),
+            entries: vec![SessionEntry {
+                id: "entry-1".into(),
+                seq: 1,
+                parent_id: None,
+                timestamp: 7,
+                message: user("stop here"),
+                terminate: true,
+            }],
+        };
+        let jsonl = snapshot.to_jsonl("session-1", 5, "/workspace");
+        assert!(jsonl.contains("\"terminate\":true"));
+        let (_, _, imported) = SessionSnapshot::from_jsonl(&jsonl).expect("valid JSONL");
+        assert!(imported.entries[0].terminate);
     }
 
     #[tokio::test]
