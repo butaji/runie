@@ -165,6 +165,12 @@ pub struct NavigationSnapshot {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NavigationValidation {
+    pub target_exists: bool,
+    pub summary_exists: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OperationErrorSnapshot {
     pub code: String,
     pub message: String,
@@ -281,6 +287,29 @@ impl SessionSnapshot {
         }
         path.reverse();
         path
+    }
+
+    /// Validate the currently projected navigation intent against journal IDs.
+    /// This is pure and intentionally does not admit or mutate navigation.
+    pub fn navigation_validation(&self) -> Option<NavigationValidation> {
+        let ids = self
+            .entries
+            .iter()
+            .map(|entry| entry.id.as_str())
+            .chain(self.config_records.iter().map(|entry| entry.id.as_str()))
+            .collect::<std::collections::BTreeSet<_>>();
+        self.navigation
+            .as_ref()
+            .map(|navigation| NavigationValidation {
+                target_exists: navigation
+                    .target_id
+                    .as_deref()
+                    .is_some_and(|target| ids.contains(target)),
+                summary_exists: navigation
+                    .summary_entry_id
+                    .as_deref()
+                    .is_some_and(|summary| ids.contains(summary)),
+            })
     }
 
     /// Parse the message-only subset emitted by [`Self::to_jsonl`].
@@ -1025,6 +1054,44 @@ mod tests {
         assert_eq!(
             snapshot.branch_entry_ids(),
             ["message-1", "message-2", "config-3"]
+        );
+    }
+
+    #[test]
+    fn navigation_validation_checks_target_and_summary_ids() {
+        let mut snapshot = SessionSnapshot {
+            navigation: Some(NavigationSnapshot {
+                target_id: Some("entry-1".into()),
+                summarize: true,
+                summary_entry_id: Some("summary-1".into()),
+            }),
+            ..SessionSnapshot::default()
+        };
+        snapshot.entries.push(SessionEntry {
+            id: "entry-1".into(),
+            seq: 1,
+            parent_id: None,
+            timestamp: 0,
+            message: user("target"),
+            terminate: false,
+        });
+        snapshot.config_records.push(SessionConfigEntry {
+            id: "summary-1".into(),
+            seq: 2,
+            parent_id: Some("entry-1".into()),
+            timestamp: 0,
+            record: SessionConfigRecord::BranchSummaryCreated {
+                from_id: "entry-1".into(),
+                summary: "summary".into(),
+                details: None,
+            },
+        });
+        assert_eq!(
+            snapshot.navigation_validation(),
+            Some(NavigationValidation {
+                target_exists: true,
+                summary_exists: true,
+            })
         );
     }
 

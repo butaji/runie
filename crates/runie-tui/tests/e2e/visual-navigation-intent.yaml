@@ -23,3 +23,6 @@ assertions:
       target_id: entry-target
       summarize: true
       summary_entry_id: summary-target
+    navigation_validation:
+      target_exists: false
+      summary_exists: false

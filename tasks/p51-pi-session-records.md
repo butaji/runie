@@ -141,3 +141,10 @@ then returns the selected branch oldest-first. YAML state assertions expose
 message/configuration path at runtime. This closes branch-path projection
 without claiming Pi's remaining target validation, fork storage, or context
 materialization behavior.
+
+Navigation validation increment (2026-08-07): the actor-owned snapshot now
+derives `NavigationValidation` from the same journal ID namespace. YAML can
+assert whether the navigation target and optional summary entry resolve;
+`visual-navigation-intent.yaml` deliberately asserts both are absent. This
+surfaces Pi's target-validation fact without silently admitting an invalid
+navigation operation or mutating state outside the session actor.

@@ -940,6 +940,8 @@ pub struct StateAssertions {
     pub active_operations: Option<BTreeMap<String, String>>,
     /// Last Pi navigation intent reduced by the session actor.
     pub navigation: Option<NavigationAssertion>,
+    /// Pure validation of the projected navigation IDs against the journal.
+    pub navigation_validation: Option<NavigationValidationAssertion>,
     /// Terminal Pi operation outcomes keyed by operation ID.
     pub operation_outcomes: Option<BTreeMap<String, String>>,
     /// Pi operation intent kinds keyed by operation ID.
@@ -1024,6 +1026,12 @@ pub struct NavigationAssertion {
     #[serde(default)]
     pub summarize: bool,
     pub summary_entry_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Default, Clone, PartialEq, Eq)]
+pub struct NavigationValidationAssertion {
+    pub target_exists: bool,
+    pub summary_exists: bool,
 }
 
 #[derive(Debug, Deserialize, Default, Clone, PartialEq, Eq)]
@@ -2608,6 +2616,21 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
             Some(expected_navigation.clone()),
             actual_navigation.unwrap_or_default(),
             "navigation"
+        );
+    }
+    if let Some(expected_validation) = &expected.navigation_validation {
+        let actual_validation = outcome
+            .session
+            .navigation_validation()
+            .map(|validation| NavigationValidationAssertion {
+                target_exists: validation.target_exists,
+                summary_exists: validation.summary_exists,
+            })
+            .unwrap_or_default();
+        assert_yaml_eq!(
+            Some(expected_validation.clone()),
+            actual_validation,
+            "navigation_validation"
         );
     }
     if let Some(expected_terminate) = expected.session_last_terminate {
