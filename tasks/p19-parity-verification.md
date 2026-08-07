@@ -1357,7 +1357,7 @@ those differences are not promoted into the deterministic Pi-core oracle.
 - **Assistant error reason (2026-08-06):** The internal assistant error text
   now serializes under pi's terminal `reason` key, while reducer code retains
   the descriptive `error` field name. Wire coverage pins the `aborted` value.
- - **Attribute-oracle audit (2026-08-06):** Temporarily promoted both strict
+- **Attribute-oracle audit (2026-08-06):** Temporarily promoted both strict
    Grok feed YAML references to `exact_attributes: true`. The oracle correctly
    rejected them with 518 cell attribute differences: the checked-in
    `grok-rich.cast` records terminal-default SGR while Runie paints explicit
@@ -1365,6 +1365,13 @@ those differences are not promoted into the deterministic Pi-core oracle.
    The fixtures remain symbol-exact but intentionally attribute-pending until
    a fresh full-color Grok capture is recorded; this is an open parity gap, not
    a passing color claim.
+
+- **Theme-token source audit (2026-08-06):** Compared Grok's canonical
+  `groknight.rs` palette with Runie's Opaline projection. The feed-critical
+  semantic values match: base `#141414`/`#e1e1e1`, user panel `#242424`, muted
+  text `#6c6c6c`, selection `#1c1c1c`, and accent magenta `#bb9af7`. Added a
+  regression test for these token projections. This confirms the mapping but
+  does not close the separate capture-level attribute gap above.
 
 - **Tool-call sectional YAML parity (2026-08-06):** Added declarative
   `tool_call_start`/`tool_call_delta`/`tool_call_end` events with indexed

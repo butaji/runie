@@ -286,6 +286,20 @@ mod tests {
     }
 
     #[test]
+    fn grok_night_feed_semantic_tokens_match_grok_palette() {
+        let base = base_style_for(ThemeKind::GrokNight);
+        let user = user_style_for(ThemeKind::GrokNight);
+        let muted = muted_style_for(ThemeKind::GrokNight);
+        let selection = selected_style_for(ThemeKind::GrokNight);
+
+        assert_eq!(base.fg, Some(Color::Rgb(225, 225, 225)));
+        assert_eq!(base.bg, Some(Color::Rgb(20, 20, 20)));
+        assert_eq!(user.bg, Some(Color::Rgb(36, 36, 36)));
+        assert_eq!(muted.fg, Some(Color::Rgb(108, 108, 108)));
+        assert_eq!(selection.bg, Some(Color::Rgb(28, 28, 28)));
+    }
+
+    #[test]
     fn themed_projection_resolves_day_tokens_without_night_literals() {
         assert_eq!(
             base_style_for(ThemeKind::GrokDay).fg,
