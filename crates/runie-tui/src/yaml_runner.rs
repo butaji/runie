@@ -1012,6 +1012,8 @@ pub struct StateAssertions {
     pub operation_errors: Option<BTreeMap<String, OperationErrorAssertion>>,
     /// Ordered Pi session configuration-record kinds from the actor journal.
     pub session_config_records: Option<Vec<String>>,
+    /// Effective Pi labels after replaying ordered label facts.
+    pub session_labels: Option<BTreeMap<String, String>>,
     /// Ordered admitted Pi operation-lane record kinds.
     pub session_lane_records: Option<Vec<String>>,
     /// Ordered actor-owned assistant step operation IDs.
@@ -2872,6 +2874,11 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
             ));
         }
     }
+    assert_yaml_eq!(
+        expected.session_labels.clone(),
+        outcome.session.labels(),
+        "session_labels"
+    );
     if let Some(expected_records) = &expected.session_lane_records {
         let actual_records = outcome
             .session

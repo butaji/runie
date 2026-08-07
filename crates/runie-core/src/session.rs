@@ -528,6 +528,22 @@ impl CompactionContextProjection {
 }
 
 impl SessionSnapshot {
+    /// Reduce ordered Pi label facts into the effective label map. This is a
+    /// pure read projection; the session actor remains the only writer.
+    pub fn labels(&self) -> BTreeMap<String, String> {
+        let mut labels = BTreeMap::new();
+        for entry in &self.config_records {
+            if let SessionConfigRecord::LabelChanged { target_id, label } = &entry.record {
+                if let Some(label) = label {
+                    labels.insert(target_id.clone(), label.clone());
+                } else {
+                    labels.remove(target_id);
+                }
+            }
+        }
+        labels
+    }
+
     /// Return the first entry selected by Pi's ordered entry query.
     pub fn find_entry(&self, query: &SessionEntryQuery) -> Option<SessionEntryRecord> {
         self.find_entries(query).into_iter().next()
@@ -2478,6 +2494,13 @@ impl SessionActor {
                         let _ = reply.send(());
                     }
                     Command::Config(record, reply) => {
+                        if let SessionConfigRecord::LabelChanged { target_id, .. } = &record {
+                            if !state.entries.iter().any(|entry| entry.id == *target_id) {
+                                let _ = reply
+                                    .send(Err(format!("label target does not exist: {target_id}")));
+                                continue;
+                            }
+                        }
                         if let SessionConfigRecord::OperationRecordCreated { record_type, data } =
                             &record
                         {
@@ -2746,6 +2769,40 @@ mod tests {
         assert_eq!(snapshot.entries[0].parent_id, None);
         assert_eq!(snapshot.entries[1].parent_id.as_deref(), Some("entry-1"));
         assert_eq!(snapshot.leaf_id.as_deref(), Some("entry-2"));
+    }
+
+    #[tokio::test]
+    async fn labels_are_event_reduced_validated_and_removed_by_fact() {
+        let actor = SessionActor::new();
+        actor.append(user("one")).await;
+        actor
+            .apply_event(&AgentEvent::SessionLabelChanged {
+                target_id: "entry-1".into(),
+                label: Some("important".into()),
+            })
+            .await
+            .expect("label admission");
+        assert_eq!(
+            actor.snapshot().labels().get("entry-1"),
+            Some(&"important".to_owned())
+        );
+
+        actor
+            .apply_event(&AgentEvent::SessionLabelChanged {
+                target_id: "entry-1".into(),
+                label: None,
+            })
+            .await
+            .expect("label removal");
+        assert!(actor.snapshot().labels().is_empty());
+        let error = actor
+            .apply_event(&AgentEvent::SessionLabelChanged {
+                target_id: "missing".into(),
+                label: Some("bad".into()),
+            })
+            .await
+            .expect_err("missing target must be rejected");
+        assert!(error.contains("label target does not exist"));
     }
 
     #[tokio::test]
