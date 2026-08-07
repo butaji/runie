@@ -26,6 +26,13 @@ pub enum UiMsg {
     CommandPaletteMove(isize),
     CommandPaletteEscape,
     ActivateCommandPalette,
+    ToggleModelSelector,
+    ModelSelectorChar(char),
+    ModelSelectorBackspace,
+    ModelSelectorMove(isize),
+    ModelSelectorEscape,
+    ModelSelectorToggleScope,
+    SetModelSelectorResultCount(usize),
     Reset,
 }
 
@@ -77,6 +84,11 @@ pub struct UiState {
     pub command_palette_query: String,
     pub command_palette_index: usize,
     pub last_palette_command: Option<String>,
+    pub model_selector_open: bool,
+    pub model_selector_query: String,
+    pub model_selector_index: usize,
+    pub model_selector_scoped_only: bool,
+    pub model_selector_result_count: usize,
 }
 
 impl UiState {
@@ -91,6 +103,7 @@ impl UiState {
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     pub fn update(mut self, msg: UiMsg) -> Self {
         if matches!(
             msg,
@@ -99,10 +112,26 @@ impl UiState {
                 | UiMsg::CommandPaletteMove(_)
                 | UiMsg::CommandPaletteEscape
                 | UiMsg::ActivateCommandPalette
+                | UiMsg::ModelSelectorChar(_)
+                | UiMsg::ModelSelectorBackspace
+                | UiMsg::ModelSelectorMove(_)
+                | UiMsg::ModelSelectorEscape
+                | UiMsg::ModelSelectorToggleScope
         ) {
-            return self
-                .update_palette(msg)
-                .expect("palette message is handled by the palette reducer");
+            return if matches!(
+                msg,
+                UiMsg::ModelSelectorChar(_)
+                    | UiMsg::ModelSelectorBackspace
+                    | UiMsg::ModelSelectorMove(_)
+                    | UiMsg::ModelSelectorEscape
+                    | UiMsg::ModelSelectorToggleScope
+            ) {
+                self.update_model_selector(msg)
+                    .expect("selector message is handled by selector reducer")
+            } else {
+                self.update_palette(msg)
+                    .expect("palette message is handled by palette reducer")
+            };
         }
         match msg {
             UiMsg::HideWelcome => self.show_welcome = false,
@@ -119,6 +148,22 @@ impl UiState {
             | UiMsg::CommandPaletteMove(_)
             | UiMsg::CommandPaletteEscape
             | UiMsg::ActivateCommandPalette => unreachable!("palette messages handled above"),
+            UiMsg::ToggleModelSelector => {
+                self.model_selector_open = !self.model_selector_open;
+                if !self.model_selector_open {
+                    self.model_selector_query.clear();
+                    self.model_selector_index = 0;
+                }
+            }
+            UiMsg::SetModelSelectorResultCount(count) => {
+                self.model_selector_result_count = count;
+                self.model_selector_index = self.model_selector_index.min(count.saturating_sub(1));
+            }
+            UiMsg::ModelSelectorChar(_)
+            | UiMsg::ModelSelectorBackspace
+            | UiMsg::ModelSelectorMove(_)
+            | UiMsg::ModelSelectorEscape
+            | UiMsg::ModelSelectorToggleScope => unreachable!("selector messages handled above"),
             UiMsg::Reset => self = Self::new(),
         }
         self
@@ -157,6 +202,39 @@ impl UiState {
                 self.command_palette_open = false;
                 self.command_palette_query.clear();
                 self.command_palette_index = 0;
+            }
+            _ => return None,
+        }
+        Some(self)
+    }
+
+    fn update_model_selector(mut self, msg: UiMsg) -> Option<Self> {
+        match msg {
+            UiMsg::ModelSelectorChar(ch) => self.model_selector_query.push(ch),
+            UiMsg::ModelSelectorBackspace => {
+                self.model_selector_query.pop();
+            }
+            UiMsg::ModelSelectorMove(delta) => {
+                let count = self.model_selector_result_count;
+                self.model_selector_index = if count == 0 {
+                    0
+                } else {
+                    self.model_selector_index
+                        .saturating_add_signed(delta)
+                        .min(count - 1)
+                };
+            }
+            UiMsg::ModelSelectorEscape => {
+                if self.model_selector_query.is_empty() {
+                    self.model_selector_open = false;
+                } else {
+                    self.model_selector_query.clear();
+                }
+                self.model_selector_index = 0;
+            }
+            UiMsg::ModelSelectorToggleScope => {
+                self.model_selector_scoped_only = !self.model_selector_scoped_only;
+                self.model_selector_index = 0;
             }
             _ => return None,
         }

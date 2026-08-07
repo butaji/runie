@@ -249,6 +249,7 @@ pub enum Slot {
     WelcomeOverlay,
     ShortcutsOverlay,
     CommandPaletteOverlay,
+    ModelSelectorOverlay,
     CompactModeHint,
 }
 
@@ -264,6 +265,7 @@ pub enum ComponentKind {
     WelcomeOverlay,
     ShortcutsOverlay,
     CommandPaletteOverlay,
+    ModelSelectorOverlay,
     CompactModeHint,
 }
 
@@ -305,6 +307,7 @@ pub struct ChatViewProps {
     pub welcome_visible: bool,
     pub shortcuts_visible: bool,
     pub command_palette_visible: bool,
+    pub model_selector_visible: bool,
     pub compact_mode_hint_visible: bool,
 }
 
@@ -337,7 +340,7 @@ pub struct ViewDocument {
     pub props: ViewProps,
 }
 
-pub const CHAT_COMPONENTS: [ComponentSpec; 9] = [
+pub const CHAT_COMPONENTS: [ComponentSpec; 10] = [
     ComponentSpec {
         kind: ComponentKind::Header,
         slot: Slot::Header,
@@ -376,6 +379,11 @@ pub const CHAT_COMPONENTS: [ComponentSpec; 9] = [
     ComponentSpec {
         kind: ComponentKind::CommandPaletteOverlay,
         slot: Slot::CommandPaletteOverlay,
+        owner: StateOwner::UiActor,
+    },
+    ComponentSpec {
+        kind: ComponentKind::ModelSelectorOverlay,
+        slot: Slot::ModelSelectorOverlay,
         owner: StateOwner::UiActor,
     },
     ComponentSpec {
@@ -444,6 +452,7 @@ impl fmt::Display for Slot {
             Self::WelcomeOverlay => "welcome-overlay",
             Self::ShortcutsOverlay => "shortcuts-overlay",
             Self::CommandPaletteOverlay => "command-palette-overlay",
+            Self::ModelSelectorOverlay => "model-selector-overlay",
             Self::CompactModeHint => "compact-mode-hint",
         })
     }
@@ -493,6 +502,9 @@ pub fn chat_view_with_props(props: ChatViewProps) -> Element {
     }
     if props.command_palette_visible {
         children.push(view!(slot Slot::CommandPaletteOverlay));
+    }
+    if props.model_selector_visible {
+        children.push(view!(slot Slot::ModelSelectorOverlay));
     }
     if props.compact_mode_hint_visible {
         children.push(view!(slot Slot::CompactModeHint));

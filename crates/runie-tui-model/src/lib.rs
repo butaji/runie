@@ -186,6 +186,27 @@ mod tests {
     }
 
     #[test]
+    fn model_selector_reduces_query_scope_and_navigation_events() {
+        let state = UiState::new()
+            .update(UiMsg::SetModelSelectorResultCount(3))
+            .update(UiMsg::ToggleModelSelector)
+            .update(UiMsg::ModelSelectorChar('g'))
+            .update(UiMsg::ModelSelectorMove(2));
+        assert!(state.model_selector_open);
+        assert_eq!(state.model_selector_query, "g");
+        assert_eq!(state.model_selector_index, 2);
+        let state = state.update(UiMsg::ModelSelectorToggleScope);
+        assert!(state.model_selector_scoped_only);
+        assert_eq!(state.model_selector_index, 0);
+
+        let state = state.update(UiMsg::ModelSelectorEscape);
+        assert!(state.model_selector_open);
+        assert!(state.model_selector_query.is_empty());
+        assert_eq!(state.model_selector_index, 0);
+        assert!(!state.update(UiMsg::ModelSelectorEscape).model_selector_open);
+    }
+
+    #[test]
     fn ui_core_event_mapping_is_explicit_and_pure() {
         assert_eq!(
             super::ui_messages_for_event(&AgentEvent::Reset),

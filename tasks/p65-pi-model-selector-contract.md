@@ -1,6 +1,6 @@
 # P65 — Pi model selector and scoped-model contract
 
-Status: catalog semantics, async actor, and provider discovery seam implemented; concrete adapter/selector UI open (2026-08-08)
+Status: catalog semantics, provider discovery seam, and renderer-neutral async selector projection implemented; concrete selector renderer/hotkeys remain (2026-08-08)
 
 ## Source contract
 
@@ -36,10 +36,12 @@ Provider discovery now has an explicit async capability chain:
 `App::refresh_models` → `ModelCatalogActor::refresh`. The default provider
 implementation returns a typed unsupported error; no provider-specific wire
 behavior is invented by the generic actor.
-`/model provider/model` route. It does not yet own a model catalog, scoped
-model projection, async refresh result, selection query/index, or cycle
-direction. The current route must therefore remain explicit and must not claim
-selector parity.
+The UI actor now owns selector query, index, scope, open/close, escape, and
+result-count transitions through `UiMsg`; `App::toggle_model_selector` admits
+the catalog snapshot count through that mailbox before opening the selector.
+The declarative view tree exposes `ModelSelectorOverlay` with `UiActor`
+ownership. The renderer and production key routing remain open, so this slice
+does not claim complete selector parity.
 
 ## Required implementation
 

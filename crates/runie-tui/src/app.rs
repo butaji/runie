@@ -498,6 +498,21 @@ impl App {
         self.ui.send(UiMsg::ToggleCommandPalette).await;
     }
 
+    /// Project the catalog actor's immutable search universe into the UI
+    /// actor before opening its selector. The UI owns query/index/scope;
+    /// catalog ownership remains in `ModelCatalogActor`.
+    pub async fn toggle_model_selector(&self) {
+        let count = self.model_catalog.snapshot().results.len();
+        self.ui
+            .send(UiMsg::SetModelSelectorResultCount(count))
+            .await;
+        self.ui.send(UiMsg::ToggleModelSelector).await;
+    }
+
+    pub async fn model_selector_key(&self, msg: UiMsg) {
+        self.ui.send(msg).await;
+    }
+
     pub async fn command_palette_key(&self, msg: UiMsg) {
         self.ui.send(msg).await;
     }
@@ -738,6 +753,7 @@ impl App {
                 welcome_visible: model.ui.show_welcome,
                 shortcuts_visible: model.ui.shortcuts_open,
                 command_palette_visible: model.ui.command_palette_open,
+                model_selector_visible: model.ui.model_selector_open,
                 // The settled small-screen hint is ambient: after the first
                 // completed turn it remains below the feed, matching Grok's
                 // one-shot tip promotion. Terminal-size gating belongs to
