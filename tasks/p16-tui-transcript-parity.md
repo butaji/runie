@@ -21,6 +21,12 @@ render-snapshot boundary defect between the YAML visual request and the final
 buffer; do not change per-tool collapse semantics until that boundary is
 reproduced and fixed.
 
+**Boundary assertion (2026-08-08):** The YAML renderer now checks the
+actor-owned feed snapshot immediately before drawing and fails if the
+declarative `activity_expanded` value was not delivered. The check passes for
+the existing matrix, narrowing the remaining defect to physical-row
+projection or buffer composition rather than mailbox delivery.
+
 **Latest parity note (2026-08-05):** Grouped activity now retains Grok's
 failure suffix (`· N failed`) after failed directory/file/command tools
 complete. `visual-tool-error.yaml` exercises the contract through the YAML

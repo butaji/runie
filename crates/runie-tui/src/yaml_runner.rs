@@ -4780,6 +4780,21 @@ pub async fn render_visual_buffer(
     } else {
         None
     };
+    // Keep the declarative visual request and the actor-owned render input on
+    // the same event boundary. Without this check a fixture can pass a state
+    // assertion while the final buffer silently renders a stale fold mode.
+    let projected_activity_expanded = app.scrollback_actor.model_snapshot().activity_expanded;
+    if projected_activity_expanded != activity_expanded {
+        return Err(format!(
+            "visual activity_expanded delivery mismatch: expected {activity_expanded}, got {projected_activity_expanded}"
+        ));
+    }
+    let app_projected_activity_expanded = app.model_snapshot().feed.activity_expanded;
+    if app_projected_activity_expanded != activity_expanded {
+        return Err(format!(
+            "visual app feed activity mismatch: expected {activity_expanded}, got {app_projected_activity_expanded}"
+        ));
+    }
     draw_visual_frame(
         &app,
         vis,
