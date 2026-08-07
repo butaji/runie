@@ -142,6 +142,33 @@ async fn concurrent_prompt_rejected_as_busy() {
     assert_eq!(first_out.len(), 2, "user + assistant");
 }
 
+#[tokio::test(flavor = "multi_thread")]
+async fn reset_rejects_an_active_run_like_pi() {
+    let (started_tx, mut started_rx) = tokio::sync::watch::channel(false);
+    let (release_tx, release_rx) = tokio::sync::watch::channel(false);
+    let stream = Arc::new(BlockingStream {
+        started: started_tx,
+        release: Mutex::new(Some(release_rx)),
+    });
+    let test = TestLoopBuilder::new(stream).build();
+    let actor = test.actor.clone();
+    let run = tokio::spawn(async move {
+        actor
+            .prompt(vec![user("reset", 1)], AgentContext::default())
+            .await
+    });
+    while !*started_rx.borrow() {
+        let _ = started_rx.changed().await;
+    }
+
+    assert!(matches!(
+        test.actor.reset().await,
+        Err(runie_core::r#loop::LoopError::Busy)
+    ));
+    let _ = release_tx.send(true);
+    assert!(run.await.unwrap().is_ok());
+}
+
 #[tokio::test]
 async fn prompt_propagates_abort_signal_to_provider_options() {
     let (seen_tx, mut seen_rx) = tokio::sync::watch::channel(false);

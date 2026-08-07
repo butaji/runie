@@ -314,8 +314,8 @@ impl App {
 
     /// Reset the core and every event-driven TUI projection through the loop
     /// actor's single reset boundary.
-    pub async fn reset_session(&self) {
-        self.loop_actor.reset().await;
+    pub async fn reset_session(&self) -> Result<(), runie_core::r#loop::LoopError> {
+        self.loop_actor.reset().await
     }
 
     /// Publish a theme change and wait until all live projections acknowledge

@@ -2703,7 +2703,7 @@ pub async fn render_visual_buffer(
                 // Route the reset through the core actor's event boundary and
                 // await its acknowledgement so YAML observes the reduced UI
                 // state rather than racing the broadcast subscriber.
-                app.reset_session().await;
+                let _ = app.reset_session().await;
             }
             continue;
         }

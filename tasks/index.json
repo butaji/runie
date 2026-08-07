@@ -41,6 +41,12 @@
       "title": "Await ordered Pi lifecycle listeners before run and idle settlement"
     },
     {
+      "id": "p41",
+      "file": "p41-reset-active-run-parity.md",
+      "status": "in_progress",
+      "title": "Reject reset while a Pi-compatible run is active"
+    },
+    {
       "id": "p35",
       "file": "p35-scrollback-model-reducer.md",
       "status": "done",

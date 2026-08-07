@@ -283,13 +283,17 @@ impl LoopActor {
     }
 
     /// Clear transcript, projections, and queued messages through their owners.
-    pub async fn reset(&self) {
+    pub async fn reset(&self) -> Result<(), LoopError> {
+        // Pi rejects reset while an active run exists. Hold the admission
+        // permit through the reset event so a new prompt cannot race it.
+        let _run_permit = self.acquire_run().await?;
         self.inner
             .deps
             .state
             .publish_event(&self.inner.deps.bus, crate::types::AgentEvent::Reset)
             .await;
         self.clear_all_queues().await;
+        Ok(())
     }
 
     /// Apply an externally replayed event through the core state owner.

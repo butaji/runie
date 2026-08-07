@@ -419,7 +419,7 @@ async fn run_app(
                                         app.activate_command_palette().await;
                                         match ui_commands.recv().await {
                                             Ok(UiCommand::ActivatePaletteEntry(PaletteAction::NewSession)) => {
-                                                app.reset_session().await;
+                                                let _ = app.reset_session().await;
                                             }
                                             Ok(UiCommand::ActivatePaletteEntry(PaletteAction::KeyboardShortcuts)) => {
                                                 app.toggle_shortcuts().await;
