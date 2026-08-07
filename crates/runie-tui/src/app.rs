@@ -301,8 +301,8 @@ impl App {
         let ui = UiActor::new(&bus);
         Self {
             prompt: PromptActor::new(&bus),
-            status_actor: StatusActor::new(),
-            scrollback_actor: ScrollbackActor::new(),
+            status_actor: StatusActor::new_with_bus(&bus),
+            scrollback_actor: ScrollbackActor::new_with_bus(&bus),
             session_actor: SessionActor::new_with_bus(&bus),
             loop_actor,
             bus,
@@ -314,8 +314,8 @@ impl App {
         let ui = UiActor::new_with_welcome(&bus, true);
         Self {
             prompt: PromptActor::new(&bus),
-            status_actor: StatusActor::new(),
-            scrollback_actor: ScrollbackActor::new(),
+            status_actor: StatusActor::new_with_bus(&bus),
+            scrollback_actor: ScrollbackActor::new_with_bus(&bus),
             session_actor: SessionActor::new_with_bus(&bus),
             loop_actor,
             bus,
@@ -333,14 +333,10 @@ impl App {
         self.loop_actor.reset().await
     }
 
-    /// Deliver one typed theme event to every owning projection and await all
-    /// mailbox acknowledgements. No renderer state or snapshot is mutated
-    /// directly, and no polling is needed for completion.
+    /// Publish one typed theme event. Each owning projection consumes the
+    /// event from its bus subscription and reduces it in its own mailbox.
     pub async fn set_theme(&self, theme: runie_core::types::ThemeKind) {
-        let event = AgentEvent::ThemeChanged { theme };
-        self.prompt.apply_event(event.clone()).await;
-        self.status_actor.apply_event(&event).await;
-        self.scrollback_actor.apply_event(&event).await;
+        self.bus.publish(AgentEvent::ThemeChanged { theme });
     }
 
     pub async fn toggle_command_palette(&self) {

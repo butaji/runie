@@ -295,3 +295,7 @@ asserts Grok's fallback `○` glyph alongside the actor-owned workflow snapshot.
 constructors through a small private acknowledgement helper backed by
 `mailbox_ack!`. The macro removes repeated oneshot plumbing without hiding
 payload semantics or changing the YAML fixture boundary.
+
+The event-boundary regression is covered by the live actor construction path:
+theme changes enter through `EventBus` and are reduced by each projection
+actor, keeping the YAML/event model applicable to all TUI state owners.

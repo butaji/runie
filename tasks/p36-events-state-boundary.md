@@ -138,3 +138,8 @@ State mailbox DSL consolidation (2026-08-06): acknowledged `StateCommand`
 construction now shares `mailbox_ack!` plumbing through the state actor's
 private helper. State ownership and command payloads remain explicit at each
 public method.
+
+TUI theme event boundary (2026-08-06): `App::set_theme` now publishes one
+`ThemeChanged` event. Prompt, status, and scrollback actors are constructed
+with bus subscriptions and reduce that event independently through their own
+mailboxes; the app no longer fans out direct projection mutations.
