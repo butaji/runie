@@ -861,3 +861,12 @@ thinking/`1.5s` worked durations reduced the strict result to 122 differing
 cells (29 glyph, 93 attributes). The visible timestamp and duration glyphs
 now match; remaining row deltas are primarily terminal-style encoding,
 user-panel blank-cell foreground, and Grok's `/doctor` diagnostic row.
+
+Clock-aligned matrix (same capture): the strict full-screen results were
+62×32 — 123 cells (30 glyph, 93 attributes), 80×24 — 210 (70 glyph, 140
+attributes), 100×30 — 264 (60 glyph, 204 attributes), and 120×36 — 293 (33
+glyph, 260 attributes). The timestamp/duration rows remain symbol-aligned;
+the growing attribute count is concentrated in the full-width user-panel
+background encoding, while the glyph deltas remain concentrated in the
+diagnostic `/doctor` row and footer/phase rows. This matrix is retained as a
+strict non-parity baseline across viewport sizes.
