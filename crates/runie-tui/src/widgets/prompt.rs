@@ -158,6 +158,12 @@ impl PromptWidget {
         };
     }
 
+    /// Synchronous fixture helper for unit tests only.
+    ///
+    /// Live input always enters through `PromptActor`, which awaits
+    /// `open_file_search_async`; keeping this helper test-only prevents a
+    /// blocking filesystem path from being used by the runtime TUI.
+    #[cfg(test)]
     pub fn open_file_search(&mut self) {
         if let Some(path) = self.selected_file.clone() {
             self.viewer_lines = std::fs::read_to_string(&path)

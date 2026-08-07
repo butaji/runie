@@ -1,6 +1,6 @@
 # P59 — Async boundary audit
 
-Status: audited (2026-08-08)
+Status: audited (2026-08-08; runtime sync helper quarantined)
 
 ## Evidence
 
@@ -11,6 +11,11 @@ The production actor/provider paths were scanned after P57 and P58:
 - session persistence already uses `tokio::fs` behind `SessionStorageActor`
 - provider retry delays and cancellation use Tokio timers/signals
 - all production spawned workers are attached to actor/task owners or joined
+
+The former synchronous `PromptWidget::open_file_search` helper is now compiled
+only for unit tests. The live `PromptActor` path can only call the async
+Tokio-filesystem implementation, so a blocking file search cannot be reached
+from the runtime TUI.
 
 The remaining `std::sync::Mutex<Vec<AgentEvent>>` is an explicitly documented
 compatibility-only side buffer used when no event bus is supplied. Live tool
