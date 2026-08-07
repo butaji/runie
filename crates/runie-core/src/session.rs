@@ -1683,6 +1683,45 @@ fn materialize_tool_start(
     }))
 }
 
+/// Rebuild actor-local tool-result reservations after a journal restore.
+///
+/// The reservation is operational state, not a second source of truth: the
+/// durable `tool_started` lane record is authoritative and only starts that
+/// do not yet have a message entry remain reserved.
+fn rebuild_tool_result_reservations(
+    state: &SessionSnapshot,
+    tool_result_ids: &mut HashMap<String, String>,
+) {
+    let entry_ids = state
+        .entries
+        .iter()
+        .map(|entry| entry.id.as_str())
+        .collect::<std::collections::HashSet<_>>();
+    tool_result_ids.clear();
+    for record in &state.lane_records {
+        if record.record_type != "tool_started" {
+            continue;
+        }
+        let Some(tool_call_id) = record
+            .data
+            .get("toolCallId")
+            .and_then(|value| value.as_str())
+        else {
+            continue;
+        };
+        let Some(result_entry_id) = record
+            .data
+            .get("resultEntryId")
+            .and_then(|value| value.as_str())
+        else {
+            continue;
+        };
+        if !entry_ids.contains(result_entry_id) {
+            tool_result_ids.insert(tool_call_id.to_owned(), result_entry_id.to_owned());
+        }
+    }
+}
+
 enum StorageCommand {
     Publish {
         path: String,
@@ -2037,6 +2076,8 @@ impl SessionActor {
                             .unwrap_or(imported.sequence)
                             .saturating_add(1);
                         state = imported;
+                        rebuild_tool_result_reservations(&state, &mut tool_result_ids);
+                        pending_tool_starts.clear();
                         let _ = snapshot_tx.send(state.clone());
                         let _ = reply.send(());
                     }
@@ -3353,6 +3394,72 @@ mod tests {
         assert_eq!(snapshot.sequence, 3);
         assert_eq!(snapshot.entries[2].id, "entry-3");
         assert_eq!(snapshot.entries[2].parent_id.as_deref(), Some("entry-2"));
+    }
+
+    #[tokio::test]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the restore regression keeps the durable and live tool facts together"
+    )]
+    async fn actor_restore_rebuilds_unsettled_tool_result_reservation() {
+        let source = SessionActor::new();
+        source
+            .record_config(SessionConfigRecord::OperationRecordCreated {
+                record_type: "operation_started".into(),
+                data: serde_json::json!({"id": "run-1"}),
+            })
+            .await;
+        source
+            .append(AgentMessage::Assistant(AssistantMessage {
+                content: vec![AssistantContent::ToolCall(ToolCall {
+                    id: "call-1".into(),
+                    name: "echo".into(),
+                    arguments: serde_json::json!({"value": "hello"}),
+                    thought_signature: None,
+                })],
+                ..Default::default()
+            }))
+            .await;
+        source
+            .record_config(SessionConfigRecord::OperationRecordCreated {
+                record_type: "tool_started".into(),
+                data: serde_json::json!({
+                    "runId": "run-1",
+                    "assistantEntryId": "entry-1",
+                    "toolIndex": 0,
+                    "toolCallId": "call-1",
+                    "toolName": "echo",
+                    "effectiveArgs": {"value": "hello"},
+                    "resultEntryId": "entry-3",
+                    "replay": "never"
+                }),
+            })
+            .await;
+        let jsonl = source.snapshot().to_jsonl("session-1", 5, "/workspace");
+
+        let restored = SessionActor::new();
+        restored.restore_jsonl(&jsonl).await.expect("restore");
+        restored
+            .append(AgentMessage::ToolResult(ToolResultMessage {
+                tool_call_id: "call-1".into(),
+                tool_name: "echo".into(),
+                content: vec![ToolResultContent::Text {
+                    text: "hello".into(),
+                }],
+                details: serde_json::Value::Null,
+                usage: None,
+                added_tool_names: Vec::new(),
+                is_error: false,
+                timestamp: 7,
+            }))
+            .await;
+
+        let snapshot = restored.snapshot();
+        assert_eq!(
+            snapshot.entries.last().map(|entry| entry.id.as_str()),
+            Some("entry-3")
+        );
+        assert_eq!(snapshot.entries.len(), 2);
     }
 
     #[test]

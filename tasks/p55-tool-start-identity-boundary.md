@@ -1,7 +1,8 @@
 # p55 — Pi `tool_started` identity boundary
 
-Status: in progress — actor-owned identity, pending ordering, and YAML oracle
-implemented; persisted pending replay remains open (2026-08-08)
+Status: in progress — actor-owned identity, pending ordering, YAML oracle, and
+restored-result reservation implemented; persisted pending replay remains open
+(2026-08-08)
 
 ## First implementation slice (2026-08-08)
 
@@ -17,7 +18,10 @@ Out-of-order starts are retained as actor-owned pending facts until a later
 assistant entry supplies the context; the bridge no longer constructs or
 publishes a partial session record. Pending facts are cleared on reset.
 Persisted replay of pending, not-yet-admitted starts remains open because Pi
-does not journal an incomplete `tool_started` record.
+does not journal an incomplete `tool_started` record. Completed `tool_started`
+records that still lack their result entry are replayed into the actor-local
+reservation map during import, so a post-restore result keeps its journaled
+identity.
 
 `visual-tool.yaml` now asserts the complete tool-start payload through the
 runtime YAML state DSL, including actor-issued assistant and result identities.
@@ -56,7 +60,8 @@ fabricating those fields in the bridge would violate SSOT ownership.
    matching `ToolCall` index from actor-owned journal state.
 3. Reserve the actor-owned result entry identity in the same mailbox turn and
    retain the reservation keyed by `toolCallId` until the matching tool-result
-   message is appended.
+   message is appended. On import, rebuild that operational map from the
+   durable `tool_started` records whose result entry is not yet present.
 4. Emit/reduce the complete Pi-shaped `tool_started` lane fact from that
    actor-owned data. The event sequence must be
    `ToolExecutionStart → actor reservation → tool_started snapshot`.
@@ -70,6 +75,7 @@ fabricating those fields in the bridge would violate SSOT ownership.
 - A YAML event sequence can start a tool, append its result, and assert the
   complete `tool_started` payload without Rust fixture code.
 - Parallel tool calls retain distinct actor-issued result identities.
-- JSONL round-trip preserves every field and replay policy.
+- JSONL round-trip preserves every field and replay policy, and restored
+  unsettled starts preserve their reserved result identity.
 - The bridge no longer constructs a session lane record directly.
 - `just ci` remains green and no test uses `sleep()`.
