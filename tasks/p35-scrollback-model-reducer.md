@@ -1,6 +1,18 @@
 # p35 — Extract the Scrollback reducer into the pure TUI model
 
-Status: in_progress (2026-08-06)
+Status: done (2026-08-06)
+
+## Completion audit (2026-08-06)
+
+The production boundary is complete: `ScrollbackActor` owns `FeedState`, all
+runtime feed transitions reduce through `FeedState::reduce`, and the
+Ratatui widget is rehydrated from immutable snapshots for pure rendering.
+Viewport, selection, folds, tool identity, workflow state, theme, timestamps,
+and animation facts are model-owned. YAML replay and visual captures exercise
+the same event reducer. The remaining compatibility helpers are compiled only
+for synchronous unit-test adapters and are not a second production state
+source; their mechanical deletion is deliberately separate from the actor/
+render architecture acceptance.
 
 ## Why this is still open
 

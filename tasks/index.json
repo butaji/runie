@@ -13,7 +13,7 @@
     {
       "id": "p35",
       "file": "p35-scrollback-model-reducer.md",
-      "status": "in_progress",
+      "status": "done",
       "title": "Architecture: extract the Scrollback reducer into the pure TUI model"
     },
     {
