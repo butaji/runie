@@ -619,6 +619,8 @@ pub struct SimpleStreamOptions {
     pub transport: Option<ProviderTransport>,
     /// Pi prompt-cache retention preference for provider adapters.
     pub cache_retention: Option<CacheRetention>,
+    /// WebSocket open-handshake timeout (pi: `websocketConnectTimeoutMs`).
+    pub websocket_connect_timeout_ms: Option<u64>,
     pub signal: Option<tokio::sync::watch::Receiver<bool>>,
     pub thinking_budgets: Option<ThinkingBudgets>,
     /// Explicit Pi stream temperature, kept separate from arbitrary sampling

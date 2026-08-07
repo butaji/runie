@@ -24,6 +24,7 @@ pub struct HttpRequest {
     pub metadata: std::collections::HashMap<String, serde_json::Value>,
     pub transport: Option<ProviderTransport>,
     pub cache_retention: Option<CacheRetention>,
+    pub websocket_connect_timeout_ms: Option<u64>,
 }
 
 #[async_trait::async_trait]
@@ -88,6 +89,9 @@ pub trait HttpActor: Send + Sync + 'static {
                     metadata: metadata.clone(),
                     transport: options.as_ref().and_then(|options| options.transport),
                     cache_retention: options.as_ref().and_then(|options| options.cache_retention),
+                    websocket_connect_timeout_ms: options
+                        .as_ref()
+                        .and_then(|options| options.websocket_connect_timeout_ms),
                 },
                 options.as_ref().and_then(|o| o.timeout_ms),
             )

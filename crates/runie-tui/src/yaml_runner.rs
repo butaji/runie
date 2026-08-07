@@ -81,6 +81,8 @@ pub struct ProviderOptionsSpec {
     #[serde(default)]
     pub cache_retention: Option<String>,
     #[serde(default)]
+    pub websocket_connect_timeout_ms: Option<u64>,
+    #[serde(default)]
     pub thinking_budgets: Option<runie_core::types::ThinkingBudgets>,
     #[serde(default)]
     pub temperature: Option<f64>,
@@ -105,6 +107,7 @@ impl ProviderOptionsSpec {
             metadata: self.metadata.clone(),
             transport: self.transport.as_deref().map(parse_provider_transport),
             cache_retention: self.cache_retention.as_deref().map(parse_cache_retention),
+            websocket_connect_timeout_ms: self.websocket_connect_timeout_ms,
             thinking_budgets: self.thinking_budgets.clone(),
             temperature: self.temperature,
             max_tokens: self.max_tokens,
@@ -732,6 +735,7 @@ pub struct ProviderOptionsAssertions {
     pub metadata: Option<std::collections::HashMap<String, serde_json::Value>>,
     pub transport: Option<String>,
     pub cache_retention: Option<String>,
+    pub websocket_connect_timeout_ms: Option<u64>,
     pub thinking_budgets: Option<runie_core::types::ThinkingBudgets>,
     pub temperature: Option<f64>,
     pub max_tokens: Option<u64>,
@@ -1805,6 +1809,14 @@ fn assert_provider_options(outcome: &ScenarioOutcome, scenario: &Scenario) -> Re
         if actual_retention != Some(value.as_str()) {
             return Err(format!(
                 "provider cache retention mismatch: expected {value:?}, got {actual_retention:?}"
+            ));
+        }
+    }
+    if let Some(value) = expected.websocket_connect_timeout_ms {
+        if actual.websocket_connect_timeout_ms != Some(value) {
+            return Err(format!(
+                "provider websocket connect timeout mismatch: expected {value}, got {:?}",
+                actual.websocket_connect_timeout_ms
             ));
         }
     }

@@ -77,6 +77,8 @@ Not yet implemented behaviorally:
 - named temperature/cache-retention fields: Runie's current provider boundary
   does not construct provider-specific payloads, so promoting them requires a
   concrete adapter contract rather than merely deserializing unused fields.
+- WebSocket open-handshake timeout is carried as separate request metadata;
+  the current HTTP actor still does not open WebSockets.
 
 ## Next implementation slice
 
@@ -86,6 +88,9 @@ backoff policy as injected dependencies, then promote each Pi option only when
 one concrete adapter consumes it and a YAML event sequence asserts the
 effective request. Keep unsupported provider-specific options explicitly
 classified until that boundary exists.
+
+The YAML fixture asserts `websocket_connect_timeout_ms: 2500`, preserving this
+Pi option for a future WebSocket adapter without claiming behavioral support.
 
 ## Verification contract
 
