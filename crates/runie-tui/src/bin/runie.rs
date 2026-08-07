@@ -47,20 +47,7 @@ struct PlaceholderStream;
 
 enum InputEvent {
     Key(KeyEvent),
-    Mouse(MouseEventKind),
-}
-
-const GROK_DEFAULT_EVENTS_PER_WHEEL_TICK: i32 = 3;
-const GROK_DEFAULT_LINES_PER_WHEEL_TICK: i32 = 3;
-const GROK_DEFAULT_LINES_PER_RAW_WHEEL_EVENT: i32 =
-    GROK_DEFAULT_LINES_PER_WHEEL_TICK / GROK_DEFAULT_EVENTS_PER_WHEEL_TICK;
-
-fn mouse_scroll_delta(kind: MouseEventKind) -> Option<i32> {
-    match kind {
-        MouseEventKind::ScrollUp => Some(-GROK_DEFAULT_LINES_PER_RAW_WHEEL_EVENT),
-        MouseEventKind::ScrollDown => Some(GROK_DEFAULT_LINES_PER_RAW_WHEEL_EVENT),
-        _ => None,
-    }
+    Mouse(i32),
 }
 
 fn render_command_palette(
@@ -402,10 +389,23 @@ async fn run_app(
     let (input_tx, mut input_rx) = mpsc::channel::<InputEvent>(32);
     let _input_owner = runie_core::spawn_owned_worker!(async move {
         let mut input = EventStream::new();
+        let mut scroll_normalizer = runie_tui_model::ScrollNormalizer::default();
         while let Some(result) = input.next().await {
             let event = match result {
                 Ok(Event::Key(key)) => InputEvent::Key(key),
-                Ok(Event::Mouse(mouse)) => InputEvent::Mouse(mouse.kind),
+                Ok(Event::Mouse(mouse)) => {
+                    let direction = match mouse.kind {
+                        MouseEventKind::ScrollUp => runie_tui_model::ScrollDirection::Up,
+                        MouseEventKind::ScrollDown => runie_tui_model::ScrollDirection::Down,
+                        _ => continue,
+                    };
+                    let (next, delta) = scroll_normalizer.push(direction);
+                    scroll_normalizer = next;
+                    if delta == 0 {
+                        continue;
+                    }
+                    InputEvent::Mouse(delta)
+                }
                 _ => continue,
             };
             if input_tx.send(event).await.is_err() {
@@ -423,11 +423,7 @@ async fn run_app(
                 let Some(input) = input else { return Ok(AppExit::Quit) };
                 match input {
                     InputEvent::Key(key) => pending_key = Some(key),
-                    InputEvent::Mouse(kind) => {
-                        if let Some(delta) = mouse_scroll_delta(kind) {
-                            app.scroll_scrollback_by(delta).await;
-                        }
-                    }
+                    InputEvent::Mouse(delta) => app.scroll_scrollback_by(delta).await,
                 }
                 continue;
             }
@@ -708,11 +704,7 @@ fn _key_marker(_k: KeyEvent) {}
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        current_branch, mouse_scroll_delta, render_header, render_live_ready_footer,
-        repository_label,
-    };
-    use crossterm::event::MouseEventKind;
+    use super::{current_branch, render_header, render_live_ready_footer, repository_label};
     use ratatui::buffer::Buffer;
     use ratatui::layout::Rect;
     use ratatui::style::Modifier;
@@ -747,12 +739,5 @@ mod tests {
         let shortcut = buffer.cell((19, 0)).expect("second shortcut");
         assert_eq!(shortcut.symbol(), "C");
         assert!(shortcut.modifier.contains(Modifier::BOLD));
-    }
-
-    #[test]
-    fn mouse_wheel_maps_to_actor_scroll_deltas() {
-        assert_eq!(mouse_scroll_delta(MouseEventKind::ScrollUp), Some(-1));
-        assert_eq!(mouse_scroll_delta(MouseEventKind::ScrollDown), Some(1));
-        assert_eq!(mouse_scroll_delta(MouseEventKind::Moved), None);
     }
 }

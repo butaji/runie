@@ -8,6 +8,7 @@ mod events;
 mod feed;
 mod memory;
 mod prompt;
+mod scroll;
 mod status;
 mod theme;
 mod ui;
@@ -21,6 +22,7 @@ pub use feed::{
 };
 pub use memory::{memory_display_lines, parse_memory_results, MemoryResult};
 pub use prompt::{InputMode, PromptOutcome, PromptSnapshot};
+pub use scroll::{ScrollDirection, ScrollNormalizer};
 pub use status::{Status, StatusMsg, StatusSnapshot};
 pub use theme::ThemeToken;
 pub use ui::{ui_messages_for_event, PaletteAction, UiCommand, UiMsg, UiState};
