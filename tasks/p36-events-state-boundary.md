@@ -117,6 +117,14 @@ The compatibility renderer's feed adapter and the actor's background/workflow
 adapter are explicit as well. This keeps the legacy replay path and the live
 actor path aligned while the renderer is being retired as a state owner.
 
+Renderer ownership re-audit (2026-08-07): a current source search confirms
+that `EventRenderer::new`/`with_welcome` and direct legacy widget locks are
+reachable only from `#[cfg(test)]` compatibility constructors and focused
+tests. The live `App` path uses `with_live_actors`; YAML replay uses
+`with_actors`. The remaining legacy adapter is documented migration debt, not
+a second production state owner. New state changes must continue through the
+actor message/event paths rather than extending that adapter.
+
 The capture helper remains an external instrument, not production state. Its
 bounded polling is intentionally limited to detecting terminal readiness and
 settled output; it does not mutate Runie's state.
