@@ -1403,8 +1403,10 @@ those differences are not promoted into the deterministic Pi-core oracle.
   timeout was caused by bursty prompt injection dropping `He` and leaving only
   `y` in the feed. Per-character literal injection with a 30ms interval fixes
   that instrumentation defect: a rerun settles at `62×32`, `80×24`, and
-  `100×30`; `120×36` still times out and retains its timeout frame. The fixed
-  settled comparisons report 401, 787, and 448 differing cells respectively,
+  `100×30`. A bounded post-readiness stabilization turn was also required at
+  `120×36` so the input worker could subscribe before injection; it now
+  settles as well. The fixed settled comparisons report 401, 787, 448, and
+  438 differing cells at `62×32`, `80×24`, `100×30`, and `120×36` respectively,
   mostly style-only at the wider geometries. These are valid evidence of
   non-equivalent live states, not a 100% parity claim.
 - **Settled chrome correction (2026-08-05):** A valid 62×32 cast comparison

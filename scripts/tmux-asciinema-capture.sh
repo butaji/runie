@@ -97,6 +97,12 @@ if (( ! ready )); then
     exit 1
 fi
 
+# The wide layout can finish its first full paint after the prompt marker is
+# visible. Give the crossterm input worker one bounded turn to subscribe before
+# injecting the scenario; otherwise the first prompt bytes can be lost only at
+# the widest geometry.
+sleep 0.2
+
 # Send one ordinary tmux key event per character. A single multi-character
 # argument is interpreted as a tmux key name (`Hey`), while `-l` emits a
 # paste-like byte sequence that crossterm does not expose as ordinary
