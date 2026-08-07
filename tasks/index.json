@@ -59,6 +59,12 @@
       "title": "Preserve provider retry metadata before implementing max retry delay"
     },
     {
+      "id": "p44",
+      "file": "p44-theme-ack-boundary.md",
+      "status": "planned",
+      "title": "Replace application theme snapshot polling with actor acknowledgements"
+    },
+    {
       "id": "p35",
       "file": "p35-scrollback-model-reducer.md",
       "status": "done",
