@@ -336,6 +336,15 @@ so concurrent active IDs no longer fall back to a lexical `BTreeMap` choice.
 Further Pi operation-kind admission policy remains a separate recovery/storage
 contract, but assistant-step correlation is actor-owned and deterministic.
 
+YAML replay cannot currently express this concurrent transition honestly: the
+fixture runner publishes several bus events without awaiting per-event
+acknowledgements, so an operation record inserted between `start` and `done`
+can arrive after the run's terminal event. The attempted fixture was removed
+instead of asserting a scheduler-dependent order. A future YAML barrier event
+must await the owning actor acknowledgement before the next declared event;
+the Rust actor regression remains the authoritative concurrent-order test
+until that barrier is available.
+
 ## Completed slice (2026-08-07, separated operation journal lane)
 
 `SessionActor` no longer inserts `OperationRecordCreated` facts into the
