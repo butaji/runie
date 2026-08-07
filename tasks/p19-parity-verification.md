@@ -1601,3 +1601,11 @@ wall-clock timestamps, provider response text, worked-for duration, footer
 capability hints, and compact-mode hints. They are not treated as color or
 layout regressions until both implementations share a deterministic event
 sequence and clock.
+
+**YAML initial-prompt clock boundary (2026-08-08):** Replay scenarios now
+accept `initial_prompt_timestamp` and use it for every YAML-created initial
+user message, including direct Enter, automatic initial submission, and the
+functional scenario path. The default remains the historical sentinel `1`,
+while `visual-hey.yaml` pins a real deterministic Unix timestamp. This keeps
+the event payload and whole-screen replay under fixture control without
+mutating process-wide environment variables or recompiling the runner.

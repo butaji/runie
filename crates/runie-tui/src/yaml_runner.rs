@@ -66,11 +66,26 @@ pub struct Scenario {
     pub capture_while_waiting: bool,
     /// Deterministic user-row clock for full-frame replay assertions.
     pub prompt_timestamp: Option<String>,
+    /// Unix timestamp carried by YAML-created initial user messages. Keeping
+    /// this in the fixture makes timestamped replay frames event-controlled
+    /// instead of relying on the live wall clock or a hard-coded sentinel.
+    #[serde(default = "default_replay_prompt_timestamp")]
+    pub initial_prompt_timestamp: i64,
     /// Deterministic Pi tool-result timestamp for replay.
     #[serde(default)]
     pub tool_result_timestamp: i64,
     #[serde(default)]
     pub assertions: Assertions,
+}
+
+fn default_replay_prompt_timestamp() -> i64 {
+    1
+}
+
+impl Scenario {
+    fn initial_prompt_timestamp(&self) -> i64 {
+        self.initial_prompt_timestamp
+    }
 }
 
 #[derive(Debug, Deserialize, Default, Clone)]
@@ -2261,7 +2276,7 @@ async fn submit_scenario(actor: LoopActor, scenario: &Scenario) {
         .map(|text| {
             vec![AgentMessage::User(UserMessage {
                 content: vec![UserContent::Text { text: text.clone() }],
-                timestamp: 1,
+                timestamp: scenario.initial_prompt_timestamp(),
             })]
         })
         .unwrap_or_default();
@@ -4561,7 +4576,7 @@ pub async fn render_visual_buffer(
             if let PromptOutcome::Submitted(text) = outcome {
                 let user_msg = AgentMessage::User(UserMessage {
                     content: vec![UserContent::Text { text }],
-                    timestamp: 1,
+                    timestamp: scenario.initial_prompt_timestamp(),
                 });
                 let _ = app
                     .loop_actor
@@ -4645,7 +4660,7 @@ pub async fn render_visual_buffer(
         if !vis.steps.iter().any(|s| s == "Enter") {
             let user_msg = AgentMessage::User(UserMessage {
                 content: vec![UserContent::Text { text: text.clone() }],
-                timestamp: 1,
+                timestamp: scenario.initial_prompt_timestamp(),
             });
             if scenario.capture_while_waiting {
                 let actor = app.loop_actor.clone();

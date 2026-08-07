@@ -3,7 +3,10 @@ description: >-
   Baseline working-view conversation: submit the literal prompt "Hey" and
   render one short assistant response with Grok's transcript rail geometry.
 initial_prompt: "Hey"
-prompt_timestamp: "9:27 PM"
+# Keep the message's Pi timestamp deterministic while the display clock stays
+# explicitly asserted below.
+initial_prompt_timestamp: 1700000000
+prompt_timestamp: "5:13 PM"
 provider_options:
   model_headers:
     x-model-default: model
@@ -100,7 +103,7 @@ assertions:
     screen_text:
       - "❯ Hey"
       - "┃  Hi there!"
-      - "9:27 PM"
+      - "5:13 PM"
       - "Worked for"
       - "Enter:send"
     cell_assertions:
