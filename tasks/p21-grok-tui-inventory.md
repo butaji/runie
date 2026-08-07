@@ -580,8 +580,11 @@ changing the formatter in isolation.
 
 Reducer checkpoint (2026-08-06): Runie's scrollback reducer now targets the
 semantic tool header when settling a card, preserving all output rows. The
-mixed, truncated, and update fixtures assert this event-to-state contract;
-duplicate-ID compatibility seed ownership remains a separate open item.
+mixed, truncated, and update fixtures assert this event-to-state contract.
+Duplicate call IDs are separated by opaque actor-owned `tool_row_id`
+identity; completed rows are inactive and cannot be rewritten by a later
+duplicate. The remaining authoritative gap is the full Grok typed
+block/member model, not ordinary duplicate-ID lifecycle ownership.
 
 Ordinary running-state closure (2026-08-06): `ToolStartRunning` is now an
 explicit actor-owned reducer message emitted by ordinary Pi tool lifecycle
