@@ -29,7 +29,7 @@ Grok path/version, tmux/asciinema versions, and cast/raw artifact paths.
 Scenario-specific provider and clock fields remain YAML responsibilities.
 
 Live validation (2026-08-06): a 62×32 `runie --terminal-native` capture
-produced a valid manifest containing revision `ed238f61`, Grok `0.2.118`, tmux
+produced a valid manifest containing revision `6f964b99`, Grok `0.2.118`, tmux
 `3.7b`, asciinema `3.2.1`, requested truecolor environment, geometry, and both
 raw artifacts. The provenance path is operational.
 

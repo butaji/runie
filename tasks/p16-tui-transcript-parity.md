@@ -6,12 +6,13 @@ complete. `visual-tool-error.yaml` exercises the contract through the YAML
 runner while individual tool rows continue to render `✗`.
 
 - **tmux/asciinema Grok audit (2026-08-05):** A local `grok` session inspected
-  `artifacts/grok-rich.cast` alongside the renderer. It identified the next
-  concrete parity boundary as runtime turn-status telemetry (elapsed time,
-  token usage, and stop reason), plus queue-key/footer variants. The existing
-  pure `TurnStatus` renderer is ready for those values, but the event-driven
-  runtime does not yet publish them; this remains an implementation task, not
-  a cosmetic prefix substitution.
+  `artifacts/grok-rich.cast` alongside the renderer. It identified runtime
+  turn-status telemetry (elapsed time, token usage, and stop reason), plus
+  queue-key/footer variants, as the important parity boundary. The current
+  event-driven runtime now publishes usage/stop-reason data through typed
+  assistant `Done` events and owns deterministic elapsed ticks in the status
+  actor. Remaining work is capture-level validation of dynamic values and
+  queue/footer variants, not a missing runtime event path.
 
 - **Reactive turn telemetry (2026-08-05):** `StatusBar` now owns the turn
   usage/stop-reason projection, resets it on `TurnStart`, and consumes typed
