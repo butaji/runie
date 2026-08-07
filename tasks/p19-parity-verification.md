@@ -1555,3 +1555,10 @@ captures frames without asciinema input recording. This preserves crossterm
 character delivery in Runie while retaining full ANSI/style capture. A fresh
 Runie 80×24 capture now produces a settled frame; live Grok/Runie frames remain
 non-comparable until they share deterministic content and event timing.
+
+**Tool-result clock gap (2026-08-07):** Source audit confirms the executor
+currently emits `ToolResultMessage.timestamp = 0` in its normal and fallback
+paths, whereas Pi records the tool-result time. Closing this requires an
+injected, actor-owned clock/event input (with a deterministic YAML clock for
+replay), not a renderer-side timestamp patch. Until that slice is implemented,
+strict message-timestamp parity remains open.
