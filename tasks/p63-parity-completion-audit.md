@@ -31,8 +31,9 @@ provider-specific contract”. The source of truth is the current Pi tree at
    session/account cleanup. The generic HTTP actor must not emulate these.
 2. Provider-specific deferred-response polling/decoding and cancellation.
    Runie already exposes actor-owned `fetch_deferred` and `cancel_deferred`
-   capability commands; the missing evidence is an injected adapter contract
-   and a real provider fixture.
+   capability commands. An injected adapter contract now proves both commands
+   cross the `ProviderActor` mailbox and publish a deferred terminal event;
+   provider-specific polling/decoding and a real provider fixture remain open.
 3. Full Pi telemetry callback/span nesting and provider-specific diagnostics;
    generic lifecycle events are not evidence of span parity.
 4. Remaining session storage record families and direct lane identity

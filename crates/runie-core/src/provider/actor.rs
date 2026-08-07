@@ -427,6 +427,48 @@ mod tests {
         }
     }
 
+    struct DeferredFn {
+        cancelled: Arc<std::sync::atomic::AtomicBool>,
+    }
+
+    #[async_trait::async_trait]
+    impl StreamFn for DeferredFn {
+        async fn stream(
+            &self,
+            _model: &Model,
+            _context: &AgentContext,
+            _options: Option<SimpleStreamOptions>,
+        ) -> Result<AssistantMessageEventStream, StreamError> {
+            Err(StreamError::Invalid("ordinary stream unused".into()))
+        }
+
+        async fn fetch_deferred(
+            &self,
+            _model: &Model,
+            handle: &DeferredHandle,
+            _options: Option<SimpleStreamOptions>,
+        ) -> Result<AssistantMessageEventStream, StreamError> {
+            assert_eq!(handle.id, "deferred-1");
+            Ok(Box::pin(stream::iter(vec![AssistantMessageEvent::Done {
+                stop_reason: StopReason::Stop,
+                usage: Usage::default(),
+                message: None,
+            }])))
+        }
+
+        async fn cancel_deferred(
+            &self,
+            _model: &Model,
+            handle: &DeferredHandle,
+            _options: Option<SimpleStreamOptions>,
+        ) -> Result<(), StreamError> {
+            assert_eq!(handle.id, "deferred-1");
+            self.cancelled
+                .store(true, std::sync::atomic::Ordering::Release);
+            Ok(())
+        }
+    }
+
     #[tokio::test]
     async fn websocket_transport_uses_only_the_injected_provider_adapter() {
         let provider =
@@ -572,6 +614,41 @@ mod tests {
             Err(StreamError::Invalid(message))
                 if message == "provider cannot cancel deferred responses"
         ));
+    }
+
+    #[tokio::test]
+    async fn deferred_fetch_and_cancel_use_the_injected_provider_capability() {
+        let cancelled = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let actor = ProviderActor::new(Arc::new(DeferredFn {
+            cancelled: cancelled.clone(),
+        }));
+        let handle = DeferredHandle {
+            provider: "test".into(),
+            model_id: "test".into(),
+            api: "test".into(),
+            id: "deferred-1".into(),
+            expires_at: None,
+            poll_after_ms: None,
+            data: Some(serde_json::json!({"continuation": true})),
+        };
+
+        let mut events = actor
+            .fetch_deferred(Model::default(), handle.clone(), None)
+            .await
+            .expect("deferred fetch capability");
+        assert!(matches!(
+            events.recv().await.expect("deferred event"),
+            AssistantMessageEvent::Done {
+                stop_reason: StopReason::Stop,
+                ..
+            }
+        ));
+
+        actor
+            .cancel_deferred(Model::default(), handle, None)
+            .await
+            .expect("deferred cancellation capability");
+        assert!(cancelled.load(std::sync::atomic::Ordering::Acquire));
     }
 
     #[tokio::test]
