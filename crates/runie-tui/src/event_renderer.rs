@@ -279,7 +279,6 @@ pub struct EventRenderer {
     pending_tools: HashMap<String, PendingTool>,
     /// True between MessageStart(assistant) and MessageEnd(assistant).
     in_assistant_stream: bool,
-    reasoning_buffer: String,
     activity_dirs: usize,
     activity_files: usize,
     activity_commands: usize,
@@ -333,7 +332,6 @@ impl EventRenderer {
             tool_rows: HashMap::new(),
             pending_tools: HashMap::new(),
             in_assistant_stream: false,
-            reasoning_buffer: String::new(),
             activity_dirs: 0,
             activity_files: 0,
             activity_commands: 0,
@@ -792,7 +790,6 @@ impl EventRenderer {
             }
             AgentEvent::Reset => {
                 self.in_assistant_stream = false;
-                self.reasoning_buffer.clear();
             }
             AgentEvent::MessageStart { message } => self.handle_message_start(message),
             AgentEvent::MessageUpdate { event, .. } => self.handle_message_update(event),
@@ -1143,7 +1140,6 @@ impl EventRenderer {
         self.tool_rows.clear();
         self.pending_tools.clear();
         self.in_assistant_stream = false;
-        self.reasoning_buffer.clear();
         self.activity_dirs = 0;
         self.activity_files = 0;
         self.activity_commands = 0;
@@ -1183,7 +1179,6 @@ impl EventRenderer {
             AgentMessage::Assistant(_) => {
                 self.activity_group_open = false;
                 self.in_assistant_stream = true;
-                self.reasoning_buffer.clear();
                 if self.scrollback_actor.is_none() {
                     let mut scrollback = self.scrollback.lock();
                     scrollback.append(Line::new(LineKind::Separator, ""));
@@ -1202,6 +1197,10 @@ impl EventRenderer {
             self.in_assistant_stream = false;
             if self.scrollback_actor.is_none() {
                 let mut scrollback = self.scrollback.lock();
+                let has_reasoning = scrollback
+                    .lines()
+                    .iter()
+                    .any(|line| line.kind == LineKind::Reasoning && !line.text.is_empty());
                 if !scrollback.reasoning_expanded() {
                     if let Some(reasoning) = scrollback.last_mut_by_kind(LineKind::Reasoning) {
                         reasoning.text = "Thought".into();
@@ -1210,9 +1209,9 @@ impl EventRenderer {
                 // Grok commits the provisional thinking indicator as a compact
                 // session event in collapsed mode. Expanded mode keeps the
                 // reasoning event as the authoritative body projection.
-                if !self.reasoning_buffer.is_empty() && scrollback.reasoning_expanded() {
+                if has_reasoning && scrollback.reasoning_expanded() {
                     scrollback.remove_kind(LineKind::ThinkingStatus);
-                } else if !self.reasoning_buffer.is_empty() {
+                } else if has_reasoning {
                     if let Some(thinking) = scrollback.last_mut_by_kind(LineKind::ThinkingStatus) {
                         thinking.kind = LineKind::TurnSummary;
                         thinking.text = thinking_summary(self.thinking_elapsed_ms());
@@ -1256,9 +1255,8 @@ impl EventRenderer {
                 if self.status_actor.is_none() {
                     self.status.lock().set(Status::Thinking);
                 }
-                self.reasoning_buffer.push_str(&delta);
                 if self.scrollback_actor.is_none() {
-                    self.replace_last_reasoning_line(&self.reasoning_buffer.clone());
+                    self.append_reasoning_delta(&delta);
                 }
             }
             AssistantMessageEvent::Done {
@@ -1320,12 +1318,12 @@ impl EventRenderer {
         }
     }
 
-    fn replace_last_reasoning_line(&self, text: &str) {
+    fn append_reasoning_delta(&self, delta: &str) {
         let mut sb = self.scrollback.lock();
         if let Some(last) = sb.last_mut_by_kind(LineKind::Reasoning) {
-            last.text = text.to_string();
+            last.text.push_str(delta);
         } else {
-            sb.append(Line::new(LineKind::Reasoning, text.to_string()));
+            sb.append(Line::new(LineKind::Reasoning, delta.to_string()));
         }
     }
 
@@ -2091,7 +2089,6 @@ mod tests {
                 partial: Default::default(),
             },
         });
-        assert!(renderer.reasoning_buffer.is_empty());
         assert!(!renderer.in_assistant_stream);
     }
 

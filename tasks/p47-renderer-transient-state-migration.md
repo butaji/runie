@@ -143,6 +143,12 @@ snapshot; the renderer no longer uses its compatibility streaming/reasoning
 buffers for the live path. The synchronous `with_actors` replay adapter keeps
 those buffers for its existing deterministic compatibility contract.
 
+Reasoning text ownership increment (2026-08-07): removed the compatibility
+`reasoning_buffer`. Thinking deltas now append directly to the feed's reasoning
+line, and assistant finalization derives `has_reasoning` from feed lines before
+applying Grok's collapsed/expanded projection. The reasoning visual snapshot
+and YAML replay remain green.
+
 ## Acceptance evidence
 
 - Every migrated field is present in `FeedSnapshot` or a core actor snapshot;
