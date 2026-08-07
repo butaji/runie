@@ -13,6 +13,7 @@ use crate::r#loop::driver::{
     run_loop, ApiKeyResolver, ConvertToLlm, RunLoopDeps, RunLoopOutcome, TransformContext,
 };
 use crate::state::AgentStateActor;
+#[cfg(test)]
 use crate::task_owner::{spawn_owned_worker, TaskOwner};
 use crate::tools::executor::ToolExecHooks;
 use crate::tools::ToolExecutorActor;
@@ -69,6 +70,7 @@ impl LoopDeps {
             tool_executor: self.tool_executor.clone(),
             provider: self.provider.clone(),
             bus: self.bus.clone(),
+            subscribers: self.subscribers.clone(),
             hooks: self.hooks.clone(),
             turn_hooks: self.turn_hooks.clone(),
             transform_context: self.transform_context.clone(),
@@ -100,11 +102,6 @@ struct Inner {
     running: Arc<Semaphore>,
     /// Abort channel sender (pi `Agent.abort()`).
     abort_tx: tokio::sync::watch::Sender<bool>,
-    /// Owns the bus-to-registry dispatch task for this actor lifetime.
-    _subscriber_bridge: Arc<TaskOwner>,
-    /// Owns the closed Pi bus-to-registry dispatch task for this actor
-    /// lifetime; it never enters the compatibility event dispatcher.
-    _pi_subscriber_bridge: Arc<TaskOwner>,
 }
 
 impl LoopActor {
@@ -113,8 +110,6 @@ impl LoopActor {
         deps.abort = Some(abort_rx);
         let (steering_mode_tx, steering_mode_rx) = watch::channel(deps.steering_mode);
         let (follow_up_mode_tx, follow_up_mode_rx) = watch::channel(deps.follow_up_mode);
-        let subscriber_bridge = spawn_subscriber_bridge(&deps.bus, &deps.subscribers);
-        let pi_subscriber_bridge = spawn_pi_subscriber_bridge(&deps.bus, &deps.subscribers);
         Self {
             inner: Arc::new(Inner {
                 deps,
@@ -125,8 +120,6 @@ impl LoopActor {
                 current: Mutex::new(None),
                 running: Arc::new(Semaphore::new(1)),
                 abort_tx,
-                _subscriber_bridge: subscriber_bridge,
-                _pi_subscriber_bridge: pi_subscriber_bridge,
             }),
         }
     }
@@ -360,6 +353,7 @@ impl LoopActor {
     }
 }
 
+#[cfg(test)]
 fn spawn_subscriber_bridge(bus: &EventBus, subscribers: &SubscriberRegistry) -> Arc<TaskOwner> {
     let mut events = bus.subscribe();
     let subscribers = subscribers.clone();
@@ -371,6 +365,7 @@ fn spawn_subscriber_bridge(bus: &EventBus, subscribers: &SubscriberRegistry) -> 
     })
 }
 
+#[cfg(test)]
 fn spawn_pi_subscriber_bridge(bus: &EventBus, subscribers: &SubscriberRegistry) -> Arc<TaskOwner> {
     let mut events = bus.subscribe_pi();
     let subscribers = subscribers.clone();

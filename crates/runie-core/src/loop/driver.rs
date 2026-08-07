@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 use crate::convert::default_convert_to_llm;
 use crate::events::EventBus;
+use crate::events::SubscriberRegistry;
 use crate::hooks::{ShouldStopAfterTurnContext, TurnHooks};
 use crate::pi_event::PiAgentEvent;
 use crate::provider::ProviderActor;
@@ -47,6 +48,7 @@ pub struct RunLoopDeps {
     pub tool_executor: ToolExecutorActor,
     pub provider: ProviderActor,
     pub bus: EventBus,
+    pub subscribers: SubscriberRegistry,
     pub hooks: ToolExecHooks,
     pub turn_hooks: TurnHooks,
     /// pi `transformContext` (agent-loop.ts:289): pre-processes the agent
@@ -84,12 +86,8 @@ pub async fn run_loop(
     deps: RunLoopDeps,
     skip_initial_steering_poll: bool,
 ) -> RunLoopOutcome {
-    deps.state
-        .publish_pi_event(&deps.bus, PiAgentEvent::AgentStart)
-        .await;
-    deps.state
-        .publish_pi_event(&deps.bus, PiAgentEvent::TurnStart)
-        .await;
+    publish_pi_and_apply(&deps, PiAgentEvent::AgentStart).await;
+    publish_pi_and_apply(&deps, PiAgentEvent::TurnStart).await;
     let mut override_ctx = initial_context_override(context, &prompts);
     let mut all_new = initialize_run(prompts, &deps, skip_initial_steering_poll).await;
 
@@ -200,11 +198,13 @@ async fn publish_error(deps: &RunLoopDeps, message: &str) {
 }
 
 async fn publish_and_apply(deps: &RunLoopDeps, event: AgentEvent) {
-    deps.state.publish_event(&deps.bus, event).await;
+    deps.state.publish_event(&deps.bus, event.clone()).await;
+    deps.subscribers.dispatch(&event).await;
 }
 
 async fn publish_pi_and_apply(deps: &RunLoopDeps, event: PiAgentEvent) {
-    deps.state.publish_pi_event(&deps.bus, event).await;
+    deps.state.publish_pi_event(&deps.bus, event.clone()).await;
+    deps.subscribers.dispatch_pi(&event).await;
 }
 
 async fn publish_pi_or_application(deps: &RunLoopDeps, event: AgentEvent) {

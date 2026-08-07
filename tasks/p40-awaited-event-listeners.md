@@ -1,6 +1,6 @@
 # p40 — Awaited lifecycle listener settlement
 
-Status: planned
+Status: in progress
 
 ## Source evidence
 
@@ -12,6 +12,15 @@ events in its owned worker, but the run itself has no acknowledgement barrier.
 
 Therefore current event capture proves ordering of published events, not Pi's
 listener-settlement contract.
+
+## First implementation slice (2026-08-06)
+
+`RunLoopDeps` now carries the actor-owned `SubscriberRegistry`. Every emitted
+Pi event dispatches through the registry inline after state publication, so
+registration order and async completion are part of loop progress. The
+production `LoopActor` no longer starts the old broadcast-to-registry bridge;
+the broadcast bus remains observational and cannot duplicate lifecycle
+callbacks.
 
 ## Required implementation
 
