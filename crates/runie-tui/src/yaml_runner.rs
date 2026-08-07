@@ -833,6 +833,9 @@ pub struct StateAssertions {
     pub measured_anchor_row: Option<usize>,
     pub thinking_level: Option<ThinkingLevel>,
     pub thinking_elapsed_ms: Option<u64>,
+    /// Assert that an optional duration/fact has been cleared by the event
+    /// sequence, without overloading YAML `null` (which also means omitted).
+    pub thinking_elapsed_cleared: Option<bool>,
     pub reasoning_expanded: Option<bool>,
     pub activity_expanded: Option<bool>,
     pub follow_latest_user: Option<bool>,
@@ -1995,6 +1998,14 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         outcome.status.thinking_elapsed_ms,
         "thinking_elapsed_ms"
     );
+    if expected.thinking_elapsed_cleared == Some(true)
+        && outcome.status.thinking_elapsed_ms.is_some()
+    {
+        return Err(format!(
+            "state thinking_elapsed_ms mismatch: expected cleared, got {:?}",
+            outcome.status.thinking_elapsed_ms
+        ));
+    }
     assert_yaml_eq!(
         expected.pending_tool_calls,
         actual.pending_tool_calls.len(),

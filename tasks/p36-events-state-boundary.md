@@ -38,6 +38,10 @@ and feed actors' configuration-preserving reset behavior.
 The same reset path preserves the actor-owned model caption; only transient
 prompt editing state is rebuilt.
 
+The YAML state oracle now supports explicit `thinking_elapsed_cleared` checks,
+so reset fixtures can distinguish an omitted expectation from a required
+`None` projection.
+
 ## Remaining work
 
 1. Make every externally observable TUI transition have a named event/message
