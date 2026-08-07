@@ -166,6 +166,15 @@ actor; `visual-activity-mixed.yaml` asserts the resulting visible `⌄` marker f
   cannot observe completion before the worker acknowledges reduction.
 ## Macro/DSL audit (2026-08-06)
 
+### Lane-event construction closure (2026-08-07)
+
+The live loop's `operation_started` and `operation_finished` publications now
+use `session_lane_event!` rather than open-coded record-type strings. This
+keeps lifecycle facts on the same compile-time family registry used by the
+lane replay DSL; unknown families fail at the call site, while payload shape
+remains lossless JSON for Pi wire compatibility. YAML remains the authoritative
+runtime-editable oracle for ordering and projected state.
+
 - **Core-event UI mapping (2026-08-06):** `ui_messages_for_event` is now the
   pure SSOT mapping from `AgentEvent` to UI reducer messages. `UiActor` folds
   that mapping through `UiState::update` instead of embedding a special-case

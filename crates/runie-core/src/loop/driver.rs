@@ -89,10 +89,10 @@ pub async fn run_loop(
     skip_initial_steering_poll: bool,
 ) -> RunLoopOutcome {
     publish_pi_and_apply(&deps, PiAgentEvent::AgentStart).await;
-    deps.bus.publish(AgentEvent::OperationRecordCreated {
-        record_type: "operation_started".into(),
-        data: serde_json::json!({"id": deps.run_id, "intent": {"kind": "run"}}),
-    });
+    deps.bus.publish(crate::session_lane_event!(
+        operation_started,
+        serde_json::json!({"id": deps.run_id, "intent": {"kind": "run"}})
+    ));
     publish_pi_and_apply(&deps, PiAgentEvent::TurnStart).await;
     let mut override_ctx = initial_context_override(context, &prompts);
     let mut all_new = initialize_run(prompts, &deps, skip_initial_steering_poll).await;
@@ -187,10 +187,10 @@ async fn end_run(all_new: Vec<AgentMessage>, deps: &RunLoopDeps) -> RunLoopOutco
     } else {
         "completed"
     };
-    deps.bus.publish(AgentEvent::OperationRecordCreated {
-        record_type: "operation_finished".into(),
-        data: serde_json::json!({"runId": deps.run_id, "outcome": outcome}),
-    });
+    deps.bus.publish(crate::session_lane_event!(
+        operation_finished,
+        serde_json::json!({"runId": deps.run_id, "outcome": outcome})
+    ));
     publish_pi_and_apply(
         deps,
         PiAgentEvent::AgentEnd {
