@@ -10,7 +10,7 @@ use std::sync::Arc;
 use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::events::EventBus;
-use crate::task_owner::{spawn_actor_worker, spawn_owned_worker, TaskOwner};
+use crate::task_owner::{mailbox_ack, spawn_actor_worker, spawn_owned_worker, TaskOwner};
 use crate::types::{AgentEvent, AgentMessage};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -254,23 +254,12 @@ impl SessionActor {
             while let Ok(event) = events.recv().await {
                 match event {
                     AgentEvent::MessageEnd { message } => {
-                        let (reply, done) = oneshot::channel();
-                        if tx
-                            .send(Command::Append(Box::new(message), reply))
-                            .await
-                            .is_err()
-                        {
+                        if !mailbox_ack!(tx, |reply| Command::Append(Box::new(message), reply)) {
                             break;
                         }
-                        let _ = done.await;
                     }
-                    AgentEvent::Reset => {
-                        let (reply, done) = oneshot::channel();
-                        if tx.send(Command::Reset(reply)).await.is_err() {
-                            break;
-                        }
-                        let _ = done.await;
-                    }
+                    AgentEvent::Reset if !mailbox_ack!(tx, Command::Reset) => break,
+                    AgentEvent::Reset => {}
                     _ => {}
                 }
             }
@@ -279,22 +268,11 @@ impl SessionActor {
     }
 
     pub async fn append(&self, message: AgentMessage) {
-        let (reply, done) = oneshot::channel();
-        if self
-            .tx
-            .send(Command::Append(Box::new(message), reply))
-            .await
-            .is_ok()
-        {
-            let _ = done.await;
-        }
+        let _ = mailbox_ack!(self.tx, |reply| Command::Append(Box::new(message), reply));
     }
 
     pub async fn reset(&self) {
-        let (reply, done) = oneshot::channel();
-        if self.tx.send(Command::Reset(reply)).await.is_ok() {
-            let _ = done.await;
-        }
+        let _ = mailbox_ack!(self.tx, Command::Reset);
     }
 
     /// Restore a validated Pi JSONL message lane through the actor mailbox.
@@ -302,13 +280,9 @@ impl SessionActor {
     /// snapshot are performed only by the actor worker.
     pub async fn restore_jsonl(&self, input: &str) -> Result<(String, String), String> {
         let (session_id, cwd, snapshot) = SessionSnapshot::from_jsonl(input)?;
-        let (reply, done) = oneshot::channel();
-        self.tx
-            .send(Command::Import(snapshot, reply))
-            .await
-            .map_err(|_| "session actor is closed".to_owned())?;
-        done.await
-            .map_err(|_| "session actor restore was not acknowledged".to_owned())?;
+        if !mailbox_ack!(self.tx, |reply| Command::Import(snapshot, reply)) {
+            return Err("session actor restore was not acknowledged".to_owned());
+        }
         Ok((session_id, cwd))
     }
 
@@ -317,10 +291,7 @@ impl SessionActor {
     }
 
     pub async fn flush(&self) {
-        let (reply, done) = oneshot::channel();
-        if self.tx.send(Command::Flush(reply)).await.is_ok() {
-            let _ = done.await;
-        }
+        let _ = mailbox_ack!(self.tx, Command::Flush);
     }
 }
 

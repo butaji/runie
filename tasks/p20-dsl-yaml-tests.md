@@ -299,3 +299,10 @@ payload semantics or changing the YAML fixture boundary.
 The event-boundary regression is covered by the live actor construction path:
 theme changes enter through `EventBus` and are reduced by each projection
 actor, keeping the YAML/event model applicable to all TUI state owners.
+
+### Session mailbox DSL reuse (2026-08-06)
+
+`SessionActor` append, reset, import, flush, and its live `MessageEnd`/`Reset`
+projection now use `mailbox_ack!`. The JSONL parser remains pure and the
+validated snapshot still crosses the actor mailbox explicitly; the DSL only
+removes repeated acknowledgement plumbing.

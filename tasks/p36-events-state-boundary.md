@@ -143,3 +143,8 @@ TUI theme event boundary (2026-08-06): `App::set_theme` now publishes one
 `ThemeChanged` event. Prompt, status, and scrollback actors are constructed
 with bus subscriptions and reduce that event independently through their own
 mailboxes; the app no longer fans out direct projection mutations.
+
+Session mailbox consolidation (2026-08-06): journal append/reset/import/flush
+and the session event projection now acknowledge through `mailbox_ack!`, so
+session state remains actor-owned while all mutation entry points share the
+same event/mailbox DSL boundary.
