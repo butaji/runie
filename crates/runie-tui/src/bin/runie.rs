@@ -538,10 +538,11 @@ async fn run_app(
                     }
                         InputEvent::MouseSelectionCommit => app.mouse_selection_commit().await,
                     }
-                    // Wake key dispatch as soon as the owned input actor has
-                    // delivered an event. The render cadence remains 50 ms,
-                    // but input no longer waits for that cadence boundary.
-                    tick.reset();
+                    // Wake key dispatch immediately after the owned input
+                    // actor delivers an event. `reset()` would move the next
+                    // deadline a full cadence into the future, adding up to
+                    // 50 ms of latency for every key in a fast prompt.
+                    tick.reset_immediately();
             }
             _ = tick.tick() => {
                 // Input has already crossed the owned async input actor's
