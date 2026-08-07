@@ -2,9 +2,9 @@
 
 use std::sync::Arc;
 
-use tokio::sync::{mpsc, Notify};
+use tokio::sync::{mpsc, oneshot, Notify};
 
-use crate::task_owner::{mailbox_call, spawn_actor_worker, TaskOwner};
+use crate::task_owner::{mailbox_ack, mailbox_call, spawn_actor_worker, TaskOwner};
 use crate::types::AgentMessage;
 
 /// Snapshot of the steering queue for read-only consumers.
@@ -17,10 +17,10 @@ pub struct SteeringQueueSnapshot {
 /// Mailbox command for the steering queue actor.
 #[derive(Debug)]
 enum SteeringCommand {
-    Push(Box<AgentMessage>),
+    Push(Box<AgentMessage>, oneshot::Sender<()>),
     DrainOne(mpsc::Sender<Option<AgentMessage>>),
     DrainAll(mpsc::Sender<Vec<AgentMessage>>),
-    Clear,
+    Clear(oneshot::Sender<()>),
     Len(mpsc::Sender<usize>),
 }
 
@@ -48,7 +48,9 @@ impl SteeringQueueActor {
     }
 
     pub async fn push(&self, msg: AgentMessage) {
-        let _ = self.tx.send(SteeringCommand::Push(Box::new(msg))).await;
+        let _ = mailbox_ack!(self.tx, |reply| {
+            SteeringCommand::Push(Box::new(msg), reply)
+        });
         self.notify.notify_one();
     }
 
@@ -61,7 +63,7 @@ impl SteeringQueueActor {
     }
 
     pub async fn clear(&self) {
-        let _ = self.tx.send(SteeringCommand::Clear).await;
+        let _ = mailbox_ack!(self.tx, SteeringCommand::Clear);
     }
 
     pub async fn len(&self) -> usize {
@@ -88,7 +90,10 @@ async fn run_steering_worker(mut rx: mpsc::Receiver<SteeringCommand>) {
 
     while let Some(cmd) = rx.recv().await {
         match cmd {
-            SteeringCommand::Push(msg) => queue.push(*msg),
+            SteeringCommand::Push(msg, reply) => {
+                queue.push(*msg);
+                let _ = reply.send(());
+            }
             SteeringCommand::DrainOne(reply) => {
                 // `Vec::drain(..1)` panics when the queue is empty, so
                 // explicitly pop when there's at least one item.
@@ -103,7 +108,10 @@ async fn run_steering_worker(mut rx: mpsc::Receiver<SteeringCommand>) {
                 let drained = std::mem::take(&mut queue);
                 let _ = reply.send(drained).await;
             }
-            SteeringCommand::Clear => queue.clear(),
+            SteeringCommand::Clear(reply) => {
+                queue.clear();
+                let _ = reply.send(());
+            }
             SteeringCommand::Len(reply) => {
                 let _ = reply.send(queue.len()).await;
             }

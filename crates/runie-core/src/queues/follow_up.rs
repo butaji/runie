@@ -2,9 +2,9 @@
 
 use std::sync::Arc;
 
-use tokio::sync::{mpsc, Notify};
+use tokio::sync::{mpsc, oneshot, Notify};
 
-use crate::task_owner::{mailbox_call, spawn_actor_worker, TaskOwner};
+use crate::task_owner::{mailbox_ack, mailbox_call, spawn_actor_worker, TaskOwner};
 use crate::types::AgentMessage;
 
 #[derive(Debug, Clone, Default)]
@@ -15,10 +15,10 @@ pub struct FollowUpQueueSnapshot {
 
 #[derive(Debug)]
 enum FollowUpCommand {
-    Push(Box<AgentMessage>),
+    Push(Box<AgentMessage>, oneshot::Sender<()>),
     DrainOne(mpsc::Sender<Option<AgentMessage>>),
     DrainAll(mpsc::Sender<Vec<AgentMessage>>),
-    Clear,
+    Clear(oneshot::Sender<()>),
     Len(mpsc::Sender<usize>),
 }
 
@@ -46,7 +46,9 @@ impl FollowUpQueueActor {
     }
 
     pub async fn push(&self, msg: AgentMessage) {
-        let _ = self.tx.send(FollowUpCommand::Push(Box::new(msg))).await;
+        let _ = mailbox_ack!(self.tx, |reply| {
+            FollowUpCommand::Push(Box::new(msg), reply)
+        });
         self.notify.notify_one();
     }
 
@@ -59,7 +61,7 @@ impl FollowUpQueueActor {
     }
 
     pub async fn clear(&self) {
-        let _ = self.tx.send(FollowUpCommand::Clear).await;
+        let _ = mailbox_ack!(self.tx, FollowUpCommand::Clear);
     }
 
     pub async fn len(&self) -> usize {
@@ -86,7 +88,10 @@ async fn run_follow_up_worker(mut rx: mpsc::Receiver<FollowUpCommand>) {
 
     while let Some(cmd) = rx.recv().await {
         match cmd {
-            FollowUpCommand::Push(msg) => queue.push(*msg),
+            FollowUpCommand::Push(msg, reply) => {
+                queue.push(*msg);
+                let _ = reply.send(());
+            }
             FollowUpCommand::DrainOne(reply) => {
                 // `Vec::drain(..1)` panics on an empty queue; pop instead.
                 let popped = if queue.is_empty() {
@@ -100,7 +105,10 @@ async fn run_follow_up_worker(mut rx: mpsc::Receiver<FollowUpCommand>) {
                 let drained = std::mem::take(&mut queue);
                 let _ = reply.send(drained).await;
             }
-            FollowUpCommand::Clear => queue.clear(),
+            FollowUpCommand::Clear(reply) => {
+                queue.clear();
+                let _ = reply.send(());
+            }
             FollowUpCommand::Len(reply) => {
                 let _ = reply.send(queue.len()).await;
             }

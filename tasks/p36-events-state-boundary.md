@@ -117,3 +117,8 @@ carries an explicit one-shot acknowledgement. `LoopActor::replace_messages`
 and YAML session-context restore therefore return only after
 `AgentStateActor` has reduced the replacement, eliminating a
 scheduler-dependent state race.
+
+Queue acknowledgement closure (2026-08-06): steering and follow-up `push`
+and `clear` commands now use the shared `mailbox_ack!` DSL. Queue callers
+observe completion only after the owning reducer has inserted or removed the
+messages, while drain/length operations retain their existing reply path.
