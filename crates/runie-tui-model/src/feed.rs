@@ -30,6 +30,25 @@ pub fn classify_activity_tool(tool_name: &str) -> Option<ActivityKind> {
     }
 }
 
+/// Return `true` when a tool's result should be projected as the
+/// structured `LineKind::ToolOutput` rather than the textual
+/// `LineKind::ToolResult`. Output-style tools render their content
+/// directly; result-style tools keep their headers and prose.
+pub fn is_output_tool(tool_name: &str) -> bool {
+    matches!(
+        tool_name,
+        "list_dir"
+            | "list_files"
+            | "read"
+            | "read_file"
+            | "web_fetch"
+            | "web-fetch"
+            | "fetch"
+            | "memory_search"
+            | "memory-search"
+    )
+}
+
 #[allow(
     clippy::too_many_lines,
     reason = "the semantic tool-header DSL keeps Grok aliases together"
@@ -939,6 +958,27 @@ mod tests {
     };
     use runie_core::types::ToolDisplayMode;
     use std::collections::HashMap;
+
+    #[test]
+    fn is_output_tool_pins_every_alias_and_excludes_others() {
+        for alias in [
+            "list_dir",
+            "list_files",
+            "read",
+            "read_file",
+            "web_fetch",
+            "web-fetch",
+            "fetch",
+            "memory_search",
+            "memory-search",
+        ] {
+            assert!(super::is_output_tool(alias), "alias: {alias}");
+        }
+        for name in ["bash", "subagent"] {
+            assert!(!super::is_output_tool(name), "name: {name}");
+        }
+        assert!(!super::is_output_tool("unknown"));
+    }
 
     #[test]
     fn activity_classifier_pins_every_alias() {

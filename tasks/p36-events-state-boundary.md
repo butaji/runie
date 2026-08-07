@@ -60,6 +60,19 @@ implementation. Focused tests cover the `output`-over-`content` precedence
 and the non-string/`status`-only fallback; actor and renderer replay paths
 still pin the event → snapshot contract.
 
+Output-result classifier extraction (2026-08-08): the
+`LineKind::ToolOutput` / `LineKind::ToolResult` decision for completed
+tools now lives in `runie-tui-model::is_output_tool`, which owns the
+`list_dir | list_files | read | read_file | web_fetch | web-fetch | fetch |
+memory_search | memory-search` alias vocabulary. Both `ScrollbackActor` and
+`EventRenderer` consume `runie_tui_model::is_output_tool(...)` so the
+output-style vs result-style line kind is decided by a single
+renderer-independent classifier. The actor and the compatibility renderer
+now share the same alias set (including `memory_search | memory-search`),
+so the structured-output rendering stays aligned across both event paths.
+A focused unit test pins every alias and the negative `bash`/`subagent`
+cases.
+
 Boundary enforcement (2026-08-08): `validate-feed-actor-boundary.py` now
 rejects renderer, Ratatui, and Crossterm imports from `ScrollbackActor` in
 addition to direct widget reduction. This makes the declarative model/render

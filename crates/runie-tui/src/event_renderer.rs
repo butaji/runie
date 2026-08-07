@@ -682,18 +682,7 @@ impl EventRenderer {
             let raw_output = tool_result_text(&result);
             let kind = if is_error {
                 LineKind::ToolError
-            } else if matches!(
-                tool_name.as_str(),
-                "list_dir"
-                    | "list_files"
-                    | "read"
-                    | "read_file"
-                    | "web_fetch"
-                    | "web-fetch"
-                    | "fetch"
-                    | "memory_search"
-                    | "memory-search"
-            ) {
+            } else if runie_tui_model::is_output_tool(&tool_name) {
                 LineKind::ToolOutput
             } else {
                 LineKind::ToolResult

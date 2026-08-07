@@ -420,10 +420,7 @@ fn ordinary_tool_end_messages(
     } else {
         None
     };
-    let output_kind = if matches!(
-        name.as_str(),
-        "list_dir" | "list_files" | "read" | "read_file" | "web_fetch" | "web-fetch" | "fetch"
-    ) {
+    let output_kind = if runie_tui_model::is_output_tool(&name) {
         LineKind::ToolOutput
     } else {
         LineKind::ToolResult
