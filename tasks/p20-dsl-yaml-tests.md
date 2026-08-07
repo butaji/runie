@@ -358,3 +358,5 @@ The same scenario asserts the structured Pi `details` payload on the latest
 tool result, closing both deterministic metadata paths through the actor.
 It also declares and asserts Pi token `usage`, including the camelCase wire
 field `totalTokens`, through the same runtime replay path.
+The failing-tool fixture additionally asserts `isError` on the resulting Pi
+tool message, covering the error branch at the actor snapshot boundary.

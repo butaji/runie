@@ -819,6 +819,8 @@ pub struct StateAssertions {
     pub tool_result_details: Option<serde_json::Value>,
     /// `usage` from the latest Pi tool result.
     pub tool_result_usage: Option<Usage>,
+    /// `isError` from the latest Pi tool result.
+    pub tool_result_is_error: Option<bool>,
     pub session_entries: Option<usize>,
     pub tool_count: Option<usize>,
     pub streaming_contains: Option<String>,
@@ -2131,6 +2133,18 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
                 expected_usage, actual_usage
             ));
         }
+    }
+    if let Some(expected_error) = expected.tool_result_is_error {
+        let actual_error = actual
+            .messages
+            .iter()
+            .rev()
+            .find_map(|message| match message {
+                AgentMessage::ToolResult(result) => Some(result.is_error),
+                _ => None,
+            })
+            .unwrap_or(false);
+        assert_yaml_eq!(Some(expected_error), actual_error, "tool_result_is_error");
     }
     assert_yaml_eq!(
         expected
