@@ -360,3 +360,8 @@ It also declares and asserts Pi token `usage`, including the camelCase wire
 field `totalTokens`, through the same runtime replay path.
 The failing-tool fixture additionally asserts `isError` on the resulting Pi
 tool message, covering the error branch at the actor snapshot boundary.
+
+Projection DSL cleanup (2026-08-07): centralized latest-tool-result lookup in
+one pure YAML-oracle projection. All four Pi metadata assertions now consume
+the same actor snapshot helper, reducing duplicated test plumbing while
+keeping fixtures declarative and runtime-editable.

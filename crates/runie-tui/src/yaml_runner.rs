@@ -2084,15 +2084,19 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         "animation_demand"
     );
     assert_yaml_eq!(expected.is_streaming, actual.is_streaming, "is_streaming");
-    if let Some(expected_names) = &expected.tool_result_added_tool_names {
-        let actual_names = actual
+    let latest_tool_result = || {
+        actual
             .messages
             .iter()
             .rev()
             .find_map(|message| match message {
-                AgentMessage::ToolResult(result) => Some(&result.added_tool_names),
+                AgentMessage::ToolResult(result) => Some(result),
                 _ => None,
             })
+    };
+    if let Some(expected_names) = &expected.tool_result_added_tool_names {
+        let actual_names = latest_tool_result()
+            .map(|result| &result.added_tool_names)
             .cloned()
             .unwrap_or_default();
         assert_yaml_eq!(
@@ -2102,14 +2106,8 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         );
     }
     if let Some(expected_details) = &expected.tool_result_details {
-        let actual_details = actual
-            .messages
-            .iter()
-            .rev()
-            .find_map(|message| match message {
-                AgentMessage::ToolResult(result) => Some(&result.details),
-                _ => None,
-            })
+        let actual_details = latest_tool_result()
+            .map(|result| &result.details)
             .cloned()
             .unwrap_or(serde_json::Value::Null);
         assert_yaml_eq!(
@@ -2119,14 +2117,7 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         );
     }
     if let Some(expected_usage) = &expected.tool_result_usage {
-        let actual_usage = actual
-            .messages
-            .iter()
-            .rev()
-            .find_map(|message| match message {
-                AgentMessage::ToolResult(result) => result.usage.clone(),
-                _ => None,
-            });
+        let actual_usage = latest_tool_result().and_then(|result| result.usage.clone());
         if actual_usage.as_ref() != Some(expected_usage) {
             return Err(format!(
                 "state tool_result_usage mismatch: expected {:?}, got {:?}",
@@ -2135,14 +2126,8 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         }
     }
     if let Some(expected_error) = expected.tool_result_is_error {
-        let actual_error = actual
-            .messages
-            .iter()
-            .rev()
-            .find_map(|message| match message {
-                AgentMessage::ToolResult(result) => Some(result.is_error),
-                _ => None,
-            })
+        let actual_error = latest_tool_result()
+            .map(|result| result.is_error)
             .unwrap_or(false);
         assert_yaml_eq!(Some(expected_error), actual_error, "tool_result_is_error");
     }
