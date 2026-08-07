@@ -53,6 +53,10 @@ pub struct Scenario {
     pub tools: Vec<ToolSpec>,
     #[serde(default)]
     pub context: ContextSpec,
+    /// Optional validated Pi JSONL seed restored through the SessionActor
+    /// mailbox before this scenario's event sequence runs.
+    #[serde(default)]
+    pub session_restore: Option<String>,
     pub events: Vec<EventSpec>,
     /// Capture the frame after tool execution while the next model request is
     /// still pending. This models Grok's stable waiting/feed boundary.
@@ -1384,6 +1388,9 @@ impl std::fmt::Display for ScenarioError {
 pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, ScenarioError> {
     let (bus, actor, options_seen) = build_scenario_loop(scenario)?;
     let session = SessionActor::new_with_bus(&bus);
+    if let Some(jsonl) = &scenario.session_restore {
+        session.restore_jsonl(jsonl).await.map_err(ScenarioError)?;
+    }
     let listener_events = Arc::new(Mutex::new(Vec::new()));
     actor
         .subscribe(Box::new(ScenarioListener {

@@ -1,0 +1,30 @@
+name: session-restore
+description: Restore a Pi JSONL message lane through SessionActor, then append a live turn.
+initial_prompt: "next"
+tools: []
+session_restore: |
+  {"kind":"header","version":4,"id":"restored-session","createdAt":5,"cwd":"/workspace"}
+  {"kind":"entry","lane":"main","type":"message","id":"entry-1","parentId":null,"seq":1,"timestamp":7,"message":{"role":"user","content":[{"type":"text","text":"previous"}],"timestamp":7}}
+events:
+  - start
+  - text_delta: "continued"
+  - done: { stop_reason: stop }
+assertions:
+  exact_events:
+    - agent_start
+    - turn_start
+    - message_start
+    - message_end
+    - message_start
+    - message_update
+    - message_end
+    - turn_end
+    - agent_end
+  state:
+    status: ready
+    is_streaming: false
+    messages: 2
+    session_entries: 3
+  transcript_contains:
+    - "next"
+    - "continued"
