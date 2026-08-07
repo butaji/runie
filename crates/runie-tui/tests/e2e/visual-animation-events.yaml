@@ -1,0 +1,19 @@
+name: visual-animation-events
+description: Deterministic animation ticks cross both presentation actors without wall-clock sleeps.
+initial_prompt: "animate"
+events:
+  - start
+  - thinking_delta: "working"
+  - animation_ticks: 3
+  - waiting: model
+assertions:
+  state:
+    animation_frame: 3
+    elapsed_ticks: 3
+    is_streaming: false
+  visual:
+    cols: 80
+    rows: 24
+    screen_text:
+      - "❯ animate"
+      - "❙  ◆ Thought for 0.9s"

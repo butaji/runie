@@ -291,6 +291,9 @@ pub enum EventSpec {
     Scroll {
         scroll: i32,
     },
+    AnimationTicks {
+        animation_ticks: usize,
+    },
     LayoutMeasured {
         layout_measured: LayoutMeasuredSpec,
     },
@@ -602,6 +605,7 @@ impl EventSpec {
             Self::ToolFold { .. } => None,
             Self::ToolSelect { .. } => None,
             Self::Scroll { .. } => None,
+            Self::AnimationTicks { .. } => None,
             Self::LayoutMeasured { .. } => None,
             Self::RevealLatest { .. } => None,
             Self::FollowLatest { .. } => None,
@@ -836,6 +840,10 @@ pub struct StateAssertions {
     /// Assert that an optional duration/fact has been cleared by the event
     /// sequence, without overloading YAML `null` (which also means omitted).
     pub thinking_elapsed_cleared: Option<bool>,
+    /// Number of deterministic animation frames reduced by the status/feed
+    /// actors. This keeps animation replay event-driven and sleep-free.
+    pub animation_frame: Option<usize>,
+    pub elapsed_ticks: Option<u64>,
     pub reasoning_expanded: Option<bool>,
     pub activity_expanded: Option<bool>,
     pub follow_latest_user: Option<bool>,
@@ -1528,7 +1536,26 @@ async fn replay_scenario_events(
     for message in declared_scrolls(scenario) {
         scrollback_actor.apply(message).await;
     }
+    for _ in 0..declared_animation_ticks(scenario) {
+        status_actor
+            .apply(crate::widgets::StatusMsg::AdvanceAnimation)
+            .await;
+        scrollback_actor
+            .apply(ScrollbackMsg::AdvanceAnimation)
+            .await;
+    }
     (scrollback_actor.snapshot(), status_actor.model_snapshot())
+}
+
+fn declared_animation_ticks(scenario: &Scenario) -> usize {
+    scenario
+        .events
+        .iter()
+        .filter_map(|event| match event {
+            EventSpec::AnimationTicks { animation_ticks } => Some(*animation_ticks),
+            _ => None,
+        })
+        .sum()
 }
 
 fn declared_context_windows(scenario: &Scenario) -> Vec<u64> {
@@ -1980,6 +2007,16 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         }
     }
     assert_yaml_eq!(expected.theme, outcome.status.theme, "theme");
+    assert_yaml_eq!(
+        expected.animation_frame,
+        outcome.status.animation_frame,
+        "animation_frame"
+    );
+    assert_yaml_eq!(
+        expected.elapsed_ticks,
+        outcome.status.elapsed_ticks,
+        "elapsed_ticks"
+    );
     assert_yaml_eq!(expected.is_streaming, actual.is_streaming, "is_streaming");
     assert_yaml_eq!(
         expected
@@ -3465,6 +3502,12 @@ pub async fn render_visual_buffer(
     }
     for ev in events.into_iter() {
         renderer.apply_actor_event(ev).await;
+    }
+    for _ in 0..declared_animation_ticks(scenario) {
+        app.status_actor
+            .apply(crate::widgets::StatusMsg::AdvanceAnimation)
+            .await;
+        app.apply_scrollback(ScrollbackMsg::AdvanceAnimation).await;
     }
     // The deterministic renderer applies the event directly to its projection
     // actors. Re-publish the final theme through App's shared bus as well so
