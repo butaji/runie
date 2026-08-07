@@ -1,0 +1,23 @@
+name: visual-tool-selection
+description: |
+  Tool navigation is an actor event sequence: the selected tool id, transcript
+  entry, and dense-group member index are derived from the feed snapshot.
+events:
+  - start
+  - tool_call:
+      name: read
+      args: { path: "src/lib.rs" }
+  - tool_call:
+      name: edit
+      args: { path: "src/lib.rs" }
+  - tool_call:
+      name: search
+      args: { pattern: "FeedState" }
+  - tool_select: next
+  - tool_select: next
+  - done: { stop_reason: stop }
+assertions:
+  state:
+    selected_tool_id: call-2
+    selected_entry: 11
+    selected_member_index: 1

@@ -203,6 +203,13 @@ search/web/background cards), followed by theme palette propagation and the
 remaining YAML state/effect matrix. Strict feed, waiting, collapsed, mixed, and
 truncated fixed-grid replays are green.
 
+Tool-member navigation replay slice (2026-08-07): `visual-tool-selection.yaml`
+now drives two `tool_select: next` events through the feed actor after three
+Pi tool calls and asserts the resulting selected call ID, transcript entry,
+and Grok dense-group member index. This closes the missing runtime-editable
+state oracle for keyboard member navigation; mouse selection, selection-box
+actions, and the remaining card-specific interaction contracts remain open.
+
 Typed tool-block projection (2026-08-06): Runie now exposes a pure
 `Scrollback::tool_blocks()` projection over the actor snapshot, aligned with
 Grok's block/member model for parallel IDs and display modes. This is the
