@@ -25,7 +25,7 @@
     {
       "id": "p38",
       "file": "p38-loop-control-events.md",
-      "status": "planned",
+      "status": "in_progress",
       "title": "Move loop control state and compatibility rendering behind events and snapshots"
     },
     {

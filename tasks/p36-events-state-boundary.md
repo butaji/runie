@@ -100,8 +100,8 @@ than merely validating YAML deserialization.
 ## Direct-mutation audit (2026-08-06)
 
 The next unresolved event boundary is recorded in p38: LoopActor control
-fields (`running`, queue modes, and active-run ownership) and the legacy
+fields (`running`, active-run ownership) and the legacy
 renderer adapter still have private mutation paths. Queue contents and the
-actor-owned FeedState already satisfy the event boundary. p38 preserves the
+actor-owned FeedState and queue modes already satisfy the event boundary. p38 preserves the
 closed Pi event contract while introducing Runie application control events
 and snapshot-only compatibility rendering.

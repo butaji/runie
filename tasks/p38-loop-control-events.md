@@ -1,6 +1,6 @@
 # p38 — Move loop control state behind events
 
-Status: planned
+Status: in progress
 
 ## Evidence
 
@@ -14,7 +14,14 @@ mutates legacy status/scrollback widget state while consuming events. The
 actor-owned model path is already event-driven; this is the remaining
 stateful compatibility boundary.
 
-## Required design
+## First slice (2026-08-06)
+
+Steering and follow-up queue modes now travel through actor-owned Tokio
+`watch` channels. Public setters send a mode update and readers consume the
+latest immutable projection; the loop snapshots the mode at run start. This
+removes the direct mutex writes without changing Pi's event wire contract.
+
+## Remaining design
 
 Add a private `LoopCommand` mailbox and a loop-control reducer owned by
 `LoopActor`. Public control methods send commands and await acknowledgements;

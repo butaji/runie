@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use tokio::sync::Mutex;
+use tokio::sync::{watch, Mutex};
 use tokio::task::JoinHandle;
 
 use crate::events::{EventBus, SubscriberRegistry};
@@ -90,8 +90,10 @@ pub struct LoopActor {
 
 struct Inner {
     deps: LoopDeps,
-    steering_mode: Mutex<QueueMode>,
-    follow_up_mode: Mutex<QueueMode>,
+    steering_mode_tx: watch::Sender<QueueMode>,
+    steering_mode_rx: watch::Receiver<QueueMode>,
+    follow_up_mode_tx: watch::Sender<QueueMode>,
+    follow_up_mode_rx: watch::Receiver<QueueMode>,
     current: Mutex<Option<JoinHandle<RunLoopOutcome>>>,
     /// True while a run is in flight; guards concurrent `prompt()` (pi's
     /// "Agent is already processing a prompt" rejection).
@@ -109,15 +111,17 @@ impl LoopActor {
     pub fn new(mut deps: LoopDeps) -> Self {
         let (abort_tx, abort_rx) = tokio::sync::watch::channel(false);
         deps.abort = Some(abort_rx);
-        let steering_mode = deps.steering_mode;
-        let follow_up_mode = deps.follow_up_mode;
+        let (steering_mode_tx, steering_mode_rx) = watch::channel(deps.steering_mode);
+        let (follow_up_mode_tx, follow_up_mode_rx) = watch::channel(deps.follow_up_mode);
         let subscriber_bridge = spawn_subscriber_bridge(&deps.bus, &deps.subscribers);
         let pi_subscriber_bridge = spawn_pi_subscriber_bridge(&deps.bus, &deps.subscribers);
         Self {
             inner: Arc::new(Inner {
                 deps,
-                steering_mode: Mutex::new(steering_mode),
-                follow_up_mode: Mutex::new(follow_up_mode),
+                steering_mode_tx,
+                steering_mode_rx,
+                follow_up_mode_tx,
+                follow_up_mode_rx,
                 current: Mutex::new(None),
                 running: Mutex::new(false),
                 abort_tx,
@@ -153,8 +157,8 @@ impl LoopActor {
     ) -> Result<Vec<AgentMessage>, LoopError> {
         self.sync_context_to_state(&context).await;
         let mut deps = self.inner.deps.as_run_loop_deps();
-        deps.steering_mode = *self.inner.steering_mode.lock().await;
-        deps.follow_up_mode = *self.inner.follow_up_mode.lock().await;
+        deps.steering_mode = *self.inner.steering_mode_rx.borrow();
+        deps.follow_up_mode = *self.inner.follow_up_mode_rx.borrow();
         // OWNER: LoopActor — handle stored in `current` for `wait_for_idle`.
         let handle = tokio::spawn(async move {
             run_loop(prompts, context, deps, skip_initial_steering_poll).await
@@ -318,20 +322,20 @@ impl LoopActor {
 
     /// Controls how steering messages are drained on subsequent turns.
     pub async fn set_steering_mode(&self, mode: QueueMode) {
-        *self.inner.steering_mode.lock().await = mode;
+        let _ = self.inner.steering_mode_tx.send(mode);
     }
 
     pub async fn steering_mode(&self) -> QueueMode {
-        *self.inner.steering_mode.lock().await
+        *self.inner.steering_mode_rx.borrow()
     }
 
     /// Controls how follow-up messages are drained on subsequent turns.
     pub async fn set_follow_up_mode(&self, mode: QueueMode) {
-        *self.inner.follow_up_mode.lock().await = mode;
+        let _ = self.inner.follow_up_mode_tx.send(mode);
     }
 
     pub async fn follow_up_mode(&self) -> QueueMode {
-        *self.inner.follow_up_mode.lock().await
+        *self.inner.follow_up_mode_rx.borrow()
     }
 
     pub fn abort(&self) {
