@@ -777,6 +777,22 @@ fn reduce_operation_record(
     }
 }
 
+/// Select the operation that most recently entered the lane and is still
+/// active. Pi correlates assistant steps with the current operation, not with
+/// a lexical map key; lane order is the actor-owned source of that fact.
+fn latest_active_operation(snapshot: &SessionSnapshot) -> Option<String> {
+    snapshot
+        .lane_records
+        .iter()
+        .rev()
+        .find_map(|record| {
+            (record.record_type == "operation_started"
+                && snapshot.active_operations.contains_key(&record.id))
+            .then(|| record.id.clone())
+        })
+        .or_else(|| snapshot.active_operations.keys().next_back().cloned())
+}
+
 impl SessionSnapshot {
     /// Return the selected branch from oldest to newest journal node.
     /// Message and configuration records share the same parent/id namespace.
@@ -1540,11 +1556,7 @@ impl SessionActor {
                         // entry identity, so this remains one ordered
                         // mailbox reduction rather than a post-hoc guess.
                         if assistant.is_some() {
-                            if let Some(run_id) = state
-                                .active_operations
-                                .first_key_value()
-                                .map(|(id, _)| id.clone())
-                            {
+                            if let Some(run_id) = latest_active_operation(&state) {
                                 let attempt = state
                                     .lane_records
                                     .iter()
@@ -2500,6 +2512,10 @@ mod tests {
             record_type: "operation_started".into(),
             data: serde_json::json!({"id": "run-1", "lane": "main", "runId": "run-1"}),
         });
+        bus.publish(AgentEvent::OperationRecordCreated {
+            record_type: "operation_started".into(),
+            data: serde_json::json!({"id": "run-2", "lane": "main", "runId": "run-2"}),
+        });
         let assistant = AssistantMessage {
             usage: Usage::default(),
             ..Default::default()
@@ -2515,10 +2531,16 @@ mod tests {
                 .iter()
                 .map(|record| record.record_type.as_str())
                 .collect::<Vec<_>>(),
-            ["operation_started", "step_attempt", "usage"]
+            [
+                "operation_started",
+                "operation_started",
+                "step_attempt",
+                "usage"
+            ]
         );
-        assert_eq!(snapshot.lane_records[1].data["resultEntryId"], "entry-1");
-        assert_eq!(snapshot.lane_records[2].id, "entry-1");
+        assert_eq!(snapshot.lane_records[2].data["runId"], "run-2");
+        assert_eq!(snapshot.lane_records[2].data["resultEntryId"], "entry-1");
+        assert_eq!(snapshot.lane_records[3].id, "entry-1");
     }
 
     #[tokio::test]

@@ -331,10 +331,10 @@ commands and handles, but no session mutation event at the persistence point.
 The provider/loop boundary must publish that typed fact before this family can
 be projected without inventing state.
 
-The remaining limitation is operation correlation when multiple open lanes
-exist: the reducer still selects its active-operation policy, and Pi-specific
-admission/context selection must be mapped before concurrent operation kinds
-can be expanded.
+The selector now follows lane admission order and ignores finished operations,
+so concurrent active IDs no longer fall back to a lexical `BTreeMap` choice.
+Further Pi operation-kind admission policy remains a separate recovery/storage
+contract, but assistant-step correlation is actor-owned and deterministic.
 
 ## Completed slice (2026-08-07, separated operation journal lane)
 
