@@ -254,3 +254,12 @@ messages, and the run task is awaited before completion. Remaining production
 `tokio::spawn` sites are actor-worker macro expansions, an actor-owned provider
 pump, or renderer workers whose owners are retained and shut down. No new
 direct state-transfer mutation was found in this audit.
+
+Coordination-state classification (2026-08-07): the remaining production
+`Mutex`/spawn sites were checked against the SSOT rule. `LoopActor::current` is
+an owner-local `JoinHandle` slot used only to await an in-flight run;
+`SubscriberRegistry` protects registration ordering; transport/replay mutexes
+are observation probes. The only renderer state mirror remains the
+test/replay-only `Projection::Legacy` adapter. This classification does not
+close p36/p47: compatibility retirement and full deterministic cast parity
+remain explicit acceptance work.
