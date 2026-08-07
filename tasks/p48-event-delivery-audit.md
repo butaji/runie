@@ -112,3 +112,13 @@ This audit does not promote the compatibility adapter to “done”: its writes
 are isolated but still represent the final migration surface. Removing them
 requires moving replay callers to actor-backed snapshots, not merely
 suppressing the source check.
+
+## Scrollback bus ownership increment (2026-08-07)
+
+`ScrollbackActor` previously had a second mutable lifecycle projection inside
+its bus bridge: tool IDs, headers, arguments, active counts, and activity
+counters were reduced there before messages were sent to the feed actor. The
+bridge now forwards `AgentEvent` values statelessly through the actor mailbox;
+the owning actor reduces those events and owns all projection maps and
+counters. Direct `ScrollbackMsg` batches and bus events therefore share one
+reducer boundary, with acknowledged delivery and no cross-worker state mirror.

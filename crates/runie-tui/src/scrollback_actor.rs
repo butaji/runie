@@ -8,15 +8,14 @@ use std::{
 use tokio::sync::{mpsc, oneshot, watch};
 
 use runie_core::types::AgentEvent;
-use runie_core::{
-    mailbox_ack, mailbox_batch_ack, spawn_actor_worker, spawn_owned_worker, task_owner::TaskOwner,
-};
+use runie_core::{mailbox_ack, spawn_actor_worker, spawn_owned_worker, task_owner::TaskOwner};
 
 use crate::widgets::{FeedSnapshot, LineKind, Scrollback, ScrollbackMsg};
 use runie_tui_model::FeedState;
 
 enum Command {
     ApplyBatch(Vec<ScrollbackMsg>, oneshot::Sender<()>),
+    ApplyEvent(Box<AgentEvent>, oneshot::Sender<()>),
 }
 
 #[derive(Clone)]
@@ -28,13 +27,40 @@ pub struct ScrollbackActor {
 }
 
 impl ScrollbackActor {
+    #[allow(clippy::too_many_lines)]
     pub fn new() -> Self {
         let (snapshot_tx, snapshot) = watch::channel(FeedState::default().snapshot());
         let (tx, owner) = spawn_actor_worker!(32, |mut rx: mpsc::Receiver<Command>| async move {
             let mut state = FeedState::default();
+            let mut active_tools = HashSet::new();
+            let mut tool_headers = HashMap::new();
+            let mut tool_args = HashMap::new();
+            let mut tool_names = HashMap::new();
+            let mut active_tool_count = 0;
+            let mut activity_failures = 0;
+            let mut activity_dirs = 0;
+            let mut activity_files = 0;
+            let mut activity_commands = 0;
+            let mut activity_subagents = 0;
             while let Some(command) = rx.recv().await {
                 let (messages, reply) = match command {
                     Command::ApplyBatch(messages, reply) => (messages, reply),
+                    Command::ApplyEvent(event, reply) => {
+                        let messages = owned_event_messages(
+                            *event,
+                            &mut active_tools,
+                            &mut tool_headers,
+                            &mut tool_args,
+                            &mut tool_names,
+                            &mut active_tool_count,
+                            &mut activity_failures,
+                            &mut activity_dirs,
+                            &mut activity_files,
+                            &mut activity_commands,
+                            &mut activity_subagents,
+                        );
+                        (messages, reply)
+                    }
                 };
                 for message in messages {
                     state.reduce(message);
@@ -81,8 +107,10 @@ impl ScrollbackActor {
     }
 
     pub async fn apply_event(&self, event: &AgentEvent) {
-        let messages = bus_messages_for_event(event.clone());
-        self.apply_batch(messages).await;
+        let _ = mailbox_ack!(self.tx, |reply| Command::ApplyEvent(
+            Box::new(event.clone()),
+            reply
+        ));
     }
 
     pub fn snapshot(&self) -> Scrollback {
@@ -107,75 +135,91 @@ async fn run_bus_projection(
     mut events: tokio::sync::broadcast::Receiver<AgentEvent>,
     tx: mpsc::Sender<Command>,
 ) {
-    let mut active_tools = HashSet::new();
-    let mut tool_headers = HashMap::new();
-    let mut tool_args = HashMap::new();
-    let mut tool_names = HashMap::new();
-    let mut activity_dirs = 0;
-    let mut activity_files = 0;
-    let mut activity_commands = 0;
-    let mut activity_subagents = 0;
-    let mut activity_failures = 0;
-    let mut active_tool_count = 0;
     loop {
         let event = match events.recv().await {
             Ok(event) => event,
             Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
             Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
         };
-        if let AgentEvent::ToolExecutionStart {
-            tool_call_id,
-            tool_name,
-            args,
-        } = &event
+        let (reply, _ack) = oneshot::channel();
+        if tx
+            .send(Command::ApplyEvent(Box::new(event), reply))
+            .await
+            .is_err()
         {
-            active_tools.insert(tool_call_id.clone());
-            tool_headers.insert(
-                tool_call_id.clone(),
-                crate::event_renderer::tool_header(tool_name, args),
-            );
-            tool_args.insert(tool_call_id.clone(), args.clone());
-            tool_names.insert(tool_call_id.clone(), tool_name.clone());
-            if matches!(tool_name.as_str(), "list_dir" | "list_files") {
-                activity_dirs += 1;
-            } else if matches!(tool_name.as_str(), "read" | "read_file") {
-                activity_files += 1;
-            } else if matches!(tool_name.as_str(), "bash" | "shell" | "exec" | "run") {
-                activity_commands += 1;
-            } else if matches!(tool_name.as_str(), "subagent" | "agent" | "task") {
-                activity_subagents += 1;
-            }
-            active_tool_count += 1;
+            break;
         }
-        let completion = ordinary_tool_end_messages(
-            &mut active_tools,
-            &mut tool_headers,
-            &mut tool_args,
-            &mut tool_names,
-            &mut active_tool_count,
-            &mut activity_failures,
-            (
-                activity_dirs,
-                activity_files,
-                activity_commands,
-                activity_subagents,
-            ),
-            &event,
+    }
+}
+
+/// The bus bridge is deliberately stateless. Tool identity, lifecycle, and
+/// activity counters belong to the ScrollbackActor reducer, so every event
+/// changes one SSOT and the bridge cannot diverge from direct commands.
+#[allow(
+    clippy::too_many_arguments,
+    clippy::too_many_lines,
+    clippy::cognitive_complexity
+)]
+fn owned_event_messages(
+    event: AgentEvent,
+    active_tools: &mut HashSet<String>,
+    tool_headers: &mut HashMap<String, String>,
+    tool_args: &mut HashMap<String, serde_json::Value>,
+    tool_names: &mut HashMap<String, String>,
+    active_tool_count: &mut usize,
+    activity_failures: &mut usize,
+    activity_dirs: &mut usize,
+    activity_files: &mut usize,
+    activity_commands: &mut usize,
+    activity_subagents: &mut usize,
+) -> Vec<ScrollbackMsg> {
+    if let AgentEvent::ToolExecutionStart {
+        tool_call_id,
+        tool_name,
+        args,
+    } = &event
+    {
+        active_tools.insert(tool_call_id.clone());
+        tool_headers.insert(
+            tool_call_id.clone(),
+            crate::event_renderer::tool_header(tool_name, args),
         );
-        let messages = if !completion.is_empty() {
-            completion
-        } else {
-            bus_messages_for_event(event.clone())
-        };
-        let messages = if messages.is_empty() {
-            tool_update_messages(&active_tools, &mut tool_headers, &event)
+        tool_args.insert(tool_call_id.clone(), args.clone());
+        tool_names.insert(tool_call_id.clone(), tool_name.clone());
+        if matches!(tool_name.as_str(), "list_dir" | "list_files") {
+            *activity_dirs += 1;
+        } else if matches!(tool_name.as_str(), "read" | "read_file") {
+            *activity_files += 1;
+        } else if matches!(tool_name.as_str(), "bash" | "shell" | "exec" | "run") {
+            *activity_commands += 1;
+        } else if matches!(tool_name.as_str(), "subagent" | "agent" | "task") {
+            *activity_subagents += 1;
+        }
+        *active_tool_count += 1;
+    }
+    let completion = ordinary_tool_end_messages(
+        active_tools,
+        tool_headers,
+        tool_args,
+        tool_names,
+        active_tool_count,
+        activity_failures,
+        (
+            *activity_dirs,
+            *activity_files,
+            *activity_commands,
+            *activity_subagents,
+        ),
+        &event,
+    );
+    if !completion.is_empty() {
+        completion
+    } else {
+        let messages = bus_messages_for_event(event.clone());
+        if messages.is_empty() {
+            tool_update_messages(active_tools, tool_headers, &event)
         } else {
             messages
-        };
-        if !mailbox_batch_ack!(tx, messages, |messages, reply| {
-            Command::ApplyBatch(messages, reply)
-        }) {
-            break;
         }
     }
 }
