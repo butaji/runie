@@ -19,6 +19,10 @@ pub trait HttpActor: Send + Sync + 'static {
     /// Apply pi-compatible request/response hooks at the transport boundary.
     /// Concrete adapters only implement `post`; the actor owns the side
     /// effect while hooks remain caller-provided observations/transformations.
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the transport boundary keeps payload hooks, timeout, and response hooks atomic"
+    )]
     async fn post_with_options(
         &self,
         body: String,
@@ -41,7 +45,18 @@ pub trait HttpActor: Send + Sync + 'static {
                 StreamError::Invalid(format!("payload hook serialization failed: {error}"))
             })?,
         };
-        let response = self.post(request_body).await?;
+        let response = if let Some(timeout_ms) = options.as_ref().and_then(|o| o.timeout_ms) {
+            tokio::time::timeout(
+                std::time::Duration::from_millis(timeout_ms),
+                self.post(request_body),
+            )
+            .await
+            .map_err(|_| {
+                StreamError::Network(format!("request timed out after {timeout_ms}ms"))
+            })??
+        } else {
+            self.post(request_body).await?
+        };
         if let Some(hook) = options
             .as_ref()
             .and_then(|options| options.on_response.clone())
@@ -95,6 +110,15 @@ mod tests {
 
     struct CapturingHttp {
         body: Arc<Mutex<Option<String>>>,
+    }
+
+    struct PendingHttp;
+
+    #[async_trait::async_trait]
+    impl HttpActor for PendingHttp {
+        async fn post(&self, _body: String) -> Result<HttpResponse, StreamError> {
+            std::future::pending().await
+        }
     }
 
     #[async_trait::async_trait]
@@ -164,5 +188,21 @@ mod tests {
             Some(&"replay-1".to_string())
         );
         assert_eq!(response.status, 201);
+    }
+
+    #[tokio::test]
+    async fn post_with_options_enforces_pi_timeout_ms() {
+        let error = PendingHttp
+            .post_with_options(
+                "{}".into(),
+                Model::default(),
+                Some(SimpleStreamOptions {
+                    timeout_ms: Some(1),
+                    ..Default::default()
+                }),
+            )
+            .await
+            .expect_err("pending request must time out");
+        assert!(matches!(error, StreamError::Network(message) if message.contains("1ms")));
     }
 }

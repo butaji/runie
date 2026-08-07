@@ -601,6 +601,8 @@ pub struct SimpleStreamOptions {
     pub api_key: Option<String>,
     pub signal: Option<tokio::sync::watch::Receiver<bool>>,
     pub thinking_budgets: Option<ThinkingBudgets>,
+    /// Provider request timeout in milliseconds (pi: `timeoutMs`).
+    pub timeout_ms: Option<u64>,
     /// Per-request sampling overrides. The loop merges these over
     /// `Model::sampling_params`, matching Pi's `StreamOptions` contract.
     pub sampling_params: Option<std::collections::HashMap<String, serde_json::Value>>,
@@ -618,6 +620,7 @@ impl std::fmt::Debug for SimpleStreamOptions {
             .field("api_key", &self.api_key.as_ref().map(|_| "<redacted>"))
             .field("signal", &self.signal.is_some())
             .field("thinking_budgets", &self.thinking_budgets)
+            .field("timeout_ms", &self.timeout_ms)
             .field("sampling_params", &self.sampling_params)
             .field("on_payload", &self.on_payload.is_some())
             .field("on_response", &self.on_response.is_some())

@@ -80,3 +80,7 @@ The loop also merges those model defaults with per-request
 `SimpleStreamOptions::sampling_params`, using request values as the winning
 layer. The merge is pure and covered by a focused core test, keeping provider
 configuration state inside the loop's owned option snapshot.
+
+Pi's `timeoutMs` is now carried as `SimpleStreamOptions::timeout_ms` and
+enforced by the async `HttpActor` boundary. Timeout cancellation is covered
+with a pending-future test; no blocking sleep is used.
