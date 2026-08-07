@@ -173,6 +173,7 @@ pub enum ToolCardRowKind {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ToolCardPaintIntent {
     Header,
+    Running,
     Content,
     Success,
     Error,
@@ -220,6 +221,7 @@ pub fn logical_tool_member_index(lines: &[Line], tool_call_id: &str) -> Option<u
 impl ToolCardRow {
     pub fn paint_intent(&self) -> ToolCardPaintIntent {
         match self.row_kind {
+            ToolCardRowKind::Header if self.is_running => ToolCardPaintIntent::Running,
             ToolCardRowKind::Header => ToolCardPaintIntent::Header,
             ToolCardRowKind::Content if self.card_kind == ToolCardKind::MemorySearch => {
                 ToolCardPaintIntent::Muted
@@ -575,7 +577,10 @@ mod tests {
             row_kind: ToolCardRowKind::Content,
             ..header.clone()
         };
-        assert_eq!(header.paint_intent(), ToolCardPaintIntent::Header);
+        assert_eq!(header.paint_intent(), ToolCardPaintIntent::Running);
+        let mut settled_header = header.clone();
+        settled_header.is_running = false;
+        assert_eq!(settled_header.paint_intent(), ToolCardPaintIntent::Header);
         assert_eq!(output.paint_intent(), ToolCardPaintIntent::Content);
         assert_eq!(error.paint_intent(), ToolCardPaintIntent::Error);
         assert_eq!(memory.paint_intent(), ToolCardPaintIntent::Muted);

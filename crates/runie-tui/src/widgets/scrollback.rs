@@ -1084,6 +1084,7 @@ impl Scrollback {
             if let Some(intent) = self.tool_paint_intent(*kind, text, occurrence) {
                 let paint = match intent {
                     ToolCardPaintIntent::Header => PaintIntent::Base,
+                    ToolCardPaintIntent::Running => PaintIntent::Accent,
                     ToolCardPaintIntent::Content => PaintIntent::Base,
                     ToolCardPaintIntent::Success => PaintIntent::Success,
                     ToolCardPaintIntent::Error => PaintIntent::Error,

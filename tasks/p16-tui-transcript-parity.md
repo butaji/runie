@@ -744,3 +744,10 @@ Member identity SSOT (2026-08-06): logical member ordinal derivation is now
 centralized in the pure `runie-tui-model::logical_tool_member_index` helper.
 Feed snapshots, compatibility snapshots, and renderer paint resolution all use
 that same function; no layer independently reconstructs member ownership.
+
+Running-card paint intent (2026-08-06): running tool headers now project a
+model-owned `Running` semantic paint role, distinct from settled headers. The
+renderer resolves it through the existing Opaline accent token; no running
+state color is hardcoded or inferred from header text. The typed-card model
+test covers running and settled header roles, while lifecycle YAML and visual
+suites retain the event/state coverage.
