@@ -226,6 +226,7 @@ impl Scrollback {
         scrollback.navigation.selected_entry = snapshot.selected_entry;
         scrollback.navigation.selection_anchor = snapshot.selection_anchor;
         scrollback.navigation.selection_head = snapshot.selection_head;
+        scrollback.navigation.cell_selection = snapshot.cell_selection;
         scrollback.navigation.tool_modes = snapshot.tool_modes;
         scrollback.navigation.revealed_dense_groups = snapshot.revealed_dense_groups;
         scrollback.navigation.center_revealed_entry = snapshot.center_revealed_entry;
@@ -358,6 +359,18 @@ impl Scrollback {
             }
             ScrollbackMsg::ClearSelection => {
                 self.reduce_model(ScrollbackMsg::ClearSelection);
+            }
+            ScrollbackMsg::MouseSelectionStart(position) => {
+                self.reduce_model(ScrollbackMsg::MouseSelectionStart(position));
+            }
+            ScrollbackMsg::MouseSelectionExtend(position) => {
+                self.reduce_model(ScrollbackMsg::MouseSelectionExtend(position));
+            }
+            ScrollbackMsg::MouseSelectionCommit => {
+                self.reduce_model(ScrollbackMsg::MouseSelectionCommit);
+            }
+            ScrollbackMsg::ClearCellSelection => {
+                self.reduce_model(ScrollbackMsg::ClearCellSelection);
             }
             ScrollbackMsg::SelectNextTool => self.reduce_model(ScrollbackMsg::SelectNextTool),
             ScrollbackMsg::SelectPreviousTool => {
@@ -751,6 +764,7 @@ impl Scrollback {
             selected_member_index,
             selection_anchor: self.navigation.selection_anchor,
             selection_head: self.navigation.selection_head,
+            cell_selection: self.navigation.cell_selection,
             theme: self.navigation.theme,
             animation_frame: self.navigation.animation_frame,
             tool_modes: self.navigation.tool_modes.clone(),

@@ -6,10 +6,16 @@ events:
   - text_delta: "selection target"
   - done: { stop_reason: stop }
   - select_range: { anchor: 1, head: 3 }
+  - mouse_selection_start: { row: 8, column: 4 }
+  - mouse_selection_extend: { row: 10, column: 18 }
+  - mouse_selection_commit
 assertions:
   state:
     selection_anchor: 1
     selection_head: 3
+    cell_selection:
+      anchor: { row: 8, column: 4 }
+      head: { row: 10, column: 18 }
   visual:
     cols: 80
     rows: 24

@@ -334,6 +334,12 @@ pub enum EventSpec {
     SelectRange {
         select_range: SelectionRangeSpec,
     },
+    MouseSelectionStart {
+        mouse_selection_start: CellPositionSpec,
+    },
+    MouseSelectionExtend {
+        mouse_selection_extend: CellPositionSpec,
+    },
     Scroll {
         scroll: i32,
     },
@@ -700,6 +706,7 @@ impl EventSpec {
             Self::ToolFold { .. } => None,
             Self::ToolSelect { .. } => None,
             Self::SelectRange { .. } => None,
+            Self::MouseSelectionStart { .. } | Self::MouseSelectionExtend { .. } => None,
             Self::Scroll { .. } => None,
             Self::ScrollInput { .. } => None,
             Self::ScrollRawInput { .. } => None,
@@ -715,7 +722,14 @@ impl EventSpec {
             | Self::WorkflowStart { .. }
             | Self::WorkflowProgress { .. }
             | Self::WorkflowEnd { .. } => None,
-            Self::Bare(other) if other == "scroll_finalize" => None,
+            Self::Bare(other)
+                if matches!(
+                    other.as_str(),
+                    "scroll_finalize" | "mouse_selection_commit" | "clear_cell_selection"
+                ) =>
+            {
+                None
+            }
             Self::Bare(other) => panic!("unknown event kind: {other:?}"),
         }
     }
@@ -1009,6 +1023,7 @@ pub struct StateAssertions {
     pub selected_member_index: Option<usize>,
     pub selection_anchor: Option<usize>,
     pub selection_head: Option<usize>,
+    pub cell_selection: Option<CellSelectionAssertion>,
     pub autoscroll: Option<bool>,
     pub scroll_offset: Option<usize>,
     /// Ordered cadence flush/finalize records from declarative scroll input.
@@ -1856,6 +1871,10 @@ fn declared_context_windows(scenario: &Scenario) -> Vec<u64> {
         .collect()
 }
 
+#[allow(
+    clippy::too_many_lines,
+    reason = "the declarative navigation table keeps every YAML transition explicit"
+)]
 fn declared_navigation(scenario: &Scenario) -> Vec<ScrollbackMsg> {
     scenario
         .events
@@ -1885,6 +1904,28 @@ fn declared_navigation(scenario: &Scenario) -> Vec<ScrollbackMsg> {
                 anchor: select_range.anchor,
                 head: select_range.head,
             }),
+            EventSpec::MouseSelectionStart {
+                mouse_selection_start,
+            } => Some(ScrollbackMsg::MouseSelectionStart(
+                runie_tui_model::CellPosition {
+                    row: mouse_selection_start.row,
+                    column: mouse_selection_start.column,
+                },
+            )),
+            EventSpec::MouseSelectionExtend {
+                mouse_selection_extend,
+            } => Some(ScrollbackMsg::MouseSelectionExtend(
+                runie_tui_model::CellPosition {
+                    row: mouse_selection_extend.row,
+                    column: mouse_selection_extend.column,
+                },
+            )),
+            EventSpec::Bare(step) if step == "mouse_selection_commit" => {
+                Some(ScrollbackMsg::MouseSelectionCommit)
+            }
+            EventSpec::Bare(step) if step == "clear_cell_selection" => {
+                Some(ScrollbackMsg::ClearCellSelection)
+            }
             _ => None,
         })
         .collect()
@@ -1902,6 +1943,18 @@ pub struct LayoutMeasuredSpec {
 pub struct SelectionRangeSpec {
     pub anchor: usize,
     pub head: usize,
+}
+
+#[derive(Debug, Deserialize, Clone, Copy)]
+pub struct CellPositionSpec {
+    pub row: u16,
+    pub column: u16,
+}
+
+#[derive(Debug, Deserialize, Clone, Copy)]
+pub struct CellSelectionAssertion {
+    pub anchor: CellPositionSpec,
+    pub head: CellPositionSpec,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -2979,6 +3032,19 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         outcome.feed.selection_head,
         "selection_head"
     );
+    if let Some(expected) = expected.cell_selection {
+        let actual = outcome.feed.cell_selection.map(|selection| {
+            (
+                (selection.anchor.row, selection.anchor.column),
+                (selection.head.row, selection.head.column),
+            )
+        });
+        let expected = Some((
+            (expected.anchor.row, expected.anchor.column),
+            (expected.head.row, expected.head.column),
+        ));
+        assert_yaml_eq!(Some(expected), actual, "cell_selection");
+    }
     if let Some(expected) = expected.scroll_offset {
         if outcome.feed.scroll_offset != expected {
             return Err(format!(

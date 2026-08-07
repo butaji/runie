@@ -261,6 +261,18 @@ rehydration. This is the state boundary needed before mapping crossterm mouse
 coordinates; cell-range painting and clipboard actions remain separate
 renderer/input work and are not claimed complete here.
 
+## Cell-selection reducer slice (2026-08-07)
+
+The feed model now has a separate `CellSelection` projection with
+viewport-relative row/column coordinates and explicit
+`MouseSelectionStart`/`MouseSelectionExtend`/`MouseSelectionCommit`/
+`ClearCellSelection` messages. It is intentionally independent from the
+logical keyboard `SelectRange` indices. Reversed coordinates normalize through
+a pure model method, and `visual-selection-range.yaml` replays the new event
+sequence and asserts model-to-widget rehydration. Live crossterm coordinate
+mapping and copy/view effects remain pending; no clipboard side effect was
+introduced into the reducer.
+
 Keyboard intent slice (2026-08-07): Shift+Up/Down now maps to explicit
 `ExtendSelectionPrevious`/`ExtendSelectionNext` actions when the prompt is
 empty. The application converts that intent into an acknowledged

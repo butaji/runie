@@ -6,6 +6,39 @@ use runie_core::types::{ThemeKind, ToolDisplayMode};
 
 pub const GROK_GROUP_MAX_VISIBLE: usize = 10;
 
+/// Viewport-relative terminal cell coordinate used by Grok's text selection.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CellPosition {
+    pub row: u16,
+    pub column: u16,
+}
+
+/// A committed transcript-cell selection. Coordinates are retained in their
+/// input order; `normalized` provides the paint/copy rectangle deterministically.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CellSelection {
+    pub anchor: CellPosition,
+    pub head: CellPosition,
+}
+
+impl CellSelection {
+    pub const fn normalized(self) -> (CellPosition, CellPosition) {
+        let start = if self.anchor.row < self.head.row
+            || (self.anchor.row == self.head.row && self.anchor.column <= self.head.column)
+        {
+            self.anchor
+        } else {
+            self.head
+        };
+        let end = if start.row == self.anchor.row && start.column == self.anchor.column {
+            self.head
+        } else {
+            self.anchor
+        };
+        (start, end)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LineKind {
     User,
@@ -73,6 +106,7 @@ pub struct FeedSnapshot {
     pub selected_member_index: Option<usize>,
     pub selection_anchor: Option<usize>,
     pub selection_head: Option<usize>,
+    pub cell_selection: Option<CellSelection>,
     pub theme: ThemeKind,
     pub animation_frame: usize,
     pub tool_modes: HashMap<String, ToolDisplayMode>,
@@ -94,6 +128,8 @@ pub struct FeedNavigation {
     pub selected_entry: Option<usize>,
     pub selection_anchor: Option<usize>,
     pub selection_head: Option<usize>,
+    pub cell_selection: Option<CellSelection>,
+    pub cell_selection_anchor: Option<CellPosition>,
     pub animation_frame: usize,
     pub reasoning_expanded: bool,
     pub activity_expanded: bool,
@@ -131,6 +167,8 @@ impl Default for FeedNavigation {
             selected_entry: None,
             selection_anchor: None,
             selection_head: None,
+            cell_selection: None,
+            cell_selection_anchor: None,
             animation_frame: 0,
             reasoning_expanded: false,
             activity_expanded: false,
@@ -560,6 +598,35 @@ mod tests {
         assert!(state.snapshot().assistant_stream_open);
         state.reduce(super::ScrollbackMsg::AssistantStreamEnd);
         assert!(!state.snapshot().assistant_stream_open);
+    }
+
+    #[test]
+    fn mouse_selection_normalizes_reversed_cells_and_commits_through_events() {
+        let mut state = FeedState::default();
+        state.reduce(super::ScrollbackMsg::MouseSelectionStart(
+            super::CellPosition {
+                row: 10,
+                column: 18,
+            },
+        ));
+        state.reduce(super::ScrollbackMsg::MouseSelectionExtend(
+            super::CellPosition { row: 8, column: 4 },
+        ));
+        let selection = state.snapshot().cell_selection.expect("selection");
+        assert_eq!(
+            selection.normalized(),
+            (
+                super::CellPosition { row: 8, column: 4 },
+                super::CellPosition {
+                    row: 10,
+                    column: 18
+                }
+            )
+        );
+        state.reduce(super::ScrollbackMsg::MouseSelectionCommit);
+        assert!(state.snapshot().cell_selection.is_some());
+        state.reduce(super::ScrollbackMsg::ClearCellSelection);
+        assert!(state.snapshot().cell_selection.is_none());
     }
 
     #[test]
@@ -1000,6 +1067,10 @@ pub enum ScrollbackMsg {
         head: usize,
     },
     ClearSelection,
+    MouseSelectionStart(CellPosition),
+    MouseSelectionExtend(CellPosition),
+    MouseSelectionCommit,
+    ClearCellSelection,
     SelectNextTool,
     SelectPreviousTool,
     SelectNextEntry,
@@ -1114,6 +1185,7 @@ impl FeedState {
             selected_entry: self.navigation.selected_entry,
             selection_anchor: self.navigation.selection_anchor,
             selection_head: self.navigation.selection_head,
+            cell_selection: self.navigation.cell_selection,
             selected_member_index,
             theme: self.navigation.theme,
             animation_frame: self.navigation.animation_frame,
@@ -1237,6 +1309,25 @@ impl FeedState {
             ScrollbackMsg::ClearSelection => {
                 self.navigation.selection_anchor = None;
                 self.navigation.selection_head = None;
+            }
+            ScrollbackMsg::MouseSelectionStart(position) => {
+                self.navigation.cell_selection_anchor = Some(position);
+                self.navigation.cell_selection = None;
+            }
+            ScrollbackMsg::MouseSelectionExtend(position) => {
+                if let Some(anchor) = self.navigation.cell_selection_anchor {
+                    self.navigation.cell_selection = Some(CellSelection {
+                        anchor,
+                        head: position,
+                    });
+                }
+            }
+            ScrollbackMsg::MouseSelectionCommit => {
+                self.navigation.cell_selection_anchor = None;
+            }
+            ScrollbackMsg::ClearCellSelection => {
+                self.navigation.cell_selection_anchor = None;
+                self.navigation.cell_selection = None;
             }
             ScrollbackMsg::SelectNextTool => self.select_tool(1),
             ScrollbackMsg::SelectPreviousTool => self.select_tool(-1),
