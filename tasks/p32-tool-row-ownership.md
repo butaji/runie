@@ -1,17 +1,16 @@
 # p32 — Actor-owned tool-row identity
 
-Status: done (2026-08-06)
+Status: in progress (2026-08-06)
 
-## Completion audit (2026-08-06)
+## Current audit (2026-08-06)
 
-The acceptance boundary is now complete: `FeedState` assigns opaque row
-identity on live starts, updates and ends resolve that identity rather than
-provider call ID, and compatibility-seeded rows remain unowned. The
-`visual-tool-row-identity.yaml` fixture asserts retained IDs and active
-eligibility, while the duplicate-provider-ID unit test covers newest-first
-and older-row settlement. The focused reducer test, YAML replay, workspace
-visual suite, and actor-boundary validator all pass. No renderer-side owner
-map remains.
+`FeedState` assigns opaque row identity on live starts, and live header
+updates/completions resolve that identity before the compatibility fallback.
+However, card grouping and some display-mode/update projections still expose
+external `tool_call_id` as their grouping key. The fixture and focused tests
+prove the current header ownership boundary, but do not prove opaque identity
+through every dense-group and display-mode transition. This task therefore
+remains in progress.
 
 ## Fresh replay audit (2026-08-06)
 
@@ -31,8 +30,8 @@ cargo run -p runie-tui --bin runie-tui-e2e -- \
 ```
 
 This is evidence for event provenance, not completion of row ownership. The
-next implementation must carry an opaque reducer-owned row identity from the
-start intent through update/end messages; matching by `tool_call_id` remains
+next implementation must carry the opaque reducer-owned identity through card
+grouping and display-mode/update messages; matching by `tool_call_id` remains
 unsafe for compatibility-seeded replays.
 
 ## Completion-output boundary (2026-08-06)
