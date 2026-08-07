@@ -77,6 +77,27 @@ same `KeyboardShortcuts` and `Quit` variants instead of dropping them. The new
 transition without recompilation. Grok-only slash/skill actions remain
 excluded until their corresponding Pi-core contract exists.
 
+Complete source inventory (2026-08-08): `xai-grok-pager/src/views/modal.rs:366`
+defines the source palette as these sections and entries:
+
+- Session: New Session; New Session in Worktree; dashboard; home; delete,
+  resume, share, rename, session-info, feedback.
+- Context: compact history; context usage; view plan; memory.
+- Model & Input: switch model; always-approve; multiline input; external
+  prompt editor.
+- Tools: hooks; plugins; marketplace; skills; MCP servers; manage agents.
+- Other: switch theme; settings; keyboard shortcuts; how-to guides; tutorial;
+  quit.
+
+The same source applies two predicates before rendering: `/share` is removed
+when sharing is disabled, and slash commands are filtered by screen-mode
+support; external-editor is hidden in fullscreen. Runie's current three-entry
+Pi subset is therefore intentionally not a visual claim that the Grok palette
+is complete. The next eligible additions are only actions backed by existing
+Pi-core events/capabilities; worktree/dashboard/home/session-management,
+extensions, memory, and settings require contracts that are not currently in
+`runie-core`.
+
 ## Findings
 
 - Grok has 402 pager source files and a typed `RenderBlock` projection:
