@@ -646,3 +646,9 @@ the physical row's prior-occurrence index, selecting the corresponding nth
 logical source row when duplicate tool text appears. This removes the
 first-match ambiguity without changing actor-owned feed state or wrapping
 geometry.
+
+Specialized header typography (2026-08-06): source inspection of Grok's
+`WebSearch`, `MemorySearch`, and search-tools blocks showed the complete action
+label is one bold span. Runie now preserves the full `Web Search`, `Memory
+Search`, and `Search Tools` labels as bold spans while keeping query/details in
+the normal theme-token style. Focused span tests cover the distinction.
