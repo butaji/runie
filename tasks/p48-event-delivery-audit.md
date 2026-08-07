@@ -72,6 +72,15 @@ migrating each replay caller to an actor-backed snapshot without changing its
 deterministic YAML contract. Acceptance remains the full YAML suite plus a
 source audit proving that `with_live_actors` cannot access `Projection::Legacy`.
 
+## Declarative replay contract (2026-08-07)
+
+The YAML runner already provides the event-delivery assertions required by the
+architecture: `exact_events` checks the complete ordered Runie event stream,
+`pi_events` checks the closed Pi wire contract, and `listener_events` checks
+the awaited subscriber path. `visual-hey.yaml` exercises all three against
+the same scenario. This is the canonical event-sequence → state oracle; new
+fixtures should extend these fields instead of adding test-specific code.
+
 ## Reactive timing audit (2026-08-07)
 
 The interactive binary previously polled `LoopActor::state_snapshot()` every

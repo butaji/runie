@@ -44,13 +44,17 @@ so reset fixtures can distinguish an omitted expectation from a required
 
 ## Remaining work
 
-1. Make every externally observable TUI transition have a named event/message
-   variant, including scroll, selection, palette, and prompt actions.
-2. Add event-trace assertions to replay fixtures so ordering is tested before
-   snapshots are compared.
-3. Keep capture inputs declarative: the matrix accepts a scenario prompt, and
+1. Retire the compatibility `EventRenderer` state mirror after all replay
+   callers are actor-backed; see [p47](p47-renderer-transient-state-migration.md).
+2. Keep capture inputs declarative: the matrix accepts a scenario prompt, and
    `capture-scenario.sh` reads prompt/quit settings from the YAML fixture at
    runtime without recompilation.
+
+The first two historical bullets are now closed. Production scroll, selection,
+palette, and prompt transitions have named owner-local messages, and replay
+assertions already support ordered `exact_events`, closed-contract `pi_events`,
+and awaited `listener_events`. `visual-hey.yaml` exercises all three forms.
+New scenarios should use these fields rather than adding bespoke assertions.
 
 The matrix retains the original four-argument environment-assignment form;
 the compatibility branch is covered by shell syntax/argument checks so older
