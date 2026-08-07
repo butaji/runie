@@ -84,6 +84,17 @@ The provider projection is covered by
 callback nesting, exceptions, exporter behavior, and YAML-declared span
 conformance vectors remain open.
 
+Telemetry source reconciliation (2026-08-07): the checked-out Pi telemetry
+interface exposes `addEvent(name, attributes)` and
+`setStatus({ status, error })`; it does not expose a separate
+`recordException` operation. Runie's `TelemetryAction::Event` and
+`TelemetryAction::Status { error }` therefore map the actual contract rather
+than inventing an exception command. Runtime YAML already covers nested span
+callbacks, structured terminal errors, settled-span late mutations, and
+parent rejection. Remaining telemetry parity is limited to Pi's typed schema
+vocabulary and exporter integration, which require a concrete capability
+adapter before generic actor code can implement them.
+
 Typed DSL increment (2026-08-07): `telemetry_replay!` provides a compact
 Rust-side declaration for small adapter tests. It expands only to
 `TelemetryAction` values; runtime scenarios continue to use the YAML replay
