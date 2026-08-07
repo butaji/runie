@@ -382,6 +382,15 @@ with the same atomic clock compared through `compare-ansi-frames.py` at
 This closes the Runie-side determinism check while keeping live Grok content
 differences explicitly outside a strict equality claim.
 
+**Truecolor token audit (2026-08-06):** Compared Runie's Opaline GrokNight
+tokens with `xai-grok-pager-render/src/theme/groknight.rs`: base `#141414`,
+primary `#e1e1e1`, secondary `#c8c8c8`, muted `#6c6c6c`, panel `#242424`,
+prompt border `#505058`, selection `#1c1c1c`, and TokyoNight accents all
+match the source palette. No token change is justified by the current
+attribute diff; the remaining strict capture discrepancy is emitted terminal
+style/default-color behavior and must be resolved with a matched Grok runtime
+capture, not by hardcoding a different theme.
+
 **Grok matrix capture boundary (2026-08-06):** The private capture script now
 uses a 60-second readiness/settled window, shell-quotes the complete command as
 one asciinema argument, and bounds post-quit shutdown before killing only its
