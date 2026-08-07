@@ -9,7 +9,7 @@ use std::sync::OnceLock;
 use std::time::Duration;
 
 use anyhow::Result;
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use crossterm::execute;
 use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
@@ -31,9 +31,11 @@ use runie_core::types::{
     AgentContext, AgentMessage, Model, QueueMode, SimpleStreamOptions, ThemeKind, ToolExecutionMode,
 };
 
+use futures::StreamExt;
 use runie_tui::app::{App, AppExit, PaletteAction, UiCommand};
 use runie_tui::key::{is_quit_command, map_key, Action};
 use runie_tui::widgets::{PromptOutcome, PromptWidget, Scrollback, Status, StatusBar};
+use tokio::sync::mpsc;
 
 /// Placeholder StreamFn: emits a single "Hello from runie!" then Done.
 struct PlaceholderStream;
@@ -368,15 +370,29 @@ async fn run_app(
 
     let (renderer_handle, renderer_shutdown) = app.spawn_renderer();
 
+    // OWNER: interactive input actor; the mailbox and worker live until the
+    // terminal loop exits, and the owned task is dropped on shutdown.
+    let (input_tx, mut input_rx) = mpsc::channel::<KeyEvent>(32);
+    let _input_owner = runie_core::spawn_owned_worker!(async move {
+        let mut input = EventStream::new();
+        while let Some(result) = input.next().await {
+            let Ok(Event::Key(key)) = result else {
+                continue;
+            };
+            if input_tx.send(key).await.is_err() {
+                break;
+            }
+        }
+    });
+
     let mut tick = tokio::time::interval(Duration::from_millis(50));
 
     loop {
         tokio::select! {
             _ = tick.tick() => {
-                // Poll the controlling terminal on the render cadence as a
-                // fallback for PTYs whose async reader does not wake.
-                if event::poll(Duration::ZERO).unwrap_or(false) {
-                    if let Ok(Event::Key(key)) = event::read() {
+                // Input has already crossed the owned async input actor's
+                // mailbox; rendering never touches the terminal reader.
+                if let Ok(key) = input_rx.try_recv() {
                         if key.kind == KeyEventKind::Press {
                             if app.ui.snapshot().command_palette_open
                                 && key.code == KeyCode::Esc
@@ -538,7 +554,6 @@ async fn run_app(
                             }
                         }
                     }
-                }
                 let model = app.model_snapshot();
                 if matches!(model.status.state, Status::Ready) && !model.feed.is_empty()
                 {

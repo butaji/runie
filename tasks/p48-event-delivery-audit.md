@@ -82,11 +82,10 @@ the state actor's `ModelChanged` event (the deterministic startup caption is
 still an explicit prompt command). Animation ticks only request actor-owned
 animation advances.
 
-The terminal input loop is a separate remaining gap: the binary still calls
-`crossterm::event::poll(Duration::ZERO)` from the render cadence and reads one
-key synchronously. This is observable polling, not an actor event stream. The
-next migration must give an owned input worker a
-`crossterm::event::EventStream` and send `InputEvent` messages through a
-mailbox; the main loop should select between its render tick and that mailbox.
-Until that migration is complete, the architecture objective is not fully
-closed, even though YAML/reducer tests do not depend on a physical terminal.
+The first input migration is now implemented: an owned worker reads
+`crossterm::event::EventStream` and sends `KeyEvent` values through a bounded
+mailbox. The render loop no longer calls `event::poll` or `event::read`, and
+all prompt/UI state changes still cross actor mailboxes. A final refinement is
+to select directly on the input mailbox rather than `try_recv` from the render
+tick; that removes input latency coupling to frame cadence and remains an
+open closure item for strict fully-reactive timing.
