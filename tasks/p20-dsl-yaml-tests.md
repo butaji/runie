@@ -173,13 +173,11 @@ actor; `visual-activity-mixed.yaml` asserts the resulting visible `⌄` marker f
   state delivery event-based while leaving the actor mailbox and acknowledgement
   protocol explicit.
 
-- **Next YAML gap identified (2026-08-06):** The generic scenario outcome
-  currently exposes core, feed, and status projections but not the actor-owned
-  `UiState` projection. Therefore the new UI event mapping is covered by a
-  model/actor test, not yet by a runtime-discovered YAML state assertion. The
-  next DSL slice should add generic `state.ui` fields (welcome, shortcuts,
-  palette visibility/query/index) and construct that projection through the
-  same event sequence; no fixture-specific Rust test should be added.
+- **UI YAML gap (closed 2026-08-06):** The generic scenario outcome now
+  exposes the actor-owned `UiState` projection through `visual.ui` assertions
+  (welcome, shortcuts, palette visibility/query/index). Runtime fixtures drive
+  that projection through the same event sequence; no fixture-specific Rust
+  test is required.
 
 - **UI projection DSL (2026-08-06):** Added a nested `visual.ui` YAML
   assertion block for welcome, shortcuts, and command-palette state. The

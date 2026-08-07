@@ -1,6 +1,6 @@
 # Step 06: Steering + Follow-up queue actors
 
-**Status:** pending
+**Status:** implemented; queue behavior is covered by event/replay tests
 **Depends on:** 05
 
 ## Goal

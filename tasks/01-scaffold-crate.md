@@ -1,6 +1,6 @@
 # Step 01: Scaffold runie-tui crate
 
-**Status:** pending
+**Status:** implemented; historical scaffold record
 **Depends on:** none
 
 ## Goal

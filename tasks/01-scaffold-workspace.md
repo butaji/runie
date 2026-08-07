@@ -1,6 +1,6 @@
 # Step 01: Scaffold workspace from scratch
 
-**Status:** pending
+**Status:** implemented; historical scaffold record
 **Depends on:** none
 
 ## Goal

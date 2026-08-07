@@ -1,6 +1,6 @@
 # Step 09: Integration test (TestBackend)
 
-**Status:** pending
+**Status:** implemented; runtime YAML replay is now the canonical integration surface
 **Depends on:** 08
 
 ## Goal

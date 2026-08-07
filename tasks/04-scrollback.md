@@ -1,6 +1,6 @@
 # Step 04: Scrollback widget
 
-**Status:** pending
+**Status:** implemented; Grok typed-card parity remains active in p16/p21
 **Depends on:** 03
 
 ## Goal

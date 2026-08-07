@@ -1,6 +1,6 @@
 # Step 08: App loop
 
-**Status:** pending
+**Status:** implemented; live event delivery and ownership are tracked in p36/p47
 **Depends on:** 07
 
 ## Goal

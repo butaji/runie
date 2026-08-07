@@ -1,6 +1,6 @@
 # Step 10: Binary entrypoint + README
 
-**Status:** pending
+**Status:** implemented; provider wiring remains intentionally adapter-owned
 **Depends on:** 09
 
 ## Goal

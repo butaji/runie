@@ -1,6 +1,6 @@
 # Step 07: ToolExecutorActor (sequential + parallel)
 
-**Status:** pending
+**Status:** implemented; provider-specific tool capabilities remain in p37
 **Depends on:** 06
 
 ## Goal

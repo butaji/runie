@@ -1,6 +1,6 @@
 # Step 02: Scaffold runie-core crate skeleton
 
-**Status:** pending
+**Status:** implemented; historical scaffold record
 **Depends on:** 01
 
 ## Goal

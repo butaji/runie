@@ -1,6 +1,6 @@
 # Step 05: Prompt widget
 
-**Status:** pending
+**Status:** implemented; Grok interaction refinements remain in p14/p21
 **Depends on:** 04
 
 ## Goal

@@ -1,6 +1,6 @@
 # Step 03: Port core types
 
-**Status:** pending
+**Status:** implemented; remaining Pi extensions are tracked in p30/p37
 **Depends on:** 02
 
 ## Goal

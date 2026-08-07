@@ -1,6 +1,6 @@
 # Step 02: Layout
 
-**Status:** pending
+**Status:** implemented; active parity refinements are tracked in p17/p26
 **Depends on:** 01
 
 ## Goal
