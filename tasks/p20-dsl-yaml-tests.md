@@ -175,6 +175,16 @@ actor; `visual-activity-mixed.yaml` asserts the resulting visible `⌄` marker f
   after `Ctrl+P → new → PaletteEnter`, exercising the pure core-event mapping
   through the live mailbox without recompilation.
 
+- **Shortcut overlay fixture (2026-08-06):** Added `visual-shortcuts.yaml`
+  and a declarative `Ctrl+X` step. It validates the actor-owned shortcuts
+  overlay and reset-safe palette fields through the runtime fixture discovery
+  path.
+
+- **Shortcut renderer extraction (2026-08-06):** Moved the pure shortcut
+  overlay projection from the binary into `widgets::shortcuts`, then reused it
+  from production and YAML rendering. This keeps declarative visibility in
+  `UiState` and terminal painting in one renderer implementation.
+
 - **Actor workflow state oracle (2026-08-06):** YAML `state.workflows` now
   compares the complete actor-owned workflow projection (identity, objective,
   phase/state, active-agent count, terminal status, and elapsed time) by stable

@@ -1,0 +1,17 @@
+name: visual-shortcuts
+description: Grok shortcut help is an actor-owned overlay controlled by Ctrl+X.
+events: []
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    steps:
+      - Ctrl+X
+    ui:
+      show_welcome: false
+      shortcuts_open: true
+      command_palette_open: false
+      command_palette_query: ""
+      command_palette_index: 0
+    screen_text:
+      - "Shortcuts"

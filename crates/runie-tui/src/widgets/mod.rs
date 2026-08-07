@@ -3,6 +3,7 @@
 pub mod command_palette;
 pub mod prompt;
 pub mod scrollback;
+pub mod shortcuts;
 pub mod status;
 pub mod welcome;
 

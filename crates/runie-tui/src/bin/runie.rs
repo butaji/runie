@@ -38,33 +38,6 @@ use runie_tui::widgets::{PromptOutcome, PromptWidget, Scrollback, Status, Status
 /// Placeholder StreamFn: emits a single "Hello from runie!" then Done.
 struct PlaceholderStream;
 
-fn render_shortcuts(area: Rect, buf: &mut Buffer, theme: runie_core::types::ThemeKind) {
-    let width = 38.min(area.width.saturating_sub(2));
-    let height = 8.min(area.height.saturating_sub(2));
-    if width < 10 || height < 3 {
-        return;
-    }
-    let panel = Rect {
-        x: area.x + area.width.saturating_sub(width) / 2,
-        y: area.y + area.height.saturating_sub(height) / 2,
-        width,
-        height,
-    };
-    ratatui::widgets::Widget::render(
-        ratatui::widgets::Paragraph::new(
-            "Enter  send\nShift+Tab  cycle mode\nCtrl+C  clear / abort\nEsc  clear prompt\nCtrl+L  file search\ne  fold/unfold feed",
-        )
-        .block(
-            ratatui::widgets::Block::default()
-                .style(runie_tui::appearance::base_style_for(theme))
-                .title(" Shortcuts ")
-                .borders(ratatui::widgets::Borders::ALL),
-        ),
-        panel,
-        buf,
-    );
-}
-
 fn render_command_palette(
     area: Rect,
     buf: &mut Buffer,
@@ -366,7 +339,7 @@ async fn run_app(
             .slots()
             .any(|slot| slot == runie_tui::view::Slot::ShortcutsOverlay)
         {
-            render_shortcuts(frame.area(), frame.buffer_mut(), status.theme());
+            runie_tui::widgets::shortcuts::render(frame.area(), frame.buffer_mut(), status.theme());
         }
         if view
             .slots()
@@ -632,7 +605,7 @@ async fn run_app(
                             .slots()
                             .any(|slot| slot == runie_tui::view::Slot::ShortcutsOverlay)
                         {
-                            render_shortcuts(frame_area, buf, status.theme());
+                            runie_tui::widgets::shortcuts::render(frame_area, buf, status.theme());
                         }
                         if view
                             .slots()

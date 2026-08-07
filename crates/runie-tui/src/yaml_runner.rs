@@ -2544,6 +2544,11 @@ pub async fn render_visual_buffer(
             app.hide_welcome().await;
             continue;
         }
+        if step == "Ctrl+X" {
+            app.toggle_shortcuts().await;
+            app.hide_welcome().await;
+            continue;
+        }
         if step == "Ctrl+P" || step == "?" {
             app.toggle_command_palette().await;
             continue;
@@ -3025,6 +3030,9 @@ fn draw_visual_frame(
                     palette.command_palette_index,
                 )
                 .render(f.area(), f.buffer_mut());
+            }
+            if palette.shortcuts_open {
+                crate::widgets::shortcuts::render(f.area(), f.buffer_mut(), theme);
             }
             f.set_cursor_position(app.prompt.snapshot().cursor_position(prompt_area));
         })
