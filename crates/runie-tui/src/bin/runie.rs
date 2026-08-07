@@ -547,15 +547,11 @@ async fn run_app(
             _ = tick.tick() => {
                 // Input has already crossed the owned async input actor's
                 // mailbox; rendering never touches the terminal reader.
-                // If a burst arrived between select wake-ups, keep the
-                // dispatch loop reactive instead of spacing characters by
-                // the render cadence. The key handler may `continue` the
-                // outer select loop, so arm the immediate wake before it
-                // enters that handler.
-                if pending_keys.len() > 1 {
-                    tick.reset_immediately();
-                }
-                if let Some(key) = pending_keys.pop_front() {
+                // Drain the owned FIFO in this dispatch turn. Input delivery
+                // must not be paced by the render cadence: every queued key
+                // is awaited through the prompt/UI actor in order, and the
+                // next terminal frame observes the complete reduced state.
+                while let Some(key) = pending_keys.pop_front() {
                         if key.kind == KeyEventKind::Press {
                             if app.ui.snapshot().command_palette_open
                                 && key.code == KeyCode::Esc

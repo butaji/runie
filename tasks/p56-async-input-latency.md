@@ -12,17 +12,18 @@ visible input delay.
 
 ## Change
 
-Use `Interval::reset_immediately()` after enqueueing input. The existing
-single-owner input actor and FIFO pending-key queue remain unchanged; the
-dispatch wake-up now occurs immediately without blocking the async loop or
-mutating another actor's state. A second burst-path guard re-arms that
-immediate wake whenever more than one key is queued, preventing the one-key-per
-render-tick handler from reintroducing 50 ms gaps inside a fast prompt.
+Use `Interval::reset_immediately()` after enqueueing input and drain the
+single-owner FIFO in one async dispatch turn. The dispatch path no longer
+spaces characters across render ticks: each key is still reduced by the owning
+prompt/UI actor in order, and rendering only observes the resulting snapshot.
+This removes the last render-cadence dependency from burst input while keeping
+the terminal reader and actor mailboxes asynchronous.
 
 ## Verification
 
 - `cargo fmt --all -- --check`
 - `cargo test -p runie-tui --bin runie`
+- burst dispatch drains `Hey` in one actor turn without a render-tick delay
 - `just ci`
 
 The protected user files `AGENTS.md` and
