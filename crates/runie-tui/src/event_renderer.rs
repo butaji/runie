@@ -2260,35 +2260,43 @@ mod tests {
         assert_eq!(status.snapshot().current(), &Status::Thinking);
     }
 
-    #[test]
-    fn message_update_appends_text_to_assistant_line() {
-        let (mut r, sb, _) = new_renderer();
-        r.apply_event(AgentEvent::AgentStart);
-        r.apply_event(AgentEvent::MessageStart {
-            message: AgentMessage::Assistant(runie_core::types::AssistantMessage {
-                content: vec![],
-                stop_reason: None,
-                model: "t".into(),
-                timestamp: 0,
-                ..runie_core::types::AssistantMessage::default()
-            }),
-        });
-        r.apply_event(AgentEvent::MessageUpdate {
-            message: AgentMessage::Assistant(runie_core::types::AssistantMessage {
-                content: vec![AssistantContent::Text { text: "hi".into() }],
-                stop_reason: None,
-                model: "t".into(),
-                timestamp: 0,
-                ..runie_core::types::AssistantMessage::default()
-            }),
-            event: AssistantMessageEvent::TextDelta {
-                index: 0,
-                delta: "Hello".into(),
-                partial: runie_core::types::AssistantMessage::default(),
-            },
-        });
-        let snap = sb.lock().find_first_containing("Hello").is_some();
-        assert!(snap);
+    #[tokio::test]
+    async fn actor_message_update_appends_text_to_assistant_line() {
+        let scrollback = ScrollbackActor::new();
+        let status = StatusActor::new();
+        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status, false);
+        renderer.apply_actor_event(AgentEvent::AgentStart).await;
+        renderer
+            .apply_actor_event(AgentEvent::MessageStart {
+                message: AgentMessage::Assistant(runie_core::types::AssistantMessage {
+                    content: vec![],
+                    stop_reason: None,
+                    model: "t".into(),
+                    timestamp: 0,
+                    ..runie_core::types::AssistantMessage::default()
+                }),
+            })
+            .await;
+        renderer
+            .apply_actor_event(AgentEvent::MessageUpdate {
+                message: AgentMessage::Assistant(runie_core::types::AssistantMessage {
+                    content: vec![AssistantContent::Text { text: "hi".into() }],
+                    stop_reason: None,
+                    model: "t".into(),
+                    timestamp: 0,
+                    ..runie_core::types::AssistantMessage::default()
+                }),
+                event: AssistantMessageEvent::TextDelta {
+                    index: 0,
+                    delta: "Hello".into(),
+                    partial: runie_core::types::AssistantMessage::default(),
+                },
+            })
+            .await;
+        assert!(scrollback
+            .snapshot()
+            .find_first_containing("Hello")
+            .is_some());
     }
 
     #[test]

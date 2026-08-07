@@ -94,6 +94,12 @@ feed/status snapshots. Its legacy lock-based setup was removed, and the
 unused `Projection::legacy_arc` escape hatch was deleted. Remaining legacy
 tests are still quarantined and are the next migration slices.
 
+**Second compatibility migration (2026-08-08):** Assistant text-delta
+coverage now drives `MessageStart`/`MessageUpdate` through
+`apply_actor_event` and asserts the feed actor snapshot. The old lock-based
+message-update test was removed; production and replay delivery remain on the
+same actor path.
+
 ## Verification
 
 - event sequences prove mode changes, busy rejection, abort, and completion
