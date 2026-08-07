@@ -95,6 +95,14 @@ The same fixture now asserts the full pure preparation partition: history,
 split-turn prefix, retained tail, and `tokens_before`. Async summarization and
 event publication remain separate because they require an owned actor.
 
+## Completed slice (2026-08-07, actor-owned preparation)
+
+`SessionActor::prepare_compaction` now routes deterministic token estimates and
+the retention budget through its mailbox and returns the pure preparation
+result asynchronously. The actor remains the sole reader of live session
+state; no caller mutates or races a snapshot. Summary generation and the
+event-owned `CompactionCreated` journal mutation remain the next boundary.
+
 ## Current Runie mapping
 
 `runie-core/src/session.rs` owns parent-linked message/config entries and

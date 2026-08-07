@@ -1023,6 +1023,11 @@ enum Command {
     Import(SessionSnapshot, oneshot::Sender<()>),
     Reset(oneshot::Sender<()>),
     Flush(oneshot::Sender<()>),
+    PrepareCompaction {
+        token_estimates: Vec<u64>,
+        keep_recent_tokens: u64,
+        reply: oneshot::Sender<Result<Option<CompactionPreparation>, String>>,
+    },
 }
 
 #[derive(Clone)]
@@ -1112,6 +1117,17 @@ impl SessionActor {
                     }
                     Command::Flush(reply) => {
                         let _ = reply.send(());
+                    }
+                    Command::PrepareCompaction {
+                        token_estimates,
+                        keep_recent_tokens,
+                        reply,
+                    } => {
+                        let _ = reply.send(prepare_compaction_entries(
+                            &state.entries,
+                            &token_estimates,
+                            keep_recent_tokens,
+                        ));
                     }
                 }
             }
@@ -1224,6 +1240,32 @@ impl SessionActor {
 
     pub async fn flush(&self) {
         let _ = mailbox_ack!(self.tx, Command::Flush);
+    }
+
+    /// Ask the session owner to prepare compaction from its current state.
+    /// Callers provide deterministic token estimates; no snapshot mutation or
+    /// summarization occurs in this command.
+    pub async fn prepare_compaction(
+        &self,
+        token_estimates: Vec<u64>,
+        keep_recent_tokens: u64,
+    ) -> Result<Option<CompactionPreparation>, String> {
+        let (reply_tx, reply_rx) = oneshot::channel();
+        if self
+            .tx
+            .send(Command::PrepareCompaction {
+                token_estimates,
+                keep_recent_tokens,
+                reply: reply_tx,
+            })
+            .await
+            .is_err()
+        {
+            return Err("session actor compaction request was not acknowledged".into());
+        }
+        reply_rx
+            .await
+            .map_err(|_| "session actor compaction response was dropped".to_owned())?
     }
 }
 
@@ -1579,6 +1621,22 @@ mod tests {
         assert_eq!(preparation.turn_prefix_indices, vec![0]);
         assert_eq!(preparation.retained_indices, vec![1]);
         assert_eq!(preparation.tokens_before, 80);
+    }
+
+    #[tokio::test]
+    async fn actor_owns_compaction_preparation_through_mailbox() {
+        let actor = SessionActor::new();
+        actor.append(user("request")).await;
+        actor
+            .append(AgentMessage::Assistant(Default::default()))
+            .await;
+        let preparation = actor
+            .prepare_compaction(vec![40, 40], 20)
+            .await
+            .expect("actor response")
+            .expect("non-empty preparation");
+        assert_eq!(preparation.retained_indices, vec![1]);
+        assert_eq!(actor.snapshot().entries.len(), 2);
     }
 
     #[test]
