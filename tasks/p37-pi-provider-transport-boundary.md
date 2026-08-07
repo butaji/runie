@@ -1,6 +1,6 @@
 # p37 — Pi provider transport boundary
 
-Status: in progress
+Status: in progress (HTTP/replay boundary complete; WebSocket adapter is a planned provider-specific slice)
 
 The Pi `ProviderRequestOptions` contract is broader than Runie's current
 `HttpActor` abstraction. This task records the exact boundary so parity work
@@ -91,6 +91,41 @@ classified until that boundary exists.
 
 The YAML fixture asserts `websocket_connect_timeout_ms: 2500`, preserving this
 Pi option for a future WebSocket adapter without claiming behavioral support.
+
+## WebSocket source audit (2026-08-07)
+
+Scanning every Pi AI source reference shows that WebSocket is not a generic
+HTTP concern. Pi currently implements it only in
+`packages/ai/src/api/openai-codex-responses.ts`, where the provider adapter:
+
+- resolves a provider-specific WebSocket URL from `model.baseUrl`;
+- builds provider-specific headers and sends a Responses request envelope;
+- opens the socket with an injectable/runtime WebSocket constructor;
+- applies the open-handshake timeout only until the socket opens;
+- parses socket messages into the same assistant event stream as SSE;
+- retries selected pre-stream failures, including connection-limit and missing
+  continuation cases;
+- records per-session debug statistics and activates an SSE fallback after a
+  failed WebSocket attempt; and
+- owns cached socket lifetime and cleanup for session/account pairs.
+
+This means adding `tokio-tungstenite` to the generic `runie-core` HTTP actor
+would be incorrect: it would have no provider URL resolver, wire envelope,
+message decoder, continuation cache, fallback policy, or actor-owned cleanup
+contract. Runie currently carries the transport facts through events and
+`HttpRequest`; the next valid implementation is a provider-scoped
+`OpenAICodexWebSocketActor` (or an injected WebSocket adapter) with those
+responsibilities explicit. Until that adapter exists, selecting a WebSocket
+transport must remain an observable typed request fact and must not silently
+pretend to stream over HTTP.
+
+The event boundary required for that adapter is:
+
+`ProviderCommand::Request` → owned transport actor → `AgentEvent` stream →
+provider/session/status/feed actors.
+
+Socket lifecycle, fallback state, and debug counters belong to the transport
+actor; no renderer, loop driver, or sibling actor may mutate them directly.
 
 ## Typed request promotion (2026-08-06)
 
