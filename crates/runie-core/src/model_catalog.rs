@@ -61,10 +61,12 @@ impl Default for ModelCatalogSnapshot {
     }
 }
 
+#[allow(clippy::large_enum_variant)]
 enum ModelCatalogCommand {
     Load(Vec<Model>, mpsc::Sender<()>),
     SetScope(Vec<ScopedModel>, mpsc::Sender<()>),
     Search(String, bool, mpsc::Sender<()>),
+    Select(Model, mpsc::Sender<Option<Model>>),
     Cycle(CycleDirection, mpsc::Sender<Option<Model>>),
 }
 
@@ -119,6 +121,14 @@ impl ModelCatalogActor {
         mailbox_call!(
             self.tx,
             |reply| ModelCatalogCommand::Cycle(direction, reply),
+            None
+        )
+    }
+
+    pub async fn select(&self, model: Model) -> Option<Model> {
+        mailbox_call!(
+            self.tx,
+            |reply| ModelCatalogCommand::Select(model, reply),
             None
         )
     }
@@ -192,6 +202,15 @@ async fn run_model_catalog_worker(
                         model: snapshot.selected.clone(),
                     },
                     Either::Model(reply, snapshot.selected.clone()),
+                )
+            }
+            ModelCatalogCommand::Select(model, reply) => {
+                snapshot.selected = Some(model.clone());
+                (
+                    ModelCatalogEvent::SelectionChanged {
+                        model: Some(model.clone()),
+                    },
+                    Either::Model(reply, Some(model)),
                 )
             }
         };

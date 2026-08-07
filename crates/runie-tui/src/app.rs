@@ -302,6 +302,7 @@ pub struct App {
     pub loop_actor: LoopActor,
     pub bus: EventBus,
     pub ui: UiActor,
+    pub model_catalog: runie_core::model_catalog::ModelCatalogActor,
     submission_tx: SubmissionTx,
     _submission_owner: std::sync::Arc<runie_core::task_owner::TaskOwner>,
 }
@@ -348,6 +349,7 @@ impl App {
             loop_actor,
             bus,
             ui,
+            model_catalog: runie_core::model_catalog::ModelCatalogActor::new(),
             submission_tx,
             _submission_owner: submission_owner,
         }
@@ -366,6 +368,7 @@ impl App {
             loop_actor,
             bus,
             ui,
+            model_catalog: runie_core::model_catalog::ModelCatalogActor::new(),
             submission_tx,
             _submission_owner: submission_owner,
         }
@@ -393,14 +396,16 @@ impl App {
                 let Some((provider, model)) = reference.split_once('/') else {
                     return false;
                 };
-                self.loop_actor
-                    .set_model(Model {
-                        id: model.to_owned(),
-                        name: model.to_owned(),
-                        provider: provider.to_owned(),
-                        ..Model::default()
-                    })
-                    .await;
+                let selected = Model {
+                    id: model.to_owned(),
+                    name: model.to_owned(),
+                    provider: provider.to_owned(),
+                    ..Model::default()
+                };
+                let Some(selected) = self.model_catalog.select(selected).await else {
+                    return false;
+                };
+                self.loop_actor.set_model(selected).await;
                 true
             }
             MappableBuiltinCommand::Name { name } => {
