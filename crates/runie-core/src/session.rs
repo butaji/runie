@@ -230,7 +230,7 @@ pub fn estimate_message_tokens(message: &AgentMessage) -> u64 {
             .content
             .iter()
             .map(|content| match content {
-                crate::types::UserContent::Text { text } => text.len() as u64,
+                crate::types::UserContent::Text { text } => pi_text_units(text),
                 crate::types::UserContent::Image { .. } => ESTIMATED_IMAGE_CHARS,
             })
             .sum(),
@@ -239,11 +239,11 @@ pub fn estimate_message_tokens(message: &AgentMessage) -> u64 {
             .iter()
             .map(|content| match content {
                 crate::types::AssistantContent::Text { text }
-                | crate::types::AssistantContent::Thinking { text } => text.len() as u64,
+                | crate::types::AssistantContent::Thinking { text } => pi_text_units(text),
                 crate::types::AssistantContent::ToolCall(call) => {
-                    call.name.len() as u64
+                    pi_text_units(&call.name)
                         + serde_json::to_string(&call.arguments)
-                            .map(|value| value.len() as u64)
+                            .map(|value| pi_text_units(&value))
                             .unwrap_or_default()
                 }
             })
@@ -252,14 +252,20 @@ pub fn estimate_message_tokens(message: &AgentMessage) -> u64 {
             .content
             .iter()
             .map(|content| match content {
-                crate::types::ToolResultContent::Text { text } => text.len() as u64,
+                crate::types::ToolResultContent::Text { text } => pi_text_units(text),
                 crate::types::ToolResultContent::Image { .. } => ESTIMATED_IMAGE_CHARS,
             })
             .sum(),
-        AgentMessage::CompactionSummary(message) => message.summary.len() as u64,
+        AgentMessage::CompactionSummary(message) => pi_text_units(&message.summary),
         AgentMessage::Custom(_) => 0,
     };
     chars.saturating_add(3) / 4
+}
+
+/// JavaScript's `String.length` counts UTF-16 code units, which is the unit
+/// used by Pi's token heuristic rather than Rust's UTF-8 byte length.
+fn pi_text_units(text: &str) -> u64 {
+    text.encode_utf16().count() as u64
 }
 
 /// Estimate context tokens using the latest valid assistant usage and the
@@ -2238,6 +2244,7 @@ mod tests {
             user(ONE_TOKEN_OF_TEXT),
         ];
         assert_eq!(estimate_message_tokens(&messages[0]), 2);
+        assert_eq!(estimate_message_tokens(&user("😀😀😀")), 2);
         assert_eq!(
             estimate_context_tokens(&messages),
             ContextUsageEstimate {

@@ -252,6 +252,10 @@ and invalid terminal usage. The summarization actor still owns when this
 estimate is requested and published as an event; these functions do not mutate
 session or provider state.
 
+The estimator now counts UTF-16 code units, matching JavaScript `String.length`
+for non-ASCII/astral Unicode text; a three-emoji regression prevents a silent
+UTF-8-byte-count drift from Pi.
+
 ### Completed slice (2026-08-07, compaction context boundary)
 
 `SessionSnapshot::compaction_context_projection` is now a pure projection of
