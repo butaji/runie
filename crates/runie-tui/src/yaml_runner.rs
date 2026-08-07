@@ -3315,7 +3315,7 @@ pub async fn render_visual_buffer(
             .await
             .map_err(|_| "waiting capture ended before tool execution".to_owned())?;
         captured_events = Some(collected.lock().clone());
-        app.loop_actor.abort();
+        app.loop_actor.abort().await;
         if let Some(run) = active_run.take() {
             let _ = run.await;
         }

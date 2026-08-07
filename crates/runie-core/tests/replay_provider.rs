@@ -422,7 +422,7 @@ async fn every_trace_uses_its_yaml_expectations_and_runs_through_core() {
             while !*started_rx.borrow() {
                 let _ = started_rx.changed().await;
             }
-            test.actor.abort();
+            test.actor.abort().await;
             let _ = release_tx.send(true);
             let output = run.await.unwrap().unwrap();
             assert!(output.iter().any(|message| matches!(

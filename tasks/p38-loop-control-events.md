@@ -43,14 +43,22 @@ follow-up mode watch channels. Setters emit `LoopControlEvent` values, and the
 loop, queue drainers, public readers, and YAML outcome all read the unified
 `LoopControlSnapshot` projection.
 
+## Control mailbox closure (2026-08-06)
+
+The unified control snapshot is now reduced by an owned
+`LoopControlCommand` mailbox rather than `watch::send_modify` from public
+methods. Run start, finish, abort, and queue-mode changes all enter the same
+acknowledged reducer; the abort signal is emitted by that reducer, so
+`abort().await` returns only after cancellation intent has crossed the actor
+boundary. Existing loop and replay tests were updated to await this delivery
+and remain sleep-free.
+
 ## Remaining design
 
-Add a private `LoopCommand` mailbox and a loop-control reducer owned by
-`LoopActor` for the remaining observable control transitions. Public control
-methods should send commands and await acknowledgements; the reducer emits
-typed control events/snapshots for mode changes, busy state, abort, and run
-completion. Keep Pi's closed `AgentEvent` wire contract unchanged: these are
-Runie application events and must not be smuggled into `PiAgentEvent`.
+The loop-control reducer itself is now mailbox-owned and acknowledged; it
+emits typed control snapshots without changing Pi's closed `AgentEvent` wire
+contract. The remaining boundary here is migrating the compatibility widget
+adapter to pure event-to-view projection fed by actor snapshots.
 
 Replace compatibility widget mutation with a pure event-to-view projection
 fed by the actor snapshot. The renderer should only consume immutable

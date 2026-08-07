@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use tokio::sync::{watch, Mutex, OwnedSemaphorePermit, Semaphore};
+use tokio::sync::{mpsc, oneshot, watch, Mutex, OwnedSemaphorePermit, Semaphore};
 use tokio::task::JoinHandle;
 
 use crate::events::{EventBus, SubscriberRegistry};
@@ -13,7 +13,6 @@ use crate::r#loop::driver::{
     run_loop, ApiKeyResolver, ConvertToLlm, RunLoopDeps, RunLoopOutcome, TransformContext,
 };
 use crate::state::AgentStateActor;
-#[cfg(test)]
 use crate::task_owner::{spawn_owned_worker, TaskOwner};
 use crate::tools::executor::ToolExecHooks;
 use crate::tools::ToolExecutorActor;
@@ -69,6 +68,10 @@ fn reduce_control(snapshot: &mut LoopControlSnapshot, event: LoopControlEvent) {
         LoopControlEvent::SteeringModeChanged(mode) => snapshot.steering_mode = mode,
         LoopControlEvent::FollowUpModeChanged(mode) => snapshot.follow_up_mode = mode,
     }
+}
+
+enum LoopControlCommand {
+    Reduce(LoopControlEvent, oneshot::Sender<()>),
 }
 
 #[derive(Clone)]
@@ -129,9 +132,9 @@ struct Inner {
     /// "Agent is already processing a prompt" rejection).
     running: Arc<Semaphore>,
     /// Abort channel sender (pi `Agent.abort()`).
-    abort_tx: tokio::sync::watch::Sender<bool>,
-    control_tx: watch::Sender<LoopControlSnapshot>,
+    control_commands: mpsc::Sender<LoopControlCommand>,
     control_rx: watch::Receiver<LoopControlSnapshot>,
+    _control_owner: Arc<TaskOwner>,
 }
 
 impl LoopActor {
@@ -144,14 +147,30 @@ impl LoopActor {
             steering_mode: deps.steering_mode,
             follow_up_mode: deps.follow_up_mode,
         });
+        let (control_commands, mut commands) = mpsc::channel(32);
+        let abort_tx_for_control = abort_tx.clone();
+        let control_owner = spawn_owned_worker!(async move {
+            while let Some(LoopControlCommand::Reduce(event, reply)) = commands.recv().await {
+                if matches!(
+                    event,
+                    LoopControlEvent::RunStarted | LoopControlEvent::AbortCleared
+                ) {
+                    let _ = abort_tx_for_control.send(false);
+                } else if matches!(event, LoopControlEvent::AbortRequested) {
+                    let _ = abort_tx_for_control.send(true);
+                }
+                control_tx.send_modify(|snapshot| reduce_control(snapshot, event));
+                let _ = reply.send(());
+            }
+        });
         Self {
             inner: Arc::new(Inner {
                 deps,
                 current: Mutex::new(None),
                 running: Arc::new(Semaphore::new(1)),
-                abort_tx,
-                control_tx,
+                control_commands,
                 control_rx,
+                _control_owner: control_owner,
             }),
         }
     }
@@ -164,9 +183,9 @@ impl LoopActor {
         // Busy guard: ownership of the single permit spans the complete run
         // (pi agent.ts:340), so no mutable boolean is shared across callers.
         let _run_permit = self.acquire_run().await?;
-        self.publish_control(LoopControlEvent::RunStarted);
+        self.reduce_control(LoopControlEvent::RunStarted).await;
         let result = self.run_inner(prompts, context, false).await;
-        self.publish_control(LoopControlEvent::RunFinished);
+        self.reduce_control(LoopControlEvent::RunFinished).await;
         result
     }
 
@@ -229,9 +248,9 @@ impl LoopActor {
         context: AgentContext,
     ) -> Result<Vec<AgentMessage>, LoopError> {
         let _run_permit = self.acquire_run().await?;
-        self.publish_control(LoopControlEvent::RunStarted);
+        self.reduce_control(LoopControlEvent::RunStarted).await;
         let result = self.continue_inner(context).await;
-        self.publish_control(LoopControlEvent::RunFinished);
+        self.reduce_control(LoopControlEvent::RunFinished).await;
         result
     }
 
@@ -349,7 +368,8 @@ impl LoopActor {
 
     /// Controls how steering messages are drained on subsequent turns.
     pub async fn set_steering_mode(&self, mode: QueueMode) {
-        self.publish_control(LoopControlEvent::SteeringModeChanged(mode));
+        self.reduce_control(LoopControlEvent::SteeringModeChanged(mode))
+            .await;
     }
 
     pub async fn steering_mode(&self) -> QueueMode {
@@ -358,22 +378,29 @@ impl LoopActor {
 
     /// Controls how follow-up messages are drained on subsequent turns.
     pub async fn set_follow_up_mode(&self, mode: QueueMode) {
-        self.publish_control(LoopControlEvent::FollowUpModeChanged(mode));
+        self.reduce_control(LoopControlEvent::FollowUpModeChanged(mode))
+            .await;
     }
 
     pub async fn follow_up_mode(&self) -> QueueMode {
         self.inner.control_rx.borrow().follow_up_mode
     }
 
-    pub fn abort(&self) {
-        let _ = self.inner.abort_tx.send(true);
-        self.publish_control(LoopControlEvent::AbortRequested);
+    pub async fn abort(&self) {
+        self.reduce_control(LoopControlEvent::AbortRequested).await;
     }
 
-    fn publish_control(&self, event: LoopControlEvent) {
-        self.inner
-            .control_tx
-            .send_modify(|snapshot| reduce_control(snapshot, event));
+    async fn reduce_control(&self, event: LoopControlEvent) {
+        let (reply, done) = oneshot::channel();
+        if self
+            .inner
+            .control_commands
+            .send(LoopControlCommand::Reduce(event, reply))
+            .await
+            .is_ok()
+        {
+            let _ = done.await;
+        }
     }
 
     pub fn control_snapshot(&self) -> LoopControlSnapshot {

@@ -233,7 +233,7 @@ async fn abort_interrupts_active_stream_and_marks_partial_assistant() {
         let _ = started_rx.changed().await;
     }
 
-    test.actor.abort();
+    test.actor.abort().await;
     let output = run.await.expect("run task").expect("prompt completes");
     let assistant = output
         .iter()
@@ -411,7 +411,7 @@ async fn abort_stops_a_continuously_tool_using_run() {
     while !*started_rx.borrow() {
         let _ = started_rx.changed().await;
     }
-    test.actor.abort();
+    test.actor.abort().await;
     let _ = release_tx.send(true);
 
     let outcome = run.await.expect("run task").expect("run completes");

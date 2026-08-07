@@ -445,7 +445,7 @@ async fn run_app(
                                     continue;
                                 }
                                 Action::Abort => {
-                                    app.loop_actor.abort();
+                                    app.loop_actor.abort().await;
                                     continue;
                                 }
                                 Action::ModeCycle => {
