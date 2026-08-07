@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use tokio::sync::{watch, Mutex};
+use tokio::sync::{watch, Mutex, OwnedSemaphorePermit, Semaphore};
 use tokio::task::JoinHandle;
 
 use crate::events::{EventBus, SubscriberRegistry};
@@ -97,7 +97,7 @@ struct Inner {
     current: Mutex<Option<JoinHandle<RunLoopOutcome>>>,
     /// True while a run is in flight; guards concurrent `prompt()` (pi's
     /// "Agent is already processing a prompt" rejection).
-    running: Mutex<bool>,
+    running: Arc<Semaphore>,
     /// Abort channel sender (pi `Agent.abort()`).
     abort_tx: tokio::sync::watch::Sender<bool>,
     /// Owns the bus-to-registry dispatch task for this actor lifetime.
@@ -123,7 +123,7 @@ impl LoopActor {
                 follow_up_mode_tx,
                 follow_up_mode_rx,
                 current: Mutex::new(None),
-                running: Mutex::new(false),
+                running: Arc::new(Semaphore::new(1)),
                 abort_tx,
                 _subscriber_bridge: subscriber_bridge,
                 _pi_subscriber_bridge: pi_subscriber_bridge,
@@ -136,16 +136,10 @@ impl LoopActor {
         prompts: Vec<AgentMessage>,
         context: AgentContext,
     ) -> Result<Vec<AgentMessage>, LoopError> {
-        // Busy guard: only one run at a time (pi agent.ts:340).
-        {
-            let mut running = self.inner.running.lock().await;
-            if *running {
-                return Err(LoopError::Busy);
-            }
-            *running = true;
-        }
+        // Busy guard: ownership of the single permit spans the complete run
+        // (pi agent.ts:340), so no mutable boolean is shared across callers.
+        let _run_permit = self.acquire_run().await?;
         let result = self.run_inner(prompts, context, false).await;
-        *self.inner.running.lock().await = false;
         result
     }
 
@@ -206,9 +200,8 @@ impl LoopActor {
         &self,
         context: AgentContext,
     ) -> Result<Vec<AgentMessage>, LoopError> {
-        self.acquire_run().await?;
+        let _run_permit = self.acquire_run().await?;
         let result = self.continue_inner(context).await;
-        self.release_run().await;
         result
     }
 
@@ -231,17 +224,12 @@ impl LoopActor {
         self.run_inner(vec![], context, false).await
     }
 
-    async fn acquire_run(&self) -> Result<(), LoopError> {
-        let mut running = self.inner.running.lock().await;
-        if *running {
-            return Err(LoopError::Busy);
-        }
-        *running = true;
-        Ok(())
-    }
-
-    async fn release_run(&self) {
-        *self.inner.running.lock().await = false;
+    async fn acquire_run(&self) -> Result<OwnedSemaphorePermit, LoopError> {
+        self.inner
+            .running
+            .clone()
+            .try_acquire_owned()
+            .map_err(|_| LoopError::Busy)
     }
 
     async fn drain_steering_for_continue(&self) -> Vec<AgentMessage> {

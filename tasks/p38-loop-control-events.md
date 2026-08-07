@@ -21,14 +21,18 @@ Steering and follow-up queue modes now travel through actor-owned Tokio
 latest immutable projection; the loop snapshots the mode at run start. This
 removes the direct mutex writes without changing Pi's event wire contract.
 
+Prompt admission now uses one actor-owned semaphore permit spanning the whole
+run. Busy rejection is therefore an ownership failure, and permit release is
+scope-based even when the run returns an error.
+
 ## Remaining design
 
 Add a private `LoopCommand` mailbox and a loop-control reducer owned by
-`LoopActor`. Public control methods send commands and await acknowledgements;
-the reducer emits typed control events/snapshots for mode changes, busy state,
-abort, and run completion. Keep Pi's closed `AgentEvent` wire contract
-unchanged: these are Runie application events and must not be smuggled into
-`PiAgentEvent`.
+`LoopActor` for the remaining observable control transitions. Public control
+methods should send commands and await acknowledgements; the reducer emits
+typed control events/snapshots for mode changes, busy state, abort, and run
+completion. Keep Pi's closed `AgentEvent` wire contract unchanged: these are
+Runie application events and must not be smuggled into `PiAgentEvent`.
 
 Replace compatibility widget mutation with a pure event-to-view projection
 fed by the actor snapshot. The renderer should only consume immutable
