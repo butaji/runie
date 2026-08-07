@@ -3638,6 +3638,19 @@ mod tests {
         assert_eq!(preparation.turn_prefix_indices, vec![0]);
         assert_eq!(preparation.retained_indices, vec![1]);
         assert_eq!(preparation.tokens_before, 80);
+        let request = CompactionSummaryRequest::from_preparation(&preparation, &entries, None)
+            .expect("provider request");
+        assert_eq!(request.history, Vec::<AgentMessage>::new());
+        assert_eq!(request.turn_prefix, vec![user("request")]);
+        assert!(matches!(
+            request.retained_tail.as_slice(),
+            [AgentMessage::Assistant(_)]
+        ));
+        let invalid = CompactionPreparation {
+            history_indices: vec![99],
+            ..preparation
+        };
+        assert!(CompactionSummaryRequest::from_preparation(&invalid, &entries, None).is_err());
     }
 
     #[test]
