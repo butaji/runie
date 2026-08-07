@@ -55,6 +55,22 @@ macro_rules! assistant_event_kind {
     }};
 }
 
+/// Build an owned event sequence for compact Rust-side helpers.
+///
+/// YAML remains the preferred no-recompile fixture format; this macro is for
+/// small typed tests and adapters that already have event expressions. It has
+/// no reducer or side effects: the caller still transfers each event through
+/// the owning actor/bus.
+#[macro_export]
+macro_rules! event_sequence {
+    ($($event:expr),* $(,)?) => {
+        ::std::vec![$($event),*]
+    };
+    ($event:expr; $count:expr) => {
+        ::std::vec![$event; $count]
+    };
+}
+
 /// Declare a small string-backed action registry without hand-written label
 /// matching. The expansion remains a plain enum plus readable `from_label`
 /// match, so callers can inspect it with `cargo expand`.
@@ -150,5 +166,23 @@ mod tests {
             }),
             "Error"
         );
+    }
+
+    #[test]
+    fn event_sequence_macro_only_constructs_owned_values() {
+        let events = crate::event_sequence![
+            crate::types::AgentEvent::AgentStart,
+            crate::types::AgentEvent::TurnStart,
+        ];
+        assert!(matches!(
+            events.as_slice(),
+            [
+                crate::types::AgentEvent::AgentStart,
+                crate::types::AgentEvent::TurnStart,
+            ]
+        ));
+
+        let repeated = crate::event_sequence![crate::types::AgentEvent::Reset; 2];
+        assert_eq!(repeated.len(), 2);
     }
 }

@@ -29,6 +29,12 @@
       "title": "Move loop control state and compatibility rendering behind events and snapshots"
     },
     {
+      "id": "p39",
+      "file": "p39-event-sequence-dsl.md",
+      "status": "in_progress",
+      "title": "Provide a side-effect-free typed event-sequence DSL beneath YAML fixtures"
+    },
+    {
       "id": "p35",
       "file": "p35-scrollback-model-reducer.md",
       "status": "done",
