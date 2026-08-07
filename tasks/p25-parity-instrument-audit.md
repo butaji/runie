@@ -792,3 +792,21 @@ settled footer. The helper now captures the pane after literal prompt
 injection and rejects the run as `prompt_injection_mismatch` unless the exact
 declared prompt is visible before Enter. Partial-input casts can no longer be
 mistaken for application parity evidence.
+
+Assistant-body token increment (2026-08-07): the first valid 80×24 Grok/Runie
+settled comparison contained 251 differing cells, including 238 style-only
+cells. Tracing the assistant row found that the live overlay computed its body
+range only from the user cursor; assistant rows therefore fell through to
+terminal-default foreground instead of the `text.assistant` theme token. The
+pure renderer now derives the assistant body end from the last non-empty cell
+before its timestamp, and a live-layout unit test asserts the resolved token.
+The remaining comparison deltas include runtime timestamps, elapsed time,
+response-provider wording, and other dynamic values, so they are retained as
+separate evidence dimensions rather than conflated with this stable styling
+bug.
+
+Prompt injection reliability increment (2026-08-07): the capture driver now
+sends ordinary named tmux key events with a bounded per-key interval rather
+than literal-string injection. This follows the same input path as a user and
+prevents the PTY from accepting only the first character of `Hey`; the exact
+prompt visibility check remains the acceptance gate.

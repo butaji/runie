@@ -1236,15 +1236,34 @@ impl Scrollback {
                     buf.cell((*x, row_y))
                         .is_some_and(|cell| cell.symbol() == "❯")
                 });
-                let body_end = pointer.map(|start| {
-                    (start + 1..area.x.saturating_add(area.width))
+                let body_end = if let Some(start) = pointer {
+                    Some(
+                        (start + 1..area.x.saturating_add(area.width))
+                            .rev()
+                            .find(|x| {
+                                buf.cell((*x, row_y))
+                                    .is_some_and(|cell| !cell.symbol().trim().is_empty())
+                            })
+                            .unwrap_or(start),
+                    )
+                } else if *kind == LineKind::CompletedAssistant {
+                    // Assistant rows have no user pointer. Their themed body
+                    // extends through the final non-empty cell before the
+                    // right-aligned timestamp; otherwise the overlay would
+                    // reset every assistant body cell to the terminal default.
+                    let end = timestamp_start
+                        .map(|start| start.saturating_sub(1))
+                        .unwrap_or(area.width as usize)
+                        .min(area.width.saturating_sub(1) as usize);
+                    (area.x..=area.x.saturating_add(end as u16))
                         .rev()
                         .find(|x| {
                             buf.cell((*x, row_y))
                                 .is_some_and(|cell| !cell.symbol().trim().is_empty())
                         })
-                        .unwrap_or(start)
-                });
+                } else {
+                    None
+                };
                 for x in area.x..area.x.saturating_add(area.width) {
                     let index = usize::from(x - area.x);
                     let color = if timestamp_start.is_some_and(|start| index >= start) {
@@ -3024,12 +3043,18 @@ mod tests {
         let mut scrollback = Scrollback::new();
         scrollback.append(Line::new(LineKind::Assistant, "Hello from Runie"));
         scrollback.normalize_live_completed_assistants();
+        scrollback.set_live_grok_layout(true);
 
         assert_eq!(scrollback.lines()[0].kind, LineKind::CompletedAssistant);
         let mut buffer = Buffer::empty(Rect::new(0, 0, 30, 1));
         scrollback.render(Rect::new(0, 0, 30, 1), &mut buffer);
         let cell = buffer.cell((3, 0)).expect("assistant body");
-        assert_eq!(cell.fg, Color::Rgb(225, 225, 225));
+        assert_eq!(
+            cell.fg,
+            appearance::assistant_body_style_for(ThemeKind::GrokNight)
+                .fg
+                .expect("assistant body token")
+        );
         assert!(!cell.modifier.contains(Modifier::DIM));
     }
 

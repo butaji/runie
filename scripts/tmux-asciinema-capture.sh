@@ -131,11 +131,12 @@ sleep 0.2
 # character events to Runie.
 while IFS= read -r -n 1 character; do
     if [[ -n "$character" ]]; then
-        # Literal mode is required per character: plain tmux arguments can be
-        # interpreted as key names, while a burst of crossterm events can be
-        # coalesced/dropped before Runie's bounded input worker receives it.
-        tmux send-keys -t "$session" -l "$character"
-        sleep 0.03
+        # Send one key event per character. Literal paste mode can coalesce or
+        # drop trailing bytes in crossterm editors; named key events preserve
+        # the editor's ordinary-character path. Keep a bounded gap so both
+        # Grok and Runie's async input workers acknowledge each character.
+        tmux send-keys -t "$session" "$character"
+        sleep 0.08
     fi
 done <<< "$prompt"
 injected_screen=$(tmux capture-pane -p -t "$session" 2>/dev/null || true)
