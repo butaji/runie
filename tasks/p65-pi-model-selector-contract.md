@@ -1,6 +1,6 @@
 # P65 — Pi model selector and scoped-model contract
 
-Status: catalog semantics implemented; actor/selector UI open (2026-08-08)
+Status: catalog semantics and async actor implemented; selector UI/refresh adapter open (2026-08-08)
 
 ## Source contract
 
@@ -23,8 +23,9 @@ Authoritative sources:
 ## Current Runie boundary
 
 Runie now also has a pure `ModelCatalog` contract with YAML-driven search and
-scoped-cycle coverage. Runie has an actor-owned `ModelChanged` event and a
-YAML-tested explicit
+scoped-cycle coverage, plus `ModelCatalogActor` with an owned worker, mailbox,
+acknowledged commands, and a watch snapshot carrying typed catalog/selection
+events. Runie has an actor-owned `ModelChanged` event and a YAML-tested explicit
 `/model provider/model` route. It does not yet own a model catalog, scoped
 model projection, async refresh result, selection query/index, or cycle
 direction. The current route must therefore remain explicit and must not claim
