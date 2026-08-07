@@ -54,6 +54,12 @@ The capture helper remains an external instrument, not production state. Its
 bounded polling is intentionally limited to detecting terminal readiness and
 settled output; it does not mutate Runie's state.
 
+UI mailbox DSL closure (2026-08-06): the `UiActor` acknowledged-message path
+now uses the shared `mailbox_ack!` expansion. This removes duplicated one-shot
+plumbing while preserving the rule that every UI state transition enters via
+an explicit `UiMsg` and is reduced by the owning actor before the caller
+continues.
+
 ## Async ownership audit (2026-08-06)
 
 All production task creation is owned:
