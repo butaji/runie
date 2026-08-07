@@ -84,3 +84,8 @@ configuration state inside the loop's owned option snapshot.
 Pi's `timeoutMs` is now carried as `SimpleStreamOptions::timeout_ms` and
 enforced by the async `HttpActor` boundary. Timeout cancellation is covered
 with a pending-future test; no blocking sleep is used.
+
+`maxRetries` is likewise carried as `SimpleStreamOptions::max_retries` and
+implemented as bounded, actor-local retry attempts around the async transport.
+The deterministic flaky transport fixture proves two failures followed by a
+successful third attempt, without sleeps or detached tasks.

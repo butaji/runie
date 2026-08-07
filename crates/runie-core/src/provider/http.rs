@@ -45,18 +45,27 @@ pub trait HttpActor: Send + Sync + 'static {
                 StreamError::Invalid(format!("payload hook serialization failed: {error}"))
             })?,
         };
-        let response = if let Some(timeout_ms) = options.as_ref().and_then(|o| o.timeout_ms) {
-            tokio::time::timeout(
-                std::time::Duration::from_millis(timeout_ms),
-                self.post(request_body),
+        let retries = options.as_ref().and_then(|o| o.max_retries).unwrap_or(0);
+        let mut response = None;
+        let mut last_error = None;
+        for _ in 0..=retries {
+            match post_once(
+                self,
+                request_body.clone(),
+                options.as_ref().and_then(|o| o.timeout_ms),
             )
             .await
-            .map_err(|_| {
-                StreamError::Network(format!("request timed out after {timeout_ms}ms"))
-            })??
-        } else {
-            self.post(request_body).await?
-        };
+            {
+                Ok(value) => {
+                    response = Some(value);
+                    break;
+                }
+                Err(error) => last_error = Some(error),
+            }
+        }
+        let response = response.ok_or_else(|| {
+            last_error.expect("at least one provider attempt must produce a result")
+        })?;
         if let Some(hook) = options
             .as_ref()
             .and_then(|options| options.on_response.clone())
@@ -71,6 +80,23 @@ pub trait HttpActor: Send + Sync + 'static {
             .await;
         }
         Ok(response)
+    }
+}
+
+async fn post_once<A: HttpActor + ?Sized>(
+    actor: &A,
+    body: String,
+    timeout_ms: Option<u64>,
+) -> Result<HttpResponse, StreamError> {
+    if let Some(timeout_ms) = timeout_ms {
+        tokio::time::timeout(
+            std::time::Duration::from_millis(timeout_ms),
+            actor.post(body),
+        )
+        .await
+        .map_err(|_| StreamError::Network(format!("request timed out after {timeout_ms}ms")))?
+    } else {
+        actor.post(body).await
     }
 }
 
@@ -118,6 +144,28 @@ mod tests {
     impl HttpActor for PendingHttp {
         async fn post(&self, _body: String) -> Result<HttpResponse, StreamError> {
             std::future::pending().await
+        }
+    }
+
+    struct FlakyHttp {
+        attempts: Arc<std::sync::atomic::AtomicUsize>,
+    }
+
+    #[async_trait::async_trait]
+    impl HttpActor for FlakyHttp {
+        async fn post(&self, _body: String) -> Result<HttpResponse, StreamError> {
+            let attempt = self
+                .attempts
+                .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            if attempt < 2 {
+                Err(StreamError::Network("transient".into()))
+            } else {
+                Ok(HttpResponse {
+                    status: 200,
+                    headers: Default::default(),
+                    body: String::new(),
+                })
+            }
         }
     }
 
@@ -204,5 +252,25 @@ mod tests {
             .await
             .expect_err("pending request must time out");
         assert!(matches!(error, StreamError::Network(message) if message.contains("1ms")));
+    }
+
+    #[tokio::test]
+    async fn post_with_options_retries_transient_transport_errors() {
+        let attempts = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let response = FlakyHttp {
+            attempts: attempts.clone(),
+        }
+        .post_with_options(
+            "{}".into(),
+            Model::default(),
+            Some(SimpleStreamOptions {
+                max_retries: Some(2),
+                ..Default::default()
+            }),
+        )
+        .await
+        .expect("third attempt succeeds");
+        assert_eq!(response.status, 200);
+        assert_eq!(attempts.load(std::sync::atomic::Ordering::SeqCst), 3);
     }
 }
