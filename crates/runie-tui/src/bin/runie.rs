@@ -262,7 +262,7 @@ async fn run_app(
     let state = AgentStateActor::new();
     let steering = SteeringQueueActor::new();
     let follow_up = FollowUpQueueActor::new();
-    let tool_executor = ToolExecutorActor::new(std::sync::Arc::new(ToolRegistry::new()));
+    let tool_executor = ToolExecutorActor::new_live(std::sync::Arc::new(ToolRegistry::new()));
     let provider = ProviderActor::new(std::sync::Arc::new(PlaceholderStream));
     let deps = LoopDeps {
         state,

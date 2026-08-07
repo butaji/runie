@@ -11,6 +11,13 @@ use crate::types::{
     ToolResultMessage,
 };
 
+fn unix_timestamp_millis() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|duration| duration.as_millis() as i64)
+        .unwrap_or_default()
+}
+
 use super::executor::{execute_parallel, execute_sequential, DispatchOutcome, ToolExecContext};
 use super::registry::ToolRegistry;
 
@@ -51,8 +58,18 @@ impl ToolExecutorActor {
         Self::new_with_timestamp(registry, 0)
     }
 
+    /// Construct the production executor with the runtime clock. Replay and
+    /// unit callers should use `new_with_timestamp` for deterministic output.
+    pub fn new_live(registry: Arc<ToolRegistry>) -> Self {
+        Self::new_with_clock(registry, None)
+    }
+
     /// Construct an executor with an injected deterministic tool-result clock.
     pub fn new_with_timestamp(registry: Arc<ToolRegistry>, tool_result_timestamp: i64) -> Self {
+        Self::new_with_clock(registry, Some(tool_result_timestamp))
+    }
+
+    fn new_with_clock(registry: Arc<ToolRegistry>, tool_result_timestamp: Option<i64>) -> Self {
         let reg = registry.clone();
 
         // OWNER: ToolExecutorActor
@@ -151,7 +168,7 @@ fn aborted_outcome(calls: &[ToolCall], reason: &str) -> ToolOutcome {
 async fn run_tool_worker(
     mut rx: mpsc::Receiver<ToolCommand>,
     registry: Arc<ToolRegistry>,
-    tool_result_timestamp: i64,
+    tool_result_timestamp: Option<i64>,
 ) {
     while let Some(cmd) = rx.recv().await {
         let ToolCommand::Execute {
@@ -183,7 +200,7 @@ async fn run_tool_worker(
             registry: registry.clone(),
             hooks,
             updates: Arc::new(std::sync::Mutex::new(Vec::new())),
-            tool_result_timestamp,
+            tool_result_timestamp: tool_result_timestamp.unwrap_or_else(unix_timestamp_millis),
         };
 
         let outcome: DispatchOutcome = match effective_mode {
