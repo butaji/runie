@@ -5,7 +5,7 @@
 //! provider adapters. Storage backends can consume the immutable snapshot
 //! later without becoming a second state owner.
 
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use tokio::sync::{mpsc, oneshot, watch};
 
@@ -182,7 +182,7 @@ impl SessionSnapshot {
 }
 
 enum Command {
-    Append(Box<AgentMessage>, oneshot::Sender<()>),
+    Append(Box<AgentMessage>, bool, oneshot::Sender<()>),
     Import(SessionSnapshot, oneshot::Sender<()>),
     Reset(oneshot::Sender<()>),
     Flush(oneshot::Sender<()>),
@@ -208,7 +208,7 @@ impl SessionActor {
             let mut next_id = 1_u64;
             while let Some(command) = rx.recv().await {
                 match command {
-                    Command::Append(message, reply) => {
+                    Command::Append(message, terminate, reply) => {
                         state.sequence += 1;
                         let id = format!("entry-{}", next_id);
                         next_id += 1;
@@ -218,7 +218,7 @@ impl SessionActor {
                             parent_id: state.leaf_id.clone(),
                             timestamp: message.timestamp(),
                             message: *message,
-                            terminate: false,
+                            terminate,
                         };
                         state.leaf_id = Some(id);
                         state.entries.push(entry);
@@ -264,12 +264,32 @@ impl SessionActor {
         let tx = actor.tx.clone();
         actor._bus_owner = Some(spawn_owned_worker!(async move {
             let mut events = events;
+            let mut tool_termination = HashMap::<String, bool>::new();
             while let Ok(event) = events.recv().await {
                 match event {
                     AgentEvent::MessageEnd { message } => {
-                        if !mailbox_ack!(tx, |reply| Command::Append(Box::new(message), reply)) {
+                        let terminate = match &message {
+                            AgentMessage::ToolResult(result) => tool_termination
+                                .remove(&result.tool_call_id)
+                                .unwrap_or(false),
+                            _ => false,
+                        };
+                        if !mailbox_ack!(tx, |reply| {
+                            Command::Append(Box::new(message), terminate, reply)
+                        }) {
                             break;
                         }
+                    }
+                    AgentEvent::ToolExecutionEnd {
+                        tool_call_id,
+                        result,
+                        ..
+                    } => {
+                        let terminate = result
+                            .get("terminate")
+                            .and_then(serde_json::Value::as_bool)
+                            .unwrap_or(false);
+                        tool_termination.insert(tool_call_id, terminate);
                     }
                     AgentEvent::Reset if !mailbox_ack!(tx, Command::Reset) => break,
                     AgentEvent::Reset => {}
@@ -281,7 +301,9 @@ impl SessionActor {
     }
 
     pub async fn append(&self, message: AgentMessage) {
-        let _ = mailbox_ack!(self.tx, |reply| Command::Append(Box::new(message), reply));
+        let _ = mailbox_ack!(self.tx, |reply| {
+            Command::Append(Box::new(message), false, reply)
+        });
     }
 
     pub async fn reset(&self) {
@@ -318,7 +340,7 @@ impl Default for SessionActor {
 mod tests {
     use super::*;
     use crate::events::EventBus;
-    use crate::types::{UserContent, UserMessage};
+    use crate::types::{ToolResultContent, ToolResultMessage, UserContent, UserMessage};
 
     fn user(text: &str) -> AgentMessage {
         AgentMessage::User(UserMessage {
@@ -351,6 +373,30 @@ mod tests {
         bus.publish(AgentEvent::Reset);
         tokio::task::yield_now().await;
         assert!(actor.snapshot().entries.is_empty());
+    }
+
+    #[tokio::test]
+    async fn bus_tool_termination_is_attached_to_the_owned_session_entry() {
+        let bus = EventBus::new();
+        let actor = SessionActor::new_with_bus(&bus);
+        bus.publish(AgentEvent::ToolExecutionEnd {
+            tool_call_id: "call-1".into(),
+            tool_name: "stop".into(),
+            result: serde_json::json!({"terminate": true}),
+            is_error: false,
+        });
+        bus.publish(AgentEvent::MessageEnd {
+            message: AgentMessage::ToolResult(ToolResultMessage {
+                tool_call_id: "call-1".into(),
+                tool_name: "stop".into(),
+                content: vec![ToolResultContent::Text {
+                    text: "done".into(),
+                }],
+                ..Default::default()
+            }),
+        });
+        actor.flush().await;
+        assert!(actor.snapshot().entries[0].terminate);
     }
 
     #[tokio::test]

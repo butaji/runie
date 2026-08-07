@@ -238,3 +238,8 @@ claimed by this message-lane increment.
 The runtime `session-restore.yaml` fixture now restores a terminated entry and
 asserts the latest actor-owned entry after the subsequent turn, keeping this
 contract in the no-recompile replay path as well.
+
+Live event delivery now carries the same fact: `SessionActor` owns a
+tool-call-id → termination projection while reducing `ToolExecutionEnd`, then
+attaches it to the matching `MessageEnd` session entry. The mailbox regression
+proves this event sequence without sleeps or direct state mutation.
