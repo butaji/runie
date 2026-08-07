@@ -4,6 +4,9 @@ description: >-
   render one short assistant response with Grok's transcript rail geometry.
 initial_prompt: "Hey"
 prompt_timestamp: "9:27 PM"
+provider_options:
+  sampling_params:
+    temperature: 0.2
 capture:
   prompt: "Hey"
   quit_key: C-q

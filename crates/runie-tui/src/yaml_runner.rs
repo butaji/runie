@@ -40,6 +40,11 @@ pub struct Scenario {
     pub steering_mode: Option<runie_core::types::QueueMode>,
     #[serde(default)]
     pub follow_up_mode: Option<runie_core::types::QueueMode>,
+    /// Provider request options declared by the replay fixture. These stay
+    /// YAML-editable so provider contract experiments do not require Rust
+    /// recompilation.
+    #[serde(default)]
+    pub provider_options: ProviderOptionsSpec,
     #[serde(default)]
     pub tools: Vec<ToolSpec>,
     #[serde(default)]
@@ -53,6 +58,27 @@ pub struct Scenario {
     pub prompt_timestamp: Option<String>,
     #[serde(default)]
     pub assertions: Assertions,
+}
+
+#[derive(Debug, Deserialize, Default, Clone)]
+pub struct ProviderOptionsSpec {
+    #[serde(default)]
+    pub timeout_ms: Option<u64>,
+    #[serde(default)]
+    pub max_retries: Option<u32>,
+    #[serde(default)]
+    pub sampling_params: Option<std::collections::HashMap<String, serde_json::Value>>,
+}
+
+impl ProviderOptionsSpec {
+    fn stream_options(&self) -> runie_core::types::SimpleStreamOptions {
+        runie_core::types::SimpleStreamOptions {
+            timeout_ms: self.timeout_ms,
+            max_retries: self.max_retries,
+            sampling_params: self.sampling_params.clone(),
+            ..Default::default()
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Default, Clone)]
@@ -1435,7 +1461,7 @@ fn build_scenario_loop(scenario: &Scenario) -> Result<(EventBus, LoopActor), Sce
         transform_context: None,
         api_key_resolver: None,
         convert_to_llm: None,
-        stream_options: Default::default(),
+        stream_options: scenario.provider_options.stream_options(),
         abort: None,
         tool_execution_mode: ToolExecutionMode::Parallel,
         steering_mode: scenario.steering_mode.unwrap_or_default(),
@@ -2440,7 +2466,7 @@ pub async fn render_visual_buffer(
         transform_context: None,
         api_key_resolver: None,
         convert_to_llm: None,
-        stream_options: Default::default(),
+        stream_options: scenario.provider_options.stream_options(),
         abort: None,
         tool_execution_mode: ToolExecutionMode::Parallel,
         steering_mode: scenario.steering_mode.unwrap_or_default(),

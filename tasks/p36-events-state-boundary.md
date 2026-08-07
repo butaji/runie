@@ -89,3 +89,8 @@ with a pending-future test; no blocking sleep is used.
 implemented as bounded, actor-local retry attempts around the async transport.
 The deterministic flaky transport fixture proves two failures followed by a
 successful third attempt, without sleeps or detached tasks.
+
+The TUI replay schema now exposes `provider_options` for
+`timeout_ms`/`max_retries`/`sampling_params`; the `visual-hey.yaml` fixture
+uses the sampling field, proving these provider settings can be edited and
+replayed from YAML without recompiling the runner.
