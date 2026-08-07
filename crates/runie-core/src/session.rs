@@ -2994,7 +2994,10 @@ impl SessionActor {
         reason = "session event dispatch keeps each journal variant explicit"
     )]
     pub async fn apply_event(&self, event: &AgentEvent) -> Result<(), String> {
-        if let Some(record) = session_config_record!(event) {
+        if let AgentEvent::CustomSessionEntryCreated { custom_type, data } = event {
+            self.append_custom_entry(custom_type.clone(), data.clone())
+                .await
+        } else if let Some(record) = session_config_record!(event) {
             self.record_config(record).await
         } else if let AgentEvent::SessionLaneChanged {
             lane,

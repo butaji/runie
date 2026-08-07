@@ -78,6 +78,9 @@ payload path without compiling extension-specific test code.
 Pi session operation as an acknowledged async API. It validates the custom
 type before mailbox reduction, preserves opaque data, and has a JSONL
 round-trip regression; callers do not construct or mutate journal entries.
+The shared `SessionActor::apply_event` replay seam routes
+`CustomSessionEntryCreated` through that same API, so YAML and live delivery
+cannot diverge at the reducer boundary.
 
 Compaction payloads now use `CompactionCreated` and preserve summary, retained
 tail, token count, optional details, and usage through the same event, actor,
