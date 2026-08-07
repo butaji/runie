@@ -9,6 +9,7 @@ use tokio::sync::{mpsc, oneshot, watch};
 use crate::task_owner::{spawn_actor_worker, TaskOwner};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum SpanStatus {
     Unset,
     Ok,
@@ -30,6 +31,38 @@ pub struct SpanSnapshot {
 pub struct TelemetrySnapshot {
     pub next_id: u64,
     pub spans: Vec<SpanSnapshot>,
+}
+
+/// Runtime-editable telemetry replay commands. These address the actor
+/// mailbox contract and never expose reducer state to callers.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum TelemetryAction {
+    Start {
+        #[serde(default)]
+        parent_id: Option<u64>,
+        name: String,
+        #[serde(default)]
+        attributes: HashMap<String, serde_json::Value>,
+    },
+    Event {
+        id: u64,
+        name: String,
+    },
+    Status {
+        id: u64,
+        status: SpanStatus,
+    },
+    End {
+        id: u64,
+    },
+}
+
+/// A complete actor replay case, loaded from YAML without recompilation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TelemetryScenario {
+    pub actions: Vec<TelemetryAction>,
+    pub expected: TelemetrySnapshot,
 }
 
 enum TelemetryCommand {
@@ -140,6 +173,53 @@ impl TelemetryActor {
 
     pub fn snapshot(&self) -> TelemetrySnapshot {
         self.snapshot.borrow().clone()
+    }
+
+    /// Apply one declarative replay action through the actor mailbox.
+    pub async fn apply(&self, action: TelemetryAction) -> Option<u64> {
+        match action {
+            TelemetryAction::Start {
+                parent_id,
+                name,
+                attributes,
+            } => self
+                .start_span(parent_id, name, attributes)
+                .await
+                .map(|span| span.id),
+            TelemetryAction::Event { id, name } => {
+                TelemetrySpan {
+                    actor: self.clone(),
+                    id,
+                }
+                .event(name)
+                .await;
+                None
+            }
+            TelemetryAction::Status { id, status } => {
+                TelemetrySpan {
+                    actor: self.clone(),
+                    id,
+                }
+                .status(status)
+                .await;
+                None
+            }
+            TelemetryAction::End { id } => {
+                TelemetrySpan {
+                    actor: self.clone(),
+                    id,
+                }
+                .end()
+                .await;
+                None
+            }
+        }
+    }
+
+    pub async fn replay(&self, actions: impl IntoIterator<Item = TelemetryAction>) {
+        for action in actions {
+            let _ = self.apply(action).await;
+        }
     }
 
     pub async fn start_span(

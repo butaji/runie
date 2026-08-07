@@ -1,0 +1,40 @@
+actions:
+  - type: start
+    name: pi.turn
+    attributes:
+      model: test-model
+  - type: start
+    parent_id: 0
+    name: pi.provider.stream
+  - type: event
+    id: 1
+    name: assistant.event
+  - type: status
+    id: 1
+    status: ok
+  - type: end
+    id: 1
+  - type: status
+    id: 0
+    status: ok
+  - type: end
+    id: 0
+expected:
+  next_id: 2
+  spans:
+    - id: 0
+      parent_id: null
+      name: pi.turn
+      attributes:
+        model: test-model
+      events: []
+      status: ok
+      ended: true
+    - id: 1
+      parent_id: 0
+      name: pi.provider.stream
+      attributes: {}
+      events:
+        - assistant.event
+      status: ok
+      ended: true

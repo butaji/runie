@@ -1,7 +1,7 @@
 # p50 — Pi telemetry actor boundary
 
-Status: actor-owned lifecycle and provider stream projection implemented; YAML
-runtime adapter remains (2026-08-07)
+Status: actor-owned lifecycle, provider projection, and YAML runtime replay
+implemented; full Pi telemetry conformance remains (2026-08-07)
 
 ## Source-backed Pi contract
 
@@ -49,7 +49,9 @@ The renderer must never own spans or infer telemetry from status text.
 3. Emit core lifecycle events for span start, event, exception, and end. All
    mutable span state remains inside the telemetry actor.
 4. Add a YAML runtime fixture with declared span commands and ordered snapshot
-   assertions. Fixture edits must not require recompiling a scenario test.
+   assertions. **Done:** `TelemetryAction`, `TelemetryScenario`, and the
+   runtime-discovered `tests/telemetry_replay.rs` execute YAML actions through
+   the actor mailbox; fixture edits do not require recompiling a scenario test.
 5. Add in-memory conformance vectors for success, async failure, nested spans,
    late child rejection, and exporter absence, without sleeps.
 
@@ -63,7 +65,7 @@ The renderer must never own spans or infer telemetry from status text.
 The provider projection is covered by
 `provider_stream_projects_telemetry_through_owned_capability`; full Pi
 callback nesting, exceptions, exporter behavior, and YAML-declared span
-commands remain open.
+conformance vectors remain open.
 
 Until these conditions exist, p37 and p19 must continue to classify telemetry
 parity as open; no placeholder field should be presented as implementation.
