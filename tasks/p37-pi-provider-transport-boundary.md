@@ -148,6 +148,15 @@ including the `15m`/`1h`/`24h` windows. YAML provider options deserialize and
 carry both values through the owned provider request snapshot; unsupported
 provider behavior remains explicitly adapter-owned.
 
+Deferred provider capability audit (2026-08-07): Pi exposes optional
+`fetchDeferred(model, handle, options)` and `cancelDeferred(model, handle,
+options)` operations, with provider-specific polling/stream decoding and
+cancellation. Runie already preserves `DeferredHandle` and the `deferred`
+request option, but has no provider actor commands for these operations yet.
+The correct next boundary is
+`ProviderCommand::FetchDeferred|CancelDeferred -> owned adapter -> AgentEvent`
+stream; generic HTTP must not emulate these capabilities.
+
 Provider lifecycle increment (2026-08-07): `ProviderActor` now aborts any
 previous owned pump before acknowledging a new `Start`. This matches the
 one-in-flight Pi turn contract and prevents superseded streams from publishing
