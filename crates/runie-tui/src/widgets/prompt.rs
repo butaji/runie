@@ -179,6 +179,35 @@ impl PromptWidget {
         self.file_candidates.sort();
     }
 
+    /// Async actor-owned file-search transition. Terminal input remains
+    /// responsive while filesystem enumeration or preview reads are pending;
+    /// the widget only receives the resulting immutable facts after the
+    /// awaited operation completes.
+    pub async fn open_file_search_async(&mut self) {
+        if let Some(path) = self.selected_file.clone() {
+            self.viewer_lines = match tokio::fs::read_to_string(&path).await {
+                Ok(contents) => contents.lines().take(20).map(str::to_owned).collect(),
+                Err(error) => vec![format!("unable to read {path}: {error}")],
+            };
+            self.mode = InputMode::FileViewer;
+            return;
+        }
+        self.mode = InputMode::FileSearch;
+        self.buffer.clear();
+        self.file_candidate_index = 0;
+        self.file_candidates.clear();
+        if let Ok(mut entries) = tokio::fs::read_dir(".").await {
+            while let Ok(Some(entry)) = entries.next_entry().await {
+                if let Ok(name) = entry.file_name().into_string() {
+                    if !name.starts_with('.') {
+                        self.file_candidates.push(name);
+                    }
+                }
+            }
+        }
+        self.file_candidates.sort();
+    }
+
     pub fn file_search_active(&self) -> bool {
         self.mode == InputMode::FileSearch
     }
@@ -647,6 +676,14 @@ mod tests {
             PromptOutcome::Edited
         );
         assert!(!p.file_search_active());
+    }
+
+    #[tokio::test]
+    async fn async_file_search_keeps_filesystem_work_out_of_sync_reducer() {
+        let mut p = PromptWidget::new();
+        p.open_file_search_async().await;
+        assert!(p.file_search_active());
+        assert!(p.file_candidates.iter().any(|name| name == "Cargo.toml"));
     }
 
     #[test]

@@ -219,7 +219,7 @@ async fn run_prompt_actor(
         tokio::select! {
             message = rx.recv() => {
                 let Some(message) = message else { break };
-                handle_prompt_message(&mut prompt, message);
+                handle_prompt_message(&mut prompt, message).await;
                 let _ = snapshot_tx.send(prompt.model_snapshot());
             }
             event = events.recv() => {
@@ -247,7 +247,11 @@ async fn run_prompt_actor(
     }
 }
 
-fn handle_prompt_message(prompt: &mut PromptWidget, message: PromptMsg) {
+#[allow(
+    clippy::too_many_lines,
+    reason = "prompt mailbox keeps each event-to-state transition explicit"
+)]
+async fn handle_prompt_message(prompt: &mut PromptWidget, message: PromptMsg) {
     match message {
         PromptMsg::Key(key, reply) => {
             let _ = reply.send(prompt.handle_key(key));
@@ -261,7 +265,7 @@ fn handle_prompt_message(prompt: &mut PromptWidget, message: PromptMsg) {
             let _ = reply.send(());
         }
         PromptMsg::OpenFileSearch(reply) => {
-            prompt.open_file_search();
+            prompt.open_file_search_async().await;
             let _ = reply.send(());
         }
         PromptMsg::SetCaption(caption, reply) => {
