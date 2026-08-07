@@ -287,7 +287,6 @@ async fn run_app(
         app.set_theme(ThemeKind::TerminalNative).await;
     }
     let mut ui_commands = app.subscribe_ui_commands();
-    app.refresh_model_caption().await;
     app.prompt
         .set_model_caption("Grok 4.5 (high) · always-approve".into())
         .await;
@@ -374,7 +373,6 @@ async fn run_app(
     loop {
         tokio::select! {
             _ = tick.tick() => {
-                app.refresh_model_caption().await;
                 // Poll the controlling terminal on the render cadence as a
                 // fallback for PTYs whose async reader does not wake.
                 if event::poll(Duration::ZERO).unwrap_or(false) {

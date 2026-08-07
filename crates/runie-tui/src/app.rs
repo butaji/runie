@@ -435,11 +435,6 @@ impl App {
         self.scrollback_actor.apply_batch(messages).await;
     }
 
-    pub async fn refresh_model_caption(&self) {
-        let model = self.loop_actor.state_snapshot().model;
-        self.bus.publish(AgentEvent::ModelChanged { model });
-    }
-
     /// Handle a prompt outcome. Returns Some(text) on submit.
     pub async fn handle_prompt_outcome(&mut self, outcome: PromptOutcome) -> Option<String> {
         match outcome {

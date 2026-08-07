@@ -71,3 +71,13 @@ This remains open by design: removing the compatibility mirror requires
 migrating each replay caller to an actor-backed snapshot without changing its
 deterministic YAML contract. Acceptance remains the full YAML suite plus a
 source audit proving that `with_live_actors` cannot access `Projection::Legacy`.
+
+## Reactive timing audit (2026-08-07)
+
+The interactive binary previously polled `LoopActor::state_snapshot()` every
+50 ms and republished `ModelChanged`, even when no model transition occurred.
+That bypassed the event source and created a synthetic event stream during the
+render tick. The polling path is removed; model captions now change only from
+the state actor's `ModelChanged` event (the deterministic startup caption is
+still an explicit prompt command). Terminal input polling remains an OS input
+fallback, while animation ticks only request actor-owned animation advances.
