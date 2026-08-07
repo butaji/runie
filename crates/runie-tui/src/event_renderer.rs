@@ -281,7 +281,6 @@ pub struct EventRenderer {
     pending_tools: HashMap<String, PendingTool>,
     /// True between MessageStart(assistant) and MessageEnd(assistant).
     in_assistant_stream: bool,
-    in_reasoning: bool,
     reasoning_buffer: String,
     activity_dirs: usize,
     activity_files: usize,
@@ -337,7 +336,6 @@ impl EventRenderer {
             tool_rows: HashMap::new(),
             pending_tools: HashMap::new(),
             in_assistant_stream: false,
-            in_reasoning: false,
             reasoning_buffer: String::new(),
             activity_dirs: 0,
             activity_files: 0,
@@ -797,7 +795,6 @@ impl EventRenderer {
             }
             AgentEvent::Reset => {
                 self.in_assistant_stream = false;
-                self.in_reasoning = false;
                 self.reasoning_buffer.clear();
                 self.streaming_buffer.clear();
             }
@@ -1151,7 +1148,6 @@ impl EventRenderer {
         self.tool_rows.clear();
         self.pending_tools.clear();
         self.in_assistant_stream = false;
-        self.in_reasoning = false;
         self.reasoning_buffer.clear();
         self.activity_dirs = 0;
         self.activity_files = 0;
@@ -1210,7 +1206,6 @@ impl EventRenderer {
     fn handle_message_end(&mut self, message: runie_core::types::AgentMessage) {
         if let runie_core::types::AgentMessage::Assistant(assistant) = message {
             self.in_assistant_stream = false;
-            self.in_reasoning = false;
             if self.scrollback_actor.is_none() {
                 let mut scrollback = self.scrollback.lock();
                 if !scrollback.reasoning_expanded() {
@@ -1261,7 +1256,6 @@ impl EventRenderer {
                 if self.status_actor.is_none() {
                     self.status.lock().set(Status::Streaming);
                 }
-                self.in_reasoning = false;
                 self.streaming_buffer.push_str(&delta);
                 if self.scrollback_actor.is_none() {
                     self.replace_last_assistant_line(&self.streaming_buffer.clone());
@@ -1271,7 +1265,6 @@ impl EventRenderer {
                 if self.status_actor.is_none() {
                     self.status.lock().set(Status::Thinking);
                 }
-                self.in_reasoning = true;
                 self.reasoning_buffer.push_str(&delta);
                 if self.scrollback_actor.is_none() {
                     self.replace_last_reasoning_line(&self.reasoning_buffer.clone());
@@ -2110,7 +2103,6 @@ mod tests {
         assert!(renderer.streaming_buffer.is_empty());
         assert!(renderer.reasoning_buffer.is_empty());
         assert!(!renderer.in_assistant_stream);
-        assert!(!renderer.in_reasoning);
     }
 
     #[test]

@@ -102,6 +102,11 @@ maps are now one typed `PendingTool` map keyed by tool-call ID. This makes the
 identity, mutable header, and completion arguments one reducer-local value;
 there is no opportunity for the two former maps to diverge.
 
+Dead-state cleanup (2026-08-07): removed the compatibility `in_reasoning`
+flag, which was assigned on thinking/text transitions but never read. The
+reasoning buffer remains the sole compatibility text accumulator; live
+reasoning continues to come from the feed actor snapshot.
+
 Assistant metadata ownership increment (2026-08-07): the live
 `with_live_actors` path no longer runs `handle_message_start/update/end` through
 the compatibility metadata reducer. Assistant text/reasoning lifecycle is
