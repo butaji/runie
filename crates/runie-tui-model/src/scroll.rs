@@ -444,6 +444,23 @@ mod tests {
     }
 
     #[test]
+    fn viewport_event_changes_the_next_flush_cap() {
+        let mut state = super::ScrollFlushState::new(ScrollNormalizer::new(1, 20), 10);
+        for at_ms in 0..4 {
+            let (next, _) = state.input_at(at_ms, ScrollDirection::Down);
+            state = next;
+        }
+        assert!(state.flush_due(16));
+        state = state.with_viewport_rows(30);
+        let (state, flush) = state.flush_at(16);
+        assert_eq!(flush.lines, 15);
+        assert_eq!(flush.backlog, 65);
+        assert_eq!(state.last_flush_ms(), Some(16));
+        assert!(!state.flush_due(20));
+        assert!(state.flush_due(32));
+    }
+
+    #[test]
     fn auto_mode_keeps_a_fast_tick_in_wheel_acceleration_band() {
         let normalizer = ScrollNormalizer::default();
         let (normalizer, _) = normalizer.push_at(0, ScrollDirection::Down);
