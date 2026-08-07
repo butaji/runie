@@ -773,3 +773,9 @@ assignments used by the recorded command. Previously the doctor report could
 claim limited color because it inherited the host shell while the cast itself
 was recorded in truecolor mode. This keeps provenance diagnostics aligned with
 the actual PTY capture environment.
+
+Capture-surface validation (2026-08-07): fresh Grok capture testing showed
+that the first-run “Help improve Grok” consent surface can still contain the
+normal footer/settled markers. The capture helper now rejects that surface
+during both prompt readiness and settled-state probing, preventing consent or
+other onboarding overlays from being recorded as scenario parity references.

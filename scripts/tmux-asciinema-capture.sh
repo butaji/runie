@@ -70,6 +70,10 @@ ready=0
 welcome_advanced=0
 for _ in $(seq 1 "$probe_iterations"); do
     screen=$(tmux capture-pane -p -t "$session" 2>/dev/null || true)
+    if printf '%s' "$screen" | grep -Fq 'Help improve Grok'; then
+        echo "blocked by Grok consent surface; complete consent setup before capturing parity" >&2
+        exit 1
+    fi
     # The welcome surface also contains `❯` and `Grok 4.5`; those are not an
     # editable working prompt. Grok advances from that surface with Enter.
     if (( ! welcome_advanced )) \
@@ -123,6 +127,10 @@ tmux send-keys -t "$session" Enter
 settled=0
 for _ in $(seq 1 "$probe_iterations"); do
     screen=$(tmux capture-pane -p -t "$session" 2>/dev/null || true)
+    if printf '%s' "$screen" | grep -Fq 'Help improve Grok'; then
+        echo "blocked by Grok consent surface; refusing invalid settled capture" >&2
+        exit 1
+    fi
     if printf '%s' "$screen" | grep -Fq 'Worked for' \
         && printf '%s' "$screen" | grep -Fq 'Shift+Tab' \
         && ! printf '%s' "$screen" | grep -Fq 'Esc:cancel'; then
