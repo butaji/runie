@@ -73,6 +73,7 @@ assertions:
   state:
     session_lane_records:
       - operation_started
+      - step_attempt
       - usage
       - operation_finished
       - operation_started

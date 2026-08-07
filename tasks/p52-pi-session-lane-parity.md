@@ -265,8 +265,16 @@ When `SessionActor` commits an assistant message whose stop reason is
 target and deferred handle are copied from the assistant message, and its
 identity is the actor-issued journal entry ID. `deferred-response.yaml` now
 asserts the complete lane sequence: operation start, usage, deferred write,
-and operation finish. `step_attempt` remains open because Pi requires the
-eventual result-entry correlation before the attempt can be emitted faithfully.
+and operation finish.
+
+## Completed slice (2026-08-07, correlated step attempt)
+
+The session actor now correlates each committed assistant entry with the
+active operation lane, counts prior attempts for that run, and emits a
+`step_attempt` record containing `runId`, `step: assistant`, the monotonic
+attempt number, and the real actor-assigned `resultEntryId`. Deferred writes
+therefore retain the order `step_attempt`, `usage`, `write_deferred` within the
+same reduction. YAML replay fixtures assert the live record ordering.
 
 ## Implementation order
 

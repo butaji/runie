@@ -47,6 +47,7 @@ assertions:
       data: { batch: deferred-1 }
     session_lane_records:
       - operation_started
+      - step_attempt
       - usage
       - write_deferred
       - operation_finished

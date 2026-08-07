@@ -1328,6 +1328,32 @@ impl SessionActor {
                         if let Some(AgentMessage::Assistant(assistant)) =
                             state.entries.last().map(|entry| entry.message.clone())
                         {
+                            if let Some(run_id) = state
+                                .active_operations
+                                .first_key_value()
+                                .map(|(id, _)| id.clone())
+                            {
+                                let attempt = state
+                                    .lane_records
+                                    .iter()
+                                    .filter(|record| {
+                                        record.record_type == "step_attempt"
+                                            && record
+                                                .data
+                                                .get("runId")
+                                                .and_then(serde_json::Value::as_str)
+                                                == Some(run_id.as_str())
+                                    })
+                                    .count()
+                                    + 1;
+                                let data = serde_json::json!({
+                                    "runId": run_id,
+                                    "step": "assistant",
+                                    "attempt": attempt,
+                                    "resultEntryId": id,
+                                });
+                                reduce_operation_record(&mut state, "step_attempt", &data);
+                            }
                             let data = serde_json::json!({
                                 "entryId": id,
                                 "usage": serde_json::to_value(&assistant.usage)
