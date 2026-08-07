@@ -20,13 +20,12 @@ Source: `crates/runie-tui/src/event_renderer.rs`, `EventRenderer` fields and
 | Current renderer field | State represented | Target actor-owned projection |
 |---|---|---|
 | `tool_rows` | compatibility row identity | `FeedState` tool row identity (already modeled by `tool_row_id`) |
-| `tool_buffers` | compatibility header/update accumulation | `FeedState` live tool block/header |
-| `tool_args` | compatibility tool-card metadata | `FeedState` pending tool metadata |
+| `pending_tools` | compatibility header/update/argument accumulation keyed by tool ID | `FeedState` live tool block/header |
 | `in_assistant_stream` | compatibility stream lifecycle | `FeedState` / core projection (live migrated) |
-| `in_reasoning`, `reasoning_buffer` | compatibility thinking body | `FeedState` reasoning projection (live migrated) |
-| `thinking_elapsed_ms` | compatibility test fallback | `StatusState`/core assistant terminal event (live migrated) |
+| — | reasoning/assistant text body | `FeedState` reasoning/assistant lines (compatibility accumulator removed) |
+| — | thinking duration | `StatusState`/core assistant terminal event (compatibility cache removed) |
 | activity counters and `activity_group_open` | compatibility activity aggregation | `ScrollbackActor` feed activity aggregate (live migrated) |
-| `active_tool_count`, `in_tool_exec` | compatibility pending-tool lifecycle | core state pending-tool projection / feed reducer (live migrated) |
+| — | pending-tool count/lifecycle flag | pending tool identity map / feed reducer (compatibility duplicates removed) |
 | `turn_started` | whether terminal summary is due | `FeedState` / `FeedSnapshot` (migrated) |
 
 The legacy synchronous constructors may retain a compatibility adapter during
@@ -39,9 +38,10 @@ mutexes are confined to synchronous replay/test constructors.
 
 1. Add serializable, renderer-independent pending-tool/activity facts to
    `FeedSnapshot` and pure reducer messages for start/update/end transitions.
-2. Move header accumulation and argument retention into `FeedState`; make the
-   event renderer's tool handlers pure message constructors.
-3. Move reasoning/assistant stream accumulation into the feed reducer while
+2. Move the remaining compatibility header/argument accumulation into
+   `FeedState`; make the event renderer's tool handlers pure message
+   constructors.
+3. Move the remaining assistant lifecycle guard into the feed reducer while
    preserving Pi event ordering and Grok collapsed/expanded projections.
 4. Derive activity summaries and turn-summary eligibility from actor state;
    remove the renderer counters and lifecycle booleans.
