@@ -184,6 +184,19 @@ The following are not yet exact Pi parity:
   context-building, summarization, and `CompactionCreated` result publication
   boundary.
 
+### Queue emission audit (2026-08-07)
+
+Pi's `queue_enqueued` record is not just a notification: it carries the queue
+kind (`steer`, `followUp`, or `nextRun`), the owning `runId` where applicable,
+and a provisioned target entry with a stable entry identity. `queue_cancelled`
+then refers to that entry identity. Runie's queue actors currently own only a
+`Vec<AgentMessage>` and expose push/drain operations; they do not yet allocate
+or publish provisioned entry identities. Emitting a record from `LoopActor`
+with a timestamp- or message-derived ID would not be Pi parity and would make
+replay ambiguous. The required next boundary is therefore queue-actor-owned
+identity allocation plus an event capability that publishes the exact record
+after the mailbox accepts the message.
+
 ## Implementation order
 
 1. Replace the generic Rust operation-record payload with a typed internal
