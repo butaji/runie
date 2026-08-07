@@ -8,6 +8,8 @@ events:
       data:
         id: op-admission
         lane: main
+        seq: 1
+        timestamp: 1
         intent:
           kind: run
   - operation_record:
@@ -15,6 +17,8 @@ events:
       data:
         id: op-admission
         lane: main
+        seq: 2
+        timestamp: 2
         intent:
           kind: run
   - operation_record:
@@ -26,6 +30,8 @@ events:
       data:
         id: op-admission
         lane: main
+        seq: 3
+        timestamp: 3
         outcome: completed
 assertions:
   state:

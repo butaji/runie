@@ -28,6 +28,11 @@ lines. `SessionActor::restore_jsonl` uses this boundary before validated
 import. Unit tests cover both recoverable final corruption and unrecoverable
 middle-of-file corruption.
 
+The validator also accepts legacy pre-storage events while validating the
+complete Pi storage tuple when present: non-empty `lane`, positive `seq`, and
+non-negative `timestamp`. The YAML admission fixture exercises that metadata
+path.
+
 ## Source contract
 
 The authoritative upstream files are:

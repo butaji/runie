@@ -217,6 +217,7 @@ pub fn validate_session_lane_record(
 ) -> Result<SessionLaneRecordKind, String> {
     let kind = session_lane_record_kind(record_type)
         .ok_or_else(|| format!("unknown session lane record type {record_type:?}"))?;
+    validate_session_lane_metadata(record_type, data)?;
     let operation_id = data
         .get("runId")
         .or_else(|| data.get("id"))
@@ -237,6 +238,39 @@ pub fn validate_session_lane_record(
         ));
     }
     Ok(kind)
+}
+
+/// Validate Pi's storage metadata when a wire record carries it. Compatibility
+/// events may carry only a lane because they are created before persistence;
+/// once sequence or timestamp metadata is present, the complete storage tuple
+/// is required.
+pub fn validate_session_lane_metadata(
+    record_type: &str,
+    data: &serde_json::Value,
+) -> Result<(), String> {
+    let has_metadata = ["seq", "timestamp"]
+        .iter()
+        .any(|field| data.get(*field).is_some());
+    if !has_metadata {
+        return Ok(());
+    }
+    let lane = data
+        .get("lane")
+        .and_then(serde_json::Value::as_str)
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| format!("session lane record {record_type:?} has invalid lane"))?;
+    let seq = data
+        .get("seq")
+        .and_then(serde_json::Value::as_u64)
+        .filter(|value| *value > 0)
+        .ok_or_else(|| format!("session lane record {record_type:?} has invalid seq"))?;
+    let timestamp = data
+        .get("timestamp")
+        .and_then(serde_json::Value::as_i64)
+        .filter(|value| *value >= 0)
+        .ok_or_else(|| format!("session lane record {record_type:?} has invalid timestamp"))?;
+    let _ = (lane, seq, timestamp);
+    Ok(())
 }
 
 /// Reduce one Pi operation record into the session-owned lifecycle projection.
@@ -1114,6 +1148,26 @@ mod tests {
             &SessionSnapshot::default(),
             "unknown",
             &serde_json::json!({"id": "record-1"})
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn session_lane_metadata_requires_a_complete_positive_storage_tuple() {
+        let valid = serde_json::json!({
+            "id": "op-1", "lane": "main", "seq": 1, "timestamp": 7
+        });
+        assert!(validate_session_lane_metadata("operation_started", &valid).is_ok());
+        assert!(validate_session_lane_metadata(
+            "operation_started",
+            &serde_json::json!({"id": "op-1", "lane": "main", "seq": 1})
+        )
+        .is_err());
+        assert!(validate_session_lane_metadata(
+            "operation_started",
+            &serde_json::json!({
+                "id": "op-1", "lane": "main", "seq": 0, "timestamp": 7
+            })
         )
         .is_err());
     }
