@@ -28,6 +28,8 @@ acknowledged commands, and a watch snapshot carrying typed catalog/selection
 events. The explicit `/model provider/model` route now selects through this
 actor before `LoopActor` publishes the actor-owned `ModelChanged` event, and a
 YAML-tested explicit
+refresh result path admits successful catalogs and preserves the prior catalog
+on typed refresh failure.
 `/model provider/model` route. It does not yet own a model catalog, scoped
 model projection, async refresh result, selection query/index, or cycle
 direction. The current route must therefore remain explicit and must not claim

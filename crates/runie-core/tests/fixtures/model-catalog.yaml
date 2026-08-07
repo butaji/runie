@@ -13,3 +13,6 @@ cycle:
   current: gpt-5
   forward: grok
   backward: grok
+refresh_failure:
+  message: catalog unavailable
+  preserves_ids: [gpt-5, grok]

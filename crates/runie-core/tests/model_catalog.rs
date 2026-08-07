@@ -8,6 +8,13 @@ struct Fixture {
     scoped: Vec<ScopedFixture>,
     search: SearchFixture,
     cycle: CycleFixture,
+    refresh_failure: RefreshFailureFixture,
+}
+
+#[derive(Debug, Deserialize)]
+struct RefreshFailureFixture {
+    message: String,
+    preserves_ids: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -80,4 +87,11 @@ fn yaml_catalog_cases_reduce_without_recompiling_behavior() {
             .id,
         fixture.cycle.backward
     );
+    let preserved = catalog
+        .available
+        .iter()
+        .map(|model| model.id.clone())
+        .collect::<Vec<_>>();
+    assert_eq!(preserved, fixture.refresh_failure.preserves_ids);
+    assert_eq!(fixture.refresh_failure.message, "catalog unavailable");
 }

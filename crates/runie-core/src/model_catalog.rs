@@ -64,6 +64,7 @@ impl Default for ModelCatalogSnapshot {
 #[allow(clippy::large_enum_variant)]
 enum ModelCatalogCommand {
     Load(Vec<Model>, mpsc::Sender<()>),
+    Refresh(Result<Vec<Model>, String>, mpsc::Sender<()>),
     SetScope(Vec<ScopedModel>, mpsc::Sender<()>),
     Search(String, bool, mpsc::Sender<()>),
     Select(Model, mpsc::Sender<Option<Model>>),
@@ -97,6 +98,16 @@ impl ModelCatalogActor {
         mailbox_call!(
             self.tx,
             |reply| ModelCatalogCommand::Load(models, reply),
+            ()
+        );
+    }
+
+    /// Admit an already-resolved provider refresh result. The provider task
+    /// owns I/O; this actor owns admission and failure immutability.
+    pub async fn refresh(&self, result: Result<Vec<Model>, String>) {
+        mailbox_call!(
+            self.tx,
+            |reply| ModelCatalogCommand::Refresh(result, reply),
             ()
         );
     }
@@ -168,6 +179,24 @@ async fn run_model_catalog_worker(
                     Either::Unit(reply),
                 )
             }
+            ModelCatalogCommand::Refresh(result, reply) => match result {
+                Ok(models) => {
+                    snapshot.catalog.available = models;
+                    snapshot.results = snapshot
+                        .catalog
+                        .search(&snapshot.query, snapshot.scoped_only);
+                    (
+                        ModelCatalogEvent::CatalogLoaded {
+                            count: snapshot.catalog.available.len(),
+                        },
+                        Either::Unit(reply),
+                    )
+                }
+                Err(message) => (
+                    ModelCatalogEvent::RefreshFailed { message },
+                    Either::Unit(reply),
+                ),
+            },
             ModelCatalogCommand::SetScope(models, reply) => {
                 snapshot.catalog.scoped = models;
                 snapshot.results = snapshot
@@ -413,6 +442,22 @@ mod tests {
         assert_eq!(
             actor.snapshot().last_event,
             Some(ModelCatalogEvent::SelectionChanged { model: Some(grok) })
+        );
+    }
+
+    #[tokio::test]
+    async fn failed_refresh_preserves_catalog_and_publishes_typed_failure() {
+        let gpt = model("openai", "gpt-5", "GPT Five");
+        let actor = ModelCatalogActor::new();
+        actor.refresh(Ok(vec![gpt.clone()])).await;
+        actor.refresh(Err("catalog unavailable".into())).await;
+        let snapshot = actor.snapshot();
+        assert_eq!(snapshot.catalog.available, vec![gpt]);
+        assert_eq!(
+            snapshot.last_event,
+            Some(ModelCatalogEvent::RefreshFailed {
+                message: "catalog unavailable".into()
+            })
         );
     }
 }
