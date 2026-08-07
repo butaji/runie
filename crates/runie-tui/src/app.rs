@@ -225,9 +225,10 @@ async fn run_prompt_actor(
             event = events.recv() => {
                 match event {
                     Ok(AgentEvent::Reset) => {
-                        let theme = prompt.model_snapshot().theme;
+                        let snapshot = prompt.model_snapshot();
                         prompt = PromptWidget::new();
-                        prompt.set_theme(theme);
+                        prompt.set_theme(snapshot.theme);
+                        prompt.set_model_caption(snapshot.model_caption);
                         let _ = snapshot_tx.send(prompt.model_snapshot());
                     }
                     Ok(AgentEvent::ThemeChanged { theme }) => {
@@ -784,5 +785,20 @@ mod tests {
             }
         }
         panic!("PromptActor reset discarded the actor-owned theme");
+    }
+
+    #[tokio::test]
+    async fn prompt_reset_preserves_actor_owned_model_caption() {
+        let bus = EventBus::new();
+        let actor = PromptActor::new(&bus);
+        actor.set_model_caption("custom-model (high)".into()).await;
+        bus.publish(AgentEvent::Reset);
+        for _ in 0..4 {
+            tokio::task::yield_now().await;
+            if actor.model_snapshot().model_caption == "custom-model (high)" {
+                return;
+            }
+        }
+        panic!("PromptActor reset discarded the actor-owned model caption");
     }
 }

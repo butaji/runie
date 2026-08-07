@@ -35,6 +35,9 @@ Prompt reset parity (2026-08-07): `PromptActor` now preserves its actor-owned
 theme while rebuilding transient input state for `Reset`, matching the status
 and feed actors' configuration-preserving reset behavior.
 
+The same reset path preserves the actor-owned model caption; only transient
+prompt editing state is rebuilt.
+
 ## Remaining work
 
 1. Make every externally observable TUI transition have a named event/message
