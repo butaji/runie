@@ -234,3 +234,7 @@ validated JSONL v4 projection. A focused regression proves the field survives
 export/import; the broader Pi operation-lane records (`write_deferred`, queue,
 usage, and compaction records) remain separate inventory gaps and are not
 claimed by this message-lane increment.
+
+The runtime `session-restore.yaml` fixture now restores a terminated entry and
+asserts the latest actor-owned entry after the subsequent turn, keeping this
+contract in the no-recompile replay path as well.

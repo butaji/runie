@@ -4,7 +4,7 @@ initial_prompt: "next"
 tools: []
 session_restore: |
   {"kind":"header","version":4,"id":"restored-session","createdAt":5,"cwd":"/workspace"}
-  {"kind":"entry","lane":"main","type":"message","id":"entry-1","parentId":null,"seq":1,"timestamp":7,"message":{"role":"user","content":[{"type":"text","text":"previous"}],"timestamp":7}}
+  {"kind":"entry","lane":"main","type":"message","id":"entry-1","parentId":null,"seq":1,"timestamp":7,"terminate":true,"message":{"role":"user","content":[{"type":"text","text":"previous"}],"timestamp":7}}
 events:
   - start
   - text_delta: "continued"
@@ -25,6 +25,7 @@ assertions:
     is_streaming: false
     messages: 3
     session_entries: 3
+    session_last_terminate: false
   transcript_contains:
     - "next"
     - "continued"

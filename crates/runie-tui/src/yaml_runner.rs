@@ -852,6 +852,8 @@ pub struct StateAssertions {
     /// Arguments on the latest assistant tool call after preparation.
     pub tool_call_arguments: Option<serde_json::Value>,
     pub session_entries: Option<usize>,
+    /// Termination metadata on the latest actor-owned session entry.
+    pub session_last_terminate: Option<bool>,
     pub tool_count: Option<usize>,
     /// Ordered labels from the actor-owned registered tool projection.
     pub tool_labels: Option<Vec<String>>,
@@ -2357,6 +2359,19 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         outcome.session.entries.len(),
         "session_entries"
     );
+    if let Some(expected_terminate) = expected.session_last_terminate {
+        let actual_terminate = outcome
+            .session
+            .entries
+            .last()
+            .map(|entry| entry.terminate)
+            .unwrap_or(false);
+        if actual_terminate != expected_terminate {
+            return Err(format!(
+                "session last terminate mismatch: expected {expected_terminate}, got {actual_terminate}"
+            ));
+        }
+    }
     assert_yaml_eq!(expected.tool_count, actual.tools.len(), "tool_count");
     assert_yaml_eq!(
         expected.steering_mode,
