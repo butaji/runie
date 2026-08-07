@@ -1,5 +1,12 @@
 # p16 — TUI: transcript rendering parity (verb-group activity folding, markdown, tool cards, reasoning fold)
 
+**Dense-group screen audit (2026-08-08):** The model contains the ten-member
+`N more` projection, but `visual-activity-dense-collapsed.yaml` currently
+renders member rows at its 80×30 capture and does not show the marker. The
+state-only dense threshold therefore must not be treated as full-screen proof;
+the remaining work is to align the fixture's actual collapsed interaction
+state with Grok and then assert the marker at screen-cell level.
+
 **Latest parity note (2026-08-05):** Grouped activity now retains Grok's
 failure suffix (`· N failed`) after failed directory/file/command tools
 complete. `visual-tool-error.yaml` exercises the contract through the YAML
