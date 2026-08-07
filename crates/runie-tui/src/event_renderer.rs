@@ -7,7 +7,7 @@ use runie_core::types::AssistantContent;
 use runie_core::types::{AgentEvent, AssistantMessageEvent};
 use tokio::sync::broadcast;
 
-use crate::widgets::{Line, LineKind, Scrollback, ScrollbackMsg, StatusBar, StatusMsg};
+use crate::widgets::{Line, LineKind, ScrollbackMsg, StatusMsg};
 use crate::{ScrollbackActor, StatusActor};
 
 #[cfg(test)]
@@ -235,39 +235,9 @@ fn format_error(is_error: bool, error: Option<&str>) -> String {
     }
 }
 
-#[derive(Clone)]
-enum Projection<T> {
-    Actor(std::marker::PhantomData<T>),
-}
-
-impl<T> Projection<T> {
-    fn actor() -> Self {
-        Self::Actor(std::marker::PhantomData)
-    }
-
-    #[cfg(test)]
-    fn lock(&self) -> parking_lot::MutexGuard<'_, T> {
-        match self {
-            Self::Actor(_) => panic!("legacy projection accessed from actor renderer"),
-        }
-    }
-
-    #[cfg(not(test))]
-    fn lock(&self) -> T {
-        // Production projections are actor-backed. A compatibility branch
-        // must never manufacture a default snapshot, which would create a
-        // silent second source of truth.
-        panic!("legacy projection accessed from actor renderer")
-    }
-}
-
 pub struct EventRenderer {
-    scrollback: Projection<Scrollback>,
-    scrollback_actor: Option<ScrollbackActor>,
-    status: Projection<StatusBar>,
-    /// Actor-owned status projection used by the production event loop while
-    /// the compatibility widget projection is being retired.
-    status_actor: Option<StatusActor>,
+    scrollback_actor: ScrollbackActor,
+    status_actor: StatusActor,
     /// If true, the next AgentStart emits the welcome modal lines
     /// (matching grok's minimal-mode chrome) and then clears this flag.
     emit_welcome: bool,
@@ -280,17 +250,13 @@ pub struct EventRenderer {
 }
 
 impl EventRenderer {
-    fn with_projections(
-        scrollback: Projection<Scrollback>,
-        status: Projection<StatusBar>,
-        scrollback_actor: Option<ScrollbackActor>,
-        status_actor: Option<StatusActor>,
+    fn with_actors_inner(
+        scrollback_actor: ScrollbackActor,
+        status_actor: StatusActor,
         emit_welcome: bool,
     ) -> Self {
         Self {
-            scrollback,
             scrollback_actor,
-            status,
             status_actor,
             emit_welcome,
             live_grok_layout: false,
@@ -306,13 +272,7 @@ impl EventRenderer {
         status_actor: StatusActor,
         emit_welcome: bool,
     ) -> Self {
-        Self::with_projections(
-            Projection::actor(),
-            Projection::actor(),
-            Some(scrollback_actor),
-            Some(status_actor),
-            emit_welcome,
-        )
+        Self::with_actors_inner(scrollback_actor, status_actor, emit_welcome)
     }
 
     /// Production interactive projection with Grok's live assistant spacing.
@@ -339,14 +299,8 @@ impl EventRenderer {
         mut rx: broadcast::Receiver<AgentEvent>,
         mut shutdown: tokio::sync::watch::Receiver<bool>,
     ) {
-        let status_actor = self
-            .status_actor
-            .clone()
-            .expect("production EventRenderer::run requires a StatusActor");
-        let scrollback_actor = self
-            .scrollback_actor
-            .clone()
-            .expect("production EventRenderer::run requires a ScrollbackActor");
+        let status_actor = self.status_actor.clone();
+        let scrollback_actor = self.scrollback_actor.clone();
         const ANIMATION_TICK: Duration = Duration::from_millis(50);
         let mut tick = Box::pin(tokio::time::sleep(ANIMATION_TICK));
         loop {
@@ -525,14 +479,8 @@ impl EventRenderer {
         reason = "actor replay keeps one event-to-projection transaction explicit"
     )]
     pub async fn apply_actor_event(&mut self, event: AgentEvent) {
-        let status_actor = self
-            .status_actor
-            .clone()
-            .expect("actor replay requires a StatusActor");
-        let scrollback_actor = self
-            .scrollback_actor
-            .clone()
-            .expect("actor replay requires a ScrollbackActor");
+        let status_actor = self.status_actor.clone();
+        let scrollback_actor = self.scrollback_actor.clone();
         status_actor.apply_event(&event).await;
         let tool_message = match &event {
             AgentEvent::ToolExecutionStart {
@@ -627,11 +575,9 @@ impl EventRenderer {
 
     async fn advance_animation(&self, actor: &StatusActor) {
         actor.apply(StatusMsg::AdvanceAnimation).await;
-        if let Some(scrollback_actor) = &self.scrollback_actor {
-            scrollback_actor
-                .apply(ScrollbackMsg::AdvanceAnimation)
-                .await;
-        }
+        self.scrollback_actor
+            .apply(ScrollbackMsg::AdvanceAnimation)
+            .await;
     }
 
     /// Maintain renderer-local event metadata needed to construct the next
@@ -656,9 +602,7 @@ impl EventRenderer {
             }
             AgentEvent::AgentEnd { .. } => {}
             AgentEvent::TurnStart => {
-                if self.scrollback_actor.is_none() {
-                    self.scrollback.lock().apply(ScrollbackMsg::TurnStart);
-                }
+                // Turn lifecycle is reduced by the actor event mapping.
             }
             AgentEvent::Reset => {}
             // Transcript and assistant lifecycle events are reduced by the
@@ -693,11 +637,7 @@ impl EventRenderer {
     }
 
     fn thinking_elapsed_ms(&self) -> Option<u64> {
-        if let Some(actor) = &self.status_actor {
-            actor.model_snapshot().thinking_elapsed_ms
-        } else {
-            self.status.lock().model_snapshot().thinking_elapsed_ms
-        }
+        self.status_actor.model_snapshot().thinking_elapsed_ms
     }
 
     #[allow(
@@ -711,10 +651,6 @@ impl EventRenderer {
         tool_name: String,
         args: serde_json::Value,
     ) -> ScrollbackMsg {
-        debug_assert!(
-            self.scrollback_actor.is_some(),
-            "tool-start reduction requires the actor-backed feed"
-        );
         let starts_new_activity_group =
             self.active_tool_count() == 0 && !self.activity_group_exists_since_latest_user();
         let counts = self.activity_counts_with_start(&tool_name, starts_new_activity_group);
@@ -752,10 +688,6 @@ impl EventRenderer {
         tool_call_id: String,
         partial_result: serde_json::Value,
     ) -> Option<ScrollbackMsg> {
-        debug_assert!(
-            self.scrollback_actor.is_some(),
-            "tool-update reduction requires the actor-backed feed"
-        );
         // Grok treats transport-only lifecycle updates (for example
         // `{status: "running"}`) as block state, not transcript text. Do not
         // leak those envelopes into a specialized card header.
@@ -767,13 +699,13 @@ impl EventRenderer {
         {
             return None;
         }
-        if self.scrollback_actor.as_ref().is_some_and(|actor| {
-            actor
-                .model_snapshot()
-                .tool_blocks
-                .iter()
-                .any(|block| block.tool_call_id == tool_call_id && block.is_running)
-        }) {
+        if self
+            .scrollback_actor
+            .model_snapshot()
+            .tool_blocks
+            .iter()
+            .any(|block| block.tool_call_id == tool_call_id && block.is_running)
+        {
             if let Some(output) = structured_update_text(&partial_result) {
                 let output_lines = structured_memory_lines(&output);
                 return Some(ScrollbackMsg::ToolUpdate {
@@ -811,10 +743,6 @@ impl EventRenderer {
         result: serde_json::Value,
         is_error: bool,
     ) -> ScrollbackMsg {
-        debug_assert!(
-            self.scrollback_actor.is_some(),
-            "tool-end reduction requires the actor-backed feed"
-        );
         let (
             activity_dirs,
             activity_files,
@@ -890,49 +818,17 @@ impl EventRenderer {
         }
     }
 
-    fn tool_row_index(&self, tool_call_id: &str) -> Option<usize> {
-        if self.scrollback_actor.is_some() {
-            return None;
-        }
-        self.scrollback
-            .lock()
-            .lines()
-            .iter()
-            .enumerate()
-            .rev()
-            .find_map(|(index, line)| {
-                (line.tool_call_id.as_deref() == Some(tool_call_id)
-                    && matches!(
-                        line.kind,
-                        LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
-                    ))
-                .then_some(index)
-            })
-    }
-
     fn active_tool_count(&self) -> usize {
-        if let Some(actor) = &self.scrollback_actor {
-            return actor
-                .model_snapshot()
-                .tool_blocks
-                .iter()
-                .filter(|block| block.is_running)
-                .count();
-        }
-        self.scrollback
-            .lock()
-            .lines()
+        self.scrollback_actor
+            .model_snapshot()
+            .tool_blocks
             .iter()
-            .filter(|line| line.kind == LineKind::ToolRunning)
+            .filter(|block| block.is_running)
             .count()
     }
 
     fn activity_group_exists_since_latest_user(&self) -> bool {
-        let lines = if let Some(actor) = &self.scrollback_actor {
-            actor.model_snapshot().lines
-        } else {
-            self.scrollback.lock().lines().to_vec()
-        };
+        let lines = self.scrollback_actor.model_snapshot().lines;
         let latest_user = lines
             .iter()
             .rposition(|line| line.kind == LineKind::User)
@@ -943,11 +839,7 @@ impl EventRenderer {
     }
 
     fn activity_counts(&self) -> (usize, usize, usize, usize, usize) {
-        let snapshot = self
-            .scrollback_actor
-            .as_ref()
-            .map(|actor| actor.model_snapshot())
-            .unwrap_or_else(|| self.scrollback.lock().model_snapshot());
+        let snapshot = self.scrollback_actor.model_snapshot();
         (
             snapshot.activity_dirs,
             snapshot.activity_files,
@@ -989,35 +881,17 @@ impl EventRenderer {
     }
 
     fn current_tool_header(&self, tool_call_id: &str) -> Option<String> {
-        if let Some(actor) = &self.scrollback_actor {
-            return actor
-                .model_snapshot()
-                .tool_blocks
-                .into_iter()
-                .rev()
-                .find(|block| block.tool_call_id == tool_call_id && block.is_running)
-                .map(|block| block.header);
-        }
-        self.tool_row_index(tool_call_id).and_then(|row| {
-            self.scrollback
-                .lock()
-                .lines()
-                .get(row)
-                .map(|line| line.text.clone())
-        })
+        self.scrollback_actor
+            .model_snapshot()
+            .tool_blocks
+            .into_iter()
+            .rev()
+            .find(|block| block.tool_call_id == tool_call_id && block.is_running)
+            .map(|block| block.header)
     }
 
     fn current_tool_args(&self, tool_call_id: &str) -> serde_json::Value {
-        if let Some(actor) = &self.scrollback_actor {
-            return actor
-                .model_snapshot()
-                .tool_args
-                .get(tool_call_id)
-                .cloned()
-                .unwrap_or(serde_json::Value::Null);
-        }
-        self.scrollback
-            .lock()
+        self.scrollback_actor
             .model_snapshot()
             .tool_args
             .get(tool_call_id)
@@ -1744,15 +1618,7 @@ mod tests {
         let mut renderer = renderer;
         renderer.apply_actor_metadata(AgentEvent::TurnStart);
         renderer.apply_actor_metadata(AgentEvent::AgentEnd { messages: vec![] });
-        assert!(
-            !renderer
-                .scrollback_actor
-                .as_ref()
-                .expect("live feed actor")
-                .model_snapshot()
-                .turn_started
-        );
-        assert!(renderer.scrollback_actor.is_some());
+        assert!(!renderer.scrollback_actor.model_snapshot().turn_started);
     }
 
     #[tokio::test]
@@ -1773,8 +1639,6 @@ mod tests {
         assert!(
             !renderer
                 .scrollback_actor
-                .as_ref()
-                .expect("actor-backed renderer")
                 .model_snapshot()
                 .assistant_stream_open
         );

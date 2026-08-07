@@ -530,3 +530,11 @@ them into a second projection. Direct assistant/reasoning mutation helpers
 and the renderer-local `ScrollbackExt` adapter were deleted. The 23 renderer
 unit tests, YAML replay suite, and visual snapshots continue to validate the
 actor event → snapshot → pure render path.
+
+**Explicit actor-backed renderer (2026-08-08):** With the lifecycle helper
+families migrated, `EventRenderer` no longer stores `Projection<T>` markers or
+optional widget mirrors. Its feed and status handles are required actor
+owners, and all helper reads come from immutable actor snapshots. The former
+panic-only compatibility abstraction and its fallback lock reads are removed;
+the 150 core tests, 23 renderer tests, 28 visual tests, YAML suite, and source
+boundary validators remain green.
