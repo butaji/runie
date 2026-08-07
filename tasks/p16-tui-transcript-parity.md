@@ -733,3 +733,9 @@ reducer transition, then reveal the corresponding dense group. The
 `visual-tool-row-identity.yaml` replay asserts the selected compatibility row
 and member index. This closes the prior split-brain selection projection;
 viewport styling and richer per-member fold ranges remain open.
+
+Renderer identity handoff (2026-08-06): semantic paint-intent lookup now
+resolves the source line's logical member ordinal and requires the matching
+`ToolCardRow.member_index` before applying theme intent. Duplicate text can no
+longer silently borrow the first card's paint role; the renderer consumes the
+actor/model identity instead of rebuilding card ownership from text alone.

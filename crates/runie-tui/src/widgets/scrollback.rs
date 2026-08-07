@@ -1317,6 +1317,10 @@ impl Scrollback {
         }
     }
 
+    #[allow(
+        clippy::too_many_lines,
+        reason = "semantic paint lookup keeps source identity and theme intent together"
+    )]
     fn tool_paint_intent(
         &self,
         kind: LineKind,
@@ -1339,13 +1343,32 @@ impl Scrollback {
             })
             .nth(occurrence)?;
         let id = line.tool_call_id.as_deref()?;
+        let mut member_indices = HashMap::new();
+        let mut next_member_index = 0usize;
+        let member_index = self
+            .lines
+            .iter()
+            .filter_map(|candidate| candidate.tool_call_id.as_ref())
+            .find_map(|candidate_id| {
+                let index = if let Some(index) = member_indices.get(candidate_id) {
+                    *index
+                } else {
+                    let index = next_member_index;
+                    next_member_index += 1;
+                    member_indices.insert(candidate_id.clone(), index);
+                    index
+                };
+                (candidate_id == id).then_some(index)
+            })?;
         let rows = project_tool_card_rows(
             &self.lines,
             &self.navigation.tool_names,
             &self.navigation.tool_modes,
         );
         rows.into_iter()
-            .find(|row| row.tool_call_id == id && row.text == text)
+            .find(|row| {
+                row.tool_call_id == id && row.text == text && row.member_index == member_index
+            })
             .map(|row| row.paint_intent())
     }
 
