@@ -1486,3 +1486,9 @@ cannot prove colors because its terminal stream contains default SGR; enabling
 `exact_attributes` against it correctly fails. Any future parity completion
 claim must close both items with source-backed code review and paired
 full-cell capture evidence.
+
+**Reset-oracle increment (2026-08-07):** The runtime YAML suite now includes a
+`theme → started reasoning turn → reset` scenario. It asserts status/feed
+settlement, theme preservation, and explicit clearing of thinking duration.
+This closes reset-state evidence, but does not change the two authoritative
+full-parity gaps above.
