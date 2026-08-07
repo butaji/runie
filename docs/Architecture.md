@@ -32,6 +32,16 @@ Rules:
 - **The UI layer is pure.** Rendering is `draw(&mut Frame, &Snapshot)`.
 - **Complexity is hidden behind declarative DSLs.** Commands, keybindings, and dialog actions compose as small flows.
 
+The interactive binary owns an asynchronous crossterm `EventStream` worker.
+Key events cross a bounded mailbox before reaching `PromptActor` or `UiActor`;
+the render cadence never reads the terminal directly. Animation ticks are
+separate from input delivery and only request actor-owned animation advances.
+
+`AgentEvent::Reset` is reduced independently by each owning actor. Transient
+turn facts are cleared, while configuration facts such as theme and model
+caption are preserved. The runtime YAML reset fixture verifies the resulting
+multi-actor snapshots without recompilation.
+
 ## Crate map
 
 | Crate | Role |
@@ -75,7 +85,9 @@ Rules:
 ```
 
 The event bus connects long-lived actors. The TUI is a consumer of facts and
-producer of intents; it does not own core state.
+producer of intents; it does not own core state. `watch` snapshots are the
+renderer input; compatibility replay adapters are retained only for older
+deterministic fixtures and are not live state owners.
 
 ## Core concepts
 

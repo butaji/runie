@@ -12,6 +12,14 @@ Grok; its behavior is limited to features supplied by pi-agent-core.
 - **Status bar** — model, usage, waiting state, mode, and hints.
 - **Navigation** — scrolling, selection, and copying for core transcript blocks.
 
+Terminal input is delivered by an owned asynchronous event-stream worker. The
+render loop selects on the input mailbox and its animation tick independently;
+input handling never calls crossterm polling or reads another actor's state.
+
+Reset clears transient prompt, feed, and status facts while preserving the
+selected theme and model caption, matching the actor-owned configuration
+contract.
+
 ## MVU flow
 
 ```text
