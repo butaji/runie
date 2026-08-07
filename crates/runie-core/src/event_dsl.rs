@@ -1,5 +1,26 @@
 //! Declarative event helpers shared by replay and integration harnesses.
 
+/// Declare a closed producer-side enum whose only wire conversion is explicit.
+/// This keeps event payload construction readable while preventing free-form
+/// record-type strings from leaking into actor boundaries.
+#[macro_export]
+macro_rules! wire_kind {
+    ($vis:vis enum $name:ident { $($variant:ident => $wire:literal),+ $(,)? }) => {
+        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+        $vis enum $name {
+            $($variant),+
+        }
+
+        impl $name {
+            const fn wire_name(self) -> &'static str {
+                match self {
+                    $(Self::$variant => $wire),+
+                }
+            }
+        }
+    };
+}
+
 /// Return the stable kind name used by YAML expectations and event oracles.
 ///
 /// The expansion is intentionally a plain readable match: it centralizes

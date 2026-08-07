@@ -75,18 +75,10 @@ pub struct RunLoopOutcome {
     pub new_messages: Vec<AgentMessage>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum OperationRecordKind {
-    Started,
-    Finished,
-}
-
-impl OperationRecordKind {
-    const fn wire_name(self) -> &'static str {
-        match self {
-            Self::Started => "operation_started",
-            Self::Finished => "operation_finished",
-        }
+crate::wire_kind! {
+    enum OperationRecordKind {
+        Started => "operation_started",
+        Finished => "operation_finished",
     }
 }
 

@@ -75,18 +75,10 @@ fn reduce_control(snapshot: &mut LoopControlSnapshot, event: LoopControlEvent) {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum QueueRecordKind {
-    Enqueued,
-    Cancelled,
-}
-
-impl QueueRecordKind {
-    const fn wire_name(self) -> &'static str {
-        match self {
-            Self::Enqueued => "queue_enqueued",
-            Self::Cancelled => "queue_cancelled",
-        }
+crate::wire_kind! {
+    enum QueueRecordKind {
+        Enqueued => "queue_enqueued",
+        Cancelled => "queue_cancelled",
     }
 }
 
