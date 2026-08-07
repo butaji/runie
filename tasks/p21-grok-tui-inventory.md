@@ -187,11 +187,12 @@ The reference feed component matrix is now recorded explicitly:
 | Verb groups | Read, Listed, Searched, Ran, subagent counts; running/past verbs | activity summary projection |
 | Background work | subagent, workflow, task output, waiting reasons | actor-owned lifecycle reducers, workflow/background YAML fixtures, and whole-screen rendering; broader Grok effect variants remain open |
 | Chrome | header meter, status telemetry, prompt/footer, doctor hint | strict feed/waiting frames |
-| Effects | braille/dot spinners, animated accents, overlays, terminal capability paths | demand-driven spinner; broader effects open |
+| Effects | braille/dot spinners, animated accents, overlays, terminal capability paths | actor-owned demand-driven frames with deterministic YAML ticks; terminal capability and broader effect variants remain open |
 
 The strict fixed-grid oracle now covers both the Grok feed and waiting frames;
-component/state fixtures remain the next expansion target for the partial tool
-and effect families above.
+`visual-animation-events.yaml` covers actor cadence and demand without sleeps.
+Component/state fixtures remain the next expansion target for the partial tool
+and terminal-capability effect families above.
 
 Per-tool display state is now event-driven: `ToolDisplayModeChanged` carries a
 tool-call ID and `Collapsed`/`Truncated`/`Expanded` mode. Tool lines retain
