@@ -122,3 +122,8 @@ Queue acknowledgement closure (2026-08-06): steering and follow-up `push`
 and `clear` commands now use the shared `mailbox_ack!` DSL. Queue callers
 observe completion only after the owning reducer has inserted or removed the
 messages, while drain/length operations retain their existing reply path.
+
+Provider acknowledgement closure (2026-08-06): `ProviderActor::cancel` now
+waits for the owned worker to abort its `JoinSet` pumps before returning.
+Cancellation callers therefore observe a settled provider boundary rather
+than merely an enqueued cancel command.

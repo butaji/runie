@@ -21,7 +21,9 @@ pub enum ProviderCommand {
         options: Box<Option<SimpleStreamOptions>>,
         reply: oneshot::Sender<broadcast::Receiver<crate::types::AssistantMessageEvent>>,
     },
-    Cancel,
+    Cancel {
+        reply: oneshot::Sender<()>,
+    },
 }
 
 #[derive(Clone)]
@@ -65,7 +67,15 @@ impl ProviderActor {
     }
 
     pub async fn cancel(&self) {
-        let _ = self.tx.send(ProviderCommand::Cancel).await;
+        let (reply, done) = oneshot::channel();
+        if self
+            .tx
+            .send(ProviderCommand::Cancel { reply })
+            .await
+            .is_ok()
+        {
+            let _ = done.await;
+        }
     }
 }
 
@@ -109,11 +119,12 @@ async fn run_provider_worker(
                     }
                 }
             }
-            ProviderCommand::Cancel => {
+            ProviderCommand::Cancel { reply } => {
                 // pi aborts the active provider request. The actor owns every
                 // pump in this JoinSet, so aborting the set cancels the
                 // in-flight stream without detaching a task.
                 pumps.abort_all();
+                let _ = reply.send(());
             }
         }
     }
