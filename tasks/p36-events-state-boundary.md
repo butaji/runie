@@ -1,6 +1,6 @@
 # p36 — Events are the state-transfer boundary
 
-Status: in progress — actor/event boundary audited and closure criteria recorded; compatibility renderer retirement, strict color proof, and provider-boundary parity remain (2026-08-07)
+Status: in progress — live feed delivery consolidated; compatibility renderer retirement, strict color proof, and provider-boundary parity remain (2026-08-07)
 
 Runie keeps mutable state inside its owning actor. Commands are actor-local
 requests; durable state changes are transferred through `AgentEvent` (core)
@@ -104,6 +104,14 @@ retired.
 The UI reset mapper and actor-owned feed bus mapper now use the same explicit
 classification. New core events must therefore be assigned to a projection,
 or deliberately listed as a no-op, before the workspace compiles.
+
+Live subscription consolidation (2026-08-07): `App` now constructs its
+`ScrollbackActor` without a second bus subscription. `EventRenderer` is the
+single interactive bus-delivery boundary and sends acknowledged feed reducer
+messages to the actor. `ScrollbackActor::new_with_bus` remains available for
+isolated actor integration tests and standalone projections, but it is not
+used by the live app. This removes the possibility that one core event is
+reduced twice by competing feed subscribers.
 
 The compatibility renderer's feed adapter and the actor's background/workflow
 adapter are explicit as well. This keeps the legacy replay path and the live

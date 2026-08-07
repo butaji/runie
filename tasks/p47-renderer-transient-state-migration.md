@@ -2,6 +2,16 @@
 
 Status: in progress — live tool/assistant/turn ownership migrated; compatibility cleanup remains (2026-08-07)
 
+## Single live feed subscription (2026-08-07)
+
+`App` now constructs `ScrollbackActor::new()` and leaves interactive bus
+delivery to `EventRenderer`. Previously the live app also used
+`ScrollbackActor::new_with_bus`, creating a second feed projection subscriber
+alongside the renderer. The actor remains the sole feed-state owner, and every
+live change still arrives as an acknowledged reducer message; only the
+duplicate subscription was removed. The bus-owned constructor remains useful
+for isolated actor integration tests and is not a live `App` path.
+
 ## Production call-site audit (2026-08-07)
 
 An exhaustive search of `EventRenderer` mutation call sites confirms that the

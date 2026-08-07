@@ -305,7 +305,11 @@ impl App {
         Self {
             prompt: PromptActor::new(&bus),
             status_actor: StatusActor::new(),
-            scrollback_actor: ScrollbackActor::new_with_bus(&bus),
+            // EventRenderer is the single live bus-delivery boundary. The
+            // actor still owns the feed state; it receives acknowledged
+            // reducer messages from the renderer, so no second subscription
+            // can reduce the same core event concurrently.
+            scrollback_actor: ScrollbackActor::new(),
             session_actor: SessionActor::new_with_bus(&bus),
             loop_actor,
             bus,
@@ -318,7 +322,9 @@ impl App {
         Self {
             prompt: PromptActor::new(&bus),
             status_actor: StatusActor::new(),
-            scrollback_actor: ScrollbackActor::new_with_bus(&bus),
+            // Keep one event-to-feed path in the interactive app: the
+            // renderer delivers core events to this actor's mailbox.
+            scrollback_actor: ScrollbackActor::new(),
             session_actor: SessionActor::new_with_bus(&bus),
             loop_actor,
             bus,
