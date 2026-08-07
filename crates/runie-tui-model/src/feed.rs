@@ -4,6 +4,85 @@ use std::collections::{HashMap, HashSet};
 
 use runie_core::types::{ThemeKind, ToolDisplayMode};
 
+/// Pure semantic header projection for a tool-start event. Terminal styling
+/// and widget layout stay outside the model; callers provide the workspace
+/// prefix used to shorten absolute paths.
+#[allow(
+    clippy::too_many_lines,
+    reason = "the semantic tool-header DSL keeps Grok aliases together"
+)]
+pub fn tool_header(tool_name: &str, args: &serde_json::Value, workspace: &str) -> String {
+    let path = |value: &str| -> String {
+        value
+            .strip_prefix(workspace)
+            .and_then(|rest| rest.strip_prefix('/'))
+            .filter(|rest| !rest.is_empty())
+            .unwrap_or(value)
+            .to_owned()
+    };
+    let string = |keys: &[&str], fallback: &str| -> String {
+        keys.iter()
+            .find_map(|key| args.get(*key).and_then(serde_json::Value::as_str))
+            .unwrap_or(fallback)
+            .to_owned()
+    };
+    match tool_name {
+        "list_dir" | "list_files" | "ls" => {
+            format!("List {}", path(&string(&["path"], ".")))
+        }
+        "read" | "read_file" => format!("Read {}", path(&string(&["path"], ""))),
+        "edit" | "write" | "write_file" | "search_replace" | "apply_patch" | "strreplace" => {
+            format!("Edit {}", path(&string(&["path", "file_path"], "")))
+        }
+        "search" | "grep" | "find" | "glob" => {
+            let pattern = string(&["pattern", "query"], "");
+            match args
+                .get("path")
+                .or_else(|| args.get("cwd"))
+                .and_then(serde_json::Value::as_str)
+            {
+                Some(value) if !value.is_empty() => {
+                    format!("Search {pattern:?} in {}", path(value))
+                }
+                _ => format!("Search {pattern:?}"),
+            }
+        }
+        "web_search" | "web-search" => format!("Web Search {}", string(&["query", "q"], "")),
+        "web_fetch" | "web-fetch" | "fetch" => {
+            format!("Fetch {}", string(&["url"], ""))
+        }
+        "bash"
+        | "shell"
+        | "exec"
+        | "run"
+        | "execute"
+        | "run_terminal_command"
+        | "run_terminal_cmd" => format!("Run {}", string(&["command", "cmd"], "")),
+        "subagent" | "agent" | "task" => {
+            format!(
+                "Subagent started: {:?}",
+                string(&["description", "task", "prompt"], "")
+            )
+        }
+        "workflow" | "run_workflow" | "run-workflow" => {
+            format!("Workflow {}", string(&["name", "workflow"], ""))
+        }
+        "use" | "use_tool" | "use-tool" => {
+            format!("Use {}", string(&["tool", "name"], ""))
+        }
+        "memory_search" | "memory-search" => {
+            format!("Memory Search {}", string(&["query", "q"], ""))
+        }
+        "todo" | "todo_write" | "todo-write" => {
+            format!("Todo {}", string(&["title", "task"], "Update todos"))
+        }
+        _ => format!(
+            "{tool_name} {}",
+            serde_json::to_string(args).unwrap_or_default()
+        ),
+    }
+}
+
 pub const GROK_GROUP_MAX_VISIBLE: usize = 10;
 
 /// Viewport-relative terminal cell coordinate used by Grok's text selection.

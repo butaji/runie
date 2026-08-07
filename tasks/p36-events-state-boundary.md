@@ -21,6 +21,14 @@ snapshots only and never mutate another actor's state.
 The detailed audit and per-change acceptance checklist are recorded in
 [p48](p48-event-delivery-audit.md).
 
+Pure projection extraction (2026-08-08): `ScrollbackActor` no longer imports
+the renderer's `tool_header` formatter while reducing tool-start events. The
+semantic header DSL now lives in `runie-tui-model`; the actor supplies its
+workspace projection and emits model messages, while terminal rendering stays
+in `runie-tui`. This removes a renderer → actor dependency without adding a
+second state owner; existing actor and YAML tool-card replays remain the
+behavior oracle.
+
 Reset lifecycle increment (2026-08-07): `AgentEvent::Reset` now maps to
 explicit status/feed reset reducers. Status clears terminal turn facts while
 preserving theme/context configuration, and feed clear resets turn-summary

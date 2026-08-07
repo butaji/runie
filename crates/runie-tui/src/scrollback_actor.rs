@@ -32,7 +32,11 @@ impl ScrollbackActor {
         let (snapshot_tx, snapshot) = watch::channel(FeedState::default().snapshot());
         let (tx, owner) = spawn_actor_worker!(32, |mut rx: mpsc::Receiver<Command>| async move {
             let mut state = FeedState::default();
-            let mut projection = OwnedEventProjection::default();
+            let workspace = std::env::current_dir()
+                .ok()
+                .map(|path| path.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            let mut projection = OwnedEventProjection::new(workspace);
             while let Some(command) = rx.recv().await {
                 let (messages, reply) = match command {
                     Command::ApplyBatch(messages, reply) => (messages, reply),
@@ -152,6 +156,7 @@ async fn run_bus_projection(
 /// changes one SSOT and the bridge cannot diverge from direct commands.
 #[derive(Default)]
 struct OwnedEventProjection {
+    workspace: String,
     active_tools: HashSet<String>,
     tool_headers: HashMap<String, String>,
     tool_args: HashMap<String, serde_json::Value>,
@@ -165,6 +170,13 @@ struct OwnedEventProjection {
 }
 
 impl OwnedEventProjection {
+    fn new(workspace: String) -> Self {
+        Self {
+            workspace,
+            ..Self::default()
+        }
+    }
+
     #[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
     fn messages(&mut self, event: AgentEvent) -> Vec<ScrollbackMsg> {
         if let AgentEvent::ToolExecutionStart {
@@ -176,7 +188,7 @@ impl OwnedEventProjection {
             self.active_tools.insert(tool_call_id.clone());
             self.tool_headers.insert(
                 tool_call_id.clone(),
-                crate::event_renderer::tool_header(tool_name, args),
+                runie_tui_model::tool_header(tool_name, args, &self.workspace),
             );
             self.tool_args.insert(tool_call_id.clone(), args.clone());
             self.tool_names
