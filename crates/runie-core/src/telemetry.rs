@@ -18,6 +18,12 @@ pub enum SpanStatus {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SpanError {
+    pub name: String,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SpanSnapshot {
     pub id: u64,
     pub parent_id: Option<u64>,
@@ -25,6 +31,8 @@ pub struct SpanSnapshot {
     pub attributes: HashMap<String, serde_json::Value>,
     pub events: Vec<TelemetryEventSnapshot>,
     pub status: SpanStatus,
+    #[serde(default)]
+    pub error: Option<SpanError>,
     pub ended: bool,
 }
 
@@ -65,6 +73,8 @@ pub enum TelemetryAction {
     Status {
         id: u64,
         status: SpanStatus,
+        #[serde(default)]
+        error: Option<SpanError>,
     },
     End {
         id: u64,
@@ -99,6 +109,7 @@ enum TelemetryCommand {
     Status {
         id: u64,
         status: SpanStatus,
+        error: Option<SpanError>,
         reply: oneshot::Sender<()>,
     },
     End {
@@ -142,6 +153,7 @@ impl TelemetryActor {
                             attributes,
                             events: Vec::new(),
                             status: SpanStatus::Unset,
+                            error: None,
                             ended: false,
                         });
                         let _ = snapshot_tx.send(state.clone());
@@ -179,13 +191,19 @@ impl TelemetryActor {
                         }
                         let _ = reply.send(());
                     }
-                    TelemetryCommand::Status { id, status, reply } => {
+                    TelemetryCommand::Status {
+                        id,
+                        status,
+                        error,
+                        reply,
+                    } => {
                         if let Some(span) = state
                             .spans
                             .iter_mut()
                             .find(|span| span.id == id && !span.ended)
                         {
                             span.status = status;
+                            span.error = error;
                             let _ = snapshot_tx.send(state.clone());
                         }
                         let _ = reply.send(());
@@ -252,12 +270,12 @@ impl TelemetryActor {
                 .await;
                 None
             }
-            TelemetryAction::Status { id, status } => {
+            TelemetryAction::Status { id, status, error } => {
                 TelemetrySpan {
                     actor: self.clone(),
                     id,
                 }
-                .status(status)
+                .status_with_error(status, error)
                 .await;
                 None
             }
@@ -373,6 +391,10 @@ impl TelemetrySpan {
     }
 
     pub async fn status(&self, status: SpanStatus) {
+        self.status_with_error(status, None).await;
+    }
+
+    pub async fn status_with_error(&self, status: SpanStatus, error: Option<SpanError>) {
         let (reply, acknowledged) = oneshot::channel();
         let _ = self
             .actor
@@ -380,6 +402,7 @@ impl TelemetrySpan {
             .send(TelemetryCommand::Status {
                 id: self.id,
                 status,
+                error,
                 reply,
             })
             .await;

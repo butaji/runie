@@ -1,8 +1,8 @@
 # p50 — Pi telemetry actor boundary
 
 Status: actor-owned lifecycle, structured attributes/events, callback-scoped
-settlement, provider projection, and YAML runtime replay implemented; full Pi
-telemetry conformance remains (2026-08-07)
+settlement, structured errors, provider projection, and YAML runtime replay
+implemented; full Pi telemetry conformance remains (2026-08-07)
 
 ## Source-backed Pi contract
 
@@ -51,8 +51,9 @@ The renderer must never own spans or infer telemetry from status text.
    progress:** event attributes and mutable span attributes now use
    acknowledged actor commands, and `TelemetryActor::with_span` settles
    callback success/error through the actor. Exception/error detail and
-   callback nesting remain open. All mutable span state remains inside the
-   telemetry actor.
+   callback nesting remain open. `SpanError` preserves Pi error name/message
+   details through actor status commands. All mutable span state remains inside
+   the telemetry actor.
 4. Add a YAML runtime fixture with declared span commands and ordered snapshot
    assertions. **Done:** `TelemetryAction`, `TelemetryScenario`, and the
    runtime-discovered `tests/telemetry_replay.rs` execute YAML actions through

@@ -1,0 +1,24 @@
+actions:
+  - type: start
+    name: failed-operation
+  - type: status
+    id: 0
+    status: error
+    error:
+      name: UpstreamError
+      message: request failed
+  - type: end
+    id: 0
+expected:
+  next_id: 1
+  spans:
+    - id: 0
+      parent_id: null
+      name: failed-operation
+      attributes: {}
+      events: []
+      status: error
+      error:
+        name: UpstreamError
+        message: request failed
+      ended: true

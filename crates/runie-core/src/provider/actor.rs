@@ -5,7 +5,7 @@ use std::sync::Arc;
 use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio::task::JoinSet;
 
-use crate::telemetry::{SpanStatus, TelemetrySpan};
+use crate::telemetry::{SpanError, SpanStatus, TelemetrySpan};
 use crate::types::{AgentContext, Model, SimpleStreamOptions};
 
 use super::stream_fn::{AssistantMessageEventStream, StreamFn};
@@ -121,7 +121,14 @@ async fn run_provider_worker(
                     }
                     Err(error) => {
                         if let Some(span) = telemetry_span {
-                            span.status(SpanStatus::Error).await;
+                            span.status_with_error(
+                                SpanStatus::Error,
+                                Some(SpanError {
+                                    name: "ProviderError".into(),
+                                    message: error.to_string(),
+                                }),
+                            )
+                            .await;
                             span.end().await;
                         }
                         let receiver = event_tx.subscribe();
