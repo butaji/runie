@@ -40,7 +40,8 @@ live binary and YAML runner: `/new` awaits the loop reset, `/hotkeys` sends a
 actor-owned `ModelChanged` event, `/name` publishes `SessionNameChanged` and
 awaits the session actor, and `/quit` is consumed only by the live application
 exit boundary. `/scoped-models` opens the actor-owned model selector in
-scoped-only mode. Other unsupported commands
+scoped-only mode and re-runs catalog search through the catalog actor before
+projecting rows. Other unsupported commands
 remain ordinary prompt text. `visual-slash-hotkeys.yaml` proves the route without a
 provider submission; `visual-slash-new.yaml` proves reset clears the resulting
 actor-owned message/feed projection, and `visual-slash-model.yaml` proves the

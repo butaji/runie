@@ -430,7 +430,8 @@ impl App {
             }
             MappableBuiltinCommand::ScopedModels => {
                 self.toggle_model_selector().await;
-                self.ui.send(UiMsg::ModelSelectorToggleScope).await;
+                self.model_selector_key(UiMsg::ModelSelectorToggleScope)
+                    .await;
                 true
             }
             MappableBuiltinCommand::Name { name } => {
