@@ -790,17 +790,23 @@ impl EventRenderer {
                 self.emit_welcome = false;
             }
             AgentEvent::AgentEnd { .. } => {
-                self.turn_started = false;
+                if self.scrollback_actor.is_none() {
+                    self.turn_started = false;
+                }
             }
             AgentEvent::TurnStart => {
-                self.turn_started = true;
+                if self.scrollback_actor.is_none() {
+                    self.turn_started = true;
+                }
             }
             AgentEvent::Reset => {
                 #[cfg(test)]
                 {
                     self.thinking_elapsed_ms = None;
                 }
-                self.turn_started = false;
+                if self.scrollback_actor.is_none() {
+                    self.turn_started = false;
+                }
                 self.in_assistant_stream = false;
                 self.in_reasoning = false;
                 self.reasoning_buffer.clear();
@@ -2094,6 +2100,17 @@ mod tests {
 
         shutdown_tx.send(true).expect("renderer shutdown");
         task.await.expect("renderer task");
+    }
+
+    #[tokio::test]
+    async fn live_renderer_does_not_retain_turn_lifecycle_state() {
+        let renderer =
+            EventRenderer::with_live_actors(ScrollbackActor::new(), StatusActor::new(), false);
+        let mut renderer = renderer;
+        renderer.apply_actor_metadata(AgentEvent::TurnStart);
+        renderer.apply_actor_metadata(AgentEvent::AgentEnd { messages: vec![] });
+        assert!(!renderer.turn_started);
+        assert!(renderer.scrollback_actor.is_some());
     }
 
     #[test]

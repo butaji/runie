@@ -1,6 +1,6 @@
 # p47 — Migrate renderer transient state into actor reducers
 
-Status: in progress — live tool/assistant ownership migrated; compatibility cleanup remains (2026-08-06)
+Status: in progress — live tool/assistant/turn ownership migrated; compatibility cleanup remains (2026-08-07)
 
 ## Why this task exists
 
@@ -63,6 +63,11 @@ renderer no longer uses its lifecycle flag for production summary eligibility;
 the compatibility reducer remains available for synchronous tests.
 The baseline `visual-hey.yaml` fixture now asserts the final `false` value
 directly from the feed snapshot.
+
+The live metadata bridge no longer writes the compatibility `turn_started`
+field at all when actors are attached. A regression test proves that the live
+renderer remains stateless for this lifecycle fact; the field is retained only
+for synchronous compatibility reducers.
 
 ## Tool lifecycle increment (2026-08-06)
 
