@@ -1505,3 +1505,11 @@ response/timing. These are now explicit capture-state mismatches rather than
 silently treating a stale cast as a color oracle. Strict 100% requires paired
 captures with equivalent consent/session state and deterministic provider
 output before changing theme tokens.
+
+The current Grok build renders its training-consent copy persistently in the
+working view, while Escape/Tab/Enter do not dismiss it in a session-local
+probe. Because Runie intentionally skips Grok's welcome/onboarding surfaces,
+this panel must be classified as reference-environment chrome; it cannot be
+silently treated as a Runie feed mismatch. The capture tool therefore records
+the full frame unchanged and the comparison report must call out this state
+before any row masking or parity conclusion is made.
