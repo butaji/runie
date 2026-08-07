@@ -534,11 +534,12 @@ summary/source contract. Memory-search result parsing (score, source, file
 range, and snippet panel) remains the next specialized-card gap.
 
 Memory-card projection audit (2026-08-06): Grok parses `### Result N` blocks
-into score/source/file-range/snippet rows. A first implementation attempt was
-reverted after the visual runner exposed two distinct projection routes: the
-bus-backed live scrollback actor and deterministic replay. Formatting only one
-route duplicated raw provider rows; the correct fix must place one pure parser
-below both routes and preserve the single actor-owned mutation boundary.
+into score/source/file-range/snippet rows. The current implementation has the
+required pure parser and shared `memory_display_lines` projection in
+`runie-tui-model`; both live event rendering and deterministic replay consume
+that contract, and `visual-specialized-tools.yaml` asserts the two-result
+header/output behavior. The remaining gap is rich Grok snippet-panel styling
+and metadata spans, not parsing or event ownership.
 
 Non-tool selection YAML oracle (2026-08-06): `visual-hey.yaml` now performs
 `tool_select: entry_next` against a tool-free conversation and asserts the
