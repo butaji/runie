@@ -41,6 +41,14 @@ JSON payload. Invalid and duplicate records are excluded before projection.
 The YAML state oracle supports `session_lane_records`, and the admission
 fixture proves that only the valid start/finish sequence is retained.
 
+## Completed slice (2026-08-07, pure fork prefix)
+
+`SessionSnapshot::fork_at_message` now validates a message target, copies only
+its selected branch prefix, re-sequences the forked journal from one, and
+rebuilds admitted operation projections through the same reducer. The source
+snapshot is not mutated; invalid targets return an error. This is the pure
+core needed by the future actor-owned atomic fork writer.
+
 ## Source contract
 
 The authoritative upstream files are:

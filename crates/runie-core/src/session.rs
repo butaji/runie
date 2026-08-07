@@ -423,6 +423,60 @@ impl SessionSnapshot {
         path
     }
 
+    /// Create the message-lane fork prefix Pi would publish into a new
+    /// session. The returned snapshot owns new sequence numbers while
+    /// retaining the original parent/id graph; no actor or source snapshot
+    /// is mutated.
+    #[allow(
+        clippy::too_many_lines,
+        reason = "fork validation and projection stay one pure operation"
+    )]
+    pub fn fork_at_message(&self, target_id: &str) -> Result<Self, String> {
+        if !self.entries.iter().any(|entry| entry.id == target_id) {
+            return Err(format!("invalid fork target {target_id:?}"));
+        }
+        let branch = self.branch_entry_ids();
+        if !branch.iter().any(|id| id == target_id) {
+            return Err(format!(
+                "fork target {target_id:?} is not on the selected branch"
+            ));
+        }
+        let retained = branch
+            .into_iter()
+            .take_while(|id| id != target_id)
+            .chain(std::iter::once(target_id.to_owned()))
+            .collect::<std::collections::BTreeSet<_>>();
+        let mut fork = Self {
+            leaf_id: Some(target_id.to_owned()),
+            ..Self::default()
+        };
+        let mut sequence = 0;
+        for entry in &self.entries {
+            if !retained.contains(&entry.id) {
+                continue;
+            }
+            sequence += 1;
+            let mut copy = entry.clone();
+            copy.seq = sequence;
+            fork.entries.push(copy);
+        }
+        for entry in &self.config_records {
+            if !retained.contains(&entry.id) {
+                continue;
+            }
+            sequence += 1;
+            let mut copy = entry.clone();
+            copy.seq = sequence;
+            if let SessionConfigRecord::OperationRecordCreated { record_type, data } = &copy.record
+            {
+                reduce_operation_record(&mut fork, record_type, data);
+            }
+            fork.config_records.push(copy);
+        }
+        fork.sequence = sequence;
+        Ok(fork)
+    }
+
     /// Validate the currently projected navigation intent against journal IDs.
     /// This is pure and intentionally does not admit or mutate navigation.
     pub fn navigation_validation(&self) -> Option<NavigationValidation> {
@@ -1298,6 +1352,62 @@ mod tests {
             snapshot.branch_entry_ids(),
             ["message-1", "message-2", "config-3"]
         );
+    }
+
+    #[test]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the branch fixture spells out the parent graph"
+    )]
+    fn fork_at_message_resequences_only_the_validated_branch_prefix() {
+        let snapshot = SessionSnapshot {
+            entries: vec![
+                SessionEntry {
+                    id: "message-1".into(),
+                    seq: 1,
+                    parent_id: None,
+                    timestamp: 0,
+                    message: user("one"),
+                    terminate: false,
+                },
+                SessionEntry {
+                    id: "message-2".into(),
+                    seq: 2,
+                    parent_id: Some("message-1".into()),
+                    timestamp: 0,
+                    message: user("two"),
+                    terminate: false,
+                },
+                SessionEntry {
+                    id: "message-3".into(),
+                    seq: 3,
+                    parent_id: Some("message-2".into()),
+                    timestamp: 0,
+                    message: user("three"),
+                    terminate: false,
+                },
+            ],
+            leaf_id: Some("message-3".into()),
+            ..SessionSnapshot::default()
+        };
+        let fork = snapshot.fork_at_message("message-2").expect("fork");
+        assert_eq!(fork.sequence, 2);
+        assert_eq!(fork.leaf_id.as_deref(), Some("message-2"));
+        assert_eq!(
+            fork.entries
+                .iter()
+                .map(|entry| entry.id.as_str())
+                .collect::<Vec<_>>(),
+            ["message-1", "message-2"]
+        );
+        assert_eq!(
+            fork.entries
+                .iter()
+                .map(|entry| entry.seq)
+                .collect::<Vec<_>>(),
+            [1, 2]
+        );
+        assert!(snapshot.fork_at_message("missing").is_err());
     }
 
     #[test]
