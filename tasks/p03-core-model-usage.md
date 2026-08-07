@@ -23,8 +23,14 @@ numeric per-level token budgets remain in the separate `ThinkingBudgets` type.
 ## Current runie state
 
 `~/Code/GitHub/runie-tests/runie/crates/runie-core/src/types.rs`
-- `Model` (types.rs:280): `id, name, api, provider, base_url, reasoning, context_window, max_tokens`. **Missing:** `input` types, `cost`, `headers`, `compat`, `thinking_level_map`.
-- `Usage` (types.rs:143): `input, output, cache_read, cache_write, total_tokens, cost`. **Missing:** `cache_write_1h`, `reasoning`.
+- `Model` now carries `input`, `cost`, `headers`, `compat`, and
+  `thinking_level_map` in addition to the base fields; camelCase serde and
+  fractional pricing/compatibility round trips are tested.
+- `Usage` now carries `cache_write_1h` and `reasoning`, with the full cost
+  object and Pi-compatible wire keys covered by round-trip tests.
+
+The former “Missing” list below is retained only as historical scope; it is
+not current implementation debt.
 
 ## Adapt to runie
 
