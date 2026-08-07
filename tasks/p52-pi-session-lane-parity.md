@@ -2,6 +2,14 @@
 
 Status: in_progress
 
+## Completed slice (2026-08-08, branch entry query)
+
+`SessionBranchEntryQuery` and `SessionSnapshot::find_entries_on_branch` now
+provide Pi's explicit-start branch read boundary. Parent links are validated,
+missing starts and cycles are rejected, stop-at ID/type and newest-first
+ordering are supported, and limits apply after ordering. The result remains
+the typed entry union and never mutates the session owner.
+
 ## Completed slice (2026-08-08, ordered session log)
 
 `SessionSnapshot::get_log` now merges message/config entries and admitted

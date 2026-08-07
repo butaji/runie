@@ -173,6 +173,19 @@ pub struct SessionEntryQuery {
     pub limit: Option<usize>,
 }
 
+/// Declarative Pi branch query. `start` is required; callers cannot silently
+/// fall back to the current leaf when asking for a specific branch.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SessionBranchEntryQuery {
+    pub start: String,
+    pub stop_at_type: Option<String>,
+    pub stop_at_id: Option<String>,
+    pub record_type: Option<String>,
+    pub custom_type: Option<String>,
+    pub newest_first: bool,
+    pub limit: Option<usize>,
+}
+
 /// Pi's durable session statistics projection.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct SessionStats {
@@ -449,6 +462,71 @@ impl CompactionContextProjection {
 }
 
 impl SessionSnapshot {
+    /// Find entries on one validated parent-linked branch.
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the Pi branch query keeps validation, projection, and ordering together"
+    )]
+    pub fn find_entries_on_branch(
+        &self,
+        query: &SessionBranchEntryQuery,
+    ) -> Result<Vec<SessionEntryRecord>, String> {
+        let mut parents = BTreeMap::new();
+        for entry in &self.entries {
+            parents.insert(entry.id.clone(), entry.parent_id.clone());
+        }
+        for entry in &self.config_records {
+            parents.insert(entry.id.clone(), entry.parent_id.clone());
+        }
+        if !parents.contains_key(&query.start) {
+            return Err(format!("branch start {:?} was not found", query.start));
+        }
+        let mut ids = Vec::new();
+        let mut current = Some(query.start.clone());
+        while let Some(id) = current {
+            if ids.iter().any(|seen| seen == &id) {
+                return Err("branch contains a parent cycle".into());
+            }
+            ids.push(id.clone());
+            let entry = self
+                .find_entries(&SessionEntryQuery::default())
+                .into_iter()
+                .find(|entry| match entry {
+                    SessionEntryRecord::Message(entry) => entry.id == id,
+                    SessionEntryRecord::Config(entry) => entry.id == id,
+                });
+            let Some(entry) = entry else { break };
+            let entry_type = entry.record_type();
+            if query.stop_at_id.as_deref() == Some(id.as_str())
+                || query.stop_at_type.as_deref() == Some(entry_type)
+            {
+                break;
+            }
+            current = parents.get(&id).cloned().flatten();
+        }
+        ids.reverse();
+        let id_set = ids.into_iter().collect::<std::collections::HashSet<_>>();
+        let mut entries = self
+            .find_entries(&SessionEntryQuery {
+                record_type: query.record_type.clone(),
+                custom_type: query.custom_type.clone(),
+                ..SessionEntryQuery::default()
+            })
+            .into_iter()
+            .filter(|entry| match entry {
+                SessionEntryRecord::Message(entry) => id_set.contains(&entry.id),
+                SessionEntryRecord::Config(entry) => id_set.contains(&entry.id),
+            })
+            .collect::<Vec<_>>();
+        if query.newest_first {
+            entries.reverse();
+        }
+        if let Some(limit) = query.limit {
+            entries.truncate(limit);
+        }
+        Ok(entries)
+    }
+
     /// Return message/config entries and operation records in journal order.
     pub fn get_log(&self, after_seq: Option<u64>, limit: Option<usize>) -> Vec<SessionLogItem> {
         let mut items = self
@@ -3227,6 +3305,50 @@ mod tests {
             snapshot.branch_entry_ids(),
             ["message-1", "message-2", "config-3"]
         );
+    }
+
+    #[test]
+    fn branch_entry_query_requires_start_and_respects_stop_and_limit() {
+        let snapshot = SessionSnapshot {
+            entries: vec![
+                SessionEntry {
+                    id: "message-1".into(),
+                    seq: 1,
+                    parent_id: None,
+                    timestamp: 0,
+                    message: user("one"),
+                    terminate: false,
+                },
+                SessionEntry {
+                    id: "message-2".into(),
+                    seq: 2,
+                    parent_id: Some("message-1".into()),
+                    timestamp: 0,
+                    message: user("two"),
+                    terminate: false,
+                },
+            ],
+            leaf_id: Some("message-2".into()),
+            ..SessionSnapshot::default()
+        };
+        let entries = snapshot
+            .find_entries_on_branch(&SessionBranchEntryQuery {
+                start: "message-2".into(),
+                stop_at_id: Some("message-1".into()),
+                newest_first: true,
+                limit: Some(1),
+                ..SessionBranchEntryQuery::default()
+            })
+            .expect("branch query");
+        assert!(
+            matches!(entries[0], SessionEntryRecord::Message(ref entry) if entry.id == "message-2")
+        );
+        assert!(snapshot
+            .find_entries_on_branch(&SessionBranchEntryQuery {
+                start: "missing".into(),
+                ..SessionBranchEntryQuery::default()
+            })
+            .is_err());
     }
 
     #[test]
