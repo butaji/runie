@@ -15,7 +15,9 @@ visible input delay.
 Use `Interval::reset_immediately()` after enqueueing input. The existing
 single-owner input actor and FIFO pending-key queue remain unchanged; the
 dispatch wake-up now occurs immediately without blocking the async loop or
-mutating another actor's state.
+mutating another actor's state. A second burst-path guard re-arms that
+immediate wake whenever more than one key is queued, preventing the one-key-per
+render-tick handler from reintroducing 50 ms gaps inside a fast prompt.
 
 ## Verification
 
