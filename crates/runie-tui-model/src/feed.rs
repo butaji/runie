@@ -49,6 +49,7 @@ pub struct FeedSnapshot {
     pub tool_blocks: Vec<ToolBlock>,
     /// Tool names are reducer facts used to resolve specialized Grok cards.
     pub tool_names: HashMap<String, String>,
+    pub tool_args: HashMap<String, serde_json::Value>,
     pub settled_no_tool_phase: bool,
     pub live_grok_layout: bool,
     pub next_tool_row_id: u64,
@@ -95,6 +96,7 @@ pub struct FeedNavigation {
     pub workflow_headers: HashMap<String, String>,
     pub workflow_phases: HashMap<String, Vec<(String, String)>>,
     pub tool_names: HashMap<String, String>,
+    pub tool_args: HashMap<String, serde_json::Value>,
     pub settled_no_tool_phase: bool,
     pub live_grok_layout: bool,
     pub next_tool_row_id: u64,
@@ -124,6 +126,7 @@ impl Default for FeedNavigation {
             workflow_headers: HashMap::new(),
             workflow_phases: HashMap::new(),
             tool_names: HashMap::new(),
+            tool_args: HashMap::new(),
             settled_no_tool_phase: false,
             live_grok_layout: false,
             next_tool_row_id: 0,
@@ -962,6 +965,8 @@ pub enum ScrollbackMsg {
     SetPromptTimestamp(Option<String>),
     SetFollowLatestUser(bool),
     SetToolName(String, String),
+    SetToolArgs(String, serde_json::Value),
+    RemoveToolArgs(String),
     SetToolMode(String, ToolDisplayMode),
     ToggleToolMode(String),
     SelectNextTool,
@@ -1051,6 +1056,7 @@ impl FeedState {
                 &self.navigation.tool_modes,
             ),
             tool_names: self.navigation.tool_names.clone(),
+            tool_args: self.navigation.tool_args.clone(),
             settled_no_tool_phase: self.navigation.settled_no_tool_phase,
             live_grok_layout: self.navigation.live_grok_layout,
             next_tool_row_id: self.navigation.next_tool_row_id,
@@ -1103,6 +1109,12 @@ impl FeedState {
             ScrollbackMsg::AssistantStreamEnd => self.navigation.assistant_stream_open = false,
             ScrollbackMsg::Clear => self.clear(),
             ScrollbackMsg::SetTheme(theme) => self.navigation.theme = theme,
+            ScrollbackMsg::SetToolArgs(id, args) => {
+                self.navigation.tool_args.insert(id, args);
+            }
+            ScrollbackMsg::RemoveToolArgs(id) => {
+                self.navigation.tool_args.remove(&id);
+            }
             ScrollbackMsg::AdvanceAnimation => self.navigation.advance_animation(),
             ScrollbackMsg::RemoveKind(kind) => self.lines.retain(|line| line.kind != kind),
             ScrollbackMsg::NormalizeLiveCompletedAssistants => {
@@ -1403,6 +1415,7 @@ impl FeedState {
     fn clear(&mut self) {
         self.lines.clear();
         self.navigation.tool_names.clear();
+        self.navigation.tool_args.clear();
         self.navigation.tool_modes.clear();
         self.navigation.workflow_headers.clear();
         self.navigation.workflow_phases.clear();

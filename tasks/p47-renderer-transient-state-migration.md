@@ -90,6 +90,13 @@ updates now resolve the newest matching row from that projection at the
 mutation boundary. Parallel tool updates remain ID-based, while the
 renderer no longer owns a second mutable row-index map.
 
+Pending-tool ownership increment (2026-08-07): removed the compatibility
+`pending_tools` header/argument map. Tool arguments now cross the event
+boundary through `SetToolArgs`/`RemoveToolArgs` and live in the feed snapshot;
+compatibility updates derive the current header and arguments from that
+projection. This preserves parallel tool identity and terminal header
+formatting while eliminating the renderer's second pending-lifecycle store.
+
 Thinking-duration ownership increment (2026-08-07): the compatibility
 `StatusBar` now retains `thinking_elapsed_ms` in its renderer-independent
 snapshot, exactly like `StatusState`. `EventRenderer` no longer keeps a

@@ -306,6 +306,12 @@ impl Scrollback {
                 self.clear();
             }
             ScrollbackMsg::SetTheme(theme) => self.reduce_model(ScrollbackMsg::SetTheme(theme)),
+            ScrollbackMsg::SetToolArgs(id, args) => {
+                self.reduce_model(ScrollbackMsg::SetToolArgs(id, args));
+            }
+            ScrollbackMsg::RemoveToolArgs(id) => {
+                self.reduce_model(ScrollbackMsg::RemoveToolArgs(id));
+            }
             ScrollbackMsg::AdvanceAnimation => {
                 self.reduce_model(ScrollbackMsg::AdvanceAnimation);
             }
@@ -717,6 +723,7 @@ impl Scrollback {
             lines: self.lines.clone(),
             tool_blocks: self.tool_blocks(),
             tool_names: self.navigation.tool_names.clone(),
+            tool_args: self.navigation.tool_args.clone(),
             autoscroll: self.navigation.autoscroll,
             scroll_offset: self.navigation.scroll_offset,
             reasoning_expanded: self.navigation.reasoning_expanded,

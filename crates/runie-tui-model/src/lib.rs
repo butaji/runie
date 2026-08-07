@@ -193,6 +193,7 @@ mod tests {
             lines: Vec::new(),
             tool_blocks: Vec::new(),
             tool_names: std::collections::HashMap::new(),
+            tool_args: std::collections::HashMap::new(),
             autoscroll: true,
             scroll_offset: 0,
             reasoning_expanded: false,

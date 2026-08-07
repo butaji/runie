@@ -1,6 +1,5 @@
 //! `EventRenderer` — subscribes to `runie-core`'s event bus and mutates widgets.
 
-use std::collections::HashMap;
 use std::time::Duration;
 
 #[cfg(test)]
@@ -83,9 +82,11 @@ pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
         AgentEvent::ToolExecutionStart {
             tool_call_id,
             tool_name,
+            args,
             ..
         } => vec![
             ScrollbackMsg::SetToolName(tool_call_id.clone(), tool_name.clone()),
+            ScrollbackMsg::SetToolArgs(tool_call_id.clone(), args.clone()),
             ScrollbackMsg::SetToolMode(
                 tool_call_id.clone(),
                 runie_tui_model::default_tool_display_mode(tool_name),
@@ -183,6 +184,9 @@ pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
             status: status.clone(),
             elapsed_ms: *elapsed_ms,
         }],
+        AgentEvent::ToolExecutionEnd { tool_call_id, .. } => {
+            vec![ScrollbackMsg::RemoveToolArgs(tool_call_id.clone())]
+        }
         AgentEvent::AgentStart
         | AgentEvent::AgentEnd { .. }
         | AgentEvent::Error { .. }
@@ -193,8 +197,7 @@ pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
         | AgentEvent::MessageStart { .. }
         | AgentEvent::MessageUpdate { .. }
         | AgentEvent::MessageEnd { .. }
-        | AgentEvent::ToolExecutionUpdate { .. }
-        | AgentEvent::ToolExecutionEnd { .. } => Vec::new(),
+        | AgentEvent::ToolExecutionUpdate { .. } => Vec::new(),
     }
 }
 
@@ -264,12 +267,6 @@ impl<T> Projection<T> {
     }
 }
 
-#[derive(Debug)]
-struct PendingTool {
-    header: String,
-    args: serde_json::Value,
-}
-
 pub struct EventRenderer {
     scrollback: Projection<Scrollback>,
     scrollback_actor: Option<ScrollbackActor>,
@@ -277,7 +274,6 @@ pub struct EventRenderer {
     /// Actor-owned status projection used by the production event loop while
     /// the compatibility widget projection is being retired.
     status_actor: Option<StatusActor>,
-    pending_tools: HashMap<String, PendingTool>,
     activity_dirs: usize,
     activity_files: usize,
     activity_commands: usize,
@@ -339,7 +335,6 @@ impl EventRenderer {
             scrollback_actor,
             status,
             status_actor,
-            pending_tools: HashMap::new(),
             activity_dirs: 0,
             activity_files: 0,
             activity_commands: 0,
@@ -872,7 +867,7 @@ impl EventRenderer {
         tool_name: String,
         args: serde_json::Value,
     ) -> ScrollbackMsg {
-        let starts_new_activity_group = self.pending_tools.is_empty() && !self.activity_group_open;
+        let starts_new_activity_group = self.active_tool_count() == 0 && !self.activity_group_open;
         if starts_new_activity_group {
             self.activity_dirs = 0;
             self.activity_files = 0;
@@ -936,13 +931,11 @@ impl EventRenderer {
                 Line::new(LineKind::ToolRunning, tool_buffer.clone()).for_tool(&tool_call_id),
             );
         }
-        self.pending_tools.insert(
-            tool_call_id.clone(),
-            PendingTool {
-                header: tool_buffer.clone(),
-                args,
-            },
-        );
+        if self.scrollback_actor.is_none() {
+            self.scrollback
+                .lock()
+                .apply(ScrollbackMsg::SetToolArgs(tool_call_id.clone(), args));
+        }
         ScrollbackMsg::ToolStartRunning {
             tool_call_id,
             header: tool_buffer,
@@ -967,7 +960,15 @@ impl EventRenderer {
         {
             return None;
         }
-        if self.pending_tools.contains_key(&tool_call_id) {
+        if self.tool_row_index(&tool_call_id).is_some()
+            || self.scrollback_actor.as_ref().is_some_and(|actor| {
+                actor
+                    .model_snapshot()
+                    .tool_blocks
+                    .iter()
+                    .any(|block| block.tool_call_id == tool_call_id && block.is_running)
+            })
+        {
             if let Some(output) = structured_update_text(&partial_result) {
                 let output_lines = structured_memory_lines(&output);
                 if self.scrollback_actor.is_none() {
@@ -983,14 +984,14 @@ impl EventRenderer {
                     output: output_lines,
                 });
             }
-            let Some(pending) = self.pending_tools.get_mut(&tool_call_id) else {
+            let Some(current_header) = self.current_tool_header(&tool_call_id) else {
                 return None;
             };
-            pending.header.push_str(&format!(
-                " | update: {}",
+            let updated = format!(
+                "{} | update: {}",
+                current_header,
                 serde_json::to_string(&partial_result).unwrap_or_default()
-            ));
-            let updated = pending.header.clone();
+            );
             if self.scrollback_actor.is_none() {
                 if let Some(row) = self.tool_row_index(&tool_call_id) {
                     self.replace_tool_line(row, &updated);
@@ -1022,16 +1023,8 @@ impl EventRenderer {
         if is_error {
             self.activity_failures += 1;
         }
-        let PendingTool {
-            header: tool_buffer,
-            args: tool_args,
-        } = self
-            .pending_tools
-            .remove(&tool_call_id)
-            .unwrap_or_else(|| PendingTool {
-                header: String::new(),
-                args: serde_json::Value::Null,
-            });
+        let tool_buffer = self.current_tool_header(&tool_call_id).unwrap_or_default();
+        let tool_args = self.current_tool_args(&tool_call_id);
         let tool_buffer = if is_error {
             tool_buffer
         } else {
@@ -1043,7 +1036,7 @@ impl EventRenderer {
                 self.replace_tool_line(row, &tool_buffer);
             }
         }
-        let activity = if self.pending_tools.is_empty()
+        let activity = if self.active_tool_count() <= 1
             && self.activity_dirs
                 + self.activity_files
                 + self.activity_commands
@@ -1114,6 +1107,11 @@ impl EventRenderer {
                 }
             }
         }
+        if self.scrollback_actor.is_none() {
+            self.scrollback
+                .lock()
+                .apply(ScrollbackMsg::RemoveToolArgs(tool_call_id.clone()));
+        }
         ScrollbackMsg::ToolEnd {
             tool_call_id,
             header: tool_buffer,
@@ -1142,7 +1140,6 @@ impl EventRenderer {
         if self.status_actor.is_none() {
             self.status.lock().set(Status::Thinking);
         }
-        self.pending_tools.clear();
         self.activity_dirs = 0;
         self.activity_files = 0;
         self.activity_commands = 0;
@@ -1331,6 +1328,60 @@ impl EventRenderer {
                     ))
                 .then_some(index)
             })
+    }
+
+    fn active_tool_count(&self) -> usize {
+        if let Some(actor) = &self.scrollback_actor {
+            return actor
+                .model_snapshot()
+                .tool_blocks
+                .iter()
+                .filter(|block| block.is_running)
+                .count();
+        }
+        self.scrollback
+            .lock()
+            .lines()
+            .iter()
+            .filter(|line| line.kind == LineKind::ToolRunning)
+            .count()
+    }
+
+    fn current_tool_header(&self, tool_call_id: &str) -> Option<String> {
+        if let Some(actor) = &self.scrollback_actor {
+            return actor
+                .model_snapshot()
+                .tool_blocks
+                .into_iter()
+                .rev()
+                .find(|block| block.tool_call_id == tool_call_id && block.is_running)
+                .map(|block| block.header);
+        }
+        self.tool_row_index(tool_call_id).and_then(|row| {
+            self.scrollback
+                .lock()
+                .lines()
+                .get(row)
+                .map(|line| line.text.clone())
+        })
+    }
+
+    fn current_tool_args(&self, tool_call_id: &str) -> serde_json::Value {
+        if let Some(actor) = &self.scrollback_actor {
+            return actor
+                .model_snapshot()
+                .tool_args
+                .get(tool_call_id)
+                .cloned()
+                .unwrap_or(serde_json::Value::Null);
+        }
+        self.scrollback
+            .lock()
+            .model_snapshot()
+            .tool_args
+            .get(tool_call_id)
+            .cloned()
+            .unwrap_or(serde_json::Value::Null)
     }
 
     fn replace_tool_line(&self, row: usize, text: &str) {
@@ -1995,6 +2046,7 @@ mod tests {
             }),
             vec![
                 ScrollbackMsg::SetToolName("bash-1".into(), "bash".into()),
+                ScrollbackMsg::SetToolArgs("bash-1".into(), serde_json::json!({"command": "pwd"}),),
                 ScrollbackMsg::SetToolMode(
                     "bash-1".into(),
                     runie_core::types::ToolDisplayMode::Truncated,
