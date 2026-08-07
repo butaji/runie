@@ -12,8 +12,9 @@ use crate::appearance;
 use crate::view::PaintIntent;
 use runie_core::types::ThemeKind;
 pub use runie_tui_model::{
-    logical_tool_member_index, project_tool_card_rows, FeedNavigation, FeedSnapshot, FeedState,
-    Line, LineKind, ScrollbackMsg, ToolBlock, ToolCardKind, ToolCardPaintIntent, ToolCardRowKind,
+    logical_tool_member_index, project_tool_card_rows, tool_mode_for_line,
+    tool_mode_override_for_line, FeedNavigation, FeedSnapshot, FeedState, Line, LineKind,
+    ScrollbackMsg, ToolBlock, ToolCardKind, ToolCardPaintIntent, ToolCardRowKind,
 };
 
 // Grok reserves a visible gutter between the first assistant row and its
@@ -818,7 +819,19 @@ impl Scrollback {
         tool_call_id: impl Into<String>,
         mode: runie_core::types::ToolDisplayMode,
     ) {
-        self.navigation.tool_modes.insert(tool_call_id.into(), mode);
+        let tool_call_id = tool_call_id.into();
+        if let Some(row_id) = self
+            .lines
+            .iter()
+            .rev()
+            .find(|line| line.tool_call_id.as_deref() == Some(tool_call_id.as_str()))
+            .and_then(|line| line.tool_row_id)
+        {
+            self.navigation
+                .tool_modes
+                .insert(format!("#row:{row_id}"), mode);
+        }
+        self.navigation.tool_modes.insert(tool_call_id, mode);
     }
 
     /// Apply Grok's fold action to one selected tool block. The actor owns the
@@ -1428,10 +1441,7 @@ impl Scrollback {
             if width >= 50 && line.kind == LineKind::TurnSummary {
                 rows.push((LineKind::System, String::new(), false));
             }
-            let tool_mode = line
-                .tool_call_id
-                .as_ref()
-                .and_then(|id| self.navigation.tool_modes.get(id));
+            let tool_mode = tool_mode_override_for_line(line, &self.navigation.tool_modes);
             if self.navigation.activity_expanded {
                 if let Some(tool_id) = line.tool_call_id.as_deref() {
                     if let Some((member_index, group_size)) = dense_groups.get(tool_id) {
@@ -1519,11 +1529,8 @@ impl Scrollback {
                         | LineKind::ToolError
                 )
                 && line.text != "session_start"
-                && !line
-                    .tool_call_id
-                    .as_ref()
-                    .and_then(|id| self.navigation.tool_modes.get(id))
-                    .is_some_and(|mode| *mode != runie_core::types::ToolDisplayMode::Collapsed)
+                && tool_mode_override_for_line(line, &self.navigation.tool_modes)
+                    .is_none_or(|mode| mode == runie_core::types::ToolDisplayMode::Collapsed)
             {
                 continue;
             }

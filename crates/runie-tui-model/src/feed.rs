@@ -276,15 +276,32 @@ pub fn project_tool_card_rows(
             card_kind: ToolCardKind::from_header(header),
             row_kind,
             text: line.text.clone(),
-            mode: tool_modes
-                .get(tool_call_id)
-                .copied()
-                .unwrap_or(ToolDisplayMode::Expanded),
+            mode: tool_mode_for_line(line, tool_modes),
             is_running: line.kind == LineKind::ToolRunning,
             is_error: line.kind == LineKind::ToolError,
         });
     }
     rows
+}
+
+pub fn tool_mode_for_line(
+    line: &Line,
+    tool_modes: &HashMap<String, ToolDisplayMode>,
+) -> ToolDisplayMode {
+    tool_mode_override_for_line(line, tool_modes).unwrap_or(ToolDisplayMode::Expanded)
+}
+
+pub fn tool_mode_override_for_line(
+    line: &Line,
+    tool_modes: &HashMap<String, ToolDisplayMode>,
+) -> Option<ToolDisplayMode> {
+    line.tool_call_id
+        .as_deref()
+        .and_then(|id| tool_modes.get(id).copied())
+        .or_else(|| {
+            line.tool_row_id
+                .and_then(|row_id| tool_modes.get(&format!("#row:{row_id}")).copied())
+        })
 }
 
 /// Grok's specialized tool-card families supported by pi-core tool events.
@@ -357,10 +374,7 @@ pub fn project_tool_blocks(
                     header: line.text.clone(),
                     kind: kind_for(&line.text),
                     output: Vec::new(),
-                    mode: tool_modes
-                        .get(id)
-                        .copied()
-                        .unwrap_or(ToolDisplayMode::Expanded),
+                    mode: tool_mode_for_line(line, tool_modes),
                     is_running: line.kind == LineKind::ToolRunning,
                     is_error: line.kind == LineKind::ToolError,
                     tool_row_id: line.tool_row_id,
@@ -373,6 +387,7 @@ pub fn project_tool_blocks(
             LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError => {
                 block.header = line.text.clone();
                 block.kind = kind_for(&line.text);
+                block.mode = tool_mode_for_line(line, tool_modes);
                 block.is_running = line.kind == LineKind::ToolRunning;
                 block.is_error = line.kind == LineKind::ToolError;
             }
@@ -1003,7 +1018,20 @@ impl FeedState {
                 self.navigation.tool_names.insert(id, name);
             }
             ScrollbackMsg::SetToolMode(id, mode) => {
-                self.navigation.tool_modes.insert(id, mode);
+                if let Some(row_id) = self
+                    .lines
+                    .iter()
+                    .rev()
+                    .find(|line| line.tool_call_id.as_deref() == Some(id.as_str()))
+                    .and_then(|line| line.tool_row_id)
+                {
+                    self.navigation
+                        .tool_modes
+                        .insert(format!("#row:{row_id}"), mode);
+                    self.navigation.tool_modes.insert(id, mode);
+                } else {
+                    self.navigation.tool_modes.insert(id, mode);
+                }
             }
             ScrollbackMsg::ToggleToolMode(id) => self.toggle_tool_mode(&id),
             ScrollbackMsg::SelectNextTool => self.select_tool(1),
@@ -1058,6 +1086,16 @@ impl FeedState {
                 activity,
                 output,
             } => {
+                let mode_key = self
+                    .lines
+                    .iter()
+                    .rev()
+                    .find(|line| {
+                        line.is_tool_row_active()
+                            && line.tool_call_id.as_deref() == Some(tool_call_id.as_str())
+                    })
+                    .and_then(|line| line.tool_row_id)
+                    .map_or_else(|| tool_call_id.clone(), |row_id| format!("#row:{row_id}"));
                 self.replace_tool(&tool_call_id, header);
                 if let Some(name) = self.navigation.tool_names.get(&tool_call_id) {
                     if matches!(name.as_str(), "read" | "read_file") {
@@ -1066,11 +1104,21 @@ impl FeedState {
                         // expanded while running.
                         self.navigation
                             .tool_modes
+                            .insert(mode_key.clone(), ToolDisplayMode::Collapsed);
+                        self.navigation
+                            .tool_modes
                             .insert(tool_call_id.clone(), ToolDisplayMode::Collapsed);
                     } else if matches!(name.as_str(), "bash" | "shell" | "exec" | "run")
-                        && self.navigation.tool_modes.get(&tool_call_id)
+                        && self
+                            .navigation
+                            .tool_modes
+                            .get(&mode_key)
+                            .or_else(|| self.navigation.tool_modes.get(&tool_call_id))
                             == Some(&ToolDisplayMode::Truncated)
                     {
+                        self.navigation
+                            .tool_modes
+                            .insert(mode_key, ToolDisplayMode::Expanded);
                         self.navigation
                             .tool_modes
                             .insert(tool_call_id.clone(), ToolDisplayMode::Expanded);

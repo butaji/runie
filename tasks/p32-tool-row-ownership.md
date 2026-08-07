@@ -1,16 +1,17 @@
 # p32 — Actor-owned tool-row identity
 
-Status: in progress (2026-08-06)
+Status: in progress (2026-08-06; reducer/projection slice advanced)
 
 ## Current audit (2026-08-06)
 
 `FeedState` assigns opaque row identity on live starts, and live header
 updates/completions resolve that identity before the compatibility fallback.
-However, card grouping and some display-mode/update projections still expose
-external `tool_call_id` as their grouping key. The fixture and focused tests
-prove the current header ownership boundary, but do not prove opaque identity
-through every dense-group and display-mode transition. This task therefore
-remains in progress.
+However, card grouping still exposes external `tool_call_id` as its grouping
+key. Display-mode events now retain an opaque `#row:<id>` projection key, and
+existing typed blocks refresh their mode from current event state; the
+compatibility widget uses the same projection helper. Legacy ID fallback is
+intentional for replayed rows, but independent duplicate-ID semantics through
+every dense-group transition and full renderer capture remain unproven.
 
 ## Fresh replay audit (2026-08-06)
 
