@@ -30,7 +30,9 @@ Runie now has a minimal session-tree foundation in `runie-core::session`:
   callers never replace the actor's state directly.
 - The runtime YAML DSL exposes `session_restore`; `session-restore.yaml`
   exercises restore followed by a real loop/event-bus turn and asserts the
-  combined journal without recompiling the runner.
+  combined journal and restored conversation message count without
+  recompiling the runner. The restored messages enter `AgentStateActor` via
+  its mailbox; the session journal remains a separate actor-owned projection.
 
 This is intentionally the journal seam, not a claim that Pi JSONL filesystem
 storage,

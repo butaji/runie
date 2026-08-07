@@ -366,6 +366,13 @@ impl LoopActor {
         self.inner.deps.state.set_model(model).await;
     }
 
+    /// Replace the owned conversation context through the state actor
+    /// mailbox. Session restore and replay adapters use this instead of
+    /// reaching into `AgentStateActor` behind the loop boundary.
+    pub async fn replace_messages(&self, messages: Vec<AgentMessage>) {
+        self.inner.deps.state.replace_messages(messages).await;
+    }
+
     /// Controls how steering messages are drained on subsequent turns.
     pub async fn set_steering_mode(&self, mode: QueueMode) {
         self.reduce_control(LoopControlEvent::SteeringModeChanged(mode))

@@ -1389,7 +1389,18 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
     let (bus, actor, options_seen) = build_scenario_loop(scenario)?;
     let session = SessionActor::new_with_bus(&bus);
     if let Some(jsonl) = &scenario.session_restore {
+        let (_, _, restored) =
+            runie_core::session::SessionSnapshot::from_jsonl(jsonl).map_err(ScenarioError)?;
         session.restore_jsonl(jsonl).await.map_err(ScenarioError)?;
+        actor
+            .replace_messages(
+                restored
+                    .entries
+                    .into_iter()
+                    .map(|entry| entry.message)
+                    .collect(),
+            )
+            .await;
     }
     let listener_events = Arc::new(Mutex::new(Vec::new()));
     actor

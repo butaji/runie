@@ -23,7 +23,7 @@ assertions:
   state:
     status: ready
     is_streaming: false
-    messages: 2
+    messages: 3
     session_entries: 3
   transcript_contains:
     - "next"
