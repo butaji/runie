@@ -726,3 +726,10 @@ project `None`; no renderer-side cursor state is introduced. YAML supports the
 assertion field, while a fixture that ends on a non-tool entry confirms the
 negative case. Tool-selected member assertions remain the next navigation
 fixture slice.
+
+Tool-selection synchronization (2026-08-06): `SelectNextTool` and
+`SelectPreviousTool` now update `selected_tool_id` and `selected_entry` as one
+reducer transition, then reveal the corresponding dense group. The
+`visual-tool-row-identity.yaml` replay asserts the selected compatibility row
+and member index. This closes the prior split-brain selection projection;
+viewport styling and richer per-member fold ranges remain open.

@@ -1409,8 +1409,13 @@ impl FeedState {
             (Some(index), -1) => index - 1,
             _ => 0,
         };
-        self.navigation.selected_tool_id = Some(ids[next].clone());
-        self.reveal_dense_group(&ids[next]);
+        let selected_id = ids[next].clone();
+        self.navigation.selected_tool_id = Some(selected_id.clone());
+        self.navigation.selected_entry = self
+            .lines
+            .iter()
+            .position(|line| line.tool_call_id.as_deref() == Some(selected_id.as_str()));
+        self.reveal_dense_group(&selected_id);
     }
 
     fn reveal_dense_group(&mut self, tool_id: &str) {

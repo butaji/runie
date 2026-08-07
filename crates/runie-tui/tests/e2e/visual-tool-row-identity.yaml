@@ -12,11 +12,14 @@ events:
       name: echo
       args: { value: "hello" }
   - done: { stop_reason: tool_use }
+  - tool_select: next
 assertions:
   state:
     tool_blocks: 1
     tool_header_row_ids: [null, 0]
     tool_header_row_active: [false, false]
+    selected_tool_id: call-2
+    selected_member_index: 0
   transcript_contains:
     - "compatibility seed"
   scrollback_lines:
