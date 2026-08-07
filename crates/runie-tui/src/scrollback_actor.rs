@@ -32,10 +32,17 @@ impl ScrollbackActor {
         let (snapshot_tx, snapshot) = watch::channel(FeedState::default().snapshot());
         let (tx, owner) = spawn_actor_worker!(32, |mut rx: mpsc::Receiver<Command>| async move {
             let mut state = FeedState::default();
-            let workspace = std::env::current_dir()
-                .ok()
-                .map(|path| path.to_string_lossy().into_owned())
-                .unwrap_or_default();
+            // The reducer remains async/non-blocking: the unavoidable process
+            // cwd query is isolated behind an awaited, actor-owned blocking
+            // boundary before the projection starts consuming events.
+            let workspace = tokio::task::spawn_blocking(|| {
+                std::env::current_dir()
+                    .ok()
+                    .map(|path| path.to_string_lossy().into_owned())
+                    .unwrap_or_default()
+            })
+            .await
+            .unwrap_or_default();
             let mut projection = OwnedEventProjection::new(workspace);
             while let Some(command) = rx.recv().await {
                 let (messages, reply) = match command {

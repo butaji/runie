@@ -27,6 +27,12 @@ execution uses the event bus and does not use that buffer. Synchronous reads in
 `cast_compare`, the TUI fixture loader, and the standalone capture/e2e binary
 are offline command-line tooling, not runtime actor paths.
 
+Scrollback actor initialization now obtains the workspace directory through an
+awaited `tokio::task::spawn_blocking` join before its owned reducer begins
+consuming mailbox events. This keeps the unavoidable process-environment query
+off the async runtime without creating a detached task; feed state still enters
+the projection only through actor events.
+
 ## Rule
 
 Any new runtime filesystem or transport operation must enter an owned actor or
@@ -35,5 +41,6 @@ quarantined and must not become a production delivery path.
 
 ## Verification
 
-The full `just ci` gate passes after the P57/P58 changes, including actor,
-replay, YAML, visual, and boundary validators.
+The focused scrollback actor suite passes after the boundary change. The full
+`just ci` gate is the required final verification for this audit, including
+actor, replay, YAML, visual, and boundary validators.
