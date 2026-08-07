@@ -135,6 +135,13 @@ request as SSE. A provider adapter can therefore be added behind the existing
 `StreamFn` boundary without changing the Pi event contract or creating a
 second state owner.
 
+Wire metadata preservation (2026-08-07): the generic `WireMessage::ToolResult`
+projection now carries Pi `details`, `usage`, and `added_tool_names` instead
+of dropping them during `default_convert_to_llm`. The reverse loop projection
+restores the same fields, and the core round-trip test asserts all three. This
+keeps provider-specific deferred-tool encoding possible without coupling the
+generic converter to one provider protocol.
+
 Provider lifecycle increment (2026-08-07): `ProviderActor` now aborts any
 previous owned pump before acknowledging a new `Start`. This matches the
 one-in-flight Pi turn contract and prevents superseded streams from publishing

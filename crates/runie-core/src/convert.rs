@@ -26,6 +26,9 @@ pub fn default_convert_to_llm(messages: &[AgentMessage]) -> Vec<WireMessage> {
                 tool_call_id: t.tool_call_id.clone(),
                 tool_name: t.tool_name.clone(),
                 content: t.content.clone(),
+                details: t.details.clone(),
+                usage: t.usage.clone(),
+                added_tool_names: t.added_tool_names.clone(),
                 is_error: t.is_error,
                 timestamp: t.timestamp,
             }),
@@ -87,12 +90,34 @@ mod tests {
             tool_call_id: "id".into(),
             tool_name: "read_file".into(),
             content: vec![ToolResultContent::Text { text: "ok".into() }],
+            details: serde_json::json!({"source": "test"}),
+            usage: Some(crate::types::Usage {
+                input: 2,
+                output: 3,
+                cache_read: 0,
+                cache_write: 0,
+                cache_write_1h: 0,
+                reasoning: 0,
+                total_tokens: 5,
+                cost: Default::default(),
+            }),
+            added_tool_names: vec!["deferred_read".into()],
             is_error: false,
             timestamp: 9,
-            ..Default::default()
         };
         let wire = default_convert_to_llm(&[AgentMessage::ToolResult(m.clone())]);
         assert_eq!(wire.len(), 1);
-        assert!(matches!(wire[0], WireMessage::ToolResult { .. }));
+        let WireMessage::ToolResult {
+            details,
+            usage,
+            added_tool_names,
+            ..
+        } = &wire[0]
+        else {
+            panic!("tool result must remain a wire tool result");
+        };
+        assert_eq!(details, &serde_json::json!({"source": "test"}));
+        assert_eq!(usage.as_ref().map(|value| value.total_tokens), Some(5));
+        assert_eq!(added_tool_names, &["deferred_read"]);
     }
 }

@@ -932,6 +932,10 @@ fn push_or_append(assistant: &mut AssistantMessage, content: AssistantContent) {
     assistant.content.push(content);
 }
 
+#[allow(
+    clippy::too_many_lines,
+    reason = "the exhaustive wire-to-agent projection keeps all Pi message fields together"
+)]
 fn wire_to_agent(wire: &[WireMessage]) -> Vec<AgentMessage> {
     wire.iter()
         .map(|w| match w {
@@ -957,15 +961,20 @@ fn wire_to_agent(wire: &[WireMessage]) -> Vec<AgentMessage> {
                 tool_call_id,
                 tool_name,
                 content,
+                details,
+                usage,
+                added_tool_names,
                 is_error,
                 timestamp,
             } => AgentMessage::ToolResult(ToolResultMessage {
                 tool_call_id: tool_call_id.clone(),
                 tool_name: tool_name.clone(),
                 content: content.clone(),
+                details: details.clone(),
+                usage: usage.clone(),
+                added_tool_names: added_tool_names.clone(),
                 is_error: *is_error,
                 timestamp: *timestamp,
-                ..Default::default()
             }),
         })
         .collect()
