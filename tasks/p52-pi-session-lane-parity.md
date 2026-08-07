@@ -288,6 +288,17 @@ The following are not yet exact Pi parity:
   context-building, summarization, and `CompactionCreated` result publication
   boundary.
 
+### Typed identity boundary (2026-08-08)
+
+`SessionLaneRecord` now owns the Pi identity-shape table through typed
+`identity()` and `run_id()` accessors. Operation records use `id`,
+operation-owned records use `runId`, and entry-owned records use `entryId`
+with the same precedence as the existing validator. The session reducer uses
+these accessors instead of repeating JSON-field lookup at each transition.
+The JSON payload remains lossless at the wire edge; this increment removes a
+caller-side identity guess without pretending that all Pi payload variants
+are already Rust structs.
+
 ### Queue emission audit (2026-08-07)
 
 Pi's `queue_enqueued` record is not just a notification: it carries the queue

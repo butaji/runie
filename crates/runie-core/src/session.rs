@@ -585,6 +585,50 @@ impl SessionLaneRecord {
             Self::Usage(_) => SessionLaneRecordKind::Usage,
         }
     }
+
+    /// Return the Pi record identity through one typed lane-family boundary.
+    ///
+    /// Pi uses `id` for operation records, `runId` for operation-owned facts,
+    /// and `entryId` for entry-owned facts. Callers must not duplicate this
+    /// wire-shape table or guess an identity from arbitrary payload fields.
+    pub fn identity(&self) -> Option<&str> {
+        let payload = match self {
+            Self::OperationStarted(payload)
+            | Self::AbortRequested(payload)
+            | Self::OperationFinished(payload)
+            | Self::StepAttempt(payload)
+            | Self::ToolStarted(payload)
+            | Self::QueueEnqueued(payload)
+            | Self::QueueCancelled(payload)
+            | Self::WriteDeferred(payload)
+            | Self::Usage(payload) => payload,
+        };
+        payload
+            .get("runId")
+            .or_else(|| payload.get("id"))
+            .or_else(|| payload.get("entryId"))
+            .and_then(serde_json::Value::as_str)
+            .filter(|value| !value.is_empty())
+    }
+
+    /// Return the owning operation ID when Pi defines one for this family.
+    pub fn run_id(&self) -> Option<&str> {
+        let payload = match self {
+            Self::OperationStarted(payload)
+            | Self::AbortRequested(payload)
+            | Self::OperationFinished(payload)
+            | Self::StepAttempt(payload)
+            | Self::ToolStarted(payload)
+            | Self::QueueEnqueued(payload)
+            | Self::QueueCancelled(payload)
+            | Self::WriteDeferred(payload)
+            | Self::Usage(payload) => payload,
+        };
+        payload
+            .get("runId")
+            .and_then(serde_json::Value::as_str)
+            .filter(|value| !value.is_empty())
+    }
 }
 
 pub fn session_lane_record_kind(record_type: &str) -> Option<SessionLaneRecordKind> {
@@ -686,13 +730,7 @@ fn reduce_operation_record(
     if validate_session_lane_record(snapshot, record_type, data).is_err() {
         return;
     }
-    let Some(record_id) = data
-        .get("runId")
-        .or_else(|| data.get("id"))
-        .or_else(|| data.get("entryId"))
-        .and_then(serde_json::Value::as_str)
-        .filter(|value| !value.is_empty())
-    else {
+    let Some(record_id) = record.identity() else {
         return;
     };
     snapshot.lane_records.push(SessionLaneRecordSnapshot {
@@ -730,11 +768,16 @@ fn reduce_operation_record(
             });
         }
     }
-    let Some(operation_id) = data
-        .get("runId")
-        .or_else(|| data.get("id"))
-        .and_then(serde_json::Value::as_str)
-    else {
+    let operation_id = record.run_id().or_else(|| {
+        matches!(
+            record.kind(),
+            SessionLaneRecordKind::OperationStarted
+                | SessionLaneRecordKind::AbortRequested
+                | SessionLaneRecordKind::OperationFinished
+        )
+        .then_some(record_id)
+    });
+    let Some(operation_id) = operation_id else {
         return;
     };
     match record {
@@ -2002,8 +2045,29 @@ mod tests {
         let record =
             SessionLaneRecord::decode("tool_started", &payload).expect("known Pi lane family");
         assert_eq!(record.kind(), SessionLaneRecordKind::ToolStarted);
+        assert_eq!(record.identity(), Some("op-1"));
+        assert_eq!(record.run_id(), Some("op-1"));
         assert!(matches!(record, SessionLaneRecord::ToolStarted(value) if value == payload));
         assert!(SessionLaneRecord::decode("unknown", &payload).is_err());
+    }
+
+    #[test]
+    fn typed_lane_identity_prefers_pi_record_shapes() {
+        let entry = SessionLaneRecord::decode(
+            "usage",
+            &serde_json::json!({"entryId": "entry-1", "runId": "run-1"}),
+        )
+        .expect("usage record");
+        assert_eq!(entry.identity(), Some("run-1"));
+        assert_eq!(entry.run_id(), Some("run-1"));
+
+        let queue = SessionLaneRecord::decode(
+            "queue_cancelled",
+            &serde_json::json!({"entryId": "entry-1"}),
+        )
+        .expect("queue cancellation");
+        assert_eq!(queue.identity(), Some("entry-1"));
+        assert_eq!(queue.run_id(), None);
     }
 
     #[test]
