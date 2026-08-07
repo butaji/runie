@@ -161,6 +161,14 @@ actor; `visual-activity-mixed.yaml` asserts the resulting visible `⌄` marker f
   state delivery event-based while leaving the actor mailbox and acknowledgement
   protocol explicit.
 
+- **Next YAML gap identified (2026-08-06):** The generic scenario outcome
+  currently exposes core, feed, and status projections but not the actor-owned
+  `UiState` projection. Therefore the new UI event mapping is covered by a
+  model/actor test, not yet by a runtime-discovered YAML state assertion. The
+  next DSL slice should add generic `state.ui` fields (welcome, shortcuts,
+  palette visibility/query/index) and construct that projection through the
+  same event sequence; no fixture-specific Rust test should be added.
+
 - **Actor workflow state oracle (2026-08-06):** YAML `state.workflows` now
   compares the complete actor-owned workflow projection (identity, objective,
   phase/state, active-agent count, terminal status, and elapsed time) by stable
