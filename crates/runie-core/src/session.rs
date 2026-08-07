@@ -390,14 +390,36 @@ impl SessionSnapshot {
                 if entry_type == "operation_finished" {
                     if let (Some(operation_id), Some(outcome)) = (
                         value
-                            .get("id")
-                            .or_else(|| value.get("runId"))
+                            .get("runId")
+                            .or_else(|| value.get("id"))
                             .and_then(serde_json::Value::as_str),
                         value.get("outcome").and_then(serde_json::Value::as_str),
                     ) {
                         snapshot
                             .operation_outcomes
                             .insert(operation_id.to_owned(), outcome.to_owned());
+                    }
+                }
+                if let Some(operation_id) = value
+                    .get("runId")
+                    .or_else(|| value.get("id"))
+                    .and_then(serde_json::Value::as_str)
+                {
+                    match entry_type {
+                        "operation_started" => {
+                            snapshot
+                                .active_operations
+                                .insert(operation_id.to_owned(), "started".into());
+                        }
+                        "abort_requested" => {
+                            snapshot
+                                .active_operations
+                                .insert(operation_id.to_owned(), "aborted".into());
+                        }
+                        "operation_finished" => {
+                            snapshot.active_operations.remove(operation_id);
+                        }
+                        _ => {}
                     }
                 }
                 snapshot.config_records.push(SessionConfigEntry {
@@ -527,6 +549,22 @@ impl SessionSnapshot {
                     data.clone(),
                 ),
             };
+            if matches!(
+                entry_type,
+                "operation_started" | "operation_finished" | "abort_requested"
+            ) {
+                if let Some(operation_id) = entry
+                    .get("id")
+                    .cloned()
+                    .filter(|value| value.is_string())
+                {
+                    entry
+                        .as_object_mut()
+                        .expect("operation record is an object")
+                        .entry("runId")
+                        .or_insert(operation_id);
+                }
+            }
             entry["kind"] = serde_json::Value::String("entry".into());
             entry["lane"] = serde_json::Value::String("main".into());
             entry["type"] = serde_json::Value::String(entry_type.into());
@@ -644,8 +682,8 @@ impl SessionActor {
                                 }
                             }
                             let operation_id = data
-                                .get("id")
-                                .or_else(|| data.get("runId"))
+                                .get("runId")
+                                .or_else(|| data.get("id"))
                                 .and_then(serde_json::Value::as_str)
                                 .map(str::to_owned);
                             if let Some(operation_id) = operation_id {
@@ -912,6 +950,11 @@ mod tests {
         actor.flush().await;
         assert!(actor.snapshot().active_operations.is_empty());
         assert_eq!(actor.snapshot().operation_outcomes["op-1"], "aborted");
+        let original = actor.snapshot();
+        let jsonl = original.to_jsonl("session-ops", 5, "/workspace");
+        let (_, _, imported) = SessionSnapshot::from_jsonl(&jsonl).expect("operation JSONL");
+        assert_eq!(imported.active_operations, original.active_operations);
+        assert_eq!(imported.operation_outcomes, original.operation_outcomes);
     }
 
     #[tokio::test]
