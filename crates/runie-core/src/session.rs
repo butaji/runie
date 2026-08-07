@@ -141,6 +141,9 @@ pub struct SessionSnapshot {
     /// Message `entries` remains the compatibility projection for existing
     /// callers; these records never become synthetic messages.
     pub config_records: Vec<SessionConfigEntry>,
+    /// Ordered, admitted Pi operation-lane records. Invalid or duplicate
+    /// records never enter this projection.
+    pub lane_records: Vec<SessionLaneRecordSnapshot>,
     /// Reducer-owned operation lifecycle projection keyed by Pi operation ID.
     /// Values are `started` or `aborted`; finished operations are removed.
     pub active_operations: BTreeMap<String, String>,
@@ -174,6 +177,17 @@ pub struct NavigationValidation {
 pub struct OperationErrorSnapshot {
     pub code: String,
     pub message: String,
+}
+
+/// Lossless actor-owned projection of an admitted Pi operation-lane record.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SessionLaneRecordSnapshot {
+    pub record_type: String,
+    pub id: String,
+    pub lane: Option<String>,
+    pub seq: Option<u64>,
+    pub timestamp: Option<i64>,
+    pub data: serde_json::Value,
 }
 
 /// Pi's durable operation-lane record families. The payload remains JSON at
@@ -288,6 +302,26 @@ fn reduce_operation_record(
     if validate_session_lane_record(snapshot, record_type, data).is_err() {
         return;
     }
+    let Some(record_id) = data
+        .get("runId")
+        .or_else(|| data.get("id"))
+        .or_else(|| data.get("entryId"))
+        .and_then(serde_json::Value::as_str)
+        .filter(|value| !value.is_empty())
+    else {
+        return;
+    };
+    snapshot.lane_records.push(SessionLaneRecordSnapshot {
+        record_type: record_type.to_owned(),
+        id: record_id.to_owned(),
+        lane: data
+            .get("lane")
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_owned),
+        seq: data.get("seq").and_then(serde_json::Value::as_u64),
+        timestamp: data.get("timestamp").and_then(serde_json::Value::as_i64),
+        data: data.clone(),
+    });
     if record_type == "operation_started"
         && data
             .get("intent")
@@ -1123,6 +1157,15 @@ mod tests {
         actor.flush().await;
         assert!(actor.snapshot().active_operations.is_empty());
         assert_eq!(actor.snapshot().operation_outcomes["op-1"], "aborted");
+        assert_eq!(
+            actor
+                .snapshot()
+                .lane_records
+                .iter()
+                .map(|record| record.record_type.as_str())
+                .collect::<Vec<_>>(),
+            vec!["operation_started", "abort_requested", "operation_finished"]
+        );
         let original = actor.snapshot();
         let jsonl = original.to_jsonl("session-ops", 5, "/workspace");
         let (_, _, imported) = SessionSnapshot::from_jsonl(&jsonl).expect("operation JSONL");
@@ -1351,6 +1394,7 @@ mod tests {
                 terminate: true,
             }],
             config_records: Vec::new(),
+            lane_records: Vec::new(),
             active_operations: BTreeMap::new(),
             operation_outcomes: BTreeMap::new(),
             operation_kinds: BTreeMap::new(),
@@ -1389,6 +1433,7 @@ mod tests {
                     },
                 },
             ],
+            lane_records: Vec::new(),
             active_operations: BTreeMap::new(),
             operation_outcomes: BTreeMap::new(),
             operation_kinds: BTreeMap::new(),

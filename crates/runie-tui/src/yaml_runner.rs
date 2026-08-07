@@ -960,6 +960,8 @@ pub struct StateAssertions {
     pub operation_errors: Option<BTreeMap<String, OperationErrorAssertion>>,
     /// Ordered Pi session configuration-record kinds from the actor journal.
     pub session_config_records: Option<Vec<String>>,
+    /// Ordered admitted Pi operation-lane record kinds.
+    pub session_lane_records: Option<Vec<String>>,
     /// Termination metadata on the latest actor-owned session entry.
     pub session_last_terminate: Option<bool>,
     pub tool_count: Option<usize>,
@@ -2696,6 +2698,19 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         if actual_records.as_slice() != expected_records.as_slice() {
             return Err(format!(
                 "session config records mismatch: expected {expected_records:?}, got {actual_records:?}"
+            ));
+        }
+    }
+    if let Some(expected_records) = &expected.session_lane_records {
+        let actual_records = outcome
+            .session
+            .lane_records
+            .iter()
+            .map(|record| record.record_type.clone())
+            .collect::<Vec<_>>();
+        if actual_records.as_slice() != expected_records.as_slice() {
+            return Err(format!(
+                "session lane records mismatch: expected {expected_records:?}, got {actual_records:?}"
             ));
         }
     }

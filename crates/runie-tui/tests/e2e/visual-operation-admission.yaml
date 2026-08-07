@@ -40,6 +40,9 @@ assertions:
       - operation_started
       - operation_finished
       - operation_finished
+    session_lane_records:
+      - operation_started
+      - operation_finished
     active_operations: {}
     operation_outcomes:
       op-admission: completed

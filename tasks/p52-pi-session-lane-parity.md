@@ -33,6 +33,14 @@ complete Pi storage tuple when present: non-empty `lane`, positive `seq`, and
 non-negative `timestamp`. The YAML admission fixture exercises that metadata
 path.
 
+## Completed slice (2026-08-07, ordered lane projection)
+
+`SessionSnapshot` now retains every admitted operation-lane event in
+`lane_records`, including its type, identity, storage metadata, and lossless
+JSON payload. Invalid and duplicate records are excluded before projection.
+The YAML state oracle supports `session_lane_records`, and the admission
+fixture proves that only the valid start/finish sequence is retained.
+
 ## Source contract
 
 The authoritative upstream files are:
