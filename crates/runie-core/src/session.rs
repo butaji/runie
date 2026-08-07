@@ -1531,19 +1531,15 @@ impl SessionActor {
                         state.sequence += 1;
                         let id = format!("entry-{}", next_id);
                         next_id += 1;
-                        let entry = SessionEntry {
-                            id: id.clone(),
-                            seq: state.sequence,
-                            parent_id: state.leaf_id.clone(),
-                            timestamp: message.timestamp(),
-                            message: *message,
-                            terminate,
+                        let assistant = match message.as_ref() {
+                            AgentMessage::Assistant(assistant) => Some(assistant.clone()),
+                            _ => None,
                         };
-                        state.leaf_id = Some(id.clone());
-                        state.entries.push(entry);
-                        if let Some(AgentMessage::Assistant(assistant)) =
-                            state.entries.last().map(|entry| entry.message.clone())
-                        {
+                        // Pi journals the attempt before the result entry is
+                        // committed. The actor has already reserved the
+                        // entry identity, so this remains one ordered
+                        // mailbox reduction rather than a post-hoc guess.
+                        if assistant.is_some() {
                             if let Some(run_id) = state
                                 .active_operations
                                 .first_key_value()
@@ -1570,6 +1566,18 @@ impl SessionActor {
                                 });
                                 reduce_operation_record(&mut state, "step_attempt", &data);
                             }
+                        }
+                        let entry = SessionEntry {
+                            id: id.clone(),
+                            seq: state.sequence,
+                            parent_id: state.leaf_id.clone(),
+                            timestamp: message.timestamp(),
+                            message: *message,
+                            terminate,
+                        };
+                        state.leaf_id = Some(id.clone());
+                        state.entries.push(entry);
+                        if let Some(assistant) = assistant {
                             let data = serde_json::json!({
                                 "entryId": id,
                                 "usage": serde_json::to_value(&assistant.usage)
@@ -2488,6 +2496,10 @@ mod tests {
     async fn assistant_message_end_emits_owned_usage_lane_record() {
         let bus = EventBus::new();
         let actor = SessionActor::new_with_bus(&bus);
+        bus.publish(AgentEvent::OperationRecordCreated {
+            record_type: "operation_started".into(),
+            data: serde_json::json!({"id": "run-1", "lane": "main", "runId": "run-1"}),
+        });
         let assistant = AssistantMessage {
             usage: Usage::default(),
             ..Default::default()
@@ -2496,8 +2508,17 @@ mod tests {
             message: AgentMessage::Assistant(assistant),
         });
         actor.flush().await;
-        assert_eq!(actor.snapshot().lane_records[0].record_type, "usage");
-        assert_eq!(actor.snapshot().lane_records[0].id, "entry-1");
+        let snapshot = actor.snapshot();
+        assert_eq!(
+            snapshot
+                .lane_records
+                .iter()
+                .map(|record| record.record_type.as_str())
+                .collect::<Vec<_>>(),
+            ["operation_started", "step_attempt", "usage"]
+        );
+        assert_eq!(snapshot.lane_records[1].data["resultEntryId"], "entry-1");
+        assert_eq!(snapshot.lane_records[2].id, "entry-1");
     }
 
     #[tokio::test]

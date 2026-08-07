@@ -317,20 +317,24 @@ usage identity cannot drift from the journal. Coverage verifies the event
 sequence and identity; the all-family YAML fixture continues to exercise the
 runtime usage record shape.
 
-### Remaining transition audit (2026-08-07)
+### Transition audit (2026-08-08)
 
 Pi emits `step_attempt` before the assistant result is committed, with the
 active operation ID, attempt number, step kind, and eventual result entry ID.
-Runie's current `MessageStart` event has no operation ID/attempt context and
-its `MessageEnd` arrives after the point where Pi records the attempt; a
-post-hoc synthetic record would have incorrect ordering. The loop must first
-carry an actor-owned run/attempt context event.
+Runie's session mailbox now reserves the actor-issued result ID and emits this
+fact before committing the assistant entry, so the former post-hoc ordering
+defect is closed without a caller-owned identity.
 
 Pi emits `write_deferred` when a deferred assistant result is persisted, with
 the target provisioned entry and deferred handle. Runie has deferred provider
 commands and handles, but no session mutation event at the persistence point.
 The provider/loop boundary must publish that typed fact before this family can
 be projected without inventing state.
+
+The remaining limitation is operation correlation when multiple open lanes
+exist: the reducer still selects its active-operation policy, and Pi-specific
+admission/context selection must be mapped before concurrent operation kinds
+can be expanded.
 
 ## Completed slice (2026-08-07, separated operation journal lane)
 
