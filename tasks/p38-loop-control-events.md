@@ -148,3 +148,11 @@ user-message start.
 - YAML replay can express loop-control commands without recompiling;
 - no test uses `sleep()`;
 - `lint-check`, unit/replay tests, and the full `just ci` gate remain green.
+
+## Interactive submission non-blocking proof (2026-08-08)
+
+`App::handle_prompt_outcome` now has an integration regression with a provider
+stream that never resolves. The test asserts mailbox acceptance within a
+bounded timeout while the owned submission actor continues awaiting provider
+work. This proves the terminal input path does not await provider latency and
+uses no sleep-based timing assumption.

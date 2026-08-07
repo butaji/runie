@@ -29,6 +29,7 @@ use runie_core::types::{
 use runie_tui::app::App;
 use runie_tui::event_renderer::EventRenderer;
 use runie_tui::layout::chat_layout;
+use runie_tui::widgets::PromptOutcome;
 use runie_tui::yaml_runner::{assert_scenario_async, load_scenario, run_scenario};
 
 mod common;
@@ -72,6 +73,20 @@ impl StreamFn for TwoTurnMock {
     }
 }
 
+struct PendingMock;
+
+#[async_trait::async_trait]
+impl StreamFn for PendingMock {
+    async fn stream(
+        &self,
+        _model: &Model,
+        _context: &AgentContext,
+        _options: Option<SimpleStreamOptions>,
+    ) -> Result<AssistantMessageEventStream, StreamError> {
+        std::future::pending().await
+    }
+}
+
 struct EchoTool;
 #[async_trait::async_trait]
 impl AgentTool for EchoTool {
@@ -103,7 +118,7 @@ impl AgentTool for EchoTool {
     }
 }
 
-fn build_app() -> App {
+fn build_app_with(provider_stream: Arc<dyn StreamFn>) -> App {
     let bus = EventBus::new();
     let state = AgentStateActor::new();
     let steering = SteeringQueueActor::new();
@@ -111,7 +126,7 @@ fn build_app() -> App {
     let mut reg = ToolRegistry::new();
     reg.register(Arc::new(EchoTool));
     let tool_executor = ToolExecutorActor::new(Arc::new(reg));
-    let provider = ProviderActor::new(Arc::new(TwoTurnMock));
+    let provider = ProviderActor::new(provider_stream);
     let deps = LoopDeps {
         state,
         steering,
@@ -133,6 +148,22 @@ fn build_app() -> App {
     };
     let actor = LoopActor::new(deps);
     App::new(actor, bus)
+}
+
+fn build_app() -> App {
+    build_app_with(Arc::new(TwoTurnMock))
+}
+
+#[tokio::test]
+async fn prompt_submission_ack_does_not_wait_for_provider() {
+    let app = build_app_with(Arc::new(PendingMock));
+    let accepted = tokio::time::timeout(
+        std::time::Duration::from_millis(100),
+        app.handle_prompt_outcome(PromptOutcome::Submitted("pending".into())),
+    )
+    .await
+    .expect("submission mailbox acceptance must not await provider work");
+    assert_eq!(accepted.as_deref(), Some("pending"));
 }
 
 #[tokio::test]
