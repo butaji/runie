@@ -785,6 +785,12 @@ impl EventRenderer {
         reason = "the exhaustive compatibility metadata table keeps event ownership auditable"
     )]
     fn apply_actor_metadata(&mut self, event: AgentEvent) {
+        if self.live_tool_events_owned {
+            if matches!(event, AgentEvent::AgentStart) {
+                self.emit_welcome = false;
+            }
+            return;
+        }
         match event {
             AgentEvent::AgentStart => {
                 self.emit_welcome = false;
@@ -2120,6 +2126,27 @@ mod tests {
                 .turn_started
         );
         assert!(renderer.scrollback_actor.is_some());
+    }
+
+    #[tokio::test]
+    async fn live_renderer_does_not_retain_assistant_stream_metadata() {
+        let mut renderer =
+            EventRenderer::with_live_actors(ScrollbackActor::new(), StatusActor::new(), false);
+        renderer.apply_actor_metadata(AgentEvent::MessageStart {
+            message: AgentMessage::Assistant(Default::default()),
+        });
+        renderer.apply_actor_metadata(AgentEvent::MessageUpdate {
+            message: AgentMessage::Assistant(Default::default()),
+            event: AssistantMessageEvent::TextDelta {
+                index: 0,
+                delta: "live".into(),
+                partial: Default::default(),
+            },
+        });
+        assert!(renderer.streaming_buffer.is_empty());
+        assert!(renderer.reasoning_buffer.is_empty());
+        assert!(!renderer.in_assistant_stream);
+        assert!(!renderer.in_reasoning);
     }
 
     #[test]

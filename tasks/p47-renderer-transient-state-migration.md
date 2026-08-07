@@ -76,6 +76,13 @@ compatibility `Scrollback` model through `ScrollbackMsg`, and finalization
 reads the same model snapshot used by the actor path. This removes one
 renderer-side lifecycle mirror while preserving replay behavior.
 
+Assistant metadata ownership increment (2026-08-07): the live
+`with_live_actors` path no longer runs `handle_message_start/update/end` through
+the compatibility metadata reducer. Assistant text/reasoning lifecycle is
+already reduced by `ScrollbackActor`; the renderer retains those buffers only
+for synchronous compatibility/replay adapters. A regression asserts that live
+assistant events leave the compatibility buffers empty.
+
 ## Tool lifecycle increment (2026-08-06)
 
 The live `App` now constructs `ScrollbackActor::new_with_bus`. Its owned bus
