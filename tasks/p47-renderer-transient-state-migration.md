@@ -97,6 +97,12 @@ compatibility updates derive the current header and arguments from that
 projection. This preserves parallel tool identity and terminal header
 formatting while eliminating the renderer's second pending-lifecycle store.
 
+Activity-group ownership increment (2026-08-07): removed the compatibility
+`activity_group_open` boolean. Group continuity is now derived from the
+actor/compatibility feed projection: an activity row after the newest user
+entry identifies the current Grok activity group. Starting a new user turn
+therefore naturally starts a fresh group without a renderer reset flag.
+
 Thinking-duration ownership increment (2026-08-07): the compatibility
 `StatusBar` now retains `thinking_elapsed_ms` in its renderer-independent
 snapshot, exactly like `StatusState`. `EventRenderer` no longer keeps a

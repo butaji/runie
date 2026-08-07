@@ -279,7 +279,6 @@ pub struct EventRenderer {
     activity_commands: usize,
     activity_subagents: usize,
     activity_failures: usize,
-    activity_group_open: bool,
     /// If true, the next AgentStart emits the welcome modal lines
     /// (matching grok's minimal-mode chrome) and then clears this flag.
     emit_welcome: bool,
@@ -340,7 +339,6 @@ impl EventRenderer {
             activity_commands: 0,
             activity_subagents: 0,
             activity_failures: 0,
-            activity_group_open: false,
             emit_welcome,
             live_grok_layout: false,
             live_tool_events_owned: false,
@@ -867,14 +865,14 @@ impl EventRenderer {
         tool_name: String,
         args: serde_json::Value,
     ) -> ScrollbackMsg {
-        let starts_new_activity_group = self.active_tool_count() == 0 && !self.activity_group_open;
+        let starts_new_activity_group =
+            self.active_tool_count() == 0 && !self.activity_group_exists_since_latest_user();
         if starts_new_activity_group {
             self.activity_dirs = 0;
             self.activity_files = 0;
             self.activity_commands = 0;
             self.activity_subagents = 0;
             self.activity_failures = 0;
-            self.activity_group_open = true;
         }
         if matches!(tool_name.as_str(), "list_dir" | "list_files" | "ls") {
             self.activity_dirs += 1;
@@ -1145,7 +1143,6 @@ impl EventRenderer {
         self.activity_commands = 0;
         self.activity_subagents = 0;
         self.activity_failures = 0;
-        self.activity_group_open = false;
         if self.scrollback_actor.is_none() {
             self.scrollback.lock().apply(ScrollbackMsg::TurnEnd);
         }
@@ -1156,7 +1153,6 @@ impl EventRenderer {
         use runie_core::types::AgentMessage;
         match message {
             AgentMessage::User(user) => {
-                self.activity_group_open = false;
                 if self.scrollback_actor.is_none() && user.timestamp >= LIVE_TIMESTAMP_SECONDS_MIN {
                     self.scrollback
                         .lock()
@@ -1178,7 +1174,6 @@ impl EventRenderer {
                 }
             }
             AgentMessage::Assistant(_) => {
-                self.activity_group_open = false;
                 if self.scrollback_actor.is_none() {
                     self.scrollback
                         .lock()
@@ -1345,6 +1340,21 @@ impl EventRenderer {
             .iter()
             .filter(|line| line.kind == LineKind::ToolRunning)
             .count()
+    }
+
+    fn activity_group_exists_since_latest_user(&self) -> bool {
+        let lines = if let Some(actor) = &self.scrollback_actor {
+            actor.model_snapshot().lines
+        } else {
+            self.scrollback.lock().lines().to_vec()
+        };
+        let latest_user = lines
+            .iter()
+            .rposition(|line| line.kind == LineKind::User)
+            .unwrap_or(0);
+        lines[latest_user..]
+            .iter()
+            .any(|line| line.kind == LineKind::Activity)
     }
 
     fn current_tool_header(&self, tool_call_id: &str) -> Option<String> {
