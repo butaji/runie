@@ -200,14 +200,12 @@ impl OwnedEventProjection {
             self.tool_args.insert(tool_call_id.clone(), args.clone());
             self.tool_names
                 .insert(tool_call_id.clone(), tool_name.clone());
-            if matches!(tool_name.as_str(), "list_dir" | "list_files") {
-                self.activity_dirs += 1;
-            } else if matches!(tool_name.as_str(), "read" | "read_file") {
-                self.activity_files += 1;
-            } else if matches!(tool_name.as_str(), "bash" | "shell" | "exec" | "run") {
-                self.activity_commands += 1;
-            } else if matches!(tool_name.as_str(), "subagent" | "agent" | "task") {
-                self.activity_subagents += 1;
+            match runie_tui_model::classify_activity_tool(tool_name) {
+                Some(runie_tui_model::ActivityKind::Dir) => self.activity_dirs += 1,
+                Some(runie_tui_model::ActivityKind::File) => self.activity_files += 1,
+                Some(runie_tui_model::ActivityKind::Command) => self.activity_commands += 1,
+                Some(runie_tui_model::ActivityKind::Subagent) => self.activity_subagents += 1,
+                None => {}
             }
             self.active_tool_count += 1;
         }

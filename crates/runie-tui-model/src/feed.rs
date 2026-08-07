@@ -4,9 +4,32 @@ use std::collections::{HashMap, HashSet};
 
 use runie_core::types::{ThemeKind, ToolDisplayMode};
 
-/// Pure semantic header projection for a tool-start event. Terminal styling
-/// and widget layout stay outside the model; callers provide the workspace
-/// prefix used to shorten absolute paths.
+/// Semantic category for grouped activity-tool counters.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ActivityKind {
+    Dir,
+    File,
+    Command,
+    Subagent,
+}
+
+/// Classify a tool name for grouped activity presentation.
+pub fn classify_activity_tool(tool_name: &str) -> Option<ActivityKind> {
+    match tool_name {
+        "list_dir" | "list_files" | "ls" => Some(ActivityKind::Dir),
+        "read" | "read_file" => Some(ActivityKind::File),
+        "bash"
+        | "shell"
+        | "exec"
+        | "run"
+        | "execute"
+        | "run_terminal_command"
+        | "run_terminal_cmd" => Some(ActivityKind::Command),
+        "subagent" | "agent" | "task" => Some(ActivityKind::Subagent),
+        _ => None,
+    }
+}
+
 #[allow(
     clippy::too_many_lines,
     reason = "the semantic tool-header DSL keeps Grok aliases together"
@@ -910,12 +933,46 @@ impl ToolCardKind {
 #[cfg(test)]
 mod tests {
     use super::{
-        default_tool_display_mode, project_tool_blocks, project_tool_card_rows,
-        structured_update_text, FeedState, Line, LineKind, ToolCardKind, ToolCardPaintIntent,
-        ToolCardRow, ToolCardRowKind,
+        classify_activity_tool, default_tool_display_mode, project_tool_blocks,
+        project_tool_card_rows, structured_update_text, ActivityKind, FeedState, Line, LineKind,
+        ToolCardKind, ToolCardPaintIntent, ToolCardRow, ToolCardRowKind,
     };
     use runie_core::types::ToolDisplayMode;
     use std::collections::HashMap;
+
+    #[test]
+    fn activity_classifier_pins_every_alias() {
+        let cases = [
+            (
+                ActivityKind::Dir,
+                ["list_dir", "list_files", "ls"].as_slice(),
+            ),
+            (ActivityKind::File, ["read", "read_file"].as_slice()),
+            (
+                ActivityKind::Command,
+                [
+                    "bash",
+                    "shell",
+                    "exec",
+                    "run",
+                    "execute",
+                    "run_terminal_command",
+                    "run_terminal_cmd",
+                ]
+                .as_slice(),
+            ),
+            (
+                ActivityKind::Subagent,
+                ["subagent", "agent", "task"].as_slice(),
+            ),
+        ];
+        for (kind, aliases) in cases {
+            for alias in aliases {
+                assert_eq!(classify_activity_tool(alias), Some(kind), "alias: {alias}");
+            }
+        }
+        assert_eq!(classify_activity_tool("unknown"), None);
+    }
 
     #[test]
     fn structured_update_prefers_output_over_content() {
@@ -1639,26 +1696,13 @@ impl FeedState {
                 self.navigation.activity_subagents = 0;
                 self.navigation.activity_failures = 0;
             }
-            ScrollbackMsg::ActivityToolStart(name) => {
-                if matches!(name.as_str(), "list_dir" | "list_files" | "ls") {
-                    self.navigation.activity_dirs += 1;
-                } else if matches!(name.as_str(), "read" | "read_file") {
-                    self.navigation.activity_files += 1;
-                } else if matches!(
-                    name.as_str(),
-                    "bash"
-                        | "shell"
-                        | "exec"
-                        | "run"
-                        | "execute"
-                        | "run_terminal_command"
-                        | "run_terminal_cmd"
-                ) {
-                    self.navigation.activity_commands += 1;
-                } else if matches!(name.as_str(), "subagent" | "agent" | "task") {
-                    self.navigation.activity_subagents += 1;
-                }
-            }
+            ScrollbackMsg::ActivityToolStart(name) => match classify_activity_tool(name.as_str()) {
+                Some(ActivityKind::Dir) => self.navigation.activity_dirs += 1,
+                Some(ActivityKind::File) => self.navigation.activity_files += 1,
+                Some(ActivityKind::Command) => self.navigation.activity_commands += 1,
+                Some(ActivityKind::Subagent) => self.navigation.activity_subagents += 1,
+                None => {}
+            },
             ScrollbackMsg::ActivityToolEnd { is_error } => {
                 if is_error {
                     self.navigation.activity_failures += 1;

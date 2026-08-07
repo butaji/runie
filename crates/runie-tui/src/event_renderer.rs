@@ -762,23 +762,12 @@ impl EventRenderer {
         } else {
             self.activity_counts()
         };
-        if matches!(tool_name, "list_dir" | "list_files" | "ls") {
-            dirs += 1;
-        } else if matches!(tool_name, "read" | "read_file") {
-            files += 1;
-        } else if matches!(
-            tool_name,
-            "bash"
-                | "shell"
-                | "exec"
-                | "run"
-                | "execute"
-                | "run_terminal_command"
-                | "run_terminal_cmd"
-        ) {
-            commands += 1;
-        } else if matches!(tool_name, "subagent" | "agent" | "task") {
-            subagents += 1;
+        match runie_tui_model::classify_activity_tool(tool_name) {
+            Some(runie_tui_model::ActivityKind::Dir) => dirs += 1,
+            Some(runie_tui_model::ActivityKind::File) => files += 1,
+            Some(runie_tui_model::ActivityKind::Command) => commands += 1,
+            Some(runie_tui_model::ActivityKind::Subagent) => subagents += 1,
+            None => {}
         }
         (dirs, files, commands, subagents, failures)
     }

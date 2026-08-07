@@ -40,6 +40,11 @@ The model owns the semantic `◈ Listed/Read/Ran` vocabulary and failure suffix;
 the renderer only styles the resulting line. Actor lifecycle tests preserve
 the exact label and keep this event → snapshot behavior covered.
 
+Classifier centralization (2026-08-08): `ActivityKind` and
+`classify_activity_tool` now own the complete grouped activity alias vocabulary
+in `runie-tui-model`; actor and compatibility-renderer counters consume the
+shared classification, with unit coverage for every alias.
+
 Completion-header extraction (2026-08-08): Grok's tool-result cardinality,
 read-range/image suffixes, and terminal completion vocabulary now live in
 `runie-tui-model::completed_tool_header_with_args`. The feed actor consumes
