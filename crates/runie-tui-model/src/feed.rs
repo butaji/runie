@@ -68,6 +68,7 @@ pub struct FeedSnapshot {
     pub theme: ThemeKind,
     pub animation_frame: usize,
     pub tool_modes: HashMap<String, ToolDisplayMode>,
+    pub turn_started: bool,
 }
 
 /// Renderer-independent navigation and animation facts for a feed.
@@ -92,6 +93,7 @@ pub struct FeedNavigation {
     pub settled_no_tool_phase: bool,
     pub live_grok_layout: bool,
     pub next_tool_row_id: u64,
+    pub turn_started: bool,
 }
 
 impl Default for FeedNavigation {
@@ -116,6 +118,7 @@ impl Default for FeedNavigation {
             settled_no_tool_phase: false,
             live_grok_layout: false,
             next_tool_row_id: 0,
+            turn_started: false,
         }
     }
 }
@@ -868,6 +871,8 @@ impl Line {
 pub enum ScrollbackMsg {
     Append(Line),
     AppendTurnSummary(String),
+    TurnStart,
+    TurnEnd,
     Clear,
     SetTheme(ThemeKind),
     AdvanceAnimation,
@@ -982,6 +987,7 @@ impl FeedState {
             theme: self.navigation.theme,
             animation_frame: self.navigation.animation_frame,
             tool_modes: self.navigation.tool_modes.clone(),
+            turn_started: self.navigation.turn_started,
         }
     }
 
@@ -1004,6 +1010,8 @@ impl FeedState {
             ScrollbackMsg::AppendTurnSummary(text) => {
                 self.append(Line::new(LineKind::TurnSummary, text));
             }
+            ScrollbackMsg::TurnStart => self.navigation.turn_started = true,
+            ScrollbackMsg::TurnEnd => self.navigation.turn_started = false,
             ScrollbackMsg::Clear => self.clear(),
             ScrollbackMsg::SetTheme(theme) => self.navigation.theme = theme,
             ScrollbackMsg::AdvanceAnimation => self.navigation.advance_animation(),

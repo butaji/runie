@@ -462,6 +462,7 @@ impl EventRenderer {
                                 )),
                                 _ => None,
                             };
+                            let turn_was_started = scrollback_actor.model_snapshot().turn_started;
                             let mut feed_messages = if matches!(
                                 event,
                                 AgentEvent::BackgroundWorkStarted { .. }
@@ -473,6 +474,9 @@ impl EventRenderer {
                             } else {
                                 scrollback_messages_for_event(&event)
                             };
+                            if matches!(event, AgentEvent::TurnStart) {
+                                feed_messages.push(ScrollbackMsg::TurnStart);
+                            }
                             if self.live_grok_layout
                                 && matches!(
                                     event,
@@ -499,10 +503,13 @@ impl EventRenderer {
                                         && self.tool_rows.is_empty(),
                                 });
                             }
-                            if matches!(event, AgentEvent::AgentEnd { .. }) && self.turn_started {
+                            if matches!(event, AgentEvent::AgentEnd { .. }) && turn_was_started {
                                 feed_messages.push(ScrollbackMsg::AppendTurnSummary(
                                     status_actor.model_snapshot().worked_for_label(),
                                 ));
+                                feed_messages.push(ScrollbackMsg::TurnEnd);
+                            } else if matches!(event, AgentEvent::AgentEnd { .. }) {
+                                feed_messages.push(ScrollbackMsg::TurnEnd);
                             }
                             if let AgentEvent::MessageUpdate {
                                 event: AssistantMessageEvent::Error { error, .. },
@@ -598,7 +605,11 @@ impl EventRenderer {
             )),
             _ => None,
         };
+        let turn_was_started = scrollback_actor.model_snapshot().turn_started;
         let mut messages = scrollback_messages_for_event(&event);
+        if matches!(event, AgentEvent::TurnStart) {
+            messages.push(ScrollbackMsg::TurnStart);
+        }
         if matches!(event, AgentEvent::AgentStart) {
             messages.extend(agent_start_messages(self.emit_welcome));
         }
@@ -635,11 +646,14 @@ impl EventRenderer {
                 )));
             }
         }
-        if matches!(event, AgentEvent::AgentEnd { .. }) && self.turn_started {
+        if matches!(event, AgentEvent::AgentEnd { .. }) && turn_was_started {
             messages.push(ScrollbackMsg::Append(Line::new(LineKind::Separator, "")));
             messages.push(ScrollbackMsg::AppendTurnSummary(
                 status_actor.model_snapshot().worked_for_label(),
             ));
+            messages.push(ScrollbackMsg::TurnEnd);
+        } else if matches!(event, AgentEvent::AgentEnd { .. }) {
+            messages.push(ScrollbackMsg::TurnEnd);
         }
         if !messages.is_empty() {
             scrollback_actor.apply_batch(messages).await;

@@ -56,6 +56,12 @@ test-scoped fallback. `visual-thinking-duration.yaml` asserts the event-to-
 snapshot path directly, so changing the event sequence does not require
 recompilation.
 
+Turn lifecycle is also now an actor-owned feed fact: `TurnStart` and `TurnEnd`
+are explicit reducer messages and `FeedSnapshot.turn_started` determines
+whether the production path emits Grok's terminal `Worked for` row. The
+renderer no longer uses its lifecycle flag for production summary eligibility;
+the compatibility reducer remains available for synchronous tests.
+
 ## Acceptance evidence
 
 - Every migrated field is present in `FeedSnapshot` or a core actor snapshot;

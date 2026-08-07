@@ -295,6 +295,7 @@ impl Scrollback {
             ScrollbackMsg::AppendTurnSummary(text) => {
                 return Some(self.append(Line::new(LineKind::TurnSummary, text)));
             }
+            ScrollbackMsg::TurnStart | ScrollbackMsg::TurnEnd => {}
             ScrollbackMsg::Clear => {
                 self.clear();
             }
@@ -720,6 +721,7 @@ impl Scrollback {
             settled_no_tool_phase: self.navigation.settled_no_tool_phase,
             live_grok_layout: self.navigation.live_grok_layout,
             next_tool_row_id: self.navigation.next_tool_row_id,
+            turn_started: false,
         }
     }
 

@@ -212,6 +212,7 @@ mod tests {
             settled_no_tool_phase: false,
             live_grok_layout: false,
             next_tool_row_id: 0,
+            turn_started: false,
         }
     }
 }
