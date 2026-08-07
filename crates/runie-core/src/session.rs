@@ -1854,6 +1854,14 @@ mod tests {
         assert_eq!(session_id, "session-1");
         assert_eq!(cwd, "/tmp");
         assert_eq!(loaded.sequence, snapshot.sequence);
+        tokio::fs::write(&path, format!("{contents}{{\"kind\":\"entry\""))
+            .await
+            .expect("tear final line");
+        let (_, _, repaired) = storage
+            .load_snapshot(&path_string)
+            .await
+            .expect("repair load");
+        assert_eq!(repaired.sequence, snapshot.sequence);
         let fork_path = format!("{path_string}.fork");
         storage
             .fork_snapshot(&fork_path, &snapshot, "entry-1", "fork-1", 2, "/tmp")

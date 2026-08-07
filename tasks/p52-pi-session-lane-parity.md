@@ -122,6 +122,10 @@ inside the storage mailbox and atomically publishes the re-sequenced fork to
 a separate path. The round-trip test publishes, forks, reloads, and checks the
 new leaf/sequence boundary.
 
+Storage integration coverage now appends an invalid final physical line and
+loads it through the actor, proving the Pi torn-tail rule at the filesystem
+boundary rather than only in a pure parser test.
+
 ## Current Runie mapping
 
 `runie-core/src/session.rs` owns parent-linked message/config entries and
