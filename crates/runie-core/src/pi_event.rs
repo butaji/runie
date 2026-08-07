@@ -103,6 +103,18 @@ mod tests {
     }
 
     #[test]
+    fn model_configuration_events_are_rejected_at_pi_boundary() {
+        let event = AgentEvent::ModelChanged {
+            model: crate::types::Model {
+                id: "runie-model".into(),
+                context_window: 42_000,
+                ..crate::types::Model::default()
+            },
+        };
+        assert!(PiAgentEvent::try_from(event).is_err());
+    }
+
+    #[test]
     fn pi_lifecycle_round_trips_through_boundary() {
         let pi = PiAgentEvent::try_from(AgentEvent::TurnStart).expect("Pi event");
         assert!(matches!(pi.try_into_agent_event(), AgentEvent::TurnStart));

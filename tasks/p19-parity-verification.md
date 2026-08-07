@@ -1469,3 +1469,8 @@ and `addedToolNames` optional on `ToolResultMessage`. Runie now omits null
 `details` and absent `usage`/empty `addedToolNames` during serialization,
 while retaining default-compatible deserialization for internal projections.
 Focused wire tests cover both populated and absent-field cases.
+
+**Application-event boundary (2026-08-06):** The new Runie-only
+`ModelChanged` configuration event has an explicit rejection test at the
+`PiAgentEvent` adapter, preserving the closed Pi event contract while allowing
+reactive TUI projections to consume model updates.
