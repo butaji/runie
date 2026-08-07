@@ -187,12 +187,14 @@ The reference feed component matrix is now recorded explicitly:
 | Verb groups | Read, Listed, Searched, Ran, subagent counts; running/past verbs | activity summary projection |
 | Background work | subagent, workflow, task output, waiting reasons | actor-owned lifecycle reducers, workflow/background YAML fixtures, and whole-screen rendering; broader Grok effect variants remain open |
 | Chrome | header meter, status telemetry, prompt/footer, doctor hint | strict feed/waiting frames |
-| Effects | braille/dot spinners, animated accents, overlays, terminal capability paths | actor-owned demand-driven frames with deterministic YAML ticks; terminal capability and broader effect variants remain open |
+| Effects | braille/dot spinners, animated accents, overlays, terminal capability paths | actor-owned demand-driven frames with deterministic YAML ticks; terminal-native notifications/wrap capabilities are Grok shell features outside the Pi-core-limited Runie scope |
 
 The strict fixed-grid oracle now covers both the Grok feed and waiting frames;
 `visual-animation-events.yaml` covers actor cadence and demand without sleeps.
 Component/state fixtures remain the next expansion target for the partial tool
-and terminal-capability effect families above.
+and in-scope effect families above; Grok-only terminal notification/wrap
+features stay explicitly out of scope unless Pi-core supplies a corresponding
+event contract.
 
 Per-tool display state is now event-driven: `ToolDisplayModeChanged` carries a
 tool-call ID and `Collapsed`/`Truncated`/`Expanded` mode. Tool lines retain
