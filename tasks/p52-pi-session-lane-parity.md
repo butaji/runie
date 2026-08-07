@@ -126,6 +126,9 @@ Storage integration coverage now appends an invalid final physical line and
 loads it through the actor, proving the Pi torn-tail rule at the filesystem
 boundary rather than only in a pure parser test.
 
+The operation-lane JSONL round-trip now asserts that admitted record families
+survive export/import in order, in addition to lifecycle projections.
+
 ## Completed slice (2026-08-07, lane event DSL)
 
 `session_lane_event!` and `session_lane_record_name!` provide explicit macro

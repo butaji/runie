@@ -1521,6 +1521,10 @@ mod tests {
         assert_eq!(records[1].parent_id.as_deref(), Some("entry-1"));
     }
 
+    #[allow(
+        clippy::too_many_lines,
+        reason = "operation replay covers lifecycle and persistence"
+    )]
     #[tokio::test]
     async fn operation_records_reduce_to_owned_lifecycle_state() {
         let bus = EventBus::new();
@@ -1558,6 +1562,14 @@ mod tests {
         let (_, _, imported) = SessionSnapshot::from_jsonl(&jsonl).expect("operation JSONL");
         assert_eq!(imported.active_operations, original.active_operations);
         assert_eq!(imported.operation_outcomes, original.operation_outcomes);
+        assert_eq!(
+            imported
+                .lane_records
+                .iter()
+                .map(|record| record.record_type.as_str())
+                .collect::<Vec<_>>(),
+            vec!["operation_started", "abort_requested", "operation_finished"]
+        );
     }
 
     #[test]
