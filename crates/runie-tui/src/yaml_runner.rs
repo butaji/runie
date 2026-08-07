@@ -810,6 +810,8 @@ pub struct StateAssertions {
     pub is_streaming: Option<bool>,
     pub pending_tool_calls: Option<usize>,
     pub messages: Option<usize>,
+    /// `addedToolNames` from the latest Pi tool result.
+    pub tool_result_added_tool_names: Option<Vec<String>>,
     pub session_entries: Option<usize>,
     pub tool_count: Option<usize>,
     pub streaming_contains: Option<String>,
@@ -2061,6 +2063,23 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         "animation_demand"
     );
     assert_yaml_eq!(expected.is_streaming, actual.is_streaming, "is_streaming");
+    if let Some(expected_names) = &expected.tool_result_added_tool_names {
+        let actual_names = actual
+            .messages
+            .iter()
+            .rev()
+            .find_map(|message| match message {
+                AgentMessage::ToolResult(result) => Some(&result.added_tool_names),
+                _ => None,
+            })
+            .cloned()
+            .unwrap_or_default();
+        assert_yaml_eq!(
+            Some(expected_names.clone()),
+            actual_names,
+            "tool_result_added_tool_names"
+        );
+    }
     assert_yaml_eq!(
         expected
             .context_window

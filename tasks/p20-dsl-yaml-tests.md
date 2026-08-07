@@ -352,3 +352,5 @@ supports Pi's `terminate` and `added_tool_names` result fields. The
 `visual-tool-terminate.yaml` scenario runs through the real loop and asserts
 the complete Pi event vector, including the update/end lifecycle, while
 confirming that `terminate: true` prevents an automatic follow-up turn.
+It also asserts the resulting `added_tool_names` on the core actor snapshot,
+so the metadata is validated as state rather than only as transport.

@@ -11,6 +11,8 @@ events:
   - tool_call: { name: echo, args: { value: "stop" } }
   - done: { stop_reason: tool_use }
 assertions:
+  state:
+    tool_result_added_tool_names: [runtime_tool]
   pi_events:
     - agent_start
     - turn_start
