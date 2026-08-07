@@ -197,6 +197,14 @@ replay ambiguous. The required next boundary is therefore queue-actor-owned
 identity allocation plus an event capability that publishes the exact record
 after the mailbox accepts the message.
 
+The first half of that boundary is now implemented: `SteeringQueueActor` and
+`FollowUpQueueActor` allocate monotonic actor-owned identities (`steer-N` and
+`follow-up-N`) when their push mailbox commands commit. The public push result
+returns the acknowledged identity, while drain behavior remains unchanged for
+existing consumers. Queue event publication and cancellation records remain
+next, because they need the queue kind and active run context at the loop
+boundary.
+
 ## Implementation order
 
 1. Replace the generic Rust operation-record payload with a typed internal

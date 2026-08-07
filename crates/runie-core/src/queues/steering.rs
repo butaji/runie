@@ -17,7 +17,7 @@ pub struct SteeringQueueSnapshot {
 /// Mailbox command for the steering queue actor.
 #[derive(Debug)]
 enum SteeringCommand {
-    Push(Box<AgentMessage>, oneshot::Sender<()>),
+    Push(Box<AgentMessage>, mpsc::Sender<String>),
     DrainOne(mpsc::Sender<Option<AgentMessage>>),
     DrainAll(mpsc::Sender<Vec<AgentMessage>>),
     Clear(oneshot::Sender<()>),
@@ -47,11 +47,14 @@ impl SteeringQueueActor {
         }
     }
 
-    pub async fn push(&self, msg: AgentMessage) {
-        let _ = mailbox_ack!(self.tx, |reply| {
-            SteeringCommand::Push(Box::new(msg), reply)
-        });
+    pub async fn push(&self, msg: AgentMessage) -> Option<String> {
+        let id = mailbox_call!(
+            self.tx,
+            |reply| { SteeringCommand::Push(Box::new(msg), reply) },
+            String::new()
+        );
         self.notify.notify_one();
+        (!id.is_empty()).then_some(id)
     }
 
     pub async fn drain_one(&self) -> Option<AgentMessage> {
@@ -86,13 +89,16 @@ impl Default for SteeringQueueActor {
 }
 
 async fn run_steering_worker(mut rx: mpsc::Receiver<SteeringCommand>) {
-    let mut queue: Vec<AgentMessage> = Vec::new();
+    let mut queue: Vec<(String, AgentMessage)> = Vec::new();
+    let mut next_id = 1_u64;
 
     while let Some(cmd) = rx.recv().await {
         match cmd {
             SteeringCommand::Push(msg, reply) => {
-                queue.push(*msg);
-                let _ = reply.send(());
+                let id = format!("steer-{next_id}");
+                next_id += 1;
+                queue.push((id.clone(), *msg));
+                let _ = reply.send(id).await;
             }
             SteeringCommand::DrainOne(reply) => {
                 // `Vec::drain(..1)` panics when the queue is empty, so
@@ -100,12 +106,15 @@ async fn run_steering_worker(mut rx: mpsc::Receiver<SteeringCommand>) {
                 let popped = if queue.is_empty() {
                     None
                 } else {
-                    Some(queue.remove(0))
+                    Some(queue.remove(0).1)
                 };
                 let _ = reply.send(popped).await;
             }
             SteeringCommand::DrainAll(reply) => {
-                let drained = std::mem::take(&mut queue);
+                let drained = std::mem::take(&mut queue)
+                    .into_iter()
+                    .map(|(_, message)| message)
+                    .collect();
                 let _ = reply.send(drained).await;
             }
             SteeringCommand::Clear(reply) => {
@@ -136,9 +145,9 @@ mod tests {
     #[tokio::test]
     async fn push_drain_one_drain_all() {
         let q = SteeringQueueActor::new();
-        q.push(msg(1)).await;
-        q.push(msg(2)).await;
-        q.push(msg(3)).await;
+        assert_eq!(q.push(msg(1)).await.as_deref(), Some("steer-1"));
+        assert_eq!(q.push(msg(2)).await.as_deref(), Some("steer-2"));
+        assert_eq!(q.push(msg(3)).await.as_deref(), Some("steer-3"));
         assert_eq!(q.drain_one().await.unwrap().timestamp(), 1);
         let rest = q.drain_all().await;
         assert_eq!(rest.len(), 2);
