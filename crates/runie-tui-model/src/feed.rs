@@ -317,6 +317,26 @@ pub fn completed_tool_header_with_args(
     }
 }
 
+/// Render the elapsed-time suffix for completed background work. `None`
+/// resolves to an empty fragment so the host string stays identical to the
+/// pre-elapsed form.
+pub fn format_elapsed(elapsed_ms: Option<u64>) -> String {
+    elapsed_ms
+        .map(|millis| format!(" in {:.1}s", millis as f64 / 1_000.0))
+        .unwrap_or_default()
+}
+
+/// Render the trailing error fragment for background-work completions. The
+/// suffix is suppressed when the work did not error, so success messages
+/// stay identical regardless of whether an error payload is present.
+pub fn format_error(is_error: bool, error: Option<&str>) -> String {
+    if is_error {
+        error.map(|value| format!(" ({value})")).unwrap_or_default()
+    } else {
+        String::new()
+    }
+}
+
 pub const GROK_GROUP_MAX_VISIBLE: usize = 10;
 
 /// Viewport-relative terminal cell coordinate used by Grok's text selection.
@@ -994,6 +1014,35 @@ mod tests {
             default_tool_display_mode("memory_search"),
             ToolDisplayMode::Collapsed
         );
+    }
+
+    #[test]
+    fn format_elapsed_emits_empty_when_missing() {
+        assert_eq!(super::format_elapsed(None), String::new());
+        assert!(super::format_elapsed(None).is_empty());
+    }
+
+    #[test]
+    fn format_elapsed_renders_seconds_for_some_value() {
+        assert_eq!(super::format_elapsed(Some(1_500)), " in 1.5s");
+        assert_eq!(super::format_elapsed(Some(0)), " in 0.0s");
+    }
+
+    #[test]
+    fn format_error_with_error_flag_and_no_message_yields_empty() {
+        assert_eq!(super::format_error(true, None), String::new());
+        assert!(super::format_error(true, None).is_empty());
+    }
+
+    #[test]
+    fn format_error_with_error_flag_and_message_renders_parenthesised_text() {
+        assert_eq!(super::format_error(true, Some("boom")), " (boom)");
+    }
+
+    #[test]
+    fn format_error_suppresses_suffix_when_not_error() {
+        assert_eq!(super::format_error(false, None), String::new());
+        assert_eq!(super::format_error(false, Some("ignored")), String::new());
     }
 
     #[test]

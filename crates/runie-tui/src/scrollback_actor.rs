@@ -239,20 +239,6 @@ impl OwnedEventProjection {
     }
 }
 
-fn format_elapsed(elapsed_ms: Option<u64>) -> String {
-    elapsed_ms
-        .map(|millis| format!(" in {:.1}s", millis as f64 / 1_000.0))
-        .unwrap_or_default()
-}
-
-fn format_error(is_error: bool, error: Option<&str>) -> String {
-    if is_error {
-        error.map(|value| format!(" ({value})")).unwrap_or_default()
-    } else {
-        String::new()
-    }
-}
-
 #[allow(
     clippy::too_many_lines,
     reason = "the exhaustive event-to-feed table keeps application no-ops explicit"
@@ -507,8 +493,8 @@ fn background_messages_for_event(event: AgentEvent) -> Vec<ScrollbackMsg> {
                 header: format!(
                     "Subagent {}{}{}: {description:?}",
                     if is_error { "failed" } else { "completed" },
-                    format_elapsed(elapsed_ms),
-                    format_error(is_error, error.as_deref())
+                    runie_tui_model::format_elapsed(elapsed_ms),
+                    runie_tui_model::format_error(is_error, error.as_deref())
                 ),
                 activity: None,
                 output: Vec::new(),
@@ -527,7 +513,7 @@ fn background_messages_for_event(event: AgentEvent) -> Vec<ScrollbackMsg> {
                 tool_call_id: work_id.clone(),
                 header: format!(
                     "Subagent cancelled{}: {description:?}",
-                    format_elapsed(elapsed_ms)
+                    runie_tui_model::format_elapsed(elapsed_ms)
                 ),
                 activity: None,
                 output: Vec::new(),

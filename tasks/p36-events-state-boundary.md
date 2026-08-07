@@ -120,6 +120,16 @@ code-ownership cleanup only; the `ScrollbackMsg::Append` delivery path,
 the renderer/actor boundary, and the actor snapshot consumer are
 identical.
 
+**Background completion helpers (2026-08-08):** `format_elapsed` and
+`format_error` now live in `runie-tui-model::feed` next to the other
+background-completion formatters. Both `EventRenderer` and
+`ScrollbackActor` consume `runie_tui_model::{format_elapsed, format_error}`
+when shaping the `Subagent completed/failed/cancelled` header, so the
+elapsed suffix and parenthesised error fragment share a single
+renderer-independent implementation. The renderer-local duplicates were
+removed; focused unit tests cover the `None`/empty/`Some` and
+`is_error` true/false branches.
+
 The first two historical bullets are now closed. Production scroll, selection,
 palette, and prompt transitions have named owner-local messages, and replay
 assertions already support ordered `exact_events`, closed-contract `pi_events`,
