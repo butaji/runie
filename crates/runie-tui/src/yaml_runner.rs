@@ -965,6 +965,8 @@ pub struct StateAssertions {
     /// Arguments on the latest assistant tool call after preparation.
     pub tool_call_arguments: Option<serde_json::Value>,
     pub session_entries: Option<usize>,
+    /// Complete Pi-compatible session statistics projection.
+    pub session_stats: Option<serde_json::Value>,
     /// Ordered parent-linked Pi session nodes from the selected leaf.
     pub session_branch_entry_ids: Option<Vec<String>>,
     pub active_operations: Option<BTreeMap<String, String>>,
@@ -2784,6 +2786,21 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         outcome.session.entries.len(),
         "session_entries"
     );
+    if let Some(expected_stats) = &expected.session_stats {
+        let stats = outcome.session.stats();
+        let actual_stats = serde_json::json!({
+            "messageCount": stats.message_count,
+            "cachedTokens": stats.cached_tokens,
+            "uncachedTokens": stats.uncached_tokens,
+            "totalTokens": stats.total_tokens,
+            "costTotal": stats.cost_total,
+        });
+        if &actual_stats != expected_stats {
+            return Err(format!(
+                "session stats mismatch: expected {expected_stats:?}, got {actual_stats:?}"
+            ));
+        }
+    }
     if let Some(expected_records) = &expected.session_config_records {
         let actual_records = outcome
             .session

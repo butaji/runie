@@ -47,6 +47,12 @@ assertions:
     pending_tool_calls: 0
     messages: 2
     session_entries: 2
+    session_stats:
+      messageCount: 2
+      cachedTokens: 0
+      uncachedTokens: 0
+      totalTokens: 0
+      costTotal: 0.0
     compaction_token_estimates: [40, 40]
     compaction_keep_recent_tokens: 20
     compaction_first_kept_entry_index: 1

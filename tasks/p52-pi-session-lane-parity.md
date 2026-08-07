@@ -53,6 +53,8 @@ count, cached tokens, uncached input/cache-write tokens, total tokens, and
 cost total are recomputed from actor-owned message and usage-lane facts. The
 projection is pure and replay-stable, including missing optional usage fields.
 Regression coverage pins Pi's token accounting and decimal cost behavior.
+The runtime `hello-streaming.yaml` fixture now asserts the full stats object,
+so the contract can be edited and replayed without recompiling Rust.
 
 ## Completed slice (2026-08-08, open-operation recovery query)
 
