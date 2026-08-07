@@ -30,6 +30,17 @@ assertions:
     - message_end
     - turn_end
     - agent_end
+  listener_events:
+    - agent_start
+    - turn_start
+    - message_start
+    - message_end
+    - message_start
+    - message_update
+    - message_update
+    - message_end
+    - turn_end
+    - agent_end
   state:
     status: ready
     is_streaming: false

@@ -28,6 +28,8 @@ closed-wire adapter and is dispatched separately. `loop_entry.rs` proves an
 `AgentEnd` listener can hold prompt settlement until a watch-channel release.
 The common listener hook also receives the actor-owned abort projection, with
 direct registry coverage proving an already-aborted signal is observable.
+The YAML runner now records the same awaited listener path separately from the
+broadcast trace; `hello-streaming.yaml` asserts its complete lifecycle order.
 
 ## Required implementation
 

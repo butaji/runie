@@ -13,7 +13,7 @@ use crate::event_renderer::EventRenderer;
 use crate::widgets::{FeedSnapshot, Line, LineKind, Scrollback, ScrollbackMsg, ToolBlock};
 use parking_lot::Mutex;
 use ratatui::buffer::Buffer;
-use runie_core::events::EventBus;
+use runie_core::events::{EventBus, Subscriber};
 use runie_core::provider::stream_fn::{AssistantMessageEventStream, StreamError, StreamFn};
 use runie_core::provider::ProviderActor;
 use runie_core::queues::{FollowUpQueueActor, SteeringQueueActor};
@@ -647,6 +647,9 @@ pub struct Assertions {
     pub state: Option<StateAssertions>,
     #[serde(default)]
     pub provider_options: Option<ProviderOptionsAssertions>,
+    /// Exact event sequence observed by the awaited actor listener path.
+    #[serde(default)]
+    pub listener_events: Option<Vec<String>>,
 }
 
 #[derive(Debug, Deserialize, Default, Clone)]
@@ -1210,6 +1213,18 @@ pub struct ScenarioOutcome {
     pub provider_options: Vec<SimpleStreamOptions>,
     pub steering_mode: runie_core::types::QueueMode,
     pub follow_up_mode: runie_core::types::QueueMode,
+    pub listener_events: Vec<String>,
+}
+
+struct ScenarioListener {
+    events: Arc<Mutex<Vec<String>>>,
+}
+
+#[async_trait::async_trait]
+impl Subscriber for ScenarioListener {
+    async fn handle(&mut self, event: &AgentEvent) {
+        self.events.lock().push(event_kind(event).to_owned());
+    }
 }
 
 pub struct ScenarioError(pub String);
@@ -1222,6 +1237,12 @@ impl std::fmt::Display for ScenarioError {
 
 pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, ScenarioError> {
     let (bus, actor, options_seen) = build_scenario_loop(scenario)?;
+    let listener_events = Arc::new(Mutex::new(Vec::new()));
+    actor
+        .subscribe(Box::new(ScenarioListener {
+            events: listener_events.clone(),
+        }))
+        .await;
 
     let actor_snapshot = actor.clone();
     let mut events_from_task = record_and_run_scenario(actor, bus, scenario).await;
@@ -1239,6 +1260,7 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
     .await;
     let feed = scrollback.model_snapshot();
     let provider_options = options_seen.lock().clone();
+    let listener_events = listener_events.lock().clone();
     Ok(ScenarioOutcome {
         events: events_from_task,
         scrollback: feed.lines.clone(),
@@ -1252,6 +1274,7 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
         provider_options,
         steering_mode: actor_snapshot.steering_mode().await,
         follow_up_mode: actor_snapshot.follow_up_mode().await,
+        listener_events,
     })
 }
 
@@ -2029,6 +2052,10 @@ fn message_text(message: &runie_core::types::AgentMessage) -> String {
     }
 }
 
+#[allow(
+    clippy::too_many_lines,
+    reason = "event assertions remain one declarative YAML oracle"
+)]
 fn assert_event_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> Result<(), String> {
     let kinds = outcome.events.iter().map(event_kind).collect::<Vec<_>>();
     for expected in &scenario.assertions.events {
@@ -2058,6 +2085,14 @@ fn assert_event_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         if actual != expected {
             return Err(format!(
                 "exact Pi event sequence mismatch: expected {expected:?}, got {actual:?}"
+            ));
+        }
+    }
+    if let Some(expected) = &scenario.assertions.listener_events {
+        if &outcome.listener_events != expected {
+            return Err(format!(
+                "listener event sequence mismatch: expected {expected:?}, got {:?}",
+                outcome.listener_events
             ));
         }
     }
