@@ -94,8 +94,9 @@ Pi option for a future WebSocket adapter without claiming behavioral support.
 
 ## Typed request promotion (2026-08-06)
 
-The owned `HttpRequest` now receives the effective `session_id`, explicit
-`temperature`, `max_tokens`, and merged `sampling_params` as typed fields.
+The owned `HttpRequest` now receives the effective `session_id`, API key,
+explicit `temperature`, `max_tokens`, and merged `sampling_params` as typed
+fields.
 This closes a real loss-of-information boundary: concrete adapters no longer
 need to recover Pi options from serialized payloads or opaque metadata. The
 merge remains pure at request construction time (model defaults followed by
@@ -104,7 +105,8 @@ without timers or sleeps.
 
 Provider-specific payload encoding is still intentionally adapter-owned; this
 change transports the facts needed by an adapter and does not invent a generic
-wire format.
+wire format. The API key remains an owned request field and is not copied into
+the body or implicitly converted into a header by the generic actor.
 
 ## Verification contract
 

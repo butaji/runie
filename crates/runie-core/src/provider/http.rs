@@ -20,6 +20,7 @@ pub struct HttpResponse {
 pub struct HttpRequest {
     pub body: String,
     pub session_id: Option<String>,
+    pub api_key: Option<String>,
     pub temperature: Option<f64>,
     pub max_tokens: Option<u64>,
     pub sampling_params: std::collections::HashMap<String, serde_json::Value>,
@@ -91,6 +92,7 @@ pub trait HttpActor: Send + Sync + 'static {
                     session_id: options
                         .as_ref()
                         .and_then(|options| options.session_id.clone()),
+                    api_key: options.as_ref().and_then(|options| options.api_key.clone()),
                     temperature: options.as_ref().and_then(|options| options.temperature),
                     max_tokens: options.as_ref().and_then(|options| options.max_tokens),
                     sampling_params: merged_sampling_params(&model, options.as_ref()),
@@ -334,6 +336,7 @@ mod tests {
 
     type CapturedRequestOptions = (
         Option<String>,
+        Option<String>,
         Option<f64>,
         Option<u64>,
         std::collections::HashMap<String, serde_json::Value>,
@@ -369,6 +372,7 @@ mod tests {
             *self.transport.lock().expect("transport lock") = request.transport;
             *self.request_options.lock().expect("request options lock") = Some((
                 request.session_id,
+                request.api_key,
                 request.temperature,
                 request.max_tokens,
                 request.sampling_params,
@@ -490,6 +494,7 @@ mod tests {
                 headers: Some([(String::from("x-trace"), String::from("replay-1"))].into()),
                 transport: Some(ProviderTransport::Sse),
                 session_id: Some("session-1".into()),
+                api_key: Some("secret-1".into()),
                 temperature: Some(0.6),
                 max_tokens: Some(64),
                 sampling_params: Some([(String::from("top_p"), serde_json::json!(0.9))].into()),
@@ -511,9 +516,10 @@ mod tests {
             Some(ProviderTransport::Sse)
         );
         let options = request_options.lock().expect("request options lock");
-        let (session_id, temperature, max_tokens, sampling_params) =
+        let (session_id, api_key, temperature, max_tokens, sampling_params) =
             options.as_ref().expect("typed request options");
         assert_eq!(session_id.as_deref(), Some("session-1"));
+        assert_eq!(api_key.as_deref(), Some("secret-1"));
         assert_eq!(*temperature, Some(0.6));
         assert_eq!(*max_tokens, Some(64));
         assert_eq!(sampling_params.get("top_p"), Some(&serde_json::json!(0.9)));
