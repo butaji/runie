@@ -482,7 +482,22 @@ fn background_messages_for_event(event: AgentEvent) -> Vec<ScrollbackMsg> {
             status,
             elapsed_ms,
         }],
-        _ => Vec::new(),
+        AgentEvent::AgentStart
+        | AgentEvent::AgentEnd { .. }
+        | AgentEvent::Error { .. }
+        | AgentEvent::ThinkingLevelChanged { .. }
+        | AgentEvent::Reset
+        | AgentEvent::TurnStart
+        | AgentEvent::Waiting { .. }
+        | AgentEvent::ThemeChanged { .. }
+        | AgentEvent::ToolDisplayModeChanged { .. }
+        | AgentEvent::TurnEnd { .. }
+        | AgentEvent::MessageStart { .. }
+        | AgentEvent::MessageUpdate { .. }
+        | AgentEvent::MessageEnd { .. }
+        | AgentEvent::ToolExecutionStart { .. }
+        | AgentEvent::ToolExecutionUpdate { .. }
+        | AgentEvent::ToolExecutionEnd { .. } => Vec::new(),
     }
 }
 

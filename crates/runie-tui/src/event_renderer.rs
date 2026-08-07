@@ -178,7 +178,18 @@ pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
             status: status.clone(),
             elapsed_ms: *elapsed_ms,
         }],
-        _ => Vec::new(),
+        AgentEvent::AgentStart
+        | AgentEvent::AgentEnd { .. }
+        | AgentEvent::Error { .. }
+        | AgentEvent::ThinkingLevelChanged { .. }
+        | AgentEvent::TurnStart
+        | AgentEvent::Waiting { .. }
+        | AgentEvent::TurnEnd { .. }
+        | AgentEvent::MessageStart { .. }
+        | AgentEvent::MessageUpdate { .. }
+        | AgentEvent::MessageEnd { .. }
+        | AgentEvent::ToolExecutionUpdate { .. }
+        | AgentEvent::ToolExecutionEnd { .. } => Vec::new(),
     }
 }
 

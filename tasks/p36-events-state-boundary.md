@@ -46,6 +46,10 @@ The UI reset mapper and actor-owned feed bus mapper now use the same explicit
 classification. New core events must therefore be assigned to a projection,
 or deliberately listed as a no-op, before the workspace compiles.
 
+The compatibility renderer's feed adapter and the actor's background/workflow
+adapter are explicit as well. This keeps the legacy replay path and the live
+actor path aligned while the renderer is being retired as a state owner.
+
 The capture helper remains an external instrument, not production state. Its
 bounded polling is intentionally limited to detecting terminal readiness and
 settled output; it does not mutate Runie's state.
