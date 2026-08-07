@@ -34,6 +34,7 @@ Implemented end-to-end through the owned provider request snapshot:
 - `maxRetries`
 - payload and response hooks
 - request headers carried to the transport boundary
+- provider environment and metadata carried to the transport boundary
 
 The YAML runner exposes these effective options at runtime; `visual-hey.yaml`
 now declares and asserts `session_id`, thinking budgets, and sampling
@@ -41,8 +42,11 @@ parameters.
 
 Not yet implemented behaviorally:
 
-- custom fetch, provider environment, telemetry context, and transport
+- custom fetch, telemetry context, and transport
   selection: `HttpActor` has no injectable transport/request-context object.
+- custom fetch, telemetry context, and transport selection remain unsupported;
+  environment and metadata now travel through `HttpRequest` and are exposed to
+  YAML assertions.
 - nullable request headers: additive `HttpRequest` delivery now carries
   optional headers; the default adapter preserves existing body-only actors.
 - `maxRetryDelayMs`: retry currently handles bounded transport failures but

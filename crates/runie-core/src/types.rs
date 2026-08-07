@@ -612,6 +612,9 @@ pub struct SimpleStreamOptions {
     pub api_key: Option<String>,
     /// Additional provider request headers (pi: `headers`).
     pub headers: Option<std::collections::HashMap<String, String>>,
+    /// Provider-scoped environment and metadata carried with the request.
+    pub env: Option<std::collections::HashMap<String, String>>,
+    pub metadata: Option<std::collections::HashMap<String, serde_json::Value>>,
     pub signal: Option<tokio::sync::watch::Receiver<bool>>,
     pub thinking_budgets: Option<ThinkingBudgets>,
     /// Provider request timeout in milliseconds (pi: `timeoutMs`).
@@ -643,6 +646,8 @@ impl std::fmt::Debug for SimpleStreamOptions {
             .field("session_id", &self.session_id)
             .field("api_key", &self.api_key.as_ref().map(|_| "<redacted>"))
             .field("headers", &self.headers)
+            .field("env", &self.env)
+            .field("metadata", &self.metadata)
             .field("signal", &self.signal.is_some())
             .field("thinking_budgets", &self.thinking_budgets)
             .field("timeout_ms", &self.timeout_ms)

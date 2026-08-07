@@ -69,6 +69,10 @@ pub struct ProviderOptionsSpec {
     #[serde(default)]
     pub headers: Option<std::collections::HashMap<String, String>>,
     #[serde(default)]
+    pub env: Option<std::collections::HashMap<String, String>>,
+    #[serde(default)]
+    pub metadata: Option<std::collections::HashMap<String, serde_json::Value>>,
+    #[serde(default)]
     pub thinking_budgets: Option<runie_core::types::ThinkingBudgets>,
     #[serde(default)]
     pub timeout_ms: Option<u64>,
@@ -85,6 +89,8 @@ impl ProviderOptionsSpec {
         runie_core::types::SimpleStreamOptions {
             session_id: self.session_id.clone(),
             headers: self.headers.clone(),
+            env: self.env.clone(),
+            metadata: self.metadata.clone(),
             thinking_budgets: self.thinking_budgets.clone(),
             timeout_ms: self.timeout_ms,
             max_retries: self.max_retries,
@@ -670,6 +676,8 @@ pub struct Assertions {
 pub struct ProviderOptionsAssertions {
     pub session_id: Option<String>,
     pub headers: Option<std::collections::HashMap<String, String>>,
+    pub env: Option<std::collections::HashMap<String, String>>,
+    pub metadata: Option<std::collections::HashMap<String, serde_json::Value>>,
     pub thinking_budgets: Option<runie_core::types::ThinkingBudgets>,
     pub timeout_ms: Option<u64>,
     pub max_retries: Option<u32>,
@@ -1665,6 +1673,22 @@ fn assert_provider_options(outcome: &ScenarioOutcome, scenario: &Scenario) -> Re
             return Err(format!(
                 "provider headers mismatch: expected {value:?}, got {:?}",
                 actual.headers
+            ));
+        }
+    }
+    if let Some(value) = &expected.env {
+        if actual.env.as_ref() != Some(value) {
+            return Err(format!(
+                "provider env mismatch: expected {value:?}, got {:?}",
+                actual.env
+            ));
+        }
+    }
+    if let Some(value) = &expected.metadata {
+        if actual.metadata.as_ref() != Some(value) {
+            return Err(format!(
+                "provider metadata mismatch: expected {value:?}, got {:?}",
+                actual.metadata
             ));
         }
     }

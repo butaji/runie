@@ -18,6 +18,8 @@ pub struct HttpResponse {
 pub struct HttpRequest {
     pub body: String,
     pub headers: std::collections::HashMap<String, String>,
+    pub env: std::collections::HashMap<String, String>,
+    pub metadata: std::collections::HashMap<String, serde_json::Value>,
 }
 
 #[async_trait::async_trait]
@@ -61,6 +63,14 @@ pub trait HttpActor: Send + Sync + 'static {
             .as_ref()
             .and_then(|options| options.headers.clone())
             .unwrap_or_default();
+        let env = options
+            .as_ref()
+            .and_then(|options| options.env.clone())
+            .unwrap_or_default();
+        let metadata = options
+            .as_ref()
+            .and_then(|options| options.metadata.clone())
+            .unwrap_or_default();
         let retries = options.as_ref().and_then(|o| o.max_retries).unwrap_or(0);
         let mut response = None;
         let mut last_error = None;
@@ -70,6 +80,8 @@ pub trait HttpActor: Send + Sync + 'static {
                 HttpRequest {
                     body: request_body.clone(),
                     headers: headers.clone(),
+                    env: env.clone(),
+                    metadata: metadata.clone(),
                 },
                 options.as_ref().and_then(|o| o.timeout_ms),
             )
