@@ -870,3 +870,12 @@ the growing attribute count is concentrated in the full-width user-panel
 background encoding, while the glyph deltas remain concentrated in the
 diagnostic `/doctor` row and footer/phase rows. This matrix is retained as a
 strict non-parity baseline across viewport sizes.
+
+User-panel encoding audit (2026-08-08): the renderer-level regression tests
+already prove live user trailing cells carry `fg: Color::Reset` and the Grok
+panel background token. The paired VT dump nevertheless sees Grok's untouched
+terminal-default state and Runie's emitted RGB/reset sequence as distinct.
+This separates a correct actor/render buffer projection from a terminal
+encoding difference; no raw color was added and the strict comparator was not
+weakened. Any future closure must address the backend emission boundary or
+prove the terminal default provenance, not alter feed state ownership.
