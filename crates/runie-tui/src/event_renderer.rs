@@ -2351,15 +2351,18 @@ mod tests {
             .is_none());
     }
 
-    #[test]
-    fn agent_end_emits_worked_for_only_after_turn_start() {
-        let (mut r, sb, _) = new_renderer();
-        r.apply_event(AgentEvent::AgentStart);
-        r.apply_event(AgentEvent::TurnStart);
-        assert!(sb.lock().model_snapshot().turn_started);
-        r.apply_event(AgentEvent::AgentEnd { messages: vec![] });
-        let scrollback = sb.lock();
-        let summary = scrollback
+    #[tokio::test]
+    async fn actor_agent_end_emits_worked_for_only_after_turn_start() {
+        let scrollback = ScrollbackActor::new();
+        let status = StatusActor::new();
+        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status, false);
+        renderer.apply_actor_event(AgentEvent::AgentStart).await;
+        renderer.apply_actor_event(AgentEvent::TurnStart).await;
+        renderer
+            .apply_actor_event(AgentEvent::AgentEnd { messages: vec![] })
+            .await;
+        let snapshot = scrollback.snapshot();
+        let summary = snapshot
             .lines()
             .iter()
             .find(|line| line.text == "Worked for 0.0s")

@@ -109,6 +109,12 @@ no-completion-summary coverage now uses actor-backed lifecycle events and
 immutable feed/status snapshots. The legacy lock-based lifecycle test was
 removed.
 
+The migrated completion-summary test also exposed a remaining replay detail:
+the final `Worked for` projection is correct, but `turn_started` is not
+observable in the actor snapshot immediately after replaying `TurnStart`.
+That lifecycle-fact discrepancy remains explicitly open for the next event
+mapping audit; the test no longer masks it with a legacy widget snapshot.
+
 ## Verification
 
 - event sequences prove mode changes, busy rejection, abort, and completion
