@@ -241,3 +241,13 @@ The runtime YAML state oracle now also asserts the final assistant's deferred
 stop reason and complete handle fields. `deferred-response.yaml` therefore
 proves the full event sequence → actor snapshot contract, not just wire
 serialization or event cardinality.
+
+## Current-state reconciliation (2026-08-08)
+
+The generic `StreamFn`/`ProviderActor` seam is the intended injection point for
+the missing Codex adapter; no generic WebSocket implementation belongs in
+`HttpActor`. The adapter contract must supply an owned socket constructor,
+Codex Responses envelope/decoder, continuation-cache key, fallback decision,
+and close/cleanup events. Until those provider-specific facts are implemented,
+the explicit unsupported result is the truthful behavior and is covered by
+`default_http_boundary_rejects_unsupported_websocket_transport`.
