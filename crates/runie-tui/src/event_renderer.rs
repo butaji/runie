@@ -272,14 +272,6 @@ impl<T> Projection<T> {
         // silent second source of truth.
         panic!("legacy projection accessed from actor renderer")
     }
-
-    #[cfg(test)]
-    fn legacy_arc(&self) -> Arc<Mutex<T>> {
-        match self {
-            Self::Legacy(value) => value.clone(),
-            Self::Actor => panic!("legacy projection accessed from actor renderer"),
-        }
-    }
 }
 
 pub struct EventRenderer {
@@ -2251,20 +2243,21 @@ mod tests {
         assert!(!renderer.assistant_stream_open());
     }
 
-    #[test]
-    fn agent_start_emits_welcome_and_sets_thinking() {
-        let (mut r, sb, st) = new_renderer();
-        // Pre-seed a stale line. AgentStart now emits the welcome modal
-        // instead of clearing (matches grok's minimal-mode chrome where
-        // the welcome block persists across runs).
-        r = EventRenderer::with_welcome(r.scrollback.legacy_arc(), r.status.legacy_arc(), true);
-        r.apply_event(AgentEvent::AgentStart);
+    #[tokio::test]
+    async fn actor_agent_start_emits_welcome_and_sets_thinking() {
+        let scrollback = ScrollbackActor::new();
+        let status = StatusActor::new();
+        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status.clone(), true);
+        renderer.apply_actor_event(AgentEvent::AgentStart).await;
         assert!(
-            !sb.lock().is_empty(),
+            !scrollback.snapshot().is_empty(),
             "welcome modal should populate scrollback"
         );
-        assert!(sb.lock().find_first_containing("Runie").is_some());
-        assert_eq!(st.lock().current(), &Status::Thinking);
+        assert!(scrollback
+            .snapshot()
+            .find_first_containing("Runie")
+            .is_some());
+        assert_eq!(status.snapshot().current(), &Status::Thinking);
     }
 
     #[test]

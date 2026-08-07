@@ -88,6 +88,12 @@ The remaining `apply_event` calls are confined to `event_renderer` unit tests
 that exercise the quarantined compatibility widgets. Retirement can therefore
 be staged as test migration, with no live delivery-path change.
 
+**First compatibility migration (2026-08-08):** The welcome/agent-start
+regression now uses `with_actors` and `apply_actor_event`, asserting immutable
+feed/status snapshots. Its legacy lock-based setup was removed, and the
+unused `Projection::legacy_arc` escape hatch was deleted. Remaining legacy
+tests are still quarantined and are the next migration slices.
+
 ## Verification
 
 - event sequences prove mode changes, busy rejection, abort, and completion
