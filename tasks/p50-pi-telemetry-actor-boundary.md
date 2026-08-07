@@ -1,7 +1,7 @@
 # p50 — Pi telemetry actor boundary
 
-Status: actor-owned in-memory lifecycle implemented; provider integration and
-YAML runtime adapter remain (2026-08-07)
+Status: actor-owned lifecycle and provider stream projection implemented; YAML
+runtime adapter remains (2026-08-07)
 
 ## Source-backed Pi contract
 
@@ -20,9 +20,8 @@ lose nesting, lifetime, callback error handling, and parent propagation.
 
 ## Runie boundary
 
-Runie currently carries serializable provider metadata through `HttpRequest`,
-but has no telemetry capability or actor-owned span lifecycle. The missing
-boundary must be:
+Runie carries serializable provider metadata through `HttpRequest` and keeps
+telemetry as a separate actor-owned capability. The boundary is:
 
 ```text
 LoopActor event
@@ -42,7 +41,11 @@ The renderer must never own spans or infer telemetry from status text.
    commands, immutable watch snapshots, nested spans, and late-mutation
    rejection tests.
 2. Define a capability-oriented `TelemetryContext` adapter for provider
-   actors; keep it separate from `HttpRequest` serialization.
+   actors; keep it separate from `HttpRequest` serialization. **Partial:**
+   `SimpleStreamOptions.telemetry` carries a cloneable `TelemetryActor`, and
+   `ProviderActor` opens `pi.provider.stream`, records one `assistant.event`
+   per streamed event, and acknowledges terminal status/end. Startup failures
+   close the span with `Error`; the capability is not serialized.
 3. Emit core lifecycle events for span start, event, exception, and end. All
    mutable span state remains inside the telemetry actor.
 4. Add a YAML runtime fixture with declared span commands and ordered snapshot
@@ -56,6 +59,11 @@ The renderer must never own spans or infer telemetry from status text.
 - YAML replay observes ordered span lifecycle state through an actor snapshot.
 - Provider requests preserve the telemetry capability without serializing it.
 - `just ci` and the existing Pi/TUI parity gates remain green.
+
+The provider projection is covered by
+`provider_stream_projects_telemetry_through_owned_capability`; full Pi
+callback nesting, exceptions, exporter behavior, and YAML-declared span
+commands remain open.
 
 Until these conditions exist, p37 and p19 must continue to classify telemetry
 parity as open; no placeholder field should be presented as implementation.

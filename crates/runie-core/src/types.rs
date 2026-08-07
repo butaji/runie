@@ -657,6 +657,9 @@ pub type RetryJitterHook = std::sync::Arc<dyn Fn() -> f64 + Send + Sync>;
 /// Options passed to a `StreamFn::stream` call.
 #[derive(Clone, Default)]
 pub struct SimpleStreamOptions {
+    /// Optional actor-owned Pi telemetry capability; never serialized into a
+    /// provider request.
+    pub telemetry: Option<crate::telemetry::TelemetryActor>,
     pub session_id: Option<String>,
     pub api_key: Option<String>,
     /// Additional provider request headers (pi: `headers`).
@@ -719,6 +722,7 @@ impl std::fmt::Debug for SimpleStreamOptions {
         formatter
             .debug_struct("SimpleStreamOptions")
             .field("session_id", &self.session_id)
+            .field("telemetry", &self.telemetry.is_some())
             .field("api_key", &self.api_key.as_ref().map(|_| "<redacted>"))
             .field("headers", &self.headers)
             .field("env", &self.env)

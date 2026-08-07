@@ -5,6 +5,7 @@ use std::sync::Arc;
 use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio::task::JoinSet;
 
+use crate::telemetry::{SpanStatus, TelemetrySpan};
 use crate::types::{AgentContext, Model, SimpleStreamOptions};
 
 use super::stream_fn::{AssistantMessageEventStream, StreamFn};
@@ -71,6 +72,11 @@ impl ProviderActor {
     }
 }
 
+#[allow(
+    clippy::cognitive_complexity,
+    clippy::too_many_lines,
+    reason = "the provider actor keeps supersession, capability setup, and reply ordering in one reducer"
+)]
 async fn run_provider_worker(
     mut rx: mpsc::Receiver<ProviderCommand>,
     stream_fn: Arc<dyn StreamFn>,
@@ -90,6 +96,17 @@ async fn run_provider_worker(
                 // handed back, so two streams cannot publish concurrently.
                 pumps.abort_all();
                 let (event_tx, _) = broadcast::channel(STREAM_CAPACITY);
+                let telemetry_span = if let Some(telemetry) = options
+                    .as_ref()
+                    .as_ref()
+                    .and_then(|options| options.telemetry.clone())
+                {
+                    telemetry
+                        .start_span(None, "pi.provider.stream", Default::default())
+                        .await
+                } else {
+                    None
+                };
                 match stream_fn.stream(&model, &context, *options).await {
                     Ok(stream) => {
                         // Subscribe before starting the pump. Otherwise a
@@ -99,10 +116,14 @@ async fn run_provider_worker(
                         let tx = event_tx.clone();
                         // ProviderActor owns every active pump through this
                         // JoinSet; dropping the worker aborts its children.
-                        pumps.spawn(pump_stream(stream, tx));
+                        pumps.spawn(pump_stream(stream, tx, telemetry_span));
                         let _ = reply.send(receiver);
                     }
                     Err(error) => {
+                        if let Some(span) = telemetry_span {
+                            span.status(SpanStatus::Error).await;
+                            span.end().await;
+                        }
                         let receiver = event_tx.subscribe();
                         let _ = event_tx.send(crate::types::AssistantMessageEvent::Error {
                             reason: crate::types::StopReason::Error,
@@ -129,11 +150,19 @@ async fn run_provider_worker(
 async fn pump_stream(
     mut stream: AssistantMessageEventStream,
     tx: broadcast::Sender<crate::types::AssistantMessageEvent>,
+    telemetry_span: Option<TelemetrySpan>,
 ) {
     use futures::StreamExt;
     while let Some(event) = stream.next().await {
         // Errors from the broadcast are non-fatal (no current receivers).
         let _ = tx.send(event);
+        if let Some(span) = &telemetry_span {
+            span.event("assistant.event").await;
+        }
+    }
+    if let Some(span) = telemetry_span {
+        span.status(SpanStatus::Ok).await;
+        span.end().await;
     }
 }
 
@@ -231,6 +260,26 @@ mod tests {
             }
         }
         assert_eq!(count, 3);
+    }
+
+    #[tokio::test]
+    async fn provider_stream_projects_telemetry_through_owned_capability() {
+        let telemetry = crate::telemetry::TelemetryActor::new();
+        let actor = ProviderActor::new(std::sync::Arc::new(ThreeEventFn));
+        let options = SimpleStreamOptions {
+            telemetry: Some(telemetry.clone()),
+            ..Default::default()
+        };
+        let mut rx = actor
+            .start(Model::default(), AgentContext::default(), Some(options))
+            .await
+            .unwrap();
+        while rx.recv().await.is_ok() {}
+        let snapshot = telemetry.snapshot();
+        assert_eq!(snapshot.spans.len(), 1);
+        assert_eq!(snapshot.spans[0].events.len(), 3);
+        assert_eq!(snapshot.spans[0].status, SpanStatus::Ok);
+        assert!(snapshot.spans[0].ended);
     }
 
     #[tokio::test]
