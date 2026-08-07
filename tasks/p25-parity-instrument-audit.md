@@ -745,3 +745,9 @@ separate from the prompt border (`#505058`). Runie now exposes that role as
 the Opaline `text.model` token and renders the caption through the semantic
 theme adapter. The prompt widget no longer receives or owns a raw caption
 color; day/night theme resolution remains centralized.
+
+Capture provenance increment (2026-08-06): `tmux-asciinema-capture.sh` now
+writes `<capture>.grok-doctor.json` and references it from the capture manifest.
+Both paired reports must show an available color capability before a strict
+attribute comparison can be promoted; default-SGR output is otherwise
+classified as an evidence limitation rather than a passing theme result.

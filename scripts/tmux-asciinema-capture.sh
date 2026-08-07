@@ -134,11 +134,20 @@ asciinema convert -f raw "$cast" "${cast%.cast}.raw"
 # Preserve the provenance required for a trustworthy parity decision beside
 # every cast. Keep credentials and shell environment out of the manifest.
 manifest="${cast%.cast}.meta.json"
+doctor_report="${cast%.cast}.grok-doctor.json"
 repo_revision=$(git rev-parse HEAD 2>/dev/null || printf 'unknown')
 grok_path=$(command -v grok 2>/dev/null || printf '')
 grok_version=$([[ -n "$grok_path" ]] && "$grok_path" --version 2>/dev/null | head -1 || printf '')
 tmux_version=$(tmux -V 2>/dev/null || printf '')
 asciinema_version=$(asciinema --version 2>/dev/null || printf '')
+# Preserve the capability probe with the capture. A failed probe is recorded as
+# JSON rather than aborting the capture: unavailable color is explicit evidence
+# and cannot be mistaken for a theme-palette oracle.
+if [[ -n "$grok_path" ]] && "$grok_path" doctor --json > "$doctor_report" 2>/dev/null; then
+    :
+else
+    printf '%s\n' '{"status":"unavailable","reason":"grok doctor probe failed"}' > "$doctor_report"
+fi
 jq -n \
   --arg captured_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   --arg repo_revision "$repo_revision" \
@@ -153,6 +162,7 @@ jq -n \
   --arg cast "$cast" \
   --arg raw "${cast%.cast}.raw" \
   --arg settled_dump "$settled_dump" \
+  --arg doctor_report "$doctor_report" \
   --arg probe "$prompt" \
   --arg quit_key "$quit_key" \
   --argjson cols "$cols" \
@@ -163,4 +173,5 @@ jq -n \
     grok_path:$grok_path, grok_version:$grok_version,
     capture_tools:{tmux:$tmux_version, asciinema:$asciinema_version},
     terminal:{cols:$cols, rows:$rows, term:$term, colorterm:$colorterm},
-    artifacts:{cast:$cast, raw:$raw, settled_ansi:$settled_dump}}' > "$manifest"
+    artifacts:{cast:$cast, raw:$raw, settled_ansi:$settled_dump,
+      grok_doctor:$doctor_report}}' > "$manifest"
