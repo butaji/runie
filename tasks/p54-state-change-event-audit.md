@@ -57,6 +57,12 @@ unchanged, so this slice removes producer-side string drift without creating a
 second journal representation. The remaining migration is to carry the same
 typed fact through `AgentEvent` and the session reducer before the JSONL edge.
 
+The loop driver now applies the same producer-side boundary to
+`operation_started` and `operation_finished` through `OperationRecordKind`.
+Both closed enums have focused wire-name tests; the macro-based session-lane
+constructor remains available for fixed families, while dynamic producer
+values are intentionally converted only at this single event edge.
+
 ## Non-negotiable checks
 
 - No cross-actor direct mutation.

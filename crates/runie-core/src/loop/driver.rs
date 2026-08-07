@@ -75,6 +75,32 @@ pub struct RunLoopOutcome {
     pub new_messages: Vec<AgentMessage>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum OperationRecordKind {
+    Started,
+    Finished,
+}
+
+impl OperationRecordKind {
+    const fn wire_name(self) -> &'static str {
+        match self {
+            Self::Started => "operation_started",
+            Self::Finished => "operation_finished",
+        }
+    }
+}
+
+fn publish_operation_record(
+    deps: &RunLoopDeps,
+    kind: OperationRecordKind,
+    data: serde_json::Value,
+) {
+    deps.bus.publish(AgentEvent::OperationRecordCreated {
+        record_type: kind.wire_name().to_owned(),
+        data,
+    });
+}
+
 /// Run a full agent loop for the supplied prompts. Mirrors
 /// `pi-agent-core`'s `prompt("X")` event sequence.
 #[allow(
@@ -89,10 +115,11 @@ pub async fn run_loop(
     skip_initial_steering_poll: bool,
 ) -> RunLoopOutcome {
     publish_pi_and_apply(&deps, PiAgentEvent::AgentStart).await;
-    deps.bus.publish(crate::session_lane_event!(
-        operation_started,
-        serde_json::json!({"id": deps.run_id, "intent": {"kind": "run"}})
-    ));
+    publish_operation_record(
+        &deps,
+        OperationRecordKind::Started,
+        serde_json::json!({"id": deps.run_id, "intent": {"kind": "run"}}),
+    );
     publish_pi_and_apply(&deps, PiAgentEvent::TurnStart).await;
     let mut override_ctx = initial_context_override(context, &prompts);
     let mut all_new = initialize_run(prompts, &deps, skip_initial_steering_poll).await;
@@ -187,10 +214,11 @@ async fn end_run(all_new: Vec<AgentMessage>, deps: &RunLoopDeps) -> RunLoopOutco
     } else {
         "completed"
     };
-    deps.bus.publish(crate::session_lane_event!(
-        operation_finished,
-        serde_json::json!({"runId": deps.run_id, "outcome": outcome})
-    ));
+    publish_operation_record(
+        deps,
+        OperationRecordKind::Finished,
+        serde_json::json!({"runId": deps.run_id, "outcome": outcome}),
+    );
     publish_pi_and_apply(
         deps,
         PiAgentEvent::AgentEnd {
@@ -1010,6 +1038,18 @@ fn _tools_marker(_t: &[Arc<dyn AgentTool>]) {}
 #[cfg(test)]
 mod event_reconstruction_tests {
     use super::*;
+
+    #[test]
+    fn operation_record_kind_has_pi_wire_names() {
+        assert_eq!(
+            OperationRecordKind::Started.wire_name(),
+            "operation_started"
+        );
+        assert_eq!(
+            OperationRecordKind::Finished.wire_name(),
+            "operation_finished"
+        );
+    }
 
     #[test]
     fn sampling_params_merge_request_over_model_defaults() {
