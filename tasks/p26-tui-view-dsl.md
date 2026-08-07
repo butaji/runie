@@ -141,3 +141,11 @@ constructors and are used by the live chat layout. No repeated declarative
 pattern currently justifies another macro without hiding allocation or state
 ownership. The remaining DSL-adjacent work is terminal-independent reflow and
 style-intent coverage, not additional syntax.
+
+Paint-intent audit (2026-08-06): rechecked the view document, component props,
+feed card rows, and terminal adapter. Declarative layers carry semantic
+`PaintIntent`/card roles only; Opaline tokens and Ratatui styles are resolved
+after layout at the renderer boundary. No terminal color, modifier, or cell
+coordinate leaks into `ViewDocument` or `ViewProps`. The remaining work is
+exhaustive intent coverage for additional Grok card variants, not a missing
+model/render separation.
