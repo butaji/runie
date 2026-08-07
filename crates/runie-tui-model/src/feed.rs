@@ -181,7 +181,8 @@ pub enum ToolCardPaintIntent {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ToolCardRow {
     pub tool_call_id: String,
-    /// Stable ordinal within the projected card, independent of row text.
+    /// Stable ordinal of the logical member within its contiguous card group,
+    /// shared by that member's header, content, and status rows.
     pub member_index: usize,
     pub card_kind: ToolCardKind,
     pub row_kind: ToolCardRowKind,
@@ -206,6 +207,10 @@ impl ToolCardRow {
 }
 
 /// Project transcript rows into semantic card rows in transcript order.
+#[allow(
+    clippy::too_many_lines,
+    reason = "typed card row projection keeps ownership and lifecycle mapping together"
+)]
 pub fn project_tool_card_rows(
     lines: &[Line],
     tool_names: &HashMap<String, String>,
@@ -213,6 +218,7 @@ pub fn project_tool_card_rows(
 ) -> Vec<ToolCardRow> {
     let mut rows = Vec::new();
     let mut member_indices: HashMap<String, usize> = HashMap::new();
+    let mut next_member_index = 0usize;
     for line in lines {
         let Some(tool_call_id) = line.tool_call_id.as_deref() else {
             continue;
@@ -229,9 +235,14 @@ pub fn project_tool_card_rows(
             LineKind::ToolOutput | LineKind::ToolResult => ToolCardRowKind::Content,
             _ => continue,
         };
-        let member_index = member_indices.entry(tool_call_id.to_owned()).or_default();
-        let row_member_index = *member_index;
-        *member_index += 1;
+        let row_member_index = if let Some(index) = member_indices.get(tool_call_id) {
+            *index
+        } else {
+            let index = next_member_index;
+            next_member_index += 1;
+            member_indices.insert(tool_call_id.to_owned(), index);
+            index
+        };
         rows.push(ToolCardRow {
             tool_call_id: tool_call_id.to_owned(),
             member_index: row_member_index,
