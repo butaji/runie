@@ -1,6 +1,6 @@
-# p14 — TUI: keybinding parity (Shift+Tab, Ctrl+x, Ctrl+L, history, Tab, file-search, multiline)
+# p14 — TUI: keybinding parity (Shift+Tab, Ctrl+x, Ctrl+L model selector, history, file-search, multiline)
 
-Status: complete (2026-08-07)
+Status: complete for the Pi-feature subset; Grok-only file-viewer semantics are documented separately (2026-08-08)
 
 **Parity target:** grok-build pager keyboard surface.
 
@@ -27,7 +27,7 @@ Status: complete (2026-08-07)
 5. **Ctrl+X**: a shortcut (e.g. open a shortcut-help / menu). If the minimal app has no target, reserve the key and show the hint.
 6. **History browse**: Up on an empty prompt opens prompt history; `/history` search mode (grok `prompt_widget/mod.rs:499-500`). Implement prompt history ring + up/down navigation.
 7. **File-search dropdown + Tab completion**: optional; if implemented, gate behind a feature flag and document the scope (grok uses a file-search dropdown driven by Tab).
-8. **Ctrl+L**: open the selected file-search result in a line viewer (grok `prompt_widget/mod.rs:489`).
+8. **Ctrl+L**: open Pi's model selector (`pi/packages/coding-agent/src/core/keybindings.ts:85`). Grok's file-search line-viewer binding is a Grok-only surface and is not assigned this Pi-compatible key in Runie.
 
 ## State machine / variants
 
@@ -37,7 +37,8 @@ normal --Shift+Tab--> mode2 ; mode2 --Shift+Tab--> normal
 normal --Shift/Alt+Enter--> multiline ; multiline --Enter--> submit
 normal --Enter--> submit ; normal --"/"--> history_search ; normal --Up(empty)--> history_browse
 history_browse --Up/Down--> navigate ; --Enter--> select ; --Esc--> cancel
-normal --"/>"/Ctrl+L--> file_search ; file_search --Tab/Enter--> accept ; --Esc--> cancel
+normal --"@"--> file_search ; file_search --Tab/Enter--> accept ; --Esc--> cancel
+normal --Ctrl+L--> model_selector ; model_selector --Enter--> commit ; --Esc--> cancel
 normal --Ctrl+C(non-empty)--> clear ; --Ctrl+C(empty)--> cancel_run
 ```
 Key event variants to handle: `Enter`, `Shift+Enter`, `Alt+Enter`, `Tab`, `Shift+Tab`, `Up`, `Down`, `Esc`, `Ctrl+C`, `Ctrl+D`, `Ctrl+Q`, `Ctrl+X`, `Ctrl+L`, `:`, `/`.
@@ -57,9 +58,9 @@ Key event variants to handle: `Enter`, `Shift+Enter`, `Alt+Enter`, `Tab`, `Shift
   state; the mode and shortcut transitions are now runtime-wired, the prompt
   mode transition has a unit test, and the shortcut state renders a
   deterministic panel in both initial and steady-state frames.
-- **Ctrl+L reservation (2026-08-05):** removed the incorrect clear-scrollback
-  binding. Ctrl+L is now reserved for the Grok file-search/line-viewer target
-  and is documented in the shortcut surface until that optional feature exists.
+- **Ctrl+L Pi correction (2026-08-08):** Runie follows Pi's `app.model.select`
+  binding. File search remains prompt-local and does not claim Grok's global
+  line-viewer binding.
 - **File-search entry (2026-08-05):** Ctrl+L now enters an owned prompt
   `FileSearch` mode and renders a `file search` caption; Esc returns to normal
   input. Result selection and the line-viewer handoff remain to be implemented.

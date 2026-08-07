@@ -182,7 +182,7 @@
       "id": "p14",
       "file": "p14-tui-keybindings.md",
       "status": "done",
-      "title": "TUI: keybinding parity (Shift+Tab, Ctrl+x, Ctrl+L, history, Tab, file-search, multiline)"
+      "title": "TUI: keybinding parity (Shift+Tab, Ctrl+x, Ctrl+L model selector, history, file-search, multiline)"
     },
     {
       "id": "p15",

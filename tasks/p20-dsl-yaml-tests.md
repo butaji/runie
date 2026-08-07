@@ -112,7 +112,9 @@ behavior fixtures editable without recompiling Rust.
   recompiling Rust.
 - Added declarative `Shift+Enter`/`Alt+Enter` prompt steps and a multiline TUI
   fixture, keeping this behavior in the YAML scenario layer.
-- Added a declarative `Ctrl+L` step and file-search prompt fixture.
+- Added a declarative `Ctrl+L` file-search fixture at the prompt-local
+  capability boundary; Pi's global `Ctrl+L` model-selector route is covered by
+  the model-selector/scoped-model YAML fixtures.
 - Added declarative `Shift+Tab` support and `visual-plan.yaml` coverage for the
   plan-mode prompt variant.
 - Removed a timing-sensitive footer assertion from the typed visual fixture;

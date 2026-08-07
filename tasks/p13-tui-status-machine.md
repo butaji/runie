@@ -25,7 +25,10 @@ actor-owned `TurnStatus` carries that label into the pure view, and
 ## Current runie state
 
 `~/Code/GitHub/runie-tests/runie/crates/runie-tui/src/widgets/status.rs`
-- `TurnStatusPhase` + `TurnStatus` + `StatusBar` exist; `Status::{Idle,Thinking,Streaming,Error}`; braille frames already implemented (per earlier work). 
+- `TurnStatusPhase` + `TurnStatus` + `StatusBar` exist; the renderer-independent
+  actor model uses `Status::{Ready,Loading,Thinking,Streaming,Waiting(_),Aborted,Error}`;
+  typed `WaitingReason` covers model, subagent, task output, tasks complete,
+  and sleep. Braille frames and deterministic animation ticks are implemented.
 
 ## Adapt to runie — state machine
 

@@ -71,9 +71,8 @@ cannot create a second production source of truth.
 
 - **Audited (2026-08-05):** `cargo run -p lint-check`, formatting, and
   workspace check pass. Strict `cargo clippy --workspace --all-targets
-  -- -D warnings` is not yet clean; it reports existing complexity/size and
-  unused-code findings across `lint-check`, loop, provider, queue, tool, and
-  type modules. These remain required before marking this step done.
+  -- -D warnings` was historically noisy during the initial audit; the current
+  workspace gate is clean and remains required for every change.
 - **Progress (2026-08-05):** Removed the low-risk unused imports/dead provider
   field, replaced manual defaults, corrected iterator usage, and removed two
   production unused-variable warnings. The strict clippy failure count is now
