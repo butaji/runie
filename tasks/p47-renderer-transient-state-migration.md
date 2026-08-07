@@ -74,6 +74,15 @@ counters, structured updates, completion output, and errors. The live
 removes a second production source of tool-card state while preserving the
 same event vocabulary and YAML replay path.
 
+## Assistant transcript increment (2026-08-06)
+
+Live assistant deltas are already reduced by `ScrollbackActor` from the
+canonical `MessageStart`/`MessageUpdate` events. Live finalization now derives
+reasoning presence, fold policy, and pending-tool facts from that actor
+snapshot; the renderer no longer uses its compatibility streaming/reasoning
+buffers for the live path. The synchronous `with_actors` replay adapter keeps
+those buffers for its existing deterministic compatibility contract.
+
 ## Acceptance evidence
 
 - Every migrated field is present in `FeedSnapshot` or a core actor snapshot;

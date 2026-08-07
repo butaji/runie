@@ -506,12 +506,16 @@ impl EventRenderer {
                                 message: runie_core::types::AgentMessage::Assistant(_),
                             } = &event
                             {
+                                let feed_snapshot = scrollback_actor.model_snapshot();
+                                let has_reasoning = feed_snapshot.lines.iter().any(|line| {
+                                    line.kind == LineKind::Reasoning && !line.text.is_empty()
+                                });
                                 feed_messages.push(ScrollbackMsg::FinalizeAssistant {
-                                    has_reasoning: !self.reasoning_buffer.is_empty(),
-                                    reasoning_expanded: scrollback_actor.snapshot().reasoning_expanded(),
+                                    has_reasoning,
+                                    reasoning_expanded: feed_snapshot.reasoning_expanded,
                                     summary: thinking_summary(self.thinking_elapsed_ms()),
                                     settled_no_tool_phase: self.thinking_elapsed_ms().is_some()
-                                        && self.tool_rows.is_empty(),
+                                        && feed_snapshot.tool_blocks.is_empty(),
                                 });
                             }
                             if matches!(event, AgentEvent::AgentEnd { .. }) && turn_was_started {
@@ -552,7 +556,7 @@ impl EventRenderer {
                                 let _ = tool_update;
                             } else if let Some(tool_end) = actor_tool_end {
                                 scrollback_actor.apply(tool_end).await;
-                            } else {
+                            } else if !self.live_tool_events_owned {
                                 self.apply_actor_metadata(event);
                             }
                         }
@@ -628,12 +632,17 @@ impl EventRenderer {
             message: runie_core::types::AgentMessage::Assistant(_),
         } = &event
         {
+            let feed_snapshot = scrollback_actor.model_snapshot();
+            let has_reasoning = feed_snapshot
+                .lines
+                .iter()
+                .any(|line| line.kind == LineKind::Reasoning && !line.text.is_empty());
             messages.push(ScrollbackMsg::FinalizeAssistant {
-                has_reasoning: !self.reasoning_buffer.is_empty(),
-                reasoning_expanded: scrollback_actor.snapshot().reasoning_expanded(),
+                has_reasoning,
+                reasoning_expanded: feed_snapshot.reasoning_expanded,
                 summary: thinking_summary(self.thinking_elapsed_ms()),
                 settled_no_tool_phase: self.thinking_elapsed_ms().is_some()
-                    && self.tool_rows.is_empty(),
+                    && feed_snapshot.tool_blocks.is_empty(),
             });
         }
         if let AgentEvent::MessageUpdate {
