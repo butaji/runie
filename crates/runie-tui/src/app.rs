@@ -403,8 +403,49 @@ impl App {
                     .await;
                 true
             }
+            MappableBuiltinCommand::Compact => {
+                let _ = self.compact_session(None).await;
+                true
+            }
             MappableBuiltinCommand::Quit => false,
         }
+    }
+
+    /// Run Pi's manual compaction pipeline through its existing actor seams.
+    /// Preparation and journal publication belong to `SessionActor`; summary
+    /// generation belongs to `ProviderActor`; the bus transfers the resulting
+    /// fact to every interested projection.
+    pub async fn compact_session(&self, previous_summary: Option<String>) -> Result<(), String> {
+        const GROK_COMPACTION_KEEP_RECENT_TOKENS: u64 = 20_000;
+        let snapshot = self.session_actor.snapshot();
+        let token_estimates = compaction_token_estimates(&snapshot);
+        let Some(preparation) = self
+            .session_actor
+            .prepare_compaction(token_estimates, GROK_COMPACTION_KEEP_RECENT_TOKENS)
+            .await?
+        else {
+            return Ok(());
+        };
+        let request = runie_core::session::CompactionSummaryRequest::from_preparation(
+            &preparation,
+            &snapshot.entries,
+            previous_summary,
+        )?;
+        let summary = self
+            .loop_actor
+            .summarize_compaction(request)
+            .await
+            .map_err(|error| error.to_string())?;
+        let retained_tail = compaction_retained_tail(&snapshot, &preparation);
+        self.bus.publish(AgentEvent::CompactionCreated {
+            summary: summary.summary,
+            retained_tail,
+            tokens_before: preparation.tokens_before,
+            details: summary.details,
+            usage: summary.usage,
+        });
+        self.session_actor.flush().await;
+        Ok(())
     }
 
     /// Reset the core and every event-driven TUI projection through the loop
@@ -715,6 +756,26 @@ impl App {
         f(layout.prompt, &mut buf);
         f(layout.status, &mut buf);
     }
+}
+
+fn compaction_token_estimates(snapshot: &SessionSnapshot) -> Vec<u64> {
+    snapshot
+        .entries
+        .iter()
+        .map(|entry| runie_core::session::estimate_message_tokens(&entry.message))
+        .collect()
+}
+
+fn compaction_retained_tail(
+    snapshot: &SessionSnapshot,
+    preparation: &runie_core::session::CompactionPreparation,
+) -> Vec<AgentMessage> {
+    preparation
+        .retained_indices
+        .iter()
+        .filter_map(|index| snapshot.entries.get(*index))
+        .map(|entry| entry.message.clone())
+        .collect()
 }
 
 #[cfg(test)]

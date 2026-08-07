@@ -1566,6 +1566,17 @@ impl StreamFn for ScenarioStream {
         // between parallel tool dispatch and recorder completion.
         Ok(Box::pin(stream::iter(self.events.clone())))
     }
+
+    async fn summarize_compaction(
+        &self,
+        request: &runie_core::session::CompactionSummaryRequest,
+    ) -> Result<runie_core::session::CompactionSummary, StreamError> {
+        Ok(runie_core::session::CompactionSummary {
+            summary: format!("compacted {} tokens", request.tokens_before),
+            usage: None,
+            details: Some(serde_json::json!({"source": "yaml"})),
+        })
+    }
 }
 
 #[async_trait::async_trait]

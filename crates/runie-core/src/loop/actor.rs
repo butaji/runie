@@ -427,6 +427,21 @@ impl LoopActor {
             .await;
     }
 
+    /// Ask the provider actor for a Pi-compatible compaction summary. The
+    /// provider remains the owner of transport/generation; this coordinator
+    /// only forwards the immutable prepared request through its mailbox.
+    pub async fn summarize_compaction(
+        &self,
+        request: crate::session::CompactionSummaryRequest,
+    ) -> Result<crate::session::CompactionSummary, LoopError> {
+        self.inner
+            .deps
+            .provider
+            .summarize_compaction(request)
+            .await
+            .map_err(|error| LoopError::Provider(error.to_string()))
+    }
+
     /// Replace the owned conversation context through the state actor
     /// mailbox. Session restore and replay adapters use this instead of
     /// reaching into `AgentStateActor` behind the loop boundary.

@@ -80,6 +80,7 @@ pub enum MappableBuiltinCommand {
     Hotkeys,
     Quit,
     Model { reference: String },
+    Compact,
 }
 
 /// Parse an exact Pi built-in command that Runie can currently route through
@@ -90,6 +91,7 @@ pub fn parse_mappable_builtin_command(input: &str) -> Option<MappableBuiltinComm
         "/new" => Some(MappableBuiltinCommand::NewSession),
         "/hotkeys" => Some(MappableBuiltinCommand::Hotkeys),
         "/quit" => Some(MappableBuiltinCommand::Quit),
+        "/compact" => Some(MappableBuiltinCommand::Compact),
         value if value.starts_with("/model ") => {
             let reference = value[7..].trim();
             reference
@@ -145,8 +147,7 @@ mod tests {
         );
         assert_eq!(
             parse_mappable_builtin_command("/compact"),
-            None,
-            "unsupported commands must remain ordinary prompt input"
+            Some(MappableBuiltinCommand::Compact)
         );
         assert_eq!(parse_mappable_builtin_command("/quit now"), None);
         assert_eq!(

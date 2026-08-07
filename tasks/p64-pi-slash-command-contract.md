@@ -44,6 +44,14 @@ provider submission; `visual-slash-new.yaml` proves reset clears the resulting
 actor-owned message/feed projection, and `visual-slash-model.yaml` proves the
 model caption projection.
 
+`/compact` now uses the existing Pi-shaped pipeline: the session actor computes
+the cut point and retained tail, the provider actor owns summary generation,
+and `CompactionCreated` crosses the event bus back into the session journal.
+The YAML ScenarioStream supplies deterministic summary capability data for
+provider replay tests; no summary text is fabricated by the TUI. A dedicated
+visual command fixture remains open because the current visual harness builds
+its render projection separately from the command execution phase.
+
 Routing consolidation (2026-08-08): `App::route_mappable_command` is now the
 single async dispatch boundary for live and YAML input. The binary owns only
 process exit for `/quit`; stateful commands cannot acquire a second reducer by
