@@ -42,13 +42,20 @@ pub fn memory_display_lines(output: &str) -> Vec<String> {
                 format!("{}:{}-{}", result.path, result.start_line, result.end_line)
             };
             std::iter::once(format!(
-                "Result {} · {:.2} · {} · {}",
+                "  {}. {}  (score: {:.2}, {})",
                 index + 1,
+                location,
                 result.score,
-                result.source,
-                location
+                result.source
             ))
-            .chain(result.snippet.lines().map(|line| format!("  {line}")))
+            .chain(
+                result
+                    .snippet
+                    .lines()
+                    .filter(|line| !line.trim().is_empty())
+                    .take(3)
+                    .map(|line| format!("    {}", line.trim())),
+            )
         })
         .collect()
 }
@@ -136,7 +143,7 @@ mod tests {
         );
         assert_eq!(
             rows,
-            ["Result 1 · 0.72 · global · memory.md:1-2", "  alpha"]
+            ["  1. memory.md:1-2  (score: 0.72, global)", "    alpha"]
         );
     }
 }

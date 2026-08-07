@@ -1959,6 +1959,25 @@ fn styled_line_for(kind: LineKind, text: &str, theme: ThemeKind) -> RatLine<'sta
                     .patch(appearance::panel_background_style_for(theme)),
             );
         }
+        let trimmed = text.trim_start();
+        if let Some((index, rest)) = trimmed.split_once(". ") {
+            if index.chars().all(|ch| ch.is_ascii_digit()) {
+                if let Some((path, metadata)) = rest.split_once("  (score: ") {
+                    return RatLine::from(vec![
+                        Span::styled("  ", appearance::muted_style_for(theme)),
+                        Span::styled(format!("{index}. "), appearance::muted_style_for(theme)),
+                        Span::styled(
+                            path.to_owned(),
+                            appearance::base_style_for(theme).add_modifier(Modifier::BOLD),
+                        ),
+                        Span::styled(
+                            format!("  (score: {metadata}"),
+                            appearance::muted_style_for(theme).add_modifier(Modifier::DIM),
+                        ),
+                    ]);
+                }
+            }
+        }
         if let Some(memory) = text.strip_prefix("Result ") {
             let mut parts = memory.split(" · ");
             let number = parts.next().unwrap_or_default();

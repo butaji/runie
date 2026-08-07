@@ -32,8 +32,8 @@ assertions:
     rows: 40
     screen_text:
       - "Memory Search actors (2 results)"
-      - "Result 1 · 0.72 · global · /memory/MEMORY.md:0-10"
+      - "1. /memory/MEMORY.md:0-10  (score: 0.72, global)"
       - "actors"
-      - "Result 2 · 0.42 · session · /memory/session.md:4-7"
+      - "2. /memory/session.md:4-7  (score: 0.42, session)"
       - "replay"
       - "Workflow completed: release"

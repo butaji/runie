@@ -1035,6 +1035,7 @@ impl EventRenderer {
         }
         let mut output = Vec::new();
         {
+            let raw_output = tool_result_text(&result);
             let kind = if is_error {
                 LineKind::ToolError
             } else if matches!(
@@ -1046,12 +1047,13 @@ impl EventRenderer {
                     | "web_fetch"
                     | "web-fetch"
                     | "fetch"
+                    | "memory_search"
+                    | "memory-search"
             ) {
                 LineKind::ToolOutput
             } else {
                 LineKind::ToolResult
             };
-            let raw_output = tool_result_text(&result);
             let rendered_lines: Vec<String> =
                 if matches!(tool_name.as_str(), "memory_search" | "memory-search") {
                     runie_tui_model::memory_display_lines(&raw_output)
