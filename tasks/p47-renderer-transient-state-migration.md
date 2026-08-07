@@ -245,3 +245,12 @@ Keyboard intent slice (2026-08-07): Shift+Up/Down now maps to explicit
 empty. The application converts that intent into an acknowledged
 `SelectRange` message; typed prompt editing remains isolated from transcript
 selection. Mouse coordinate mapping and clipboard integration remain open.
+
+## Mouse wheel event slice (2026-08-07)
+
+The interactive input actor now accepts crossterm mouse events instead of
+discarding them. `ScrollUp` and `ScrollDown` are reduced to fixed ±3-line
+scroll intents and delivered through `App::scroll_scrollback_by`, which sends
+the acknowledged `ScrollbackMsg::ScrollBy` to the feed actor. Other mouse
+events remain inert until Grok-compatible coordinate selection and clipboard
+contracts are modeled. A focused binary test pins the pure wheel mapping.

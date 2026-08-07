@@ -9,7 +9,9 @@ use std::sync::OnceLock;
 use std::time::Duration;
 
 use anyhow::Result;
-use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use crossterm::event::{
+    Event, EventStream, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEventKind,
+};
 use crossterm::execute;
 use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
@@ -39,6 +41,19 @@ use tokio::sync::mpsc;
 
 /// Placeholder StreamFn: emits a single "Hello from runie!" then Done.
 struct PlaceholderStream;
+
+enum InputEvent {
+    Key(KeyEvent),
+    Mouse(MouseEventKind),
+}
+
+fn mouse_scroll_delta(kind: MouseEventKind) -> Option<i32> {
+    match kind {
+        MouseEventKind::ScrollUp => Some(-3),
+        MouseEventKind::ScrollDown => Some(3),
+        _ => None,
+    }
+}
 
 fn render_command_palette(
     area: Rect,
@@ -372,14 +387,16 @@ async fn run_app(
 
     // OWNER: interactive input actor; the mailbox and worker live until the
     // terminal loop exits, and the owned task is dropped on shutdown.
-    let (input_tx, mut input_rx) = mpsc::channel::<KeyEvent>(32);
+    let (input_tx, mut input_rx) = mpsc::channel::<InputEvent>(32);
     let _input_owner = runie_core::spawn_owned_worker!(async move {
         let mut input = EventStream::new();
         while let Some(result) = input.next().await {
-            let Ok(Event::Key(key)) = result else {
-                continue;
+            let event = match result {
+                Ok(Event::Key(key)) => InputEvent::Key(key),
+                Ok(Event::Mouse(mouse)) => InputEvent::Mouse(mouse.kind),
+                _ => continue,
             };
-            if input_tx.send(key).await.is_err() {
+            if input_tx.send(event).await.is_err() {
                 break;
             }
         }
@@ -390,9 +407,16 @@ async fn run_app(
 
     loop {
         tokio::select! {
-            key = input_rx.recv() => {
-                let Some(key) = key else { return Ok(AppExit::Quit) };
-                pending_key = Some(key);
+            input = input_rx.recv() => {
+                let Some(input) = input else { return Ok(AppExit::Quit) };
+                match input {
+                    InputEvent::Key(key) => pending_key = Some(key),
+                    InputEvent::Mouse(kind) => {
+                        if let Some(delta) = mouse_scroll_delta(kind) {
+                            app.scroll_scrollback_by(delta).await;
+                        }
+                    }
+                }
                 continue;
             }
             _ = tick.tick() => {
@@ -672,7 +696,11 @@ fn _key_marker(_k: KeyEvent) {}
 
 #[cfg(test)]
 mod tests {
-    use super::{current_branch, render_header, render_live_ready_footer, repository_label};
+    use super::{
+        current_branch, mouse_scroll_delta, render_header, render_live_ready_footer,
+        repository_label,
+    };
+    use crossterm::event::MouseEventKind;
     use ratatui::buffer::Buffer;
     use ratatui::layout::Rect;
     use ratatui::style::Modifier;
@@ -707,5 +735,12 @@ mod tests {
         let shortcut = buffer.cell((19, 0)).expect("second shortcut");
         assert_eq!(shortcut.symbol(), "C");
         assert!(shortcut.modifier.contains(Modifier::BOLD));
+    }
+
+    #[test]
+    fn mouse_wheel_maps_to_actor_scroll_deltas() {
+        assert_eq!(mouse_scroll_delta(MouseEventKind::ScrollUp), Some(-3));
+        assert_eq!(mouse_scroll_delta(MouseEventKind::ScrollDown), Some(3));
+        assert_eq!(mouse_scroll_delta(MouseEventKind::Moved), None);
     }
 }
