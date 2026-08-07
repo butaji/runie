@@ -525,10 +525,10 @@ async fn run_app(
 
     loop {
         tokio::select! {
-            input = input_rx.recv() => {
-                let Some(input) = input else { return Ok(AppExit::Quit) };
-                match input {
-                    InputEvent::Key(key) => pending_keys.push_back(key),
+                input = input_rx.recv() => {
+                    let Some(input) = input else { return Ok(AppExit::Quit) };
+                    match input {
+                        InputEvent::Key(key) => pending_keys.push_back(key),
                     InputEvent::Mouse(delta) => app.scroll_scrollback_by(delta).await,
                     InputEvent::MouseSelectionStart(row, column) => {
                         app.mouse_selection_start(runie_tui::widgets::CellPosition { row, column }).await;
@@ -536,9 +536,12 @@ async fn run_app(
                     InputEvent::MouseSelectionExtend(row, column) => {
                         app.mouse_selection_extend(runie_tui::widgets::CellPosition { row, column }).await;
                     }
-                    InputEvent::MouseSelectionCommit => app.mouse_selection_commit().await,
-                }
-                continue;
+                        InputEvent::MouseSelectionCommit => app.mouse_selection_commit().await,
+                    }
+                    // Wake key dispatch as soon as the owned input actor has
+                    // delivered an event. The render cadence remains 50 ms,
+                    // but input no longer waits for that cadence boundary.
+                    tick.reset();
             }
             _ = tick.tick() => {
                 // Input has already crossed the owned async input actor's

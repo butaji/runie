@@ -74,3 +74,15 @@ hiding reducer or event-delivery behavior.
 - Rendering is pure and non-blocking.
 - State-changing tests use event/message sequences and state assertions.
 - `just ci` passes before each owned commit.
+
+## Input wake-up boundary (2026-08-08)
+
+The interactive input reader remains an owned asynchronous worker and sends
+`InputEvent` values through its bounded mailbox. The main loop previously
+queued a key and waited for its 50 ms render interval before dispatching it to
+the owning prompt/UI actor, producing visible input delay under normal typing.
+The mailbox receive path now resets the dispatch interval immediately. This
+keeps terminal drawing on its existing cadence while making key delivery
+reactive to the input event rather than to a polling boundary. Mouse and
+selection events continue to cross the same mailbox and actor messages; no
+renderer or sibling actor is mutated directly.
