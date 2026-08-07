@@ -173,9 +173,23 @@ async fn continue_after_turn(
 }
 
 async fn end_run(all_new: Vec<AgentMessage>, deps: &RunLoopDeps) -> RunLoopOutcome {
+    let assistant_aborted = all_new.iter().rev().any(|message| {
+        matches!(
+            message,
+            AgentMessage::Assistant(assistant)
+                if assistant.stop_reason == Some(StopReason::Aborted)
+        )
+    });
+    let outcome = if deps.abort.as_ref().is_some_and(|abort| *abort.borrow()) || assistant_aborted {
+        "aborted"
+    } else if deps.state.snapshot().error_message.is_some() {
+        "failed"
+    } else {
+        "completed"
+    };
     deps.bus.publish(AgentEvent::OperationRecordCreated {
         record_type: "operation_finished".into(),
-        data: serde_json::json!({"runId": deps.run_id, "outcome": "completed"}),
+        data: serde_json::json!({"runId": deps.run_id, "outcome": outcome}),
     });
     publish_pi_and_apply(
         deps,

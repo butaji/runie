@@ -276,6 +276,11 @@ attempt number, and the real actor-assigned `resultEntryId`. Deferred writes
 therefore retain the order `step_attempt`, `usage`, `write_deferred` within the
 same reduction. YAML replay fixtures assert the live record ordering.
 
+Lifecycle completion now derives the operation outcome from the actor-owned
+abort signal, terminal state error, and final assistant stop reason. Aborted
+assistant results therefore publish `operation_finished: aborted` instead of
+being mislabeled as completed; `visual-aborted-turn.yaml` asserts this case.
+
 ## Implementation order
 
 1. Replace the generic Rust operation-record payload with a typed internal

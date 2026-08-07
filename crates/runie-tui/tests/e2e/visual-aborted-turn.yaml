@@ -13,6 +13,13 @@ assertions:
     is_streaming: false
     pending_tool_calls: 0
     messages: 2
+    session_lane_records:
+      - operation_started
+      - step_attempt
+      - usage
+      - operation_finished
+    operation_outcomes:
+      run-1: aborted
   transcript_contains:
     - "stop this"
     - "partial output"
