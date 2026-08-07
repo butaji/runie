@@ -1516,3 +1516,14 @@ this panel must be classified as reference-environment chrome; it cannot be
 silently treated as a Runie feed mismatch. The capture tool therefore records
 the full frame unchanged and the comparison report must call out this state
 before any row masking or parity conclusion is made.
+
+**Paired-capture follow-up (2026-08-07):** A fresh 80×24 Grok capture was
+recorded with `TERM=xterm-256color`, `COLORTERM=truecolor`, and the private
+tmux/asciinema helper; its settled ANSI artifact is
+`/tmp/runie-parity-grok-80.settled.ansi`. A matching live `target/debug/runie`
+capture could not reach the helper's `Worked for` completion boundary because
+the binary has no configured provider response in that isolated PTY; the
+capture timed out and its private tmux session was terminated. This is a
+capture orchestration gap, not evidence for changing renderer colors. The next
+valid comparison must run Runie's deterministic YAML/mock scenario in a PTY,
+then compare both settled ANSI grids at the same geometry and event boundary.
