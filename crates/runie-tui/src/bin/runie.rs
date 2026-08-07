@@ -50,6 +50,10 @@ enum InputEvent {
     Mouse(i32),
 }
 
+enum InputConfig {
+    ScrollViewport(u16),
+}
+
 fn render_command_palette(
     area: Rect,
     buf: &mut Buffer,
@@ -387,6 +391,7 @@ async fn run_app(
     // OWNER: interactive input actor; the mailbox and worker live until the
     // terminal loop exits, and the owned task is dropped on shutdown.
     let (input_tx, mut input_rx) = mpsc::channel::<InputEvent>(32);
+    let (input_config_tx, mut input_config_rx) = mpsc::channel::<InputConfig>(4);
     let _input_owner = runie_core::spawn_owned_worker!(async move {
         let mut input = EventStream::new();
         let terminal_brand = std::env::var("TERM_PROGRAM")
@@ -441,6 +446,10 @@ async fn run_app(
                         }
                         _ => {}
                     }
+                }
+                config = input_config_rx.recv() => {
+                    let Some(InputConfig::ScrollViewport(rows)) = config else { break; };
+                    scroll_flush = scroll_flush.with_viewport_rows(rows);
                 }
                 _ = cadence.tick() => {
                     let at_ms = scroll_epoch.elapsed().as_millis() as u64;
@@ -656,6 +665,9 @@ async fn run_app(
                     use ratatui::widgets::Widget;
                     use runie_tui::layout::chat_layout;
                     let layout = chat_layout(f.area());
+                    let _ = input_config_tx.try_send(InputConfig::ScrollViewport(
+                        layout.scrollback.height,
+                    ));
                     // Wrap each render in catch_unwind so a widget bug
                     // doesn't kill the binary — log + continue.
                     let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {

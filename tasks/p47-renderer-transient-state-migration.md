@@ -392,3 +392,10 @@ input mailbox, and worker shutdown finalizes the stream without an uncapped
 catch-up event. The worker currently uses the fixed initial 24-row viewport;
 delivering live layout measurements to this worker and modeling the source's
 post-gap backlog drain are the remaining production refinements.
+
+Live viewport event slice (2026-08-07): the render/layout boundary now sends
+the computed scrollback height to the owned input worker through a bounded
+`InputConfig::ScrollViewport` mailbox event. Resizes therefore update the
+flush cap without mutating the worker from the renderer. The worker keeps its
+24-row fallback only until the first layout measurement arrives; post-gap
+backlog drain and an explicit runtime test of resize timing remain open.
