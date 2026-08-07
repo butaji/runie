@@ -160,6 +160,18 @@ renderer-independent implementation. The renderer-local duplicates were
 removed; focused unit tests cover the `None`/empty/`Some` and
 `is_error` true/false branches.
 
+**Tool-update header fragment (2026-08-08):** the streaming
+`"{header} | update: {json}"` fragment is now produced by
+`runie-tui-model::tool_update_header_text`. `EventRenderer`'s specialized
+card projection and `ScrollbackActor::tool_update_messages` both call the
+model helper instead of formatting the serialized `partial_result`
+themselves, so the separator, the serialization, and the
+`unwrap_or_default()` empty-fragment fallback share one
+renderer-independent implementation. Focused unit tests pin the appended
+JSON fragment (object and `null` payloads) and the empty-fragment shape;
+the actor and renderer replay paths still gate partial updates through the
+existing `is_transport_only_update` / `structured_update_text` contract.
+
 The first two historical bullets are now closed. Production scroll, selection,
 palette, and prompt transitions have named owner-local messages, and replay
 assertions already support ordered `exact_events`, closed-contract `pi_events`,

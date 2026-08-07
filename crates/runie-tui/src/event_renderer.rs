@@ -615,11 +615,8 @@ impl EventRenderer {
             let Some(current_header) = self.current_tool_header(&tool_call_id) else {
                 return None;
             };
-            let updated = format!(
-                "{} | update: {}",
-                current_header,
-                serde_json::to_string(&partial_result).unwrap_or_default()
-            );
+            let updated =
+                runie_tui_model::tool_update_header_text(&current_header, &partial_result);
             return Some(ScrollbackMsg::ToolUpdate {
                 tool_call_id,
                 header: Some(updated),

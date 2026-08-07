@@ -388,6 +388,17 @@ pub fn format_error(is_error: bool, error: Option<&str>) -> String {
     }
 }
 
+/// Append the streaming tool-update fragment to a retained tool header. The
+/// serialized partial result is the transport payload verbatim; a payload that
+/// cannot be serialized degrades to an empty fragment so the header stays
+/// well-formed.
+pub fn tool_update_header_text(current_header: &str, partial_result: &serde_json::Value) -> String {
+    format!(
+        "{current_header} | update: {}",
+        serde_json::to_string(partial_result).unwrap_or_default()
+    )
+}
+
 pub const GROK_GROUP_MAX_VISIBLE: usize = 10;
 
 /// Viewport-relative terminal cell coordinate used by Grok's text selection.
@@ -1160,6 +1171,38 @@ mod tests {
     fn format_error_suppresses_suffix_when_not_error() {
         assert_eq!(super::format_error(false, None), String::new());
         assert_eq!(super::format_error(false, Some("ignored")), String::new());
+    }
+
+    #[test]
+    fn tool_update_header_text_appends_serialized_json_fragment() {
+        assert_eq!(
+            super::tool_update_header_text(
+                "Run ls",
+                &serde_json::json!({"status": "running", "step": 2})
+            ),
+            "Run ls | update: {\"status\":\"running\",\"step\":2}"
+        );
+        assert_eq!(
+            super::tool_update_header_text("Read src/lib.rs", &serde_json::Value::Null),
+            "Read src/lib.rs | update: null"
+        );
+    }
+
+    #[test]
+    fn tool_update_header_text_keeps_separator_for_empty_serialization() {
+        // `serde_json::Value` always serializes, so the `unwrap_or_default()`
+        // fallback degrades to an empty fragment rather than a panic. Pin the
+        // header shape around a minimal payload and around the empty default.
+        let fragment = serde_json::to_string(&serde_json::json!({})).unwrap_or_default();
+        assert_eq!(fragment, "{}");
+        assert_eq!(
+            super::tool_update_header_text("Run ls", &serde_json::json!({})),
+            format!("Run ls | update: {fragment}")
+        );
+        assert_eq!(
+            super::tool_update_header_text("", &serde_json::json!({})),
+            " | update: {}"
+        );
     }
 
     #[test]

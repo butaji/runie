@@ -353,10 +353,7 @@ fn tool_update_messages(
     let Some(header) = tool_headers.get_mut(tool_call_id) else {
         return Vec::new();
     };
-    header.push_str(&format!(
-        " | update: {}",
-        serde_json::to_string(partial_result).unwrap_or_default()
-    ));
+    *header = runie_tui_model::tool_update_header_text(header, partial_result);
     vec![ScrollbackMsg::ToolUpdate {
         tool_call_id: tool_call_id.clone(),
         header: Some(header.clone()),
