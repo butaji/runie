@@ -341,6 +341,15 @@ the model and renderer header/card projections. `visual-search-aliases.yaml`
 replays both names through supported stub tools and asserts their typed card
 families and visible labels.
 
+Alias-matrix reconciliation (2026-08-06): the source-backed comparison now
+covers every Grok tool alias that maps to a Pi-core-relevant card family:
+terminal execute aliases, read/edit aliases, `ls`, `glob`, `search_tool`, web
+fetch/search, memory/workflow/use, and background names. The remaining
+specialized-card gap is therefore not name classification; it is Grok's
+foldable member geometry and interaction behavior. Mouse/text-selection UI is
+outside Pi agent-core scope and must not be used to inflate the Runie feature
+target.
+
 Status chrome theme propagation (2026-08-06): `TurnStatus` and the status
 footer now resolve spinner, label, shortcut, and loading styles from the
 actor-selected theme. A GrokDay regression renders both the footer and active
