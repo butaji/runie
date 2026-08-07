@@ -45,6 +45,10 @@ Replay turn machine: `turn[0] → turn[1] → ... → Stop` (each `stream()` cal
   aborts all active stream pumps through the provider actor's owned `JoinSet`;
   a pending-stream regression test verifies cancellation closes the receiver
   without leaving a detached task.
+- **Cancellation acknowledgement (2026-08-06):** `ProviderActor::cancel`
+  now waits for the actor worker to process `ProviderCommand::Cancel` and
+  abort its owned pumps before returning. This makes the cancellation boundary
+  deterministic for the loop and replay callers.
 - **Startup error encoding (2026-08-05):** provider startup failures now
   deliver an `AssistantMessageEvent::Error` through the subscribed stream,
   preserving pi's error-event lifecycle instead of presenting an empty stream.

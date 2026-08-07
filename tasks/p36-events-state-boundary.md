@@ -127,3 +127,9 @@ Provider acknowledgement closure (2026-08-06): `ProviderActor::cancel` now
 waits for the owned worker to abort its `JoinSet` pumps before returning.
 Cancellation callers therefore observe a settled provider boundary rather
 than merely an enqueued cancel command.
+
+Configuration exception audit (2026-08-06): the Pi-compatible
+`set_default_stream_fn` singleton remains an explicit provider configuration
+API, not a live agent/TUI state projection. Production `LoopActor` instances
+receive their `StreamFn` through `ProviderActor::new`; no production state
+transition uses the singleton, so it is not a second runtime state owner.
