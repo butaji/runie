@@ -127,6 +127,12 @@ coverage now uses actor-backed `AgentStart`, `ToolExecutionStart`, and
 default display mode, running state, command rendering, completion mark, and
 the cleared running flag; the lock-based compatibility test was removed.
 
+**Seventh compatibility migration (2026-08-08):** Parallel tool updates and
+structured tool output now replay through actor-backed event delivery. The
+regressions assert that interleaved updates remain attached to their tool-call
+rows and that structured output rows are reduced into the feed snapshot; both
+legacy lock-based tests were removed.
+
 ## Verification
 
 - event sequences prove mode changes, busy rejection, abort, and completion

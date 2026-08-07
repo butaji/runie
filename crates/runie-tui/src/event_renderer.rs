@@ -2442,37 +2442,47 @@ mod tests {
         );
     }
 
-    #[test]
-    fn parallel_tool_updates_stay_on_their_own_rows() {
-        let (mut renderer, scrollback, _) = new_renderer();
-        renderer.apply_event(AgentEvent::ToolExecutionStart {
-            tool_call_id: "a".into(),
-            tool_name: "alpha".into(),
-            args: serde_json::json!({}),
-        });
-        renderer.apply_event(AgentEvent::ToolExecutionStart {
-            tool_call_id: "b".into(),
-            tool_name: "beta".into(),
-            args: serde_json::json!({}),
-        });
-        renderer.apply_event(AgentEvent::ToolExecutionUpdate {
-            tool_call_id: "a".into(),
-            tool_name: "alpha".into(),
-            args: serde_json::json!({}),
-            partial_result: serde_json::json!("a-update"),
-        });
-        renderer.apply_event(AgentEvent::ToolExecutionEnd {
-            tool_call_id: "b".into(),
-            tool_name: "beta".into(),
-            result: serde_json::json!({}),
-            is_error: false,
-        });
-        let lines = scrollback.lock();
-        let alpha = lines.find_first_containing("alpha").expect("alpha row");
-        let beta = lines.find_first_containing("beta").expect("beta row");
-        assert!(lines.lines()[alpha].text.contains("a-update"));
-        assert!(lines.lines()[beta].text.contains("✓"));
-        assert!(!lines.lines()[beta].text.contains("a-update"));
+    #[tokio::test]
+    async fn actor_parallel_tool_updates_stay_on_their_own_rows() {
+        let scrollback = ScrollbackActor::new();
+        let status = StatusActor::new();
+        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status, false);
+        renderer
+            .apply_actor_event(AgentEvent::ToolExecutionStart {
+                tool_call_id: "a".into(),
+                tool_name: "alpha".into(),
+                args: serde_json::json!({}),
+            })
+            .await;
+        renderer
+            .apply_actor_event(AgentEvent::ToolExecutionStart {
+                tool_call_id: "b".into(),
+                tool_name: "beta".into(),
+                args: serde_json::json!({}),
+            })
+            .await;
+        renderer
+            .apply_actor_event(AgentEvent::ToolExecutionUpdate {
+                tool_call_id: "a".into(),
+                tool_name: "alpha".into(),
+                args: serde_json::json!({}),
+                partial_result: serde_json::json!("a-update"),
+            })
+            .await;
+        renderer
+            .apply_actor_event(AgentEvent::ToolExecutionEnd {
+                tool_call_id: "b".into(),
+                tool_name: "beta".into(),
+                result: serde_json::json!({}),
+                is_error: false,
+            })
+            .await;
+        let snapshot = scrollback.snapshot();
+        let alpha = snapshot.find_first_containing("alpha").expect("alpha row");
+        let beta = snapshot.find_first_containing("beta").expect("beta row");
+        assert!(snapshot.lines()[alpha].text.contains("a-update"));
+        assert!(snapshot.lines()[beta].text.contains("✓"));
+        assert!(!snapshot.lines()[beta].text.contains("a-update"));
     }
 
     #[test]
@@ -2622,26 +2632,32 @@ mod tests {
         );
     }
 
-    #[test]
-    fn structured_tool_updates_append_indented_output_rows() {
-        let (mut renderer, scrollback, _) = new_renderer();
-        renderer.apply_event(AgentEvent::ToolExecutionStart {
-            tool_call_id: "structured".into(),
-            tool_name: "read".into(),
-            args: serde_json::json!({"path":"README.md"}),
-        });
-        renderer.apply_event(AgentEvent::ToolExecutionUpdate {
-            tool_call_id: "structured".into(),
-            tool_name: "read".into(),
-            args: serde_json::json!({}),
-            partial_result: serde_json::json!({"output":"first\nsecond"}),
-        });
-        let lines = scrollback.lock();
-        assert!(lines
+    #[tokio::test]
+    async fn actor_structured_tool_updates_append_indented_output_rows() {
+        let scrollback = ScrollbackActor::new();
+        let status = StatusActor::new();
+        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status, false);
+        renderer
+            .apply_actor_event(AgentEvent::ToolExecutionStart {
+                tool_call_id: "structured".into(),
+                tool_name: "read".into(),
+                args: serde_json::json!({"path":"README.md"}),
+            })
+            .await;
+        renderer
+            .apply_actor_event(AgentEvent::ToolExecutionUpdate {
+                tool_call_id: "structured".into(),
+                tool_name: "read".into(),
+                args: serde_json::json!({}),
+                partial_result: serde_json::json!({"output":"first\nsecond"}),
+            })
+            .await;
+        let snapshot = scrollback.snapshot();
+        assert!(snapshot
             .lines()
             .iter()
             .any(|line| { line.kind == LineKind::ToolOutput && line.text == "first" }));
-        assert!(lines
+        assert!(snapshot
             .lines()
             .iter()
             .any(|line| { line.kind == LineKind::ToolOutput && line.text == "second" }));
