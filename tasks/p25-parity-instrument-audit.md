@@ -766,3 +766,10 @@ writes `<capture>.grok-doctor.json` and references it from the capture manifest.
 Both paired reports must show an available color capability before a strict
 attribute comparison can be promoted; default-SGR output is otherwise
 classified as an evidence limitation rather than a passing theme result.
+
+Color-probe environment fix (2026-08-07): the capture helper now runs
+`grok doctor --json` under the same `NO_COLOR` removal, `TERM`, and `COLORTERM`
+assignments used by the recorded command. Previously the doctor report could
+claim limited color because it inherited the host shell while the cast itself
+was recorded in truecolor mode. This keeps provenance diagnostics aligned with
+the actual PTY capture environment.

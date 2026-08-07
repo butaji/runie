@@ -172,7 +172,8 @@ asciinema_version=$(asciinema --version 2>/dev/null || printf '')
 # Preserve the capability probe with the capture. A failed probe is recorded as
 # JSON rather than aborting the capture: unavailable color is explicit evidence
 # and cannot be mistaken for a theme-palette oracle.
-if [[ -n "$grok_path" ]] && "$grok_path" doctor --json > "$doctor_report" 2>/dev/null; then
+doctor_command=(env -u NO_COLOR "TERM=$capture_term" "COLORTERM=$capture_colorterm" "$grok_path" doctor --json)
+if [[ -n "$grok_path" ]] && "${doctor_command[@]}" > "$doctor_report" 2>/dev/null; then
     :
 else
     printf '%s\n' '{"status":"unavailable","reason":"grok doctor probe failed"}' > "$doctor_report"
