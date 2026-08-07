@@ -29,6 +29,11 @@ in `runie-tui`. This removes a renderer → actor dependency without adding a
 second state owner; existing actor and YAML tool-card replays remain the
 behavior oracle.
 
+Result-text extraction (2026-08-08): the same boundary now owns Pi tool-result
+text normalization in `runie-tui-model`. `ScrollbackActor` no longer calls
+`event_renderer::tool_result_text`; transport-envelope handling is reduced
+before rendering, while the renderer retains only its compatibility helper.
+
 Reset lifecycle increment (2026-08-07): `AgentEvent::Reset` now maps to
 explicit status/feed reset reducers. Status clears terminal turn facts while
 preserving theme/context configuration, and feed clear resets turn-summary

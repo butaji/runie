@@ -433,7 +433,7 @@ fn ordinary_tool_end_messages(
     } else {
         LineKind::ToolResult
     };
-    let output = crate::event_renderer::tool_result_text(result)
+    let output = runie_tui_model::tool_result_text(result)
         .lines()
         .filter(|line| !line.is_empty())
         .map(|line| (output_kind, line.to_owned()))

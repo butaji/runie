@@ -83,6 +83,41 @@ pub fn tool_header(tool_name: &str, args: &serde_json::Value, workspace: &str) -
     }
 }
 
+/// Extract the user-visible text from a Pi tool result without exposing its
+/// transport envelope to the feed actor.
+pub fn tool_result_text(result: &serde_json::Value) -> String {
+    result
+        .as_str()
+        .map(str::to_owned)
+        .or_else(|| {
+            result
+                .get("content")
+                .and_then(serde_json::Value::as_array)
+                .and_then(|content| content.iter().find_map(|item| item.get("text")))
+                .and_then(serde_json::Value::as_str)
+                .map(str::to_owned)
+        })
+        .or_else(|| {
+            result
+                .get("output")
+                .and_then(serde_json::Value::as_str)
+                .map(str::to_owned)
+        })
+        .or_else(|| {
+            result
+                .get("error")
+                .and_then(serde_json::Value::as_str)
+                .map(str::to_owned)
+        })
+        .or_else(|| {
+            result
+                .get("content")
+                .filter(|content| content.as_array().is_some_and(Vec::is_empty))
+                .map(|_| String::new())
+        })
+        .unwrap_or_else(|| serde_json::to_string(result).unwrap_or_default())
+}
+
 pub const GROK_GROUP_MAX_VISIBLE: usize = 10;
 
 /// Viewport-relative terminal cell coordinate used by Grok's text selection.
