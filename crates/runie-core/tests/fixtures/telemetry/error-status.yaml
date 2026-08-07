@@ -22,3 +22,4 @@ expected:
         name: UpstreamError
         message: request failed
       ended: true
+      end_sequence: 0

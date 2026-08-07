@@ -30,6 +30,7 @@ expected:
       events: []
       status: ok
       ended: true
+      end_sequence: 1
     - id: 1
       parent_id: 0
       name: pi.provider.stream
@@ -39,3 +40,4 @@ expected:
           attributes: {}
       status: ok
       ended: true
+      end_sequence: 0

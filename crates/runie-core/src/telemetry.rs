@@ -34,6 +34,8 @@ pub struct SpanSnapshot {
     #[serde(default)]
     pub error: Option<SpanError>,
     pub ended: bool,
+    #[serde(default)]
+    pub end_sequence: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -136,6 +138,7 @@ impl TelemetryActor {
             TelemetryCommand,
         >| async move {
             let mut state = TelemetrySnapshot::default();
+            let mut next_end_sequence = 0_u64;
             while let Some(command) = rx.recv().await {
                 match command {
                     TelemetryCommand::Start {
@@ -155,6 +158,7 @@ impl TelemetryActor {
                             status: SpanStatus::Unset,
                             error: None,
                             ended: false,
+                            end_sequence: None,
                         });
                         let _ = snapshot_tx.send(state.clone());
                         let _ = reply.send(id);
@@ -214,7 +218,12 @@ impl TelemetryActor {
                             .iter_mut()
                             .find(|span| span.id == id && !span.ended)
                         {
+                            if span.status == SpanStatus::Unset {
+                                span.status = SpanStatus::Ok;
+                            }
                             span.ended = true;
+                            span.end_sequence = Some(next_end_sequence);
+                            next_end_sequence = next_end_sequence.wrapping_add(1);
                             let _ = snapshot_tx.send(state.clone());
                         }
                         let _ = reply.send(());

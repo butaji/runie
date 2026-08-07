@@ -53,7 +53,8 @@ The renderer must never own spans or infer telemetry from status text.
    callback success/error through the actor. Exception/error detail and
    callback nesting remain open. `SpanError` preserves Pi error name/message
    details through actor status commands. All mutable span state remains inside
-   the telemetry actor.
+   the telemetry actor. Settlement defaults unset spans to `ok` and assigns a
+   deterministic `end_sequence`, matching Pi's detached in-memory recordings.
 4. Add a YAML runtime fixture with declared span commands and ordered snapshot
    assertions. **Done:** `TelemetryAction`, `TelemetryScenario`, and the
    runtime-discovered `tests/telemetry_replay.rs` execute YAML actions through
