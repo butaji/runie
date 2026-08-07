@@ -32,6 +32,19 @@ The saved local attempt still contains invalid artifacts on some geometries,
 so no new full-screen parity claim is made from it. A complete fresh matrix
 must pass the helper's prompt gate before `cast_compare` results are used.
 
+## FIFO capture recheck (2026-08-08)
+
+After the Runie input boundary changed from a single pending key to a FIFO,
+the capture helper was simplified to one literal prompt send plus an exact
+visible-prompt gate. A fresh Grok/Runie four-geometry matrix then produced
+valid casts at 62×32, 80×24, 100×30, and 120×36. The strict comparator reached
+the application frame at every size; it did not report a capture or geometry
+failure. The 62×32 baseline was 138 differing cells (41 glyph, 97 color
+attributes). The remaining classes are now measurable product deltas:
+dynamic timestamps/durations, header/background style roles, and Grok's
+diagnostic `/doctor` row. This is a valid non-parity baseline, not a passing
+claim; the comparator remains strict.
+
 ## Current instruments
 
 - `scripts/tmux-asciinema-capture.sh`: private tmux PTY, fixed geometry,
