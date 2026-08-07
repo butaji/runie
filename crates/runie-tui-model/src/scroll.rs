@@ -16,6 +16,8 @@ pub struct ScrollNormalizer {
     lines_per_tick: i32,
     stream_gap_ms: u64,
     last_event_ms: Option<u64>,
+    speed_tenths: i32,
+    inverted: bool,
     pending_units: i32,
 }
 
@@ -45,6 +47,8 @@ impl ScrollNormalizer {
             },
             stream_gap_ms: 80,
             last_event_ms: None,
+            speed_tenths: 10,
+            inverted: false,
             pending_units: 0,
         }
     }
@@ -67,6 +71,27 @@ impl ScrollNormalizer {
         Self::new(events_per_tick, lines_per_tick)
     }
 
+    pub const fn with_speed(mut self, speed: u8) -> Self {
+        let speed = if speed < 1 {
+            1
+        } else if speed > 100 {
+            100
+        } else {
+            speed
+        } as i32;
+        self.speed_tenths = if speed <= 50 {
+            1 + (speed - 1) * 9 / 49
+        } else {
+            10 + (speed - 50) * 50 / 50
+        };
+        self
+    }
+
+    pub const fn with_inversion(mut self, inverted: bool) -> Self {
+        self.inverted = inverted;
+        self
+    }
+
     pub const fn push(self, direction: ScrollDirection) -> (Self, i32) {
         self.push_with_multiplier(direction, BASE_MULTIPLIER)
     }
@@ -76,12 +101,15 @@ impl ScrollNormalizer {
         direction: ScrollDirection,
         multiplier: i32,
     ) -> (Self, i32) {
-        let sign = match direction {
+        let mut sign = match direction {
             ScrollDirection::Up => -1,
             ScrollDirection::Down => 1,
         };
-        self.pending_units += sign * self.lines_per_tick * multiplier;
-        let denominator = self.events_per_tick * FIXED_POINT;
+        if self.inverted {
+            sign = -sign;
+        }
+        self.pending_units += sign * self.lines_per_tick * multiplier * self.speed_tenths;
+        let denominator = self.events_per_tick * FIXED_POINT * 10;
         let delta = self.pending_units / denominator;
         self.pending_units %= denominator;
         (self, delta)
@@ -171,5 +199,20 @@ mod tests {
         assert_eq!(remuxed.push(ScrollDirection::Down).1, 1);
         assert_eq!(wezterm.push(ScrollDirection::Down).1, 1);
         assert_eq!(unknown.push(ScrollDirection::Down).1, 1);
+    }
+
+    #[test]
+    fn speed_and_inversion_overrides_are_deterministic() {
+        let slow = ScrollNormalizer::default().with_speed(1);
+        let fast = ScrollNormalizer::default().with_speed(100);
+        assert_eq!(slow.push(ScrollDirection::Down).1, 0);
+        assert_eq!(fast.push(ScrollDirection::Down).1, 6);
+        assert_eq!(
+            ScrollNormalizer::default()
+                .with_inversion(true)
+                .push(ScrollDirection::Down)
+                .1,
+            -1
+        );
     }
 }

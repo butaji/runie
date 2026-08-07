@@ -395,8 +395,17 @@ async fn run_app(
         let remuxed = ["TMUX", "STY", "ZELLIJ"]
             .into_iter()
             .any(|name| std::env::var_os(name).is_some());
+        let scroll_speed = std::env::var("RUNIE_SCROLL_SPEED")
+            .ok()
+            .and_then(|value| value.parse::<u8>().ok())
+            .unwrap_or(50);
+        let inverted = std::env::var("RUNIE_INVERT_SCROLL")
+            .ok()
+            .is_some_and(|value| matches!(value.as_str(), "1" | "true" | "yes"));
         let mut scroll_normalizer =
-            runie_tui_model::ScrollNormalizer::for_terminal_context(&terminal_brand, remuxed);
+            runie_tui_model::ScrollNormalizer::for_terminal_context(&terminal_brand, remuxed)
+                .with_speed(scroll_speed)
+                .with_inversion(inverted);
         let scroll_epoch = Instant::now();
         while let Some(result) = input.next().await {
             let event = match result {

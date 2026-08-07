@@ -289,6 +289,12 @@ three-event default elsewhere. The interactive worker derives the brand and
 remux signal from terminal environment variables. More detailed terminal
 metadata and trackpad mode selection remain open.
 
+Override slice (2026-08-07): the normalizer now supports Grok's speed curve
+(1–100, 0.1×–6×) and direction inversion. The interactive worker reads these
+as `RUNIE_SCROLL_SPEED` and `RUNIE_INVERT_SCROLL`, while tests exercise clamped
+and inverted projections without environment mutation. Trackpad mode and
+remaining profile overrides are still open.
+
 Mouse capture lifecycle closure (2026-08-07): the interactive terminal now
 enables crossterm mouse capture together with the alternate screen and disables
 it during restoration. This makes the already-owned mouse event path reachable
