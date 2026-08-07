@@ -1387,6 +1387,14 @@ those differences are not promoted into the deterministic Pi-core oracle.
   cast replay/comparison for each pair. This prevents width wrapping and
   height chrome regressions from being hidden by a single viewport. The full
   local gate remains green.
+
+- **Settled ANSI matrix oracle (2026-08-07):** Added
+  `scripts/compare-settled-matrix.sh` and `just compare-settled-matrix`. It
+  compares the preserved pre-teardown ANSI frame for all four geometries
+  (`62×32`, `80×24`, `100×30`, `120×36`) through the full glyph/style parser,
+  independently of cast timing and teardown frames. Missing pairs fail loudly;
+  this is the preferred oracle once Grok and Runie share a deterministic
+  scenario.
 - **Settled chrome correction (2026-08-05):** A valid 62×32 cast comparison
   isolated an extra header space and the completed footer shortcut mismatch;
   both live projections are now corrected. Feed wrapping, timing text, and

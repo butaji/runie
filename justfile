@@ -100,6 +100,9 @@ capture-hey-runie DIR="/tmp/runie-hey-matrix" CLOCK="1785990000,38":
 compare-matrix GROK_DIR RUNIE_DIR:
     scripts/compare-matrix.sh {{GROK_DIR}} {{RUNIE_DIR}}
 
+compare-settled-matrix GROK_DIR RUNIE_DIR:
+    scripts/compare-settled-matrix.sh {{GROK_DIR}} {{RUNIE_DIR}}
+
 # Format the code.
 fmt:
     cargo fmt --all
