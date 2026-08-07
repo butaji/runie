@@ -19,5 +19,5 @@ events:
 assertions:
   state:
     selected_tool_id: call-2
-    selected_entry: 11
+    selected_entry: 14
     selected_member_index: 1

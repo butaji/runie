@@ -1,7 +1,8 @@
 # P64 — Pi built-in slash-command contract
 
 Status: registry implemented; eight commands have actor-owned execution and
-YAML coverage, remaining commands stay explicitly unsupported
+YAML coverage, `/compact` gains a dedicated visual fixture, remaining commands
+stay explicitly unsupported
 (2026-08-08)
 
 ## Source contract
@@ -54,9 +55,14 @@ model caption projection.
 the cut point and retained tail, the provider actor owns summary generation,
 and `CompactionCreated` crosses the event bus back into the session journal.
 The YAML ScenarioStream supplies deterministic summary capability data for
-provider replay tests; no summary text is fabricated by the TUI. A dedicated
-visual command fixture remains open because the current visual harness builds
-its render projection separately from the command execution phase.
+provider replay tests; no summary text is fabricated by the TUI.
+`visual-slash-compact.yaml` closes the dedicated visual command fixture:
+the typed `/compact` + `Enter` step drives the prompt boundary through
+`parse_mappable_builtin_command` and `App::route_mappable_command` exactly like
+the live binary, while the declared compaction event seeds the session record
+projection asserted through `session_config_records` and the Pi compaction
+context fields. The fixture passes `every_yaml_fixture_is_discovered_and_exercised`
+so the visual and replay paths agree on the compaction outcome.
 
 Custom `/compact <instructions>` text is preserved as
 `CompactionSummaryRequest::custom_instructions`. The parser, application route,

@@ -242,24 +242,16 @@ fn format_error(is_error: bool, error: Option<&str>) -> String {
 pub struct EventRenderer {
     scrollback_actor: ScrollbackActor,
     status_actor: StatusActor,
-    /// If true, the next AgentStart emits the welcome modal lines
-    /// (matching grok's minimal-mode chrome) and then clears this flag.
-    emit_welcome: bool,
     /// The live Grok surface places the thinking row directly after the user
     /// entry; deterministic replay keeps the historical four-row contract.
     live_grok_layout: bool,
 }
 
 impl EventRenderer {
-    fn with_actors_inner(
-        scrollback_actor: ScrollbackActor,
-        status_actor: StatusActor,
-        emit_welcome: bool,
-    ) -> Self {
+    fn with_actors_inner(scrollback_actor: ScrollbackActor, status_actor: StatusActor) -> Self {
         Self {
             scrollback_actor,
             status_actor,
-            emit_welcome,
             live_grok_layout: false,
         }
     }
@@ -267,21 +259,13 @@ impl EventRenderer {
     /// Build the production renderer with its SSOT actors attached at
     /// construction time. The compatibility constructors remain for the
     /// synchronous YAML harness and focused reducer tests.
-    pub fn with_actors(
-        scrollback_actor: ScrollbackActor,
-        status_actor: StatusActor,
-        emit_welcome: bool,
-    ) -> Self {
-        Self::with_actors_inner(scrollback_actor, status_actor, emit_welcome)
+    pub fn with_actors(scrollback_actor: ScrollbackActor, status_actor: StatusActor) -> Self {
+        Self::with_actors_inner(scrollback_actor, status_actor)
     }
 
     /// Production interactive projection with Grok's live assistant spacing.
-    pub fn with_live_actors(
-        scrollback_actor: ScrollbackActor,
-        status_actor: StatusActor,
-        emit_welcome: bool,
-    ) -> Self {
-        let mut renderer = Self::with_actors(scrollback_actor, status_actor, emit_welcome);
+    pub fn with_live_actors(scrollback_actor: ScrollbackActor, status_actor: StatusActor) -> Self {
+        let mut renderer = Self::with_actors(scrollback_actor, status_actor);
         renderer.live_grok_layout = true;
         renderer
     }
@@ -387,7 +371,7 @@ impl EventRenderer {
                                 feed_messages.remove(0);
                             }
                             if matches!(event, AgentEvent::AgentStart) {
-                                feed_messages.extend(agent_start_messages(self.emit_welcome));
+                                feed_messages.extend(session_start_messages());
                             }
                             if let AgentEvent::MessageEnd {
                                 message: runie_core::types::AgentMessage::Assistant(_),
@@ -443,8 +427,6 @@ impl EventRenderer {
                                 scrollback_actor.apply(tool_update).await;
                             } else if let Some(tool_end) = actor_tool_end {
                                 scrollback_actor.apply(tool_end).await;
-                            } else {
-                                self.apply_actor_metadata(event);
                             }
                         }
                         Err(broadcast::error::RecvError::Lagged(n)) => {
@@ -507,7 +489,7 @@ impl EventRenderer {
             messages.push(ScrollbackMsg::TurnStart);
         }
         if matches!(event, AgentEvent::AgentStart) {
-            messages.extend(agent_start_messages(self.emit_welcome));
+            messages.extend(session_start_messages());
         }
         if let AgentEvent::MessageEnd {
             message: runie_core::types::AgentMessage::Assistant(_),
@@ -561,8 +543,6 @@ impl EventRenderer {
         }
         if let Some(message) = tool_message {
             scrollback_actor.apply(message).await;
-        } else {
-            self.apply_actor_metadata(event);
         }
     }
 
@@ -571,15 +551,6 @@ impl EventRenderer {
         self.scrollback_actor
             .apply(ScrollbackMsg::AdvanceAnimation)
             .await;
-    }
-
-    /// Clear the one-shot welcome emission flag after actor delivery.
-    /// All stateful event reduction happens in the owning actors before this
-    /// local render-policy update.
-    fn apply_actor_metadata(&mut self, event: AgentEvent) {
-        if matches!(event, AgentEvent::AgentStart) {
-            self.emit_welcome = false;
-        }
     }
 
     fn thinking_elapsed_ms(&self) -> Option<u64> {
@@ -1299,13 +1270,7 @@ fn structured_update_text(result: &serde_json::Value) -> Option<String> {
     clippy::cognitive_complexity,
     reason = "activity label projection keeps Grok's ordered vocabulary together"
 )]
-fn agent_start_messages(emit_welcome: bool) -> Vec<ScrollbackMsg> {
-    if emit_welcome {
-        return welcome_modal_lines()
-            .into_iter()
-            .map(ScrollbackMsg::Append)
-            .collect();
-    }
+fn session_start_messages() -> Vec<ScrollbackMsg> {
     vec![
         ScrollbackMsg::Append(Line::new(LineKind::Separator, "")),
         ScrollbackMsg::Append(Line::new(
@@ -1492,7 +1457,7 @@ mod tests {
     async fn actor_renderer_reduces_events_without_legacy_projections() {
         let scrollback = ScrollbackActor::new();
         let status = StatusActor::new();
-        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status.clone(), false);
+        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status.clone());
 
         renderer.apply_actor_event(AgentEvent::AgentStart).await;
         assert_eq!(status.snapshot().current(), &Status::Thinking);
@@ -1522,7 +1487,7 @@ mod tests {
         let bus = runie_core::events::EventBus::new();
         let status = StatusActor::new();
         let scrollback = ScrollbackActor::new();
-        let renderer = EventRenderer::with_actors(scrollback, status.clone(), false);
+        let renderer = EventRenderer::with_actors(scrollback, status.clone());
         let mut status_updates = status.subscribe();
         let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
         // OWNER: test — joins the renderer after the shutdown event.
@@ -1545,7 +1510,7 @@ mod tests {
         let status = StatusActor::new();
         let scrollback = ScrollbackActor::new();
         let mut feed = scrollback.subscribe();
-        let renderer = EventRenderer::with_live_actors(scrollback.clone(), status, false);
+        let renderer = EventRenderer::with_live_actors(scrollback.clone(), status);
         let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
         // OWNER: test — joins the renderer after the shutdown event.
         let task = tokio::spawn(renderer.run(bus.subscribe(), shutdown_rx));
@@ -1581,43 +1546,35 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn live_renderer_does_not_retain_turn_lifecycle_state() {
-        let renderer =
-            EventRenderer::with_live_actors(ScrollbackActor::new(), StatusActor::new(), false);
-        let mut renderer = renderer;
-        renderer.apply_actor_metadata(AgentEvent::TurnStart);
-        renderer.apply_actor_metadata(AgentEvent::AgentEnd { messages: vec![] });
-        assert!(!renderer.scrollback_actor.model_snapshot().turn_started);
-    }
-
-    #[tokio::test]
-    async fn live_renderer_does_not_retain_assistant_stream_metadata() {
-        let mut renderer =
-            EventRenderer::with_live_actors(ScrollbackActor::new(), StatusActor::new(), false);
-        renderer.apply_actor_metadata(AgentEvent::MessageStart {
-            message: AgentMessage::Assistant(Default::default()),
-        });
-        renderer.apply_actor_metadata(AgentEvent::MessageUpdate {
-            message: AgentMessage::Assistant(Default::default()),
-            event: AssistantMessageEvent::TextDelta {
-                index: 0,
-                delta: "live".into(),
-                partial: Default::default(),
-            },
-        });
-        assert!(
-            !renderer
-                .scrollback_actor
-                .model_snapshot()
-                .assistant_stream_open
-        );
-    }
-
-    #[tokio::test]
-    async fn actor_agent_start_emits_welcome_and_sets_thinking() {
+    async fn renderer_has_no_actor_metadata_state_to_retain() {
+        // The compatibility `apply_actor_metadata` hook has been retired; the
+        // renderer no longer owns any mutable metadata for actor-owned events.
+        // This test pins the pure projection by verifying that a renderer
+        // built without a welcome flag still drives an `AgentStart` through
+        // the actor-backed session-start path.
         let scrollback = ScrollbackActor::new();
         let status = StatusActor::new();
-        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status.clone(), true);
+        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status.clone());
+        renderer.apply_actor_event(AgentEvent::AgentStart).await;
+        assert!(scrollback
+            .snapshot()
+            .find_first_containing("session_start")
+            .is_some());
+        assert_eq!(status.snapshot().current(), &Status::Thinking);
+    }
+
+    #[tokio::test]
+    async fn actor_preinjected_welcome_modal_populates_scrollback() {
+        // The welcome modal is now actor-driven: callers pre-inject the
+        // `welcome_modal_lines()` projection through the scrollback actor
+        // before driving the renderer. The renderer neither owns nor
+        // re-emits the welcome lines.
+        let scrollback = ScrollbackActor::new();
+        let status = StatusActor::new();
+        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status.clone());
+        for line in welcome_modal_lines() {
+            scrollback.apply(ScrollbackMsg::Append(line)).await;
+        }
         renderer.apply_actor_event(AgentEvent::AgentStart).await;
         assert!(
             !scrollback.snapshot().is_empty(),
@@ -1634,7 +1591,7 @@ mod tests {
     async fn actor_message_update_appends_text_to_assistant_line() {
         let scrollback = ScrollbackActor::new();
         let status = StatusActor::new();
-        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status, false);
+        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status);
         renderer.apply_actor_event(AgentEvent::AgentStart).await;
         renderer
             .apply_actor_event(AgentEvent::MessageStart {
@@ -1673,7 +1630,7 @@ mod tests {
     async fn actor_text_delta_enters_streaming_status() {
         let scrollback = ScrollbackActor::new();
         let status = StatusActor::new();
-        let mut renderer = EventRenderer::with_actors(scrollback, status.clone(), false);
+        let mut renderer = EventRenderer::with_actors(scrollback, status.clone());
         renderer.apply_actor_event(AgentEvent::AgentStart).await;
         renderer
             .apply_actor_event(AgentEvent::MessageStart {
@@ -1709,7 +1666,7 @@ mod tests {
     async fn actor_agent_end_sets_ready() {
         let scrollback = ScrollbackActor::new();
         let status = StatusActor::new();
-        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status.clone(), false);
+        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status.clone());
         renderer.apply_actor_event(AgentEvent::AgentStart).await;
         renderer
             .apply_actor_event(AgentEvent::AgentEnd { messages: vec![] })
@@ -1725,7 +1682,7 @@ mod tests {
     async fn actor_agent_end_emits_worked_for_only_after_turn_start() {
         let scrollback = ScrollbackActor::new();
         let status = StatusActor::new();
-        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status, false);
+        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status);
         renderer.apply_actor_event(AgentEvent::AgentStart).await;
         renderer.apply_actor_event(AgentEvent::TurnStart).await;
         assert!(scrollback.model_snapshot().turn_started);
@@ -1745,7 +1702,7 @@ mod tests {
     async fn actor_terminal_assistant_error_message_sets_error_status() {
         let scrollback = ScrollbackActor::new();
         let status = StatusActor::new();
-        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status.clone(), false);
+        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status.clone());
         renderer.apply_actor_event(AgentEvent::AgentStart).await;
         renderer
             .apply_actor_event(AgentEvent::MessageStart {
@@ -1775,7 +1732,7 @@ mod tests {
     async fn actor_tool_execution_lifecycle() {
         let scrollback = ScrollbackActor::new();
         let status = StatusActor::new();
-        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status, false);
+        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status);
         renderer.apply_actor_event(AgentEvent::AgentStart).await;
         renderer
             .apply_actor_event(AgentEvent::ToolExecutionStart {
@@ -1816,7 +1773,7 @@ mod tests {
     async fn actor_parallel_tool_updates_stay_on_their_own_rows() {
         let scrollback = ScrollbackActor::new();
         let status = StatusActor::new();
-        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status, false);
+        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status);
         renderer
             .apply_actor_event(AgentEvent::ToolExecutionStart {
                 tool_call_id: "a".into(),
@@ -1919,8 +1876,7 @@ mod tests {
             ),
             2
         );
-        let mut renderer =
-            EventRenderer::with_actors(ScrollbackActor::new(), StatusActor::new(), false);
+        let mut renderer = EventRenderer::with_actors(ScrollbackActor::new(), StatusActor::new());
         let end = renderer.handle_tool_end(
             "fetch-1".into(),
             "web_fetch".into(),
@@ -2007,7 +1963,7 @@ mod tests {
     async fn actor_structured_tool_updates_append_indented_output_rows() {
         let scrollback = ScrollbackActor::new();
         let status = StatusActor::new();
-        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status, false);
+        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status);
         renderer
             .apply_actor_event(AgentEvent::ToolExecutionStart {
                 tool_call_id: "structured".into(),
@@ -2063,7 +2019,7 @@ mod tests {
     async fn actor_activity_groups_do_not_merge_non_consecutive_tool_batches() {
         let scrollback = ScrollbackActor::new();
         let status = StatusActor::new();
-        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status, false);
+        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status);
         for (id, name) in [("first", "list_dir"), ("second", "read")] {
             if id == "second" {
                 renderer

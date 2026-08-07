@@ -1935,12 +1935,7 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
         }
     }
 
-    let (scrollback, status) = replay_scenario_events(
-        &events_from_task,
-        scenario.initial_prompt.is_none(),
-        scenario,
-    )
-    .await;
+    let (scrollback, status) = replay_scenario_events(&events_from_task, scenario).await;
     let feed = scrollback.model_snapshot();
     let provider_options = options_seen.lock().clone();
     let listener_events = listener_events.lock().clone();
@@ -1977,17 +1972,26 @@ fn declared_control_events(scenario: &Scenario) -> Vec<AgentEvent> {
 
 #[allow(
     clippy::cognitive_complexity,
+    clippy::too_many_lines,
     reason = "the YAML replay keeps seed, event, and navigation reduction in one deterministic pass"
 )]
 async fn replay_scenario_events(
     events: &[AgentEvent],
-    emit_welcome: bool,
     scenario: &Scenario,
 ) -> (Scrollback, crate::widgets::StatusSnapshot) {
     let scrollback_actor = crate::ScrollbackActor::new();
     let status_actor = crate::StatusActor::new();
-    let mut renderer =
-        EventRenderer::with_actors(scrollback_actor.clone(), status_actor.clone(), emit_welcome);
+    let mut renderer = EventRenderer::with_actors(scrollback_actor.clone(), status_actor.clone());
+    // The welcome modal is now actor-driven. When a scenario omits an
+    // initial prompt we pre-inject the welcome modal lines so the
+    // actor-owned scrollback reflects the same idle chrome a fresh
+    // session would emit, matching the live `App::new_with_welcome`
+    // surface. The renderer no longer owns this policy.
+    if scenario.initial_prompt.is_none() {
+        for line in crate::event_renderer::welcome_modal_lines() {
+            scrollback_actor.apply(ScrollbackMsg::Append(line)).await;
+        }
+    }
     for message in declared_tool_seeds(scenario) {
         scrollback_actor.apply(message).await;
     }
@@ -4972,11 +4976,16 @@ pub async fn render_visual_buffer(
     // actor instances only after clearing them so the deterministic replay
     // remains a single event-to-state reduction rather than a second append.
     app.apply_scrollback(ScrollbackMsg::Clear).await;
-    let mut renderer = EventRenderer::with_actors(
-        app.scrollback_actor.clone(),
-        app.status_actor.clone(),
-        scenario.initial_prompt.is_none(),
-    );
+    // Pre-inject the welcome modal when the scenario omits an initial prompt
+    // so the visual frame matches the live idle chrome. The renderer no
+    // longer carries renderer-local welcome state.
+    if scenario.initial_prompt.is_none() {
+        for line in crate::event_renderer::welcome_modal_lines() {
+            app.apply_scrollback(ScrollbackMsg::Append(line)).await;
+        }
+    }
+    let mut renderer =
+        EventRenderer::with_actors(app.scrollback_actor.clone(), app.status_actor.clone());
     app.apply_scrollback(ScrollbackMsg::SetReasoningExpanded(vis.reasoning_expanded))
         .await;
     app.apply_scrollback(ScrollbackMsg::SetActivityExpanded(activity_expanded))

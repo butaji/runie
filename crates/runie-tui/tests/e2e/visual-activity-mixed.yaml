@@ -35,7 +35,7 @@ assertions:
     tool_modes: [expanded, collapsed]
     tool_kinds: [list_dir, execute]
     selected_tool_id: null
-    selected_entry: 6
+    selected_entry: 3
     tool_headers: ["List . (3 entries)", "Run cargo test → ✓"]
     tool_outputs: [["Cargo.toml", "src", "crates"], ["cargo test completed"]]
     tool_row_kinds: [header, header, content, content, content, content]

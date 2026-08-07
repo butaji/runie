@@ -184,11 +184,8 @@ async fn end_to_end_prompt_renders_transcript() {
     eprintln!("[e2e] built app");
 
     // Spawn the renderer.
-    let renderer = EventRenderer::with_actors(
-        app.scrollback_actor.clone(),
-        app.status_actor.clone(),
-        false,
-    );
+    let renderer =
+        EventRenderer::with_actors(app.scrollback_actor.clone(), app.status_actor.clone());
     let rx = app.bus.subscribe();
     let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
     let handle = tokio::spawn(async move { renderer.run(rx, shutdown_rx).await });

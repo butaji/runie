@@ -551,3 +551,24 @@ been computing `ToolUpdate` messages and discarding them behind the
 removed; tool start/update/end messages now all reach the actor mailbox. A
 joined live-bus regression proves a start creates the running block and an
 update produces the expected output row.
+
+**Welcome emission retirement (2026-08-08):** The renderer's final
+renderer-local state — the `emit_welcome` one-shot flag and the
+`apply_actor_metadata` hook — has been retired. `EventRenderer::with_actors`,
+`with_live_actors`, and the inner constructor no longer accept an
+`emit_welcome` argument; the field is gone. The renderer's `run` and
+`apply_actor_event` paths now emit the actor-driven session-start lines on
+`AgentStart` without any renderer-local welcome state. The compatibility
+`welcome_modal_lines()` helper and its `welcome_modal_snapshot` regression
+are preserved as pure formatters. The YAML runner's `replay_scenario_events`
+(and the visual replay helper) pre-inject the welcome modal lines into the
+`ScrollbackActor` mailbox when `scenario.initial_prompt.is_none()`, so the
+actor-owned scrollback reflects the same idle chrome a fresh session would
+emit. The 23 renderer unit tests, the 212-test runie-tui suite, and the
+full `just ci` (fmt-check, clippy, lint, test, parity, source inventory,
+Pi event contract, and feed-actor boundary validators) remain green. The
+`visual-tool-selection.yaml` fixture's `selected_entry` assertion was
+updated from `11` to `14` to reflect the new pre-injection + session-start
+projection (the welcome modal pre-injection replaces the renderer's
+`AgentStart` welcome emission, adding three extra session-start lines).
+This closes the compatibility-retirement slice for the renderer.

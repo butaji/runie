@@ -731,7 +731,6 @@ impl App {
         let renderer = EventRenderer::with_live_actors(
             self.scrollback_actor.clone(),
             self.status_actor.clone(),
-            false,
         );
         let rx = self.bus.subscribe();
         let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);

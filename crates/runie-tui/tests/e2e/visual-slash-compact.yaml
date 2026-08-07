@@ -1,0 +1,28 @@
+name: visual-slash-compact
+description: |
+  Pi's /compact slash command crosses the prompt boundary, parses through the
+  built-in command registry, and reaches the typed route without provider
+  submission. The visual harness exercises the typed slash path while the
+  declared compaction event seeds the session record projection that the
+  assertions inspect.
+events:
+  - compaction:
+      summary: "Compacted earlier context"
+      tokens_before: 2048
+      retained_tail: []
+      details: { source: replay }
+assertions:
+  state:
+    session_config_records: [compaction]
+    compaction_context_entry_ids: []
+    compaction_context_roles: [compactionSummary]
+    compaction_context_tokens: 901
+    compaction_reserve_tokens: 100
+  visual:
+    cols: 80
+    rows: 24
+    steps:
+      - "/compact"
+      - Enter
+    screen_text:
+      - "Starting session…"

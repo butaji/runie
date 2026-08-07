@@ -80,6 +80,23 @@ so reset fixtures can distinguish an omitted expectation from a required
    `capture-scenario.sh` reads prompt/quit settings from the YAML fixture at
    runtime without recompilation.
 
+**Welcome emission retirement (2026-08-08):** The renderer's `emit_welcome`
+one-shot field and the `apply_actor_metadata` hook were the last
+renderer-local state mirror held outside the actor mailbox. Both are gone,
+and `EventRenderer::with_actors`/`with_live_actors` no longer take an
+`emit_welcome` argument. The renderer's `run`/`apply_actor_event` paths now
+emit only the actor-driven session-start lines on `AgentStart`. The
+welcome modal is now composed by the YAML runner via
+`replay_scenario_events` (and the visual replay helper), which pre-injects
+`welcome_modal_lines()` into the `ScrollbackActor` mailbox when
+`scenario.initial_prompt.is_none()`. The pure helper and its
+`welcome_modal_snapshot` regression are retained. The first remaining
+work item is therefore closed for the renderer surface; the live
+capture-input keep-declarative contract and the strict color parity gap
+remain separate. The full `just ci` (fmt-check, clippy, lint, test,
+parity, source inventory, Pi event contract, and feed-actor boundary
+validators) is green.
+
 The first two historical bullets are now closed. Production scroll, selection,
 palette, and prompt transitions have named owner-local messages, and replay
 assertions already support ordered `exact_events`, closed-contract `pi_events`,

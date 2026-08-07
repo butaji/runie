@@ -1,5 +1,9 @@
 # Agent Guidelines
 
+- SSOT Actors + events to transfer state
+- Everything async, reactive, pure
+- TUI is MUV
+- Tests are event based everything where its possible (sequence of events to create state and validation of a state)
 - Run unit and replay tests for every change. Never use `sleep()` in tests.
 - Verify locally with `just ci` or the relevant `cargo` commands. Do not add
   GitHub Actions or `.github/workflows`.
