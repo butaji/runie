@@ -2061,12 +2061,6 @@ mod tests {
     }
     use runie_core::types::{AgentMessage, StopReason, ThemeKind, Usage, UserContent, UserMessage};
 
-    fn new_renderer() -> (EventRenderer, Arc<Mutex<Scrollback>>, Arc<Mutex<StatusBar>>) {
-        let sb = Arc::new(Mutex::new(Scrollback::new()));
-        let st = Arc::new(Mutex::new(StatusBar::new()));
-        (EventRenderer::new(sb.clone(), st.clone()), sb, st)
-    }
-
     #[test]
     fn status_event_mapping_is_pure_and_ordered() {
         assert_eq!(
@@ -2486,9 +2480,9 @@ mod tests {
         assert!(!snapshot.lines()[beta].text.contains("a-update"));
     }
 
-    #[test]
+    #[tokio::test]
     #[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
-    fn structured_tools_use_grok_headers_and_preserve_output_rows() {
+    async fn structured_tools_use_grok_headers_and_preserve_output_rows() {
         assert_eq!(
             tool_header("list_dir", &serde_json::json!({"path":"."})),
             "List ."
@@ -2550,7 +2544,8 @@ mod tests {
             ),
             2
         );
-        let (mut renderer, _, _) = new_renderer();
+        let mut renderer =
+            EventRenderer::with_actors(ScrollbackActor::new(), StatusActor::new(), false);
         let end = renderer.handle_tool_end(
             "fetch-1".into(),
             "web_fetch".into(),

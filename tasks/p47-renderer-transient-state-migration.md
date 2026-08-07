@@ -57,6 +57,14 @@ remaining compatibility adapter is therefore isolated test/replay debt rather
 than a live second state owner. It remains scheduled for retirement, but no
 new production event boundary is blocked on it.
 
+## Compatibility call-site closure (2026-08-08)
+
+A complete repository audit now finds no caller of `EventRenderer::apply_event`.
+The final focused helper that constructed the legacy `Arc<Mutex<...>>`
+renderer was replaced with actor-backed construction. The legacy adapter types
+remain quarantined implementation debt only; they are no longer reachable
+through a repository call site.
+
 ## Why this task exists
 
 The production `EventRenderer` no longer owns the durable feed snapshot: it
