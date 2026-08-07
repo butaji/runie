@@ -11,3 +11,6 @@ fields for compatibility. The driver prefers the async variant, awaits its
 result, and applies the same event-driven context/model/thinking-level
 projection. A deterministic integration test proves an async stop hook ends
 the run before another turn is polled.
+
+Status is complete: both async hook phases are awaited by the driver and the
+event-sequence tests verify the ordering without timing sleeps.

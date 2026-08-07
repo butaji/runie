@@ -21,3 +21,7 @@ status, and scrollback actors through acknowledged mailboxes. It returns only
 after all three owners reduce the event; no snapshot polling remains. The
 event source stays declarative and each actor retains exclusive state
 ownership.
+
+Status is complete: the acknowledgement barrier is now the authoritative
+completion signal for theme application, with actor snapshots used only as
+read-only projections afterward.

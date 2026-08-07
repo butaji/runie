@@ -31,7 +31,15 @@ direct registry coverage proving an already-aborted signal is observable.
 The YAML runner now records the same awaited listener path separately from the
 broadcast trace; `hello-streaming.yaml` asserts its complete lifecycle order.
 
-## Required implementation
+## Completion (2026-08-06)
+
+The required implementation is complete: the ordered actor-owned registry is
+awaited inline by the loop, `agent_end` settlement includes listener completion,
+abort is projected into listeners, and YAML asserts the listener sequence.
+The broadcast bus remains observational and is not used as the lifecycle
+acknowledgement boundary.
+
+## Required implementation (historical design)
 
 Add a separate awaited lifecycle-delivery path for Pi-compatible events:
 

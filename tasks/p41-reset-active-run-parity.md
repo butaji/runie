@@ -11,3 +11,6 @@ event and returns `LoopError::Busy` when another run owns it. The TUI forwards
 the result without mutating projections directly. A deterministic
 blocking-stream integration test proves the active-run rejection and normal
 completion after release; it uses watch channels and no sleeps.
+
+Status is complete: the rejection, release, and event-owned reset path are
+covered by the core loop-entry and replay/CI suites.

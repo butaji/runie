@@ -37,19 +37,19 @@
     {
       "id": "p40",
       "file": "p40-awaited-event-listeners.md",
-      "status": "planned",
+      "status": "done",
       "title": "Await ordered Pi lifecycle listeners before run and idle settlement"
     },
     {
       "id": "p41",
       "file": "p41-reset-active-run-parity.md",
-      "status": "in_progress",
+      "status": "done",
       "title": "Reject reset while a Pi-compatible run is active"
     },
     {
       "id": "p42",
       "file": "p42-async-turn-hooks.md",
-      "status": "in_progress",
+      "status": "done",
       "title": "Await Pi-compatible asynchronous turn hooks before queue polling"
     },
     {
@@ -61,7 +61,7 @@
     {
       "id": "p44",
       "file": "p44-theme-ack-boundary.md",
-      "status": "in_progress",
+      "status": "done",
       "title": "Replace application theme snapshot polling with actor acknowledgements"
     },
     {

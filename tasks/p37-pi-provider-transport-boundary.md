@@ -53,8 +53,9 @@ Not yet implemented behaviorally:
   cannot yet open a WebSocket.
 - nullable request headers: additive `HttpRequest` delivery now carries
   optional headers; the default adapter preserves existing body-only actors.
-- `maxRetryDelayMs`: retry currently handles bounded transport failures but
-  has no provider response metadata or clock/backoff policy.
+- `maxRetryDelayMs`: retry delay is capped by the option, with provider
+  `retry-after` metadata taking precedence before the cap and injectable
+  delay/jitter hooks keeping replay deterministic.
 - named temperature/max-tokens/cache-retention fields: Runie's current
   provider boundary does not construct provider-specific payloads, so adding
   them to `SimpleStreamOptions` would create cosmetic parity only.
