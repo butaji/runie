@@ -235,6 +235,13 @@ impl StatusBar {
     pub fn apply(&mut self, message: StatusMsg) {
         match message {
             StatusMsg::Set(state) => self.state = state,
+            StatusMsg::Reset => {
+                self.state = Status::Ready;
+                self.animation_frame = 0;
+                self.elapsed_ticks = 0;
+                self.turn_usage = None;
+                self.turn_stop_reason = None;
+            }
             StatusMsg::BeginTurn => {
                 self.elapsed_ticks = self.elapsed_ticks_override.unwrap_or_default();
                 self.turn_usage = None;

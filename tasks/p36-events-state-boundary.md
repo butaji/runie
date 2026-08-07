@@ -21,6 +21,12 @@ snapshots only and never mutate another actor's state.
 The detailed audit and per-change acceptance checklist are recorded in
 [p48](p48-event-delivery-audit.md).
 
+Reset lifecycle increment (2026-08-07): `AgentEvent::Reset` now maps to
+explicit status/feed reset reducers. Status clears terminal turn facts while
+preserving theme/context configuration, and feed clear resets turn-summary
+eligibility. YAML and reducer tests cover the resulting event → snapshot
+contract.
+
 ## Remaining work
 
 1. Make every externally observable TUI transition have a named event/message

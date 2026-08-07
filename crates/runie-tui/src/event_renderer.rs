@@ -1991,7 +1991,7 @@ mod tests {
         );
         assert_eq!(
             status_messages_for_event(&AgentEvent::Reset),
-            vec![StatusMsg::Set(Status::Ready)]
+            vec![StatusMsg::Reset]
         );
     }
 

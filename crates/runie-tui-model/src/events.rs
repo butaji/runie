@@ -47,7 +47,7 @@ pub fn status_messages_for_event(event: &AgentEvent) -> Vec<StatusMsg> {
         AgentEvent::ModelChanged { model } => vec![StatusMsg::SetContextWindow(
             (model.context_window > 0).then_some(model.context_window),
         )],
-        AgentEvent::Reset => vec![StatusMsg::Set(Status::Ready)],
+        AgentEvent::Reset => vec![StatusMsg::Reset],
         AgentEvent::TurnEnd { .. } | AgentEvent::AgentEnd { .. } => {
             vec![StatusMsg::Set(Status::Ready)]
         }

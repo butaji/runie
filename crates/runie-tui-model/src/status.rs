@@ -33,6 +33,7 @@ impl Status {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StatusMsg {
     Set(Status),
+    Reset,
     BeginTurn,
     FinishTurn(Usage, StopReason),
     SetTheme(ThemeKind),
@@ -76,6 +77,14 @@ impl StatusSnapshot {
     pub fn apply(&mut self, message: StatusMsg, elapsed_seed: Option<u64>) {
         match message {
             StatusMsg::Set(state) => self.state = state,
+            StatusMsg::Reset => {
+                self.state = Status::Ready;
+                self.animation_frame = 0;
+                self.elapsed_ticks = 0;
+                self.turn_usage = None;
+                self.turn_stop_reason = None;
+                self.thinking_elapsed_ms = None;
+            }
             StatusMsg::BeginTurn => {
                 self.elapsed_ticks = elapsed_seed.unwrap_or_default();
                 self.turn_usage = None;
@@ -161,6 +170,29 @@ mod tests {
         assert!(state.animation_demand());
         state.state = Status::Ready;
         assert!(!state.animation_demand());
+    }
+
+    #[test]
+    fn reset_clears_terminal_turn_facts_but_preserves_theme_and_context() {
+        let mut state = StatusSnapshot {
+            theme: runie_core::types::ThemeKind::TerminalNative,
+            context_window: Some(42),
+            state: Status::Thinking,
+            animation_frame: 3,
+            elapsed_ticks: 17,
+            turn_usage: Some(Usage::default()),
+            turn_stop_reason: Some(StopReason::Stop),
+            thinking_elapsed_ms: Some(900),
+        };
+        state.apply(StatusMsg::Reset, None);
+        assert_eq!(state.state, Status::Ready);
+        assert_eq!(state.theme, runie_core::types::ThemeKind::TerminalNative);
+        assert_eq!(state.context_window, Some(42));
+        assert_eq!(state.animation_frame, 0);
+        assert_eq!(state.elapsed_ticks, 0);
+        assert!(state.turn_usage.is_none());
+        assert!(state.turn_stop_reason.is_none());
+        assert!(state.thinking_elapsed_ms.is_none());
     }
 
     #[test]
