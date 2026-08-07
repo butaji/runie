@@ -373,3 +373,14 @@ viewport height, and flush boundaries; assertions must cover each emitted
 delta, backlog after each flush, and the finalization record. No wall-clock
 wait or renderer-local mutation is acceptable. This is a source-backed parity
 gap, not an out-of-scope feature.
+
+Flush-state implementation slice (2026-08-07): `runie-tui-model` now exposes
+the pure `ScrollFlushState`, `ScrollFlush`, and `ScrollFinalize` contracts.
+It accumulates normalized whole-line movement, caps each explicit flush at
+`max(6, viewport_rows / 2)`, preserves backlog for later cadence events, and
+finalizes with `flushed: 0` rather than producing an uncapped burst. YAML now
+accepts `scroll_raw_input`, `scroll_flush`, and `scroll_finalize`; the
+`visual-scroll-flush.yaml` replay exercises the event sequence without
+recompilation or sleeps. The interactive worker still uses the legacy direct
+raw-event path, and its 16 ms timer/backlog integration remains the next
+production step; this increment does not claim complete scroll parity.

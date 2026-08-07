@@ -1,0 +1,20 @@
+name: visual-scroll-flush
+description: >-
+  Explicit Grok cadence flushes consume raw scroll input through a capped
+  backlog and finalize without an uncapped catch-up burst.
+initial_prompt: "scroll flush"
+events:
+  - start
+  - text_delta: "one\ntwo\nthree\nfour\nfive\nsix\nseven\neight\nnine\nten\neleven\ntwelve\nthirteen\nfourteen\nfifteen\nsixteen\nseventeen\neighteen\nnineteen\ntwenty"
+  - done: { stop_reason: stop }
+  - scroll_raw_input: { at_ms: 0, direction: up }
+  - scroll_raw_input: { at_ms: 1, direction: up }
+  - scroll_raw_input: { at_ms: 2, direction: up }
+  - scroll_raw_input: { at_ms: 3, direction: up }
+  - scroll_raw_input: { at_ms: 4, direction: up }
+  - scroll_flush: { at_ms: 16, viewport_rows: 10 }
+  - scroll_flush: { at_ms: 32, viewport_rows: 10 }
+  - scroll_finalize
+assertions:
+  state:
+    status: ready

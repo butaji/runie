@@ -340,6 +340,13 @@ pub enum EventSpec {
     ScrollInput {
         scroll_input: ScrollInputSpec,
     },
+    ScrollRawInput {
+        scroll_raw_input: ScrollInputSpec,
+    },
+    ScrollFlush {
+        scroll_flush: ScrollFlushSpec,
+    },
+    ScrollFinalize,
     AnimationTicks {
         animation_ticks: usize,
     },
@@ -695,6 +702,8 @@ impl EventSpec {
             Self::SelectRange { .. } => None,
             Self::Scroll { .. } => None,
             Self::ScrollInput { .. } => None,
+            Self::ScrollRawInput { .. } => None,
+            Self::ScrollFlush { .. } | Self::ScrollFinalize => None,
             Self::AnimationTicks { .. } => None,
             Self::LayoutMeasured { .. } => None,
             Self::RevealLatest { .. } => None,
@@ -706,6 +715,7 @@ impl EventSpec {
             | Self::WorkflowStart { .. }
             | Self::WorkflowProgress { .. }
             | Self::WorkflowEnd { .. } => None,
+            Self::Bare(other) if other == "scroll_finalize" => None,
             Self::Bare(other) => panic!("unknown event kind: {other:?}"),
         }
     }
@@ -1871,6 +1881,12 @@ pub struct ScrollInputSpec {
     pub inverted: Option<bool>,
 }
 
+#[derive(Debug, Deserialize, Clone)]
+pub struct ScrollFlushSpec {
+    pub at_ms: u64,
+    pub viewport_rows: u16,
+}
+
 fn declared_tool_seeds(scenario: &Scenario) -> Vec<ScrollbackMsg> {
     scenario
         .events
@@ -1892,8 +1908,13 @@ fn declared_tool_seeds(scenario: &Scenario) -> Vec<ScrollbackMsg> {
         .collect()
 }
 
+#[allow(
+    clippy::too_many_lines,
+    reason = "the declarative scroll event table keeps legacy and cadence replay paths together"
+)]
 fn declared_scrolls(scenario: &Scenario) -> Vec<ScrollbackMsg> {
     let mut normalizer = runie_tui_model::ScrollNormalizer::default();
+    let mut flush_state = runie_tui_model::ScrollFlushState::new(normalizer, 24);
     let mut messages = Vec::new();
     for event in &scenario.events {
         match event {
@@ -1905,11 +1926,43 @@ fn declared_scrolls(scenario: &Scenario) -> Vec<ScrollbackMsg> {
                     "down" => runie_tui_model::ScrollDirection::Down,
                     _ => continue,
                 };
+                let flush_input = flush_state.with_normalizer(normalizer);
                 let (next, delta) = normalizer.push_at(scroll_input.at_ms, direction);
                 normalizer = next;
+                let (next_flush, _) = flush_input.input_at(scroll_input.at_ms, direction);
+                flush_state = next_flush;
                 if delta != 0 {
                     messages.push(ScrollbackMsg::ScrollBy(delta));
                 }
+            }
+            EventSpec::ScrollRawInput { scroll_raw_input } => {
+                normalizer = configure_scroll_normalizer(normalizer, scroll_raw_input);
+                let direction = match scroll_raw_input.direction.as_str() {
+                    "up" => runie_tui_model::ScrollDirection::Up,
+                    "down" => runie_tui_model::ScrollDirection::Down,
+                    _ => continue,
+                };
+                let (next, _) = flush_state
+                    .with_normalizer(normalizer)
+                    .input_at(scroll_raw_input.at_ms, direction);
+                flush_state = next;
+                normalizer = flush_state.normalizer_for_replay();
+            }
+            EventSpec::ScrollFlush { scroll_flush } => {
+                flush_state = flush_state.with_viewport_rows(scroll_flush.viewport_rows);
+                let (next, flush) = flush_state.flush_at(scroll_flush.at_ms);
+                flush_state = next;
+                if flush.lines != 0 {
+                    messages.push(ScrollbackMsg::ScrollBy(flush.lines));
+                }
+            }
+            EventSpec::ScrollFinalize => {
+                let (next, _) = flush_state.finalize();
+                flush_state = next;
+            }
+            EventSpec::Bare(value) if value == "scroll_finalize" => {
+                let (next, _) = flush_state.finalize();
+                flush_state = next;
             }
             EventSpec::RevealLatest { reveal_latest } if *reveal_latest => {
                 messages.push(ScrollbackMsg::RevealLatest)
