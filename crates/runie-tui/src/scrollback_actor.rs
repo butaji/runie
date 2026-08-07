@@ -414,7 +414,7 @@ fn ordinary_tool_end_messages(
         crate::event_renderer::completed_tool_header_with_args(&pending, &name, &args, result)
     };
     let activity = if *active_tool_count == 0 && dirs + files + commands + subagents > 0 {
-        Some(crate::event_renderer::activity_text(
+        Some(runie_tui_model::activity_text(
             dirs,
             files,
             commands,

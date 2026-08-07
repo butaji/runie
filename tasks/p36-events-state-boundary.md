@@ -34,6 +34,12 @@ text normalization in `runie-tui-model`. `ScrollbackActor` no longer calls
 `event_renderer::tool_result_text`; transport-envelope handling is reduced
 before rendering, while the renderer retains only its compatibility helper.
 
+Activity-label extraction (2026-08-08): grouped Grok activity text is now
+projected by `runie-tui-model::activity_text` and consumed by the feed actor.
+The model owns the semantic `◈ Listed/Read/Ran` vocabulary and failure suffix;
+the renderer only styles the resulting line. Actor lifecycle tests preserve
+the exact label and keep this event → snapshot behavior covered.
+
 Reset lifecycle increment (2026-08-07): `AgentEvent::Reset` now maps to
 explicit status/feed reset reducers. Status clears terminal turn facts while
 preserving theme/context configuration, and feed clear resets turn-summary

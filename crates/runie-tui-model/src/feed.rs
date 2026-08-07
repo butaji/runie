@@ -118,6 +118,55 @@ pub fn tool_result_text(result: &serde_json::Value) -> String {
         .unwrap_or_else(|| serde_json::to_string(result).unwrap_or_default())
 }
 
+/// Project Grok's grouped tool activity label without terminal concerns.
+#[allow(
+    clippy::cognitive_complexity,
+    reason = "the activity vocabulary is one declarative projection"
+)]
+pub fn activity_text(
+    dirs: usize,
+    files: usize,
+    commands: usize,
+    subagents: usize,
+    failures: usize,
+    running: bool,
+) -> String {
+    let dir_verb = if running { "Listing" } else { "Listed" };
+    let file_verb = if running { "Reading" } else { "Read" };
+    let command_verb = if running { "Running" } else { "Ran" };
+    let subagent_verb = if running { "Running" } else { "Ran" };
+    let mut parts = Vec::new();
+    if dirs > 0 {
+        parts.push(format!(
+            "{dir_verb} {dirs} dir{}",
+            if dirs == 1 { "" } else { "s" }
+        ));
+    }
+    if files > 0 {
+        parts.push(format!(
+            "{file_verb} {files} file{}",
+            if files == 1 { "" } else { "s" }
+        ));
+    }
+    if commands > 0 {
+        parts.push(format!(
+            "{command_verb} {commands} command{}",
+            if commands == 1 { "" } else { "s" }
+        ));
+    }
+    if subagents > 0 {
+        parts.push(format!(
+            "{subagent_verb} {subagents} subagent{}",
+            if subagents == 1 { "" } else { "s" }
+        ));
+    }
+    let mut text = format!("◈ {}", parts.join(", "));
+    if failures > 0 && !running {
+        text.push_str(&format!(" · {failures} failed"));
+    }
+    text
+}
+
 pub const GROK_GROUP_MAX_VISIBLE: usize = 10;
 
 /// Viewport-relative terminal cell coordinate used by Grok's text selection.
