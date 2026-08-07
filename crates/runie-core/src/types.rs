@@ -615,6 +615,8 @@ pub struct SimpleStreamOptions {
     /// Provider-scoped environment and metadata carried with the request.
     pub env: Option<std::collections::HashMap<String, String>>,
     pub metadata: Option<std::collections::HashMap<String, serde_json::Value>>,
+    /// Preferred Pi transport (`sse`, `websocket`, `websocket-cached`, or `auto`).
+    pub transport: Option<ProviderTransport>,
     pub signal: Option<tokio::sync::watch::Receiver<bool>>,
     pub thinking_budgets: Option<ThinkingBudgets>,
     /// Provider request timeout in milliseconds (pi: `timeoutMs`).
@@ -639,6 +641,14 @@ pub struct SimpleStreamOptions {
     pub retry_jitter: Option<RetryJitterHook>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProviderTransport {
+    Sse,
+    Websocket,
+    WebsocketCached,
+    Auto,
+}
+
 impl std::fmt::Debug for SimpleStreamOptions {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
@@ -648,6 +658,7 @@ impl std::fmt::Debug for SimpleStreamOptions {
             .field("headers", &self.headers)
             .field("env", &self.env)
             .field("metadata", &self.metadata)
+            .field("transport", &self.transport)
             .field("signal", &self.signal.is_some())
             .field("thinking_budgets", &self.thinking_budgets)
             .field("timeout_ms", &self.timeout_ms)

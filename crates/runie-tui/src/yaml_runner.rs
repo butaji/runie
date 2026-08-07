@@ -73,6 +73,8 @@ pub struct ProviderOptionsSpec {
     #[serde(default)]
     pub metadata: Option<std::collections::HashMap<String, serde_json::Value>>,
     #[serde(default)]
+    pub transport: Option<String>,
+    #[serde(default)]
     pub thinking_budgets: Option<runie_core::types::ThinkingBudgets>,
     #[serde(default)]
     pub timeout_ms: Option<u64>,
@@ -91,6 +93,7 @@ impl ProviderOptionsSpec {
             headers: self.headers.clone(),
             env: self.env.clone(),
             metadata: self.metadata.clone(),
+            transport: self.transport.as_deref().map(parse_provider_transport),
             thinking_budgets: self.thinking_budgets.clone(),
             timeout_ms: self.timeout_ms,
             max_retries: self.max_retries,
@@ -98,6 +101,25 @@ impl ProviderOptionsSpec {
             sampling_params: self.sampling_params.clone(),
             ..Default::default()
         }
+    }
+}
+
+fn parse_provider_transport(value: &str) -> runie_core::types::ProviderTransport {
+    match value {
+        "sse" => runie_core::types::ProviderTransport::Sse,
+        "websocket" => runie_core::types::ProviderTransport::Websocket,
+        "websocket-cached" => runie_core::types::ProviderTransport::WebsocketCached,
+        "auto" => runie_core::types::ProviderTransport::Auto,
+        other => panic!("unknown provider transport: {other}"),
+    }
+}
+
+fn provider_transport_name(value: runie_core::types::ProviderTransport) -> &'static str {
+    match value {
+        runie_core::types::ProviderTransport::Sse => "sse",
+        runie_core::types::ProviderTransport::Websocket => "websocket",
+        runie_core::types::ProviderTransport::WebsocketCached => "websocket-cached",
+        runie_core::types::ProviderTransport::Auto => "auto",
     }
 }
 
@@ -678,6 +700,7 @@ pub struct ProviderOptionsAssertions {
     pub headers: Option<std::collections::HashMap<String, String>>,
     pub env: Option<std::collections::HashMap<String, String>>,
     pub metadata: Option<std::collections::HashMap<String, serde_json::Value>>,
+    pub transport: Option<String>,
     pub thinking_budgets: Option<runie_core::types::ThinkingBudgets>,
     pub timeout_ms: Option<u64>,
     pub max_retries: Option<u32>,
@@ -1689,6 +1712,14 @@ fn assert_provider_options(outcome: &ScenarioOutcome, scenario: &Scenario) -> Re
             return Err(format!(
                 "provider metadata mismatch: expected {value:?}, got {:?}",
                 actual.metadata
+            ));
+        }
+    }
+    if let Some(value) = &expected.transport {
+        let actual_transport = actual.transport.map(provider_transport_name);
+        if actual_transport != Some(value.as_str()) {
+            return Err(format!(
+                "provider transport mismatch: expected {value:?}, got {actual_transport:?}"
             ));
         }
     }

@@ -35,6 +35,7 @@ Implemented end-to-end through the owned provider request snapshot:
 - payload and response hooks
 - request headers carried to the transport boundary
 - provider environment and metadata carried to the transport boundary
+- preferred transport carried to the transport boundary
 
 The YAML runner exposes these effective options at runtime; `visual-hey.yaml`
 now declares and asserts `session_id`, thinking budgets, and sampling
@@ -42,11 +43,12 @@ parameters.
 
 Not yet implemented behaviorally:
 
-- custom fetch, telemetry context, and transport
-  selection: `HttpActor` has no injectable transport/request-context object.
-- custom fetch, telemetry context, and transport selection remain unsupported;
-  environment and metadata now travel through `HttpRequest` and are exposed to
-  YAML assertions.
+- custom fetch is represented by the injected `HttpActor`; no browser-style
+  fetch callback is needed at this Rust boundary.
+- telemetry context remains unsupported.
+- transport selection is now typed and carried through `HttpRequest`; concrete
+  WebSocket adapters are still unsupported, so selecting one is observable but
+  cannot yet open a WebSocket.
 - nullable request headers: additive `HttpRequest` delivery now carries
   optional headers; the default adapter preserves existing body-only actors.
 - `maxRetryDelayMs`: retry currently handles bounded transport failures but
@@ -57,8 +59,8 @@ Not yet implemented behaviorally:
 
 ## Next implementation slice
 
-Introduce an owned `ProviderRequest`/transport message carrying body, headers,
-metadata, and cancellation into `HttpActor`. Add deterministic clock and
+The owned `HttpRequest` now carries body, headers, environment, metadata,
+transport, and cancellation into `HttpActor`. Add deterministic clock and
 backoff policy as injected dependencies, then promote each Pi option only when
 one concrete adapter consumes it and a YAML event sequence asserts the
 effective request. Keep unsupported provider-specific options explicitly

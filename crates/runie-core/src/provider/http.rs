@@ -3,7 +3,7 @@
 use std::{fs, path::Path};
 
 use super::stream_fn::StreamError;
-use crate::types::{Model, ProviderResponse, SimpleStreamOptions};
+use crate::types::{Model, ProviderResponse, ProviderTransport, SimpleStreamOptions};
 
 const DEFAULT_MAX_RETRY_DELAY_MS: u64 = 60_000;
 
@@ -20,6 +20,7 @@ pub struct HttpRequest {
     pub headers: std::collections::HashMap<String, String>,
     pub env: std::collections::HashMap<String, String>,
     pub metadata: std::collections::HashMap<String, serde_json::Value>,
+    pub transport: Option<ProviderTransport>,
 }
 
 #[async_trait::async_trait]
@@ -82,6 +83,7 @@ pub trait HttpActor: Send + Sync + 'static {
                     headers: headers.clone(),
                     env: env.clone(),
                     metadata: metadata.clone(),
+                    transport: options.as_ref().and_then(|options| options.transport),
                 },
                 options.as_ref().and_then(|o| o.timeout_ms),
             )
@@ -309,6 +311,7 @@ mod tests {
 
     struct HeaderCapturingHttp {
         headers: Arc<Mutex<Option<std::collections::HashMap<String, String>>>>,
+        transport: Arc<Mutex<Option<ProviderTransport>>>,
     }
 
     #[async_trait::async_trait]
@@ -326,6 +329,7 @@ mod tests {
 
         async fn post_request(&self, request: HttpRequest) -> Result<HttpResponse, StreamError> {
             *self.headers.lock().expect("headers lock") = Some(request.headers);
+            *self.transport.lock().expect("transport lock") = request.transport;
             Ok(HttpResponse {
                 status: 200,
                 headers: Default::default(),
@@ -428,14 +432,17 @@ mod tests {
     #[tokio::test]
     async fn post_with_options_forwards_request_headers_to_transport() {
         let headers = Arc::new(Mutex::new(None));
+        let transport = Arc::new(Mutex::new(None));
         HeaderCapturingHttp {
             headers: headers.clone(),
+            transport: transport.clone(),
         }
         .post_with_options(
             "{}".into(),
             Model::default(),
             Some(SimpleStreamOptions {
                 headers: Some([(String::from("x-trace"), String::from("replay-1"))].into()),
+                transport: Some(ProviderTransport::Sse),
                 ..Default::default()
             }),
         )
@@ -448,6 +455,10 @@ mod tests {
                 .as_ref()
                 .and_then(|headers| headers.get("x-trace")),
             Some(&String::from("replay-1"))
+        );
+        assert_eq!(
+            *transport.lock().expect("transport lock"),
+            Some(ProviderTransport::Sse)
         );
     }
 
