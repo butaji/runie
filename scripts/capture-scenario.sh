@@ -12,14 +12,26 @@ command -v ruby >/dev/null || { echo "ruby is required to read YAML capture scen
 # Psych is part of Ruby's standard library on the supported capture hosts.
 # Emit shell-safe, single-line fields; the command itself remains a positional
 # argument and is never interpreted as YAML or shell source.
-read -r prompt quit_key < <(ruby -ryaml -e '
+read -r prompt quit_key resize_schedule < <(ruby -ryaml -e '
   value = YAML.load_file(ARGV.fetch(0))
   capture = value.fetch("capture", {})
   prompt = capture.fetch("prompt", value.fetch("initial_prompt", "Hey"))
   quit = capture.fetch("quit_key", "C-q")
+  resize = capture.fetch("resize", [])
   abort "capture.prompt must be a single line" unless prompt.is_a?(String) && !prompt.include?("\n")
   abort "capture.quit_key must be a single line" unless quit.is_a?(String) && !quit.include?("\n")
-  puts [prompt, quit].map { |field| field.gsub(/[^[:print:]]/, "") }.join(" ")
+  abort "capture.resize must be an array" unless resize.is_a?(Array)
+  encoded = resize.map do |entry|
+    abort "capture.resize entries must be mappings" unless entry.is_a?(Hash)
+    at = Integer(entry.fetch("at_ms"))
+    cols = Integer(entry.fetch("cols"))
+    rows = Integer(entry.fetch("rows"))
+    abort "capture.resize values must be positive" unless at >= 0 && cols > 0 && rows > 0
+    "#{at},#{cols},#{rows}"
+  end.join(";")
+  times = resize.map { |entry| Integer(entry.fetch("at_ms")) }
+  abort "capture.resize entries must be ordered" unless times == times.sort && times.uniq.length == times.length
+  puts [prompt, quit, encoded].map { |field| field.gsub(/[^[:print:]]/, "") }.join(" ")
 ' "$fixture")
 
-scripts/capture-matrix.sh "$output_dir" "$command_line" "$quit_key" "$prompt" "$env_assignments"
+scripts/capture-matrix.sh "$output_dir" "$command_line" "$quit_key" "$prompt" "$env_assignments" "$resize_schedule"

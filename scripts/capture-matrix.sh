@@ -6,6 +6,7 @@ command_line=${2:?usage: capture-matrix.sh OUTPUT_DIR COMMAND QUIT_KEY [PROMPT] 
 quit_key=${3:?usage: capture-matrix.sh OUTPUT_DIR COMMAND QUIT_KEY [PROMPT] [ENV_ASSIGNMENTS]}
 prompt=${4:-Hey}
 env_assignments=${5:-}
+resize_schedule=${6:-}
 # Preserve the pre-scenario API (`OUTPUT COMMAND QUIT_KEY ENV_ASSIGNMENTS`).
 # Environment assignments are unambiguous because they must contain `=` and
 # begin with a shell identifier; a prompt such as `foo=bar` is intentionally
@@ -24,7 +25,7 @@ for size in "${sizes[@]}"; do
     read -r cols rows <<<"$size"
     stem="${prefix}/${cols}x${rows}"
     if ! scripts/tmux-asciinema-capture.sh "$cols" "$rows" "${stem}.cast" \
-        "$command_line" "$prompt" "$quit_key" "$env_assignments"; then
+        "$command_line" "$prompt" "$quit_key" "$env_assignments" "$resize_schedule"; then
         failed=1
     fi
 done

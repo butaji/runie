@@ -1,6 +1,7 @@
 # p53 — Runtime resize capture contract
 
-Status: planned (2026-08-08)
+Status: implemented in capture tooling; runtime parity evidence pending
+(2026-08-08)
 
 ## Why
 
@@ -12,7 +13,7 @@ flooded mouse stream.
 
 ## Required declarative contract
 
-Extend the capture YAML without recompilation:
+The capture tooling now accepts this YAML without recompilation:
 
 ```yaml
 capture:
@@ -30,6 +31,11 @@ The capture driver must schedule private-tmux `resize-window` operations only
 for the isolated capture session. The cast metadata must record each resize,
 and the scenario must remain invalid if the requested geometry is not
 observed in the captured pane.
+
+The schedule is threaded through `capture-scenario.sh`, `capture-matrix.sh`,
+and the private tmux driver. Each resize is checked with tmux's observed
+window geometry and recorded in a `.resize.json` artifact and the cast
+manifest; a mismatch fails the capture.
 
 ## Acceptance
 

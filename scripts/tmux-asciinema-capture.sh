@@ -8,6 +8,7 @@ command_line=${4:?usage: tmux-asciinema-capture.sh COLS ROWS CAST COMMAND PROMPT
 prompt=${5:?usage: tmux-asciinema-capture.sh COLS ROWS CAST COMMAND PROMPT QUIT_KEY}
 quit_key=${6:?usage: tmux-asciinema-capture.sh COLS ROWS CAST COMMAND PROMPT QUIT_KEY [ENV_ASSIGNMENTS]}
 env_assignments=${7:-}
+resize_schedule=${8:-}
 session="runie-cast-$$"
 probe_iterations=600
 
@@ -83,6 +84,38 @@ quoted_command="'${escaped_command}'"
 tmux send-keys -t "$session" -l \
   "asciinema rec --window-size ${cols}x${rows} --overwrite --output-format asciicast-v2 --command ${quoted_command} '$cast'"
 tmux send-keys -t "$session" Enter
+
+# Optional YAML-driven mid-capture resize schedule. The schedule is validated
+# by capture-scenario.sh and scoped to this private tmux session. Relative
+# delays are converted to absolute sleeps so each resize is measured from the
+# recording start without touching the user's terminal multiplexer.
+resize_pid=""
+resize_report="${cast%.cast}.resize.json"
+printf '%s\n' '{"valid":true,"observed":[]}' > "$resize_report"
+if [[ -n "$resize_schedule" ]]; then
+    (
+        previous_ms=0
+        observed='[]'
+        IFS=';' read -ra entries <<< "$resize_schedule"
+        for entry in "${entries[@]}"; do
+            IFS=',' read -r at_ms resize_cols resize_rows <<< "$entry"
+            delay_ms=$((at_ms - previous_ms))
+            (( delay_ms > 0 )) && sleep "0.$(printf '%03d' "$delay_ms")"
+            tmux resize-window -t "$session" -x "$resize_cols" -y "$resize_rows" 2>/dev/null || exit 0
+            actual=$(tmux display-message -p -t "$session" '#{window_width},#{window_height}' 2>/dev/null || printf '')
+            if [[ "$actual" != "$resize_cols,$resize_rows" ]]; then
+                jq -n --arg expected "$resize_cols,$resize_rows" --arg actual "$actual" \
+                    '{valid:false,expected:$expected,actual:$actual}' > "$resize_report"
+                exit 1
+            fi
+            observed=$(jq --arg at "$at_ms" --arg geometry "$actual" \
+                '. + [{at_ms:($at|tonumber),geometry:$geometry}]' <<< "$observed")
+            previous_ms=$at_ms
+        done
+        jq -n --argjson observed "$observed" '{valid:true,observed:$observed}' > "$resize_report"
+    ) &
+    resize_pid=$!
+fi
 
 # Wait for the actual prompt, not merely alternate-screen initialization.
 # Grok may spend several seconds rendering its welcome surface first.
@@ -177,6 +210,12 @@ fi
 # final frame is not a reliable settled-state oracle after teardown.
 settled_dump="${cast%.cast}.settled.ansi"
 tmux capture-pane -e -p -t "$session" -S 0 -E "$((rows - 1))" > "$settled_dump"
+
+if [[ -n "$resize_pid" ]]; then
+    if ! wait "$resize_pid"; then
+        reject_capture "resize_observation_failed"
+    fi
+fi
 tmux send-keys -t "$session" "$quit_key"
 
 # The caller controls interaction through the session name while recording.
@@ -190,6 +229,10 @@ for _ in $(seq 1 "$shutdown_iterations"); do
 done
 if tmux has-session -t "$session" 2>/dev/null; then
     tmux kill-session -t "$session"
+fi
+if [[ -n "$resize_pid" ]]; then
+    kill "$resize_pid" 2>/dev/null || true
+    wait "$resize_pid" 2>/dev/null || true
 fi
 
 # Emit the raw replay stream beside the timed cast for terminal-parser tools.
@@ -230,13 +273,15 @@ jq -n \
   --arg doctor_report "$doctor_report" \
   --arg probe "$prompt" \
   --arg quit_key "$quit_key" \
+  --arg resize_schedule "$resize_schedule" \
+  --arg resize_report "$resize_report" \
   --argjson cols "$cols" \
   --argjson rows "$rows" \
   '{captured_at:$captured_at, repo_revision:$repo_revision,
     command:$command, capture_env:$capture_env,
-    probe:{prompt:$probe, quit_key:$quit_key},
+    probe:{prompt:$probe, quit_key:$quit_key}, resize_schedule:$resize_schedule,
     grok_path:$grok_path, grok_version:$grok_version,
     capture_tools:{tmux:$tmux_version, asciinema:$asciinema_version},
     terminal:{cols:$cols, rows:$rows, term:$term, colorterm:$colorterm},
     artifacts:{cast:$cast, raw:$raw, settled_ansi:$settled_dump,
-      grok_doctor:$doctor_report}}' > "$manifest"
+      grok_doctor:$doctor_report, resize_report:$resize_report}}' > "$manifest"
