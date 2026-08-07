@@ -86,3 +86,11 @@ keeps terminal drawing on its existing cadence while making key delivery
 reactive to the input event rather than to a polling boundary. Mouse and
 selection events continue to cross the same mailbox and actor messages; no
 renderer or sibling actor is mutated directly.
+
+Legacy delivery re-audit (2026-08-08): the remaining `apply_event` methods
+found by source search are actor mailbox APIs (`PromptActor`, `StatusActor`,
+`ScrollbackActor`, and `SessionActor`) or the renderer's event-to-actor bridge;
+there are no production calls to the retired synchronous renderer projection.
+The synchronous prompt filesystem helper is test-only; production uses the
+async actor method documented in P57. The current async/replay boundary audit
+is recorded in P59.
