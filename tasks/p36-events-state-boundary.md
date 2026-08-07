@@ -139,10 +139,10 @@ construction now shares `mailbox_ack!` plumbing through the state actor's
 private helper. State ownership and command payloads remain explicit at each
 public method.
 
-TUI theme event boundary (2026-08-06): `App::set_theme` now publishes one
-`ThemeChanged` event. Prompt, status, and scrollback actors are constructed
-with bus subscriptions and reduce that event independently through their own
-mailboxes; the app no longer fans out direct projection mutations.
+TUI theme event boundary (2026-08-06): `App::set_theme` publishes one
+`ThemeChanged` event. Prompt remains bus-reactive; status and scrollback are
+reduced by the single production `EventRenderer` bus-delivery boundary, so
+the app does not create a second competing projection subscription.
 
 Session mailbox consolidation (2026-08-06): journal append/reset/import/flush
 and the session event projection now acknowledge through `mailbox_ack!`, so

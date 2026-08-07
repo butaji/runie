@@ -301,8 +301,8 @@ impl App {
         let ui = UiActor::new(&bus);
         Self {
             prompt: PromptActor::new(&bus),
-            status_actor: StatusActor::new_with_bus(&bus),
-            scrollback_actor: ScrollbackActor::new_with_bus(&bus),
+            status_actor: StatusActor::new(),
+            scrollback_actor: ScrollbackActor::new(),
             session_actor: SessionActor::new_with_bus(&bus),
             loop_actor,
             bus,
@@ -314,8 +314,8 @@ impl App {
         let ui = UiActor::new_with_welcome(&bus, true);
         Self {
             prompt: PromptActor::new(&bus),
-            status_actor: StatusActor::new_with_bus(&bus),
-            scrollback_actor: ScrollbackActor::new_with_bus(&bus),
+            status_actor: StatusActor::new(),
+            scrollback_actor: ScrollbackActor::new(),
             session_actor: SessionActor::new_with_bus(&bus),
             loop_actor,
             bus,

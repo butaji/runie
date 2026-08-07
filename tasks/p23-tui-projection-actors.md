@@ -3,8 +3,9 @@
 ## Current state correction (2026-08-06)
 
 Theme changes now use the bus as the sole transition boundary. `App::set_theme`
-does not directly mutate the prompt actor; it waits for prompt, status, and
-scrollback projections to acknowledge the shared `ThemeChanged` event.
+does not directly mutate projections; the prompt actor consumes the event and
+the single production `EventRenderer::run` boundary reduces it into status
+and scrollback actors.
 
 The historical migration notes below mention a lazy actor-owned renderer. The
 current implementation is stricter: `EventRenderer::run` and
@@ -447,3 +448,8 @@ card-row projection now classifies that terminal marker as `Status` without
 adding a second replay command or changing event timing. `visual-tool-error`
 asserts the status row through the YAML oracle, and the search-tools replay
 remains green.
+- **Single live bus boundary correction (2026-08-06):** `App` keeps status and
+  scrollback actors mailbox-only; `EventRenderer::run` is the sole production
+  consumer that reduces shared bus events into those projections. Prompt and
+  session actors retain their independent event subscriptions. This avoids
+  duplicate status/feed reductions while preserving event-driven ownership.
