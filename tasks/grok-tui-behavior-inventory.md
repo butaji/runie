@@ -2,6 +2,13 @@
 
 Status: active (2026-08-07)
 
+**Running-tool visual oracle update (2026-08-08):**
+`visual-tool-running-fold.yaml` now drives a real prompt scenario and asserts
+the live `custom_tool running` header in the full rendered screen. The prior
+fixture could stop at the welcome overlay, so its state-only assertion did not
+prove that the running card was visible. The scenario remains runtime-editable
+and uses no wall-clock timing.
+
 ## Current source audit (2026-08-07)
 
 `scripts/source-inventory.sh` currently reports 48 Pi agent files, 174 Pi AI
