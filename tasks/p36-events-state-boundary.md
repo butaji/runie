@@ -27,6 +27,10 @@ preserving theme/context configuration, and feed clear resets turn-summary
 eligibility. YAML and reducer tests cover the resulting event → snapshot
 contract.
 
+The runtime fixture `visual-reset-state.yaml` now replays a started reasoning
+turn followed by `reset` and asserts the settled status, streaming flag, and
+feed lifecycle bit without recompilation.
+
 ## Remaining work
 
 1. Make every externally observable TUI transition have a named event/message

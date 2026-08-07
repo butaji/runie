@@ -1,0 +1,15 @@
+name: visual-reset-state
+description: Reset clears actor-owned terminal turn facts through events.
+events:
+  - start
+  - thinking_start: { index: 0 }
+  - thinking_end:
+      index: 0
+      content: "checking"
+      elapsed_ms: 900
+  - reset
+assertions:
+  state:
+    status: ready
+    is_streaming: false
+    turn_started: false

@@ -510,6 +510,7 @@ impl EventSpec {
             Self::Bare(s) if s == "start" => Some(AssistantMessageEvent::Start {
                 partial: AssistantMessage::default(),
             }),
+            Self::Bare(s) if s == "reset" => None,
             Self::TextDelta { text_delta } => Some(AssistantMessageEvent::TextDelta {
                 index: 0,
                 delta: text_delta.clone(),
@@ -621,6 +622,7 @@ impl EventSpec {
     )]
     fn waiting_event(&self) -> Option<AgentEvent> {
         match self {
+            Self::Bare(s) if s == "reset" => Some(AgentEvent::Reset),
             Self::Waiting { waiting } => Some(AgentEvent::Waiting {
                 reason: waiting_name(waiting),
             }),
