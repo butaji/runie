@@ -72,6 +72,16 @@ complete temporary file atomically before rename. Forks copy a validated
 branch prefix into a new session. Compaction entries preserve the summary,
 retained tail, token count, usage, and implementation details.
 
+The compaction audit identifies the pure algorithm still required: Pi estimates
+context tokens from the latest valid assistant usage plus trailing messages,
+applies `contextWindow - reserveTokens` as the threshold, finds valid cut
+points at message/branch-summary boundaries, preserves a recent-token budget,
+and separates a split-turn prefix from the retained tail. `prepareCompaction`
+then carries `previousSummary`, `tokensBefore`, retained messages, and
+file-operation details into the async summarization boundary. Runie currently
+journals `CompactionCreated` but does not yet implement this preparation
+algorithm.
+
 ## Current Runie mapping
 
 `runie-core/src/session.rs` owns parent-linked message/config entries and
