@@ -166,6 +166,17 @@ polling/stream decoding and cancellation. Runie now has the corresponding
 unsupported adapter errors, and joined owned stream pumps. Provider-specific
 polling/decoding remains open; generic HTTP still must not emulate it.
 
+Deferred operation re-audit (2026-08-07): Pi's `fetchDeferred` and
+`cancelDeferred` remain optional provider capabilities, not generic transport
+behavior. Runie's `ProviderActor` routes both commands through the owned
+`StreamFn` adapter, joins fetch pumps in its `JoinSet`, and returns explicit
+capability errors when the adapter does not implement them. There is no
+source-backed generic YAML behavior to add without inventing a wire protocol.
+The next valid increment is a provider-specific adapter fixture implementing
+Pi's handle/poll/decoder contract; until then the unsupported capability
+result is the correct actor boundary and is covered by the provider actor unit
+test.
+
 Provider lifecycle increment (2026-08-07): `ProviderActor` now aborts any
 previous owned pump before acknowledging a new `Start`. This matches the
 one-in-flight Pi turn contract and prevents superseded streams from publishing
