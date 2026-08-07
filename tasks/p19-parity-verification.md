@@ -1105,6 +1105,15 @@ those differences are not promoted into the deterministic Pi-core oracle.
   provider-decode fixtures must now expose a non-empty parser/transport error
   payload in addition to failing classification, preserving useful diagnostic
   parity without entering the success loop.
+- **Decode-boundary audit (2026-08-06):** Rechecked all 24 provider-decode
+  sidecars against Pi's loop entry: each fails while constructing/replaying the
+  provider stream, before `agentLoop` can publish `agent_start` or any core
+  lifecycle event. The correct parity contract is therefore a typed
+  `provider_decode` fixture error plus a stable diagnostic payload; synthesizing
+  `AgentEvent::Error` for these cases would create events Pi does not emit.
+  The YAML oracle remains intentionally outside the successful event vector,
+  while mid-stream `error:` frames continue through the real loop path and
+  are covered separately.
 - **Error-event projection parity (2026-08-05):** Non-message abort and
   provider/tool failure paths now use a shared `AgentEvent::Error` boundary;
   core and TUI tests confirm the state/status projections remain consistent.
