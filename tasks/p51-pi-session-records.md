@@ -148,3 +148,13 @@ assert whether the navigation target and optional summary entry resolve;
 `visual-navigation-intent.yaml` deliberately asserts both are absent. This
 surfaces Pi's target-validation fact without silently admitting an invalid
 navigation operation or mutating state outside the session actor.
+
+Operation admission error boundary (2026-08-08): Pi's in-memory and JSONL
+session adapters reject a second open `operation_started` on the same lane as
+an asynchronous storage error and leave the journal unchanged. Runie's
+`SessionActor::record_config` now returns the actor-owned `Result` from its
+mailbox; validation occurs inside the reducer before publication, so rejected
+operation records cannot mutate the snapshot or lane log. The event replay
+path intentionally ignores the returned error at the compatibility boundary,
+matching Pi's event delivery semantics while direct session callers can
+observe admission failure. No new wire record was invented.

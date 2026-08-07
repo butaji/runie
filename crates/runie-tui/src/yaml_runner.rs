@@ -1824,7 +1824,7 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
     events_from_task.extend(declared_events.iter().cloned());
     for event in &declared_events {
         actor_snapshot.apply_event(event).await;
-        session.apply_event(event).await;
+        let _ = session.apply_event(event).await;
     }
 
     let (scrollback, status) = replay_scenario_events(

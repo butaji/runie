@@ -2024,7 +2024,7 @@ enum Command {
         args: serde_json::Value,
         reply: oneshot::Sender<()>,
     },
-    Config(SessionConfigRecord, oneshot::Sender<()>),
+    Config(SessionConfigRecord, oneshot::Sender<Result<(), String>>),
     Import(SessionSnapshot, oneshot::Sender<()>),
     Reset(oneshot::Sender<()>),
     Flush(oneshot::Sender<()>),
@@ -2443,9 +2443,15 @@ impl SessionActor {
                         if let SessionConfigRecord::OperationRecordCreated { record_type, data } =
                             &record
                         {
+                            if let Err(error) =
+                                validate_session_lane_record(&state, record_type, data)
+                            {
+                                let _ = reply.send(Err(error));
+                                continue;
+                            }
                             reduce_operation_record(&mut state, record_type, data);
                             let _ = snapshot_tx.send(state.clone());
-                            let _ = reply.send(());
+                            let _ = reply.send(Ok(()));
                             continue;
                         }
                         state.sequence += 1;
@@ -2464,7 +2470,7 @@ impl SessionActor {
                         state.leaf_id = Some(id);
                         state.config_records.push(entry);
                         let _ = snapshot_tx.send(state.clone());
-                        let _ = reply.send(());
+                        let _ = reply.send(Ok(()));
                     }
                     Command::Import(imported, reply) => {
                         next_id = imported
@@ -2569,7 +2575,10 @@ impl SessionActor {
                     AgentEvent::Reset => {}
                     _ => {
                         if let Some(record) = session_config_record!(&event) {
-                            if !mailbox_ack!(tx, |reply| Command::Config(record, reply)) {
+                            let (reply_tx, reply_rx) = oneshot::channel();
+                            if tx.send(Command::Config(record, reply_tx)).await.is_err()
+                                || reply_rx.await.is_err()
+                            {
                                 break;
                             }
                         }
@@ -2587,8 +2596,15 @@ impl SessionActor {
     }
 
     /// Apply a session configuration fact through the owning mailbox.
-    pub async fn record_config(&self, record: SessionConfigRecord) {
-        let _ = mailbox_ack!(self.tx, |reply| Command::Config(record, reply));
+    pub async fn record_config(&self, record: SessionConfigRecord) -> Result<(), String> {
+        let (reply_tx, reply_rx) = oneshot::channel();
+        self.tx
+            .send(Command::Config(record, reply_tx))
+            .await
+            .map_err(|_| "session actor is closed".to_owned())?;
+        reply_rx
+            .await
+            .map_err(|_| "session actor response was dropped".to_owned())?
     }
 
     /// Apply session-owned configuration facts from a replay event sequence.
@@ -2598,11 +2614,14 @@ impl SessionActor {
         clippy::too_many_lines,
         reason = "session event dispatch keeps each journal variant explicit"
     )]
-    pub async fn apply_event(&self, event: &AgentEvent) {
+    pub async fn apply_event(&self, event: &AgentEvent) -> Result<(), String> {
         if let Some(record) = session_config_record!(event) {
-            self.record_config(record).await;
+            self.record_config(record).await
         } else if matches!(event, AgentEvent::Reset) {
             self.reset().await;
+            Ok(())
+        } else {
+            Ok(())
         }
     }
 
@@ -2695,13 +2714,13 @@ mod tests {
     async fn bus_message_end_and_reset_are_the_only_projection_inputs() {
         let bus = EventBus::new();
         let actor = SessionActor::new_with_bus(&bus);
-        actor
+        let _ = actor
             .record_config(SessionConfigRecord::OperationRecordCreated {
                 record_type: "operation_started".into(),
                 data: serde_json::json!({"id": "run-1"}),
             })
             .await;
-        actor
+        let _ = actor
             .record_config(SessionConfigRecord::OperationRecordCreated {
                 record_type: "operation_started".into(),
                 data: serde_json::json!({"id": "run-1"}),
@@ -2763,6 +2782,15 @@ mod tests {
         });
         actor.flush().await;
         assert_eq!(actor.snapshot().active_operations["op-1"], "started");
+        let before_rejected = actor.snapshot().lane_records.len();
+        let rejected = actor
+            .record_config(SessionConfigRecord::OperationRecordCreated {
+                record_type: "operation_started".into(),
+                data: serde_json::json!({"id": "op-1"}),
+            })
+            .await;
+        assert!(rejected.is_err());
+        assert_eq!(actor.snapshot().lane_records.len(), before_rejected);
         bus.publish(AgentEvent::OperationRecordCreated {
             record_type: "abort_requested".into(),
             data: serde_json::json!({"id": "op-1"}),
@@ -3233,7 +3261,7 @@ mod tests {
     )]
     async fn actor_reduces_complete_tool_started_identity() {
         let actor = SessionActor::new();
-        actor
+        let _ = actor
             .record_config(SessionConfigRecord::OperationRecordCreated {
                 record_type: "operation_started".into(),
                 data: serde_json::json!({"id": "run-1"}),
@@ -3250,7 +3278,7 @@ mod tests {
                 ..Default::default()
             }))
             .await;
-        actor
+        let _ = actor
             .record_config(SessionConfigRecord::OperationRecordCreated {
                 record_type: "tool_started".into(),
                 data: serde_json::json!({
@@ -3840,7 +3868,7 @@ mod tests {
     async fn bus_tool_termination_is_attached_to_the_owned_session_entry() {
         let bus = EventBus::new();
         let actor = SessionActor::new_with_bus(&bus);
-        actor
+        let _ = actor
             .record_config(SessionConfigRecord::OperationRecordCreated {
                 record_type: "operation_started".into(),
                 data: serde_json::json!({"id": "run-1"}),
@@ -3857,7 +3885,7 @@ mod tests {
                 ..Default::default()
             }))
             .await;
-        actor
+        let _ = actor
             .record_config(SessionConfigRecord::OperationRecordCreated {
                 record_type: "tool_started".into(),
                 data: serde_json::json!({
@@ -4084,7 +4112,7 @@ mod tests {
     )]
     async fn actor_restore_rebuilds_unsettled_tool_result_reservation() {
         let source = SessionActor::new();
-        source
+        let _ = source
             .record_config(SessionConfigRecord::OperationRecordCreated {
                 record_type: "operation_started".into(),
                 data: serde_json::json!({"id": "run-1"}),
@@ -4101,7 +4129,7 @@ mod tests {
                 ..Default::default()
             }))
             .await;
-        source
+        let _ = source
             .record_config(SessionConfigRecord::OperationRecordCreated {
                 record_type: "tool_started".into(),
                 data: serde_json::json!({
