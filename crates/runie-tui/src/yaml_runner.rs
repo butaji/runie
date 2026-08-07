@@ -40,6 +40,8 @@ pub struct Scenario {
     pub steering_mode: Option<runie_core::types::QueueMode>,
     #[serde(default)]
     pub follow_up_mode: Option<runie_core::types::QueueMode>,
+    #[serde(default)]
+    pub tool_execution: Option<ToolExecutionMode>,
     /// Provider request options declared by the replay fixture. These stay
     /// YAML-editable so provider contract experiments do not require Rust
     /// recompilation.
@@ -726,6 +728,7 @@ pub struct StateAssertions {
     /// Effective queue policies projected by the loop actor.
     pub steering_mode: Option<runie_core::types::QueueMode>,
     pub follow_up_mode: Option<runie_core::types::QueueMode>,
+    pub tool_execution: Option<ToolExecutionMode>,
     /// Exact actor-owned workflow projections keyed by their stable run id.
     /// YAML owns the expected state; the runner only performs generic field
     /// comparison so workflow fixtures stay recompilation-free.
@@ -1221,6 +1224,7 @@ pub struct ScenarioOutcome {
     pub provider_options: Vec<SimpleStreamOptions>,
     pub steering_mode: runie_core::types::QueueMode,
     pub follow_up_mode: runie_core::types::QueueMode,
+    pub tool_execution: ToolExecutionMode,
     pub listener_events: Vec<String>,
 }
 
@@ -1243,6 +1247,10 @@ impl std::fmt::Display for ScenarioError {
     }
 }
 
+#[allow(
+    clippy::too_many_lines,
+    reason = "scenario execution keeps actor and snapshot assembly together"
+)]
 pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, ScenarioError> {
     let (bus, actor, options_seen) = build_scenario_loop(scenario)?;
     let listener_events = Arc::new(Mutex::new(Vec::new()));
@@ -1282,6 +1290,7 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
         provider_options,
         steering_mode: actor_snapshot.steering_mode().await,
         follow_up_mode: actor_snapshot.follow_up_mode().await,
+        tool_execution: scenario.tool_execution.unwrap_or_default(),
         listener_events,
     })
 }
@@ -1521,7 +1530,7 @@ fn build_scenario_loop(
         convert_to_llm: None,
         stream_options: scenario.provider_options.stream_options(),
         abort: None,
-        tool_execution_mode: ToolExecutionMode::Parallel,
+        tool_execution_mode: scenario.tool_execution.unwrap_or_default(),
         steering_mode: scenario.steering_mode.unwrap_or_default(),
         follow_up_mode: scenario.follow_up_mode.unwrap_or_default(),
     };
@@ -1725,6 +1734,11 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         expected.follow_up_mode,
         outcome.follow_up_mode,
         "follow_up_mode"
+    );
+    assert_yaml_eq!(
+        expected.tool_execution,
+        outcome.tool_execution,
+        "tool_execution"
     );
     if let Some(needle) = &expected.streaming_contains {
         let text = actual
@@ -2605,7 +2619,7 @@ pub async fn render_visual_buffer(
         convert_to_llm: None,
         stream_options: scenario.provider_options.stream_options(),
         abort: None,
-        tool_execution_mode: ToolExecutionMode::Parallel,
+        tool_execution_mode: scenario.tool_execution.unwrap_or_default(),
         steering_mode: scenario.steering_mode.unwrap_or_default(),
         follow_up_mode: scenario.follow_up_mode.unwrap_or_default(),
     };

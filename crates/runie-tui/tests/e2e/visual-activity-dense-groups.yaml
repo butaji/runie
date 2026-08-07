@@ -4,6 +4,7 @@ description: |
   is intentionally contiguous so the hidden-prefix and newest-ten policy is
   observable without depending on a screenshot-only fixture.
 initial_prompt: "inspect the repository"
+tool_execution: sequential
 tools:
   - name: bash
     kind: bash
@@ -24,6 +25,7 @@ events:
   - done: { stop_reason: stop }
 assertions:
   state:
+    tool_execution: sequential
     tool_blocks: 12
     tool_kinds: [execute, execute, execute, execute, execute, execute, execute, execute, execute, execute, execute, execute]
   visual:

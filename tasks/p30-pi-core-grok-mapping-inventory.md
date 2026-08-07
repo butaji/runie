@@ -111,7 +111,7 @@ with the authoritative checkout present it is part of `just ci`.
 | Agent lifecycle | `agent/src/agent-loop.ts`, `agent.ts` | `LoopActor`, event bus, barriers | event order/reset covered; awaited listener settlement is tracked by p40 |
 | Agent state | `agent/src/types.ts` | `AgentStateActor` + immutable snapshot | covered; workflow snapshot recently added |
 | Message lifecycle | `agent/src/types.ts` | `AgentEvent`, assistant sectional events | covered by replay and TUI YAML |
-| Tool lifecycle | `agent/src/agent-loop.ts` | `ToolExecutorActor`, typed tool events | covered; continue specialized cards |
+| Tool lifecycle | `agent/src/agent-loop.ts` | `ToolExecutorActor`, typed tool events, and YAML `tool_execution` mode | covered; continue specialized cards |
 | Steering/follow-up queues | agent loop/state | queue actors and mailbox DSL | covered |
 | Hooks | agent loop types/driver | async hook traits and turn driver | covered by p07–p08 |
 | Provider stream boundary | `agent/src/stream-fn.ts` | `StreamFn` + provider actor/replay | core boundary covered; provider catalog out of scope |
