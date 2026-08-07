@@ -612,7 +612,7 @@ impl EventRenderer {
             .get("status")
             .and_then(serde_json::Value::as_str)
             .is_some()
-            && structured_update_text(&partial_result).is_none()
+            && runie_tui_model::structured_update_text(&partial_result).is_none()
         {
             return None;
         }
@@ -623,7 +623,7 @@ impl EventRenderer {
             .iter()
             .any(|block| block.tool_call_id == tool_call_id && block.is_running)
         {
-            if let Some(output) = structured_update_text(&partial_result) {
+            if let Some(output) = runie_tui_model::structured_update_text(&partial_result) {
                 let output_lines = structured_memory_lines(&output);
                 return Some(ScrollbackMsg::ToolUpdate {
                     tool_call_id,
@@ -1256,14 +1256,6 @@ fn web_search_sources_line(output: &str) -> Option<String> {
     } else {
         format!("  Sources: {shown} (+{remaining} more)")
     })
-}
-
-fn structured_update_text(result: &serde_json::Value) -> Option<String> {
-    result
-        .get("output")
-        .and_then(serde_json::Value::as_str)
-        .or_else(|| result.get("content").and_then(serde_json::Value::as_str))
-        .map(str::to_owned)
 }
 
 #[allow(

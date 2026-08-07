@@ -46,6 +46,15 @@ read-range/image suffixes, and terminal completion vocabulary now live in
 that projection directly, removing the final completion-format dependency on
 `event_renderer` while preserving existing tool-card replay behavior.
 
+Structured-update extraction (2026-08-08): streaming tool-update envelope
+projection now lives in `runie-tui-model::structured_update_text` beside
+`tool_result_text`. Both `ScrollbackActor` and `EventRenderer` consume the
+model helper, so the partial-result `output`/`content` fallback and the
+`None` envelope-skip behavior share a single renderer-independent
+implementation. Focused tests cover the `output`-over-`content` precedence
+and the non-string/`status`-only fallback; actor and renderer replay paths
+still pin the event → snapshot contract.
+
 Boundary enforcement (2026-08-08): `validate-feed-actor-boundary.py` now
 rejects renderer, Ratatui, and Crossterm imports from `ScrollbackActor` in
 addition to direct widget reduction. This makes the declarative model/render

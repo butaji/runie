@@ -325,7 +325,7 @@ fn structured_update_messages(
     if !active_tools.contains(tool_call_id) {
         return Vec::new();
     }
-    let Some(output) = structured_update_text(partial_result) else {
+    let Some(output) = runie_tui_model::structured_update_text(partial_result) else {
         return Vec::new();
     };
     let output = output
@@ -366,7 +366,7 @@ fn tool_update_messages(
             .get("status")
             .and_then(serde_json::Value::as_str)
             .is_some()
-            && structured_update_text(partial_result).is_none())
+            && runie_tui_model::structured_update_text(partial_result).is_none())
     {
         return Vec::new();
     }
@@ -459,14 +459,6 @@ fn ordinary_tool_end_messages(
         messages.push(ScrollbackMsg::MarkToolError(tool_call_id.clone()));
     }
     messages
-}
-
-fn structured_update_text(result: &serde_json::Value) -> Option<String> {
-    result
-        .get("output")
-        .and_then(serde_json::Value::as_str)
-        .or_else(|| result.get("content").and_then(serde_json::Value::as_str))
-        .map(str::to_owned)
 }
 
 #[allow(

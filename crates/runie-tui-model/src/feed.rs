@@ -83,6 +83,18 @@ pub fn tool_header(tool_name: &str, args: &serde_json::Value, workspace: &str) -
     }
 }
 
+/// Project a streaming tool-update envelope to the user-visible partial text
+/// when the provider ships a single string payload. Returns `None` for
+/// envelopes that only carry lifecycle metadata, so callers can keep their
+/// own transport-only path open.
+pub fn structured_update_text(result: &serde_json::Value) -> Option<String> {
+    result
+        .get("output")
+        .and_then(serde_json::Value::as_str)
+        .or_else(|| result.get("content").and_then(serde_json::Value::as_str))
+        .map(str::to_owned)
+}
+
 /// Extract the user-visible text from a Pi tool result without exposing its
 /// transport envelope to the feed actor.
 pub fn tool_result_text(result: &serde_json::Value) -> String {
@@ -878,11 +890,41 @@ impl ToolCardKind {
 #[cfg(test)]
 mod tests {
     use super::{
-        default_tool_display_mode, project_tool_blocks, project_tool_card_rows, FeedState, Line,
-        LineKind, ToolCardKind, ToolCardPaintIntent, ToolCardRow, ToolCardRowKind,
+        default_tool_display_mode, project_tool_blocks, project_tool_card_rows,
+        structured_update_text, FeedState, Line, LineKind, ToolCardKind, ToolCardPaintIntent,
+        ToolCardRow, ToolCardRowKind,
     };
     use runie_core::types::ToolDisplayMode;
     use std::collections::HashMap;
+
+    #[test]
+    fn structured_update_prefers_output_over_content() {
+        let value = serde_json::json!({
+            "output": "from-output",
+            "content": "from-content",
+        });
+        assert_eq!(
+            structured_update_text(&value).as_deref(),
+            Some("from-output")
+        );
+    }
+
+    #[test]
+    fn structured_update_falls_back_to_content_when_output_missing() {
+        let value = serde_json::json!({"content": "from-content"});
+        assert_eq!(
+            structured_update_text(&value).as_deref(),
+            Some("from-content")
+        );
+    }
+
+    #[test]
+    fn structured_update_returns_none_for_non_string_envelope() {
+        assert!(structured_update_text(&serde_json::json!({"status": "running"})).is_none());
+        assert!(structured_update_text(&serde_json::json!({"output": 7})).is_none());
+        assert!(structured_update_text(&serde_json::json!({"content": ["line"]})).is_none());
+        assert!(structured_update_text(&serde_json::Value::Null).is_none());
+    }
 
     #[test]
     fn clear_event_resets_turn_lifecycle_state() {
