@@ -183,6 +183,17 @@ one-in-flight Pi turn contract and prevents superseded streams from publishing
 events concurrently. The actor test suite covers both explicit cancellation
 and replacement by a new start; no detached task or timing sleep is used.
 
+Provider lifecycle snapshot audit (2026-08-07): a generic `active` snapshot
+would be false parity because Pi's observable lifecycle differs by adapter:
+ordinary streams settle on assistant-event completion, deferred fetches have
+provider polling/expiry semantics, and Codex WebSocket streams have fallback
+and cached-session state. The generic Runie actor therefore continues to own
+only command admission and `JoinSet` pump cleanup. A truthful provider
+lifecycle snapshot must be introduced together with an adapter contract that
+supplies terminal, deferred, fallback, and diagnostic events; adding a
+generic boolean before those events exist would create a second, incorrect
+state model.
+
 ## Typed request promotion (2026-08-06)
 
 The owned `HttpRequest` now receives the effective `session_id`, API key,
