@@ -29,6 +29,38 @@ pub struct SessionSnapshot {
     pub entries: Vec<SessionEntry>,
 }
 
+impl SessionSnapshot {
+    /// Encode the message lane using Pi's JSONL v4 header/entry shape.
+    /// Filesystem writes stay outside this pure projection function.
+    pub fn to_jsonl(&self, session_id: &str, created_at: i64, cwd: &str) -> String {
+        let mut lines = Vec::with_capacity(self.entries.len() + 1);
+        lines.push(
+            serde_json::json!({
+                "kind": "header",
+                "version": 4,
+                "id": session_id,
+                "createdAt": created_at,
+                "cwd": cwd,
+            })
+            .to_string(),
+        );
+        lines.extend(self.entries.iter().map(|entry| {
+            serde_json::json!({
+                "kind": "entry",
+                "lane": "main",
+                "type": "message",
+                "id": entry.id,
+                "parentId": entry.parent_id,
+                "seq": entry.seq,
+                "timestamp": entry.timestamp,
+                "message": entry.message,
+            })
+            .to_string()
+        }));
+        format!("{}\n", lines.join("\n"))
+    }
+}
+
 enum Command {
     Append(Box<AgentMessage>, oneshot::Sender<()>),
     Reset(oneshot::Sender<()>),
@@ -194,5 +226,23 @@ mod tests {
         bus.publish(AgentEvent::Reset);
         tokio::task::yield_now().await;
         assert!(actor.snapshot().entries.is_empty());
+    }
+
+    #[tokio::test]
+    async fn snapshot_exports_pi_jsonl_v4_header_and_parented_message_entry() {
+        let actor = SessionActor::new();
+        actor.append(user("one")).await;
+        actor.append(user("two")).await;
+        let lines = actor.snapshot().to_jsonl("session-1", 5, "/workspace");
+        let values = lines
+            .lines()
+            .map(|line| serde_json::from_str::<serde_json::Value>(line).expect("jsonl line"))
+            .collect::<Vec<_>>();
+        assert_eq!(values[0]["kind"], "header");
+        assert_eq!(values[0]["version"], 4);
+        assert_eq!(values[1]["type"], "message");
+        assert_eq!(values[1]["parentId"], serde_json::Value::Null);
+        assert_eq!(values[2]["parentId"], "entry-1");
+        assert_eq!(values[2]["seq"], 2);
     }
 }

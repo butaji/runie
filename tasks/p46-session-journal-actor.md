@@ -17,6 +17,8 @@ Runie now has a minimal session-tree foundation in `runie-core::session`:
 - `App::new` and `App::new_with_welcome` now attach the same actor-owned
   journal to the live event bus, and expose snapshot/flush accessors without
   making rendering responsible for session state.
+- `SessionSnapshot::to_jsonl` emits a pure Pi JSONL v4 header plus parent-linked
+  message entries; filesystem writes remain a separate storage boundary.
 
 This is intentionally the journal seam, not a claim that Pi JSONL storage,
 forking, compaction, labels, or durable filesystem recovery are complete.
