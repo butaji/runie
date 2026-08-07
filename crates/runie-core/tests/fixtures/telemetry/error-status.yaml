@@ -9,6 +9,9 @@ actions:
       message: request failed
   - type: end
     id: 0
+  - type: start
+    parent_id: 0
+    name: late-child
 expected:
   next_id: 1
   spans:

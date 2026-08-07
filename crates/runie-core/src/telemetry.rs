@@ -95,7 +95,7 @@ enum TelemetryCommand {
         parent_id: Option<u64>,
         name: String,
         attributes: HashMap<String, serde_json::Value>,
-        reply: oneshot::Sender<u64>,
+        reply: oneshot::Sender<Option<u64>>,
     },
     Event {
         id: u64,
@@ -147,6 +147,15 @@ impl TelemetryActor {
                         attributes,
                         reply,
                     } => {
+                        if parent_id.is_some_and(|parent_id| {
+                            !state
+                                .spans
+                                .iter()
+                                .any(|span| span.id == parent_id && !span.ended)
+                        }) {
+                            let _ = reply.send(None);
+                            continue;
+                        }
                         let id = state.next_id;
                         state.next_id = state.next_id.wrapping_add(1);
                         state.spans.push(SpanSnapshot {
@@ -161,7 +170,7 @@ impl TelemetryActor {
                             end_sequence: None,
                         });
                         let _ = snapshot_tx.send(state.clone());
-                        let _ = reply.send(id);
+                        let _ = reply.send(Some(id));
                     }
                     TelemetryCommand::Event {
                         id,
@@ -324,7 +333,7 @@ impl TelemetryActor {
             .ok()?;
         Some(TelemetrySpan {
             actor: self.clone(),
-            id: result.await.ok()?,
+            id: result.await.ok()??,
         })
     }
 
@@ -462,6 +471,7 @@ mod tests {
         let span = actor.start_span(None, "run", HashMap::new()).await.unwrap();
         span.end().await;
         span.event("late", HashMap::new()).await;
+        assert!(span.child("late-child", HashMap::new()).await.is_none());
         assert!(actor.snapshot().spans[0].events.is_empty());
     }
 
