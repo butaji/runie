@@ -158,6 +158,12 @@ Loop control consolidation (2026-08-06): steering/follow-up mode and run
 lifecycle commands share the acknowledgement DSL, preserving the loop actor
 as the sole owner of control state and keeping event reduction observable.
 
+Model configuration event boundary (2026-08-06): Runie-only `ModelChanged`
+events now carry model selection from `LoopActor` through the core state,
+status, and prompt actors. The event is explicitly excluded from the Pi wire
+contract, while `App::refresh_model_caption` no longer mutates projections
+directly.
+
 Provider cancellation consolidation (2026-08-06): cancellation acknowledgement
 now uses `mailbox_ack!`, retaining provider pump ownership and the settled
 abort boundary without duplicating oneshot plumbing.

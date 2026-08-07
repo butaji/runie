@@ -182,6 +182,10 @@ fn format_error(is_error: bool, error: Option<&str>) -> String {
     }
 }
 
+#[allow(
+    clippy::too_many_lines,
+    reason = "the exhaustive event-to-feed table keeps application no-ops explicit"
+)]
 fn bus_messages_for_event(event: AgentEvent) -> Vec<ScrollbackMsg> {
     if !runie_tui_model::is_actor_feed_event(&event) {
         return Vec::new();
@@ -189,6 +193,7 @@ fn bus_messages_for_event(event: AgentEvent) -> Vec<ScrollbackMsg> {
     match event {
         AgentEvent::Reset => vec![ScrollbackMsg::Clear],
         AgentEvent::ThemeChanged { theme } => vec![ScrollbackMsg::SetTheme(theme)],
+        AgentEvent::ModelChanged { .. } => Vec::new(),
         AgentEvent::ToolDisplayModeChanged { tool_call_id, mode } => {
             vec![ScrollbackMsg::SetToolMode(tool_call_id, mode)]
         }
@@ -497,6 +502,7 @@ fn background_messages_for_event(event: AgentEvent) -> Vec<ScrollbackMsg> {
         | AgentEvent::TurnStart
         | AgentEvent::Waiting { .. }
         | AgentEvent::ThemeChanged { .. }
+        | AgentEvent::ModelChanged { .. }
         | AgentEvent::ToolDisplayModeChanged { .. }
         | AgentEvent::TurnEnd { .. }
         | AgentEvent::MessageStart { .. }

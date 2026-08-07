@@ -16,6 +16,7 @@ macro_rules! agent_event_kind {
             $crate::types::AgentEvent::TurnStart => "TurnStart",
             $crate::types::AgentEvent::Waiting { .. } => "Waiting",
             $crate::types::AgentEvent::ThemeChanged { .. } => "ThemeChanged",
+            $crate::types::AgentEvent::ModelChanged { .. } => "ModelChanged",
             $crate::types::AgentEvent::ToolDisplayModeChanged { .. } => "ToolDisplayModeChanged",
             $crate::types::AgentEvent::TurnEnd { .. } => "TurnEnd",
             $crate::types::AgentEvent::MessageStart { .. } => "MessageStart",

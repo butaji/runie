@@ -922,6 +922,11 @@ pub enum AgentEvent {
     ThemeChanged {
         theme: ThemeKind,
     },
+    /// Runie application event for propagating the selected model to UI
+    /// projections. It is intentionally outside the closed Pi wire contract.
+    ModelChanged {
+        model: Model,
+    },
     ToolDisplayModeChanged {
         tool_call_id: String,
         mode: ToolDisplayMode,

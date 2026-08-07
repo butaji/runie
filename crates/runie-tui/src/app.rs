@@ -232,6 +232,11 @@ async fn run_prompt_actor(
                         prompt.set_theme(theme);
                         let _ = snapshot_tx.send(prompt.model_snapshot());
                     }
+                    Ok(AgentEvent::ModelChanged { model }) if !model.name.is_empty() => {
+                        prompt.set_model_caption(format!("{} (high)", model.name));
+                        let _ = snapshot_tx.send(prompt.model_snapshot());
+                    }
+                    Ok(AgentEvent::ModelChanged { .. }) => {}
                     _ => {}
                 }
             }
@@ -269,8 +274,12 @@ fn handle_prompt_message(prompt: &mut PromptWidget, message: PromptMsg) {
             let _ = reply.send(());
         }
         PromptMsg::ApplyEvent(event, reply) => {
-            if let AgentEvent::ThemeChanged { theme } = *event {
-                prompt.set_theme(theme);
+            match *event {
+                AgentEvent::ThemeChanged { theme } => prompt.set_theme(theme),
+                AgentEvent::ModelChanged { model } if !model.name.is_empty() => {
+                    prompt.set_model_caption(format!("{} (high)", model.name));
+                }
+                _ => {}
             }
             let _ = reply.send(());
         }
@@ -421,16 +430,7 @@ impl App {
 
     pub async fn refresh_model_caption(&self) {
         let model = self.loop_actor.state_snapshot().model;
-        self.status_actor
-            .apply(crate::widgets::StatusMsg::SetContextWindow(
-                (model.context_window > 0).then_some(model.context_window),
-            ))
-            .await;
-        if !model.name.is_empty() {
-            self.prompt
-                .set_model_caption(format!("{} (high)", model.name))
-                .await;
-        }
+        self.bus.publish(AgentEvent::ModelChanged { model });
     }
 
     /// Handle a prompt outcome. Returns Some(text) on submit.

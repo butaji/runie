@@ -318,3 +318,7 @@ reduced.
 `ProviderActor::cancel` uses the same DSL; stream startup keeps its typed
 broadcast-receiver reply explicit because it returns a value rather than a
 unit acknowledgement.
+
+Model configuration remains replayable as an application event: the core
+state reducer test proves `ModelChanged` updates the owned model snapshot, and
+TUI projections consume the same event through their bus subscriptions.

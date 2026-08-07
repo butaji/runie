@@ -363,7 +363,14 @@ impl LoopActor {
 
     /// Set model configuration through the state actor's mailbox.
     pub async fn set_model(&self, model: crate::types::Model) {
-        self.inner.deps.state.set_model(model).await;
+        self.inner
+            .deps
+            .state
+            .publish_event(
+                &self.inner.deps.bus,
+                crate::types::AgentEvent::ModelChanged { model },
+            )
+            .await;
     }
 
     /// Replace the owned conversation context through the state actor

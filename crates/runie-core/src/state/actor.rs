@@ -197,6 +197,9 @@ impl AgentStateActor {
                 state.pending_tool_calls.clear();
                 state.error_message = None;
             }
+            AgentEvent::ModelChanged { model } => {
+                state.model = model;
+            }
             AgentEvent::MessageStart { message } if is_assistant(&message) => {
                 state.is_streaming = true;
                 state.streaming_message = Some(message);
@@ -487,6 +490,22 @@ mod tests {
             .await;
         assert_eq!(actor.snapshot().messages.len(), 1);
         assert_eq!(actor.snapshot().messages[0].timestamp(), 1);
+    }
+
+    #[tokio::test]
+    async fn model_changed_event_updates_the_owned_model_projection() {
+        let actor = AgentStateActor::new();
+        let model = Model {
+            id: "model-1".into(),
+            context_window: 42_000,
+            ..Model::default()
+        };
+        actor
+            .apply_event(&AgentEvent::ModelChanged {
+                model: model.clone(),
+            })
+            .await;
+        assert_eq!(actor.snapshot().model, model);
     }
 
     #[tokio::test]

@@ -72,6 +72,7 @@ pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
         )],
         AgentEvent::Reset => vec![ScrollbackMsg::Clear],
         AgentEvent::ThemeChanged { theme } => vec![ScrollbackMsg::SetTheme(*theme)],
+        AgentEvent::ModelChanged { .. } => Vec::new(),
         AgentEvent::ToolDisplayModeChanged { tool_call_id, mode } => {
             vec![ScrollbackMsg::SetToolMode(tool_call_id.clone(), *mode)]
         }
@@ -690,6 +691,7 @@ impl EventRenderer {
                     self.scrollback.lock().set_theme(theme);
                 }
             }
+            AgentEvent::ModelChanged { .. } => {}
             AgentEvent::ToolDisplayModeChanged { tool_call_id, mode } => {
                 if self.scrollback_actor.is_none() {
                     self.scrollback.lock().set_tool_mode(tool_call_id, mode);
@@ -773,6 +775,7 @@ impl EventRenderer {
             | AgentEvent::ThinkingLevelChanged { .. }
             | AgentEvent::Waiting { .. }
             | AgentEvent::ThemeChanged { .. }
+            | AgentEvent::ModelChanged { .. }
             | AgentEvent::ToolDisplayModeChanged { .. }
             | AgentEvent::TurnEnd { .. }
             | AgentEvent::BackgroundWorkStarted { .. }

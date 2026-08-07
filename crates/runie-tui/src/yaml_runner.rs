@@ -2502,6 +2502,7 @@ fn event_kind(event: &runie_core::types::AgentEvent) -> &'static str {
         TurnStart => "turn_start",
         Waiting { .. } => "waiting",
         ThemeChanged { .. } => "theme_changed",
+        ModelChanged { .. } => "model_changed",
         ToolDisplayModeChanged { .. } => "tool_display_mode_changed",
         TurnEnd { .. } => "turn_end",
         MessageStart { .. } => "message_start",
