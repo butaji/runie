@@ -83,6 +83,13 @@ therefore reads one actor snapshot predicate instead of a renderer boolean,
 and reset clears the lifecycle fact. A pure reducer test covers the complete
 start/end/clear sequence.
 
+Tool-row identity increment (2026-08-07): removed the compatibility
+`tool_rows` index from `EventRenderer`. The feed model already carries each
+row's opaque tool-call identity and active/settled state; compatibility
+updates now resolve the newest matching row from that projection at the
+mutation boundary. Parallel tool updates remain ID-based, while the
+renderer no longer owns a second mutable row-index map.
+
 Thinking-duration ownership increment (2026-08-07): the compatibility
 `StatusBar` now retains `thinking_elapsed_ms` in its renderer-independent
 snapshot, exactly like `StatusState`. `EventRenderer` no longer keeps a

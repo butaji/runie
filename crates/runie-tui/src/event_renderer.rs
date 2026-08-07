@@ -277,9 +277,6 @@ pub struct EventRenderer {
     /// Actor-owned status projection used by the production event loop while
     /// the compatibility widget projection is being retired.
     status_actor: Option<StatusActor>,
-    /// Tool rows are keyed by the core tool-call id because parallel tools may
-    /// update and finish in a different order than they started.
-    tool_rows: HashMap<String, usize>,
     pending_tools: HashMap<String, PendingTool>,
     activity_dirs: usize,
     activity_files: usize,
@@ -342,7 +339,6 @@ impl EventRenderer {
             scrollback_actor,
             status,
             status_actor,
-            tool_rows: HashMap::new(),
             pending_tools: HashMap::new(),
             activity_dirs: 0,
             activity_files: 0,
@@ -936,10 +932,9 @@ impl EventRenderer {
             }
         }
         if self.scrollback_actor.is_none() {
-            let row = self.scrollback.lock().append(
+            self.scrollback.lock().append(
                 Line::new(LineKind::ToolRunning, tool_buffer.clone()).for_tool(&tool_call_id),
             );
-            self.tool_rows.insert(tool_call_id.clone(), row);
         }
         self.pending_tools.insert(
             tool_call_id.clone(),
@@ -997,11 +992,11 @@ impl EventRenderer {
             ));
             let updated = pending.header.clone();
             if self.scrollback_actor.is_none() {
-                if let Some(row) = self.tool_rows.get(&tool_call_id).copied() {
+                if let Some(row) = self.tool_row_index(&tool_call_id) {
                     self.replace_tool_line(row, &updated);
                 }
             }
-            if self.scrollback_actor.is_some() || self.tool_rows.contains_key(&tool_call_id) {
+            if self.scrollback_actor.is_some() || self.tool_row_index(&tool_call_id).is_some() {
                 return Some(ScrollbackMsg::ToolUpdate {
                     tool_call_id,
                     header: Some(updated),
@@ -1043,7 +1038,7 @@ impl EventRenderer {
             completed_tool_header_with_args(&tool_buffer, &tool_name, &tool_args, &result)
         };
         if self.scrollback_actor.is_none() {
-            if let Some(row) = self.tool_rows.remove(&tool_call_id) {
+            if let Some(row) = self.tool_row_index(&tool_call_id) {
                 self.settle_tool_line(row);
                 self.replace_tool_line(row, &tool_buffer);
             }
@@ -1147,7 +1142,6 @@ impl EventRenderer {
         if self.status_actor.is_none() {
             self.status.lock().set(Status::Thinking);
         }
-        self.tool_rows.clear();
         self.pending_tools.clear();
         self.activity_dirs = 0;
         self.activity_files = 0;
@@ -1317,6 +1311,26 @@ impl EventRenderer {
         } else {
             sb.append(Line::new(LineKind::Assistant, delta.to_string()));
         }
+    }
+
+    fn tool_row_index(&self, tool_call_id: &str) -> Option<usize> {
+        if self.scrollback_actor.is_some() {
+            return None;
+        }
+        self.scrollback
+            .lock()
+            .lines()
+            .iter()
+            .enumerate()
+            .rev()
+            .find_map(|(index, line)| {
+                (line.tool_call_id.as_deref() == Some(tool_call_id)
+                    && matches!(
+                        line.kind,
+                        LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
+                    ))
+                .then_some(index)
+            })
     }
 
     fn replace_tool_line(&self, row: usize, text: &str) {
