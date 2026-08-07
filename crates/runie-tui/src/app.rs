@@ -403,6 +403,12 @@ impl App {
                     .await;
                 true
             }
+            MappableBuiltinCommand::Name { name } => {
+                self.bus
+                    .publish(runie_core::types::AgentEvent::SessionNameChanged { name });
+                self.session_actor.flush().await;
+                true
+            }
             MappableBuiltinCommand::Compact { instructions } => {
                 let _ = self.compact_session(None, instructions).await;
                 true

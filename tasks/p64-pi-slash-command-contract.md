@@ -36,9 +36,10 @@ being treated as successful no-ops.
 The first executable subset is now routed through the same boundaries in the
 live binary and YAML runner: `/new` awaits the loop reset, `/hotkeys` sends a
 `ToggleShortcuts` mailbox message, `/model provider/model` publishes the
-actor-owned `ModelChanged` event, and `/quit` is consumed only by the live
-application exit boundary. Model catalog lookup/selector UI is still open;
-the current route accepts an explicit reference. Other unsupported commands
+actor-owned `ModelChanged` event, `/name` publishes `SessionNameChanged` and
+awaits the session actor, and `/quit` is consumed only by the live application
+exit boundary. Model catalog lookup/selector UI is still open; the current
+route accepts an explicit reference. Other unsupported commands
 remain ordinary prompt text. `visual-slash-hotkeys.yaml` proves the route without a
 provider submission; `visual-slash-new.yaml` proves reset clears the resulting
 actor-owned message/feed projection, and `visual-slash-model.yaml` proves the
@@ -57,6 +58,10 @@ Custom `/compact <instructions>` text is preserved as
 loop actor, and provider actor pass it as typed request data; the YAML provider
 replay records it in structured summary details, so instruction loss cannot be
 hidden by a passing summary string.
+
+`visual-slash-name.yaml` verifies the command route declaratively and checks
+the post-step session actor configuration projection without compiling a
+scenario-specific Rust fixture.
 
 Routing consolidation (2026-08-08): `App::route_mappable_command` is now the
 single async dispatch boundary for live and YAML input. The binary owns only

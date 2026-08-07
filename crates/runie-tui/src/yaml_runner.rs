@@ -1278,6 +1278,9 @@ pub struct VisualAssertions {
     pub header_meter: Option<String>,
     #[serde(default)]
     pub waiting_chrome: Option<String>,
+    /// Session name after visual command steps have crossed the session actor.
+    #[serde(default)]
+    pub session_name: Option<String>,
     /// Expected adapter geometry for a complete terminal frame. This keeps
     /// wrapping/scrolling decisions inspectable without encoding Ratatui
     /// objects in YAML.
@@ -4950,6 +4953,25 @@ pub async fn render_visual_buffer(
         if actual != expected {
             return Err(format!(
                 "visual center_revealed_entry mismatch: expected {expected}, got {actual}"
+            ));
+        }
+    }
+    if let Some(expected) = &vis.session_name {
+        let actual = app
+            .session_actor
+            .snapshot()
+            .config_records
+            .iter()
+            .rev()
+            .find_map(|entry| match &entry.record {
+                runie_core::session::SessionConfigRecord::NameChanged { name } => {
+                    Some(name.clone())
+                }
+                _ => None,
+            });
+        if actual.as_deref() != Some(expected.as_str()) {
+            return Err(format!(
+                "visual session_name mismatch: expected {expected:?}, got {actual:?}"
             ));
         }
     }

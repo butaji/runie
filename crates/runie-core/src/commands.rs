@@ -80,6 +80,7 @@ pub enum MappableBuiltinCommand {
     Hotkeys,
     Quit,
     Model { reference: String },
+    Name { name: String },
     Compact { instructions: Option<String> },
 }
 
@@ -96,6 +97,12 @@ pub fn parse_mappable_builtin_command(input: &str) -> Option<MappableBuiltinComm
             let instructions = value[9..].trim();
             Some(MappableBuiltinCommand::Compact {
                 instructions: (!instructions.is_empty()).then(|| instructions.to_owned()),
+            })
+        }
+        value if value.starts_with("/name ") => {
+            let name = value[6..].trim();
+            (!name.is_empty()).then(|| MappableBuiltinCommand::Name {
+                name: name.to_owned(),
             })
         }
         value if value.starts_with("/model ") => {
@@ -159,6 +166,12 @@ mod tests {
             parse_mappable_builtin_command("/compact preserve the latest user intent"),
             Some(MappableBuiltinCommand::Compact {
                 instructions: Some("preserve the latest user intent".into())
+            })
+        );
+        assert_eq!(
+            parse_mappable_builtin_command("/name release parity"),
+            Some(MappableBuiltinCommand::Name {
+                name: "release parity".into()
             })
         );
         assert_eq!(parse_mappable_builtin_command("/quit now"), None);

@@ -1,0 +1,13 @@
+name: visual-slash-name
+description: Pi's /name command crosses the session actor and persists its configuration fact.
+events: []
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    steps:
+      - "/name parity session"
+      - Enter
+    session_name: parity session
+    screen_text:
+      - "Starting session…"
