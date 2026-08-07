@@ -736,6 +736,17 @@ reducer transition, then reveal the corresponding dense group. The
 and member index. This closes the prior split-brain selection projection;
 viewport styling and richer per-member fold ranges remain open.
 
+Fold-anchor boundary (2026-08-07): the existing YAML dense-group fixtures
+prove member reveal, hidden-prefix policy, centering intent, and collapsed-tail
+behavior. Exact Grok parity for arbitrary fold/reflow transitions still needs
+an actor-delivered physical layout measurement (wrapped member heights plus a
+stable anchor identity) before the reducer can preserve the viewport across a
+fold. The current `FeedSnapshot` intentionally contains semantic rows and
+scroll intent, not renderer measurements; adding a heuristic offset would
+violate the declarative/state-versus-render boundary. The next implementation
+slice is therefore a typed layout-measurement event and YAML frame oracle,
+followed by reducer anchor restoration.
+
 Renderer identity handoff (2026-08-06): semantic paint-intent lookup now
 resolves the source line's logical member ordinal and requires the matching
 `ToolCardRow.member_index` before applying theme intent. Duplicate text can no
