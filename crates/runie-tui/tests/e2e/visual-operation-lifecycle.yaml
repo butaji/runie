@@ -18,12 +18,33 @@ events:
         id: op-yaml
         lane: main
         outcome: aborted
+  - operation_record:
+      record_type: operation_started
+      data:
+        id: op-failed
+        lane: main
+  - operation_record:
+      record_type: operation_finished
+      data:
+        id: op-failed
+        lane: main
+        outcome: failed
+        error:
+          code: provider_error
+          message: upstream unavailable
 assertions:
   state:
     session_config_records:
       - operation_started
       - abort_requested
       - operation_finished
+      - operation_started
+      - operation_finished
     active_operations: {}
     operation_outcomes:
       op-yaml: aborted
+      op-failed: failed
+    operation_errors:
+      op-failed:
+        code: provider_error
+        message: upstream unavailable

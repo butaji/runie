@@ -97,6 +97,12 @@ It also asserts the terminal Pi outcome through the actor-owned
 `operation_outcomes` projection, preserving completion semantics after the
 active operation is removed.
 
+Failed-operation metadata now follows the same event boundary: Pi's optional
+`operation_finished.error { code, message }` is reduced into
+`operation_errors`, restored by JSONL import, and asserted by the lifecycle
+YAML fixture. The raw operation record remains lossless; the typed projection
+is what consumers use for deterministic state assertions.
+
 ## Navigation intent projection (2026-08-07)
 
 Pi's `operation_started` record can carry a `navigation` intent with

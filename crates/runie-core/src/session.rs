@@ -148,6 +148,8 @@ pub struct SessionSnapshot {
     /// active operations so completion is observable without retaining a
     /// finished operation in the active projection.
     pub operation_outcomes: BTreeMap<String, String>,
+    /// Pi failure metadata keyed by operation ID.
+    pub operation_errors: BTreeMap<String, OperationErrorSnapshot>,
     /// Last admitted Pi navigation intent. This is deliberately a projection
     /// only; branch context reconstruction remains owned by the session tree.
     pub navigation: Option<NavigationSnapshot>,
@@ -160,12 +162,19 @@ pub struct NavigationSnapshot {
     pub summary_entry_id: Option<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OperationErrorSnapshot {
+    pub code: String,
+    pub message: String,
+}
+
 impl SessionSnapshot {
     /// Parse the message-only subset emitted by [`Self::to_jsonl`].
     /// Validation follows Pi's v4 invariants for header, sequence, and parent
     /// linkage; unsupported mutation kinds are rejected explicitly.
     #[allow(
         clippy::too_many_lines,
+        clippy::cognitive_complexity,
         reason = "the importer keeps the JSONL validation boundary explicit"
     )]
     pub fn from_jsonl(input: &str) -> Result<(String, String, Self), String> {
@@ -398,6 +407,20 @@ impl SessionSnapshot {
                         snapshot
                             .operation_outcomes
                             .insert(operation_id.to_owned(), outcome.to_owned());
+                        if let Some(error) = value.get("error") {
+                            if let (Some(code), Some(message)) = (
+                                error.get("code").and_then(serde_json::Value::as_str),
+                                error.get("message").and_then(serde_json::Value::as_str),
+                            ) {
+                                snapshot.operation_errors.insert(
+                                    operation_id.to_owned(),
+                                    OperationErrorSnapshot {
+                                        code: code.to_owned(),
+                                        message: message.to_owned(),
+                                    },
+                                );
+                            }
+                        }
                     }
                 }
                 if let Some(operation_id) = value
@@ -705,7 +728,25 @@ impl SessionActor {
                                         {
                                             state
                                                 .operation_outcomes
-                                                .insert(operation_id, outcome.to_owned());
+                                                .insert(operation_id.clone(), outcome.to_owned());
+                                        }
+                                        if let Some(error) = data.get("error") {
+                                            if let (Some(code), Some(message)) = (
+                                                error
+                                                    .get("code")
+                                                    .and_then(serde_json::Value::as_str),
+                                                error
+                                                    .get("message")
+                                                    .and_then(serde_json::Value::as_str),
+                                            ) {
+                                                state.operation_errors.insert(
+                                                    operation_id,
+                                                    OperationErrorSnapshot {
+                                                        code: code.to_owned(),
+                                                        message: message.to_owned(),
+                                                    },
+                                                );
+                                            }
                                         }
                                     }
                                     _ => {}
@@ -1042,6 +1083,7 @@ mod tests {
             config_records: Vec::new(),
             active_operations: BTreeMap::new(),
             operation_outcomes: BTreeMap::new(),
+            operation_errors: BTreeMap::new(),
             navigation: None,
         };
         let jsonl = snapshot.to_jsonl("session-1", 5, "/workspace");
@@ -1078,6 +1120,7 @@ mod tests {
             ],
             active_operations: BTreeMap::new(),
             operation_outcomes: BTreeMap::new(),
+            operation_errors: BTreeMap::new(),
             navigation: None,
         };
         let jsonl = snapshot.to_jsonl("session-1", 5, "/workspace");

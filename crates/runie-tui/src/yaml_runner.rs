@@ -940,6 +940,8 @@ pub struct StateAssertions {
     pub navigation: Option<NavigationAssertion>,
     /// Terminal Pi operation outcomes keyed by operation ID.
     pub operation_outcomes: Option<BTreeMap<String, String>>,
+    /// Pi failure metadata keyed by operation ID.
+    pub operation_errors: Option<BTreeMap<String, OperationErrorAssertion>>,
     /// Ordered Pi session configuration-record kinds from the actor journal.
     pub session_config_records: Option<Vec<String>>,
     /// Termination metadata on the latest actor-owned session entry.
@@ -1018,6 +1020,12 @@ pub struct NavigationAssertion {
     #[serde(default)]
     pub summarize: bool,
     pub summary_entry_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Default, Clone, PartialEq, Eq)]
+pub struct OperationErrorAssertion {
+    pub code: String,
+    pub message: String,
 }
 
 #[derive(Debug, Deserialize, Default, Clone)]
@@ -2550,6 +2558,27 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         &outcome.session.operation_outcomes,
         "operation_outcomes"
     );
+    if let Some(expected_errors) = &expected.operation_errors {
+        let actual_errors = outcome
+            .session
+            .operation_errors
+            .iter()
+            .map(|(id, error)| {
+                (
+                    id.clone(),
+                    OperationErrorAssertion {
+                        code: error.code.clone(),
+                        message: error.message.clone(),
+                    },
+                )
+            })
+            .collect::<BTreeMap<_, _>>();
+        assert_yaml_eq!(
+            Some(expected_errors.clone()),
+            actual_errors,
+            "operation_errors"
+        );
+    }
     if let Some(expected_navigation) = &expected.navigation {
         let actual_navigation =
             outcome
