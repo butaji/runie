@@ -677,8 +677,46 @@ pub fn validate_session_lane_record(
         ));
     }
     validate_operation_lane_record(snapshot, kind, data)?;
+    validate_step_attempt_record(kind, data)?;
     validate_queue_lane_record(snapshot, kind, data)?;
     Ok(kind)
+}
+
+fn validate_step_attempt_record(
+    kind: SessionLaneRecordKind,
+    data: &serde_json::Value,
+) -> Result<(), String> {
+    if kind != SessionLaneRecordKind::StepAttempt {
+        return Ok(());
+    }
+    let step = data
+        .get("step")
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| "step_attempt is missing step".to_owned())?;
+    if !matches!(step, "assistant" | "branch_summary" | "compaction") {
+        return Err(format!("step_attempt has unknown step {step:?}"));
+    }
+    let attempt = data
+        .get("attempt")
+        .and_then(serde_json::Value::as_u64)
+        .filter(|value| *value > 0)
+        .ok_or_else(|| "step_attempt has invalid attempt".to_owned())?;
+    let _ = attempt;
+    let has_result = data
+        .get("resultEntryId")
+        .and_then(serde_json::Value::as_str)
+        .is_some_and(|value| !value.is_empty());
+    if !has_result {
+        return Err("step_attempt is missing resultEntryId".into());
+    }
+    match (step, data.get("compactionReason")) {
+        ("compaction", Some(reason))
+            if matches!(reason.as_str(), Some("manual" | "threshold" | "overflow")) => {}
+        ("compaction", _) => return Err("compaction step has invalid compactionReason".into()),
+        (_, Some(_)) => return Err("non-compaction step has compactionReason".into()),
+        _ => {}
+    }
+    Ok(())
 }
 
 fn validate_operation_lane_record(
@@ -2219,6 +2257,33 @@ mod tests {
             &serde_json::json!({"runId": "op-1"})
         )
         .is_err());
+    }
+
+    #[test]
+    fn step_attempt_records_match_pi_shape() {
+        let valid = serde_json::json!({
+            "runId": "run-1",
+            "step": "assistant",
+            "attempt": 1,
+            "resultEntryId": "entry-1"
+        });
+        assert!(validate_step_attempt_record(SessionLaneRecordKind::StepAttempt, &valid).is_ok());
+        assert!(validate_step_attempt_record(
+            SessionLaneRecordKind::StepAttempt,
+            &serde_json::json!({
+                "runId": "run-1", "step": "assistant", "attempt": 0,
+                "resultEntryId": "entry-1"
+            })
+        )
+        .is_err());
+        assert!(validate_step_attempt_record(
+            SessionLaneRecordKind::StepAttempt,
+            &serde_json::json!({
+                "runId": "run-1", "step": "compaction", "attempt": 1,
+                "resultEntryId": "entry-1", "compactionReason": "threshold"
+            })
+        )
+        .is_ok());
     }
 
     #[test]

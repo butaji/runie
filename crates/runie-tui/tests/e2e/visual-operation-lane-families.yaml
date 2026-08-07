@@ -16,6 +16,9 @@ events:
       record_type: step_attempt
       data:
         runId: op-families
+        step: assistant
+        attempt: 1
+        resultEntryId: result-families
         lane: main
         seq: 2
         timestamp: 2

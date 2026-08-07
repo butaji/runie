@@ -319,6 +319,15 @@ the existing compatibility behavior for queue facts that Pi permits outside a
 run. Regression coverage exercises unknown and post-finish `step_attempt`
 events.
 
+### Step-attempt shape admission (2026-08-08)
+
+`step_attempt` now validates Pi's closed shape before the session actor
+admitting the fact: `step` is `assistant`, `branch_summary`, or `compaction`,
+`attempt` is positive, and `resultEntryId` is present. Compaction attempts
+require one of Pi's `manual`, `threshold`, or `overflow` reasons; other steps
+must not carry that field. Generated assistant attempts already satisfy this
+contract, and the lane-family YAML fixture now declares the same payload.
+
 ### Queue emission audit (2026-08-07)
 
 Pi's `queue_enqueued` record is not just a notification: it carries the queue
