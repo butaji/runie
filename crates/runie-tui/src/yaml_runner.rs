@@ -2417,7 +2417,7 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
             .session
             .config_records
             .iter()
-            .map(|record| match record {
+            .map(|entry| match &entry.record {
                 runie_core::session::SessionConfigRecord::ModelChanged { .. } => {
                     "model_change".to_owned()
                 }

@@ -1,7 +1,7 @@
 # p51 — Pi session configuration records
 
-Status: in progress — actor-owned model/thinking records implemented; JSONL
-union and active-tools record remain open (2026-08-07)
+Status: in progress — model/thinking records and JSONL round-trip implemented;
+active-tools record remains open (2026-08-07)
 
 ## Source contract
 
@@ -50,10 +50,12 @@ would violate Pi's wire contract and the actor SSOT rule.
 ## First implementation increment (2026-08-07)
 
 `SessionActor` now reduces `ModelChanged` and `ThinkingLevelChanged` through
-its owned mailbox into `SessionSnapshot::config_records`. The YAML
-`visual-status-working.yaml` fixture asserts the ordered kinds after the same
-event sequence that drives the TUI status. The records are not yet emitted by
-JSONL export; that is the next boundary and remains intentionally open.
+its owned mailbox into ordered `SessionSnapshot::config_records`. Validated
+JSONL v4 import/export preserves their `type`, payload, sequence, parent, and
+timestamp metadata. The YAML `visual-status-working.yaml` fixture asserts the
+ordered kind after the same event sequence that drives the TUI status.
+
+`active_tools_change` still needs a typed core event and actor reduction.
 
 ## Explicitly separate
 

@@ -23,6 +23,15 @@ pub enum SessionConfigRecord {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SessionConfigEntry {
+    pub id: String,
+    pub seq: u64,
+    pub parent_id: Option<String>,
+    pub timestamp: i64,
+    pub record: SessionConfigRecord,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SessionEntry {
     pub id: String,
     pub seq: u64,
@@ -43,7 +52,7 @@ pub struct SessionSnapshot {
     /// Ordered configuration records delivered through the session actor.
     /// Message `entries` remains the compatibility projection for existing
     /// callers; these records never become synthetic messages.
-    pub config_records: Vec<SessionConfigRecord>,
+    pub config_records: Vec<SessionConfigEntry>,
 }
 
 impl SessionSnapshot {
@@ -82,7 +91,6 @@ impl SessionSnapshot {
             let value: serde_json::Value = serde_json::from_str(line)
                 .map_err(|error| format!("invalid session entry {}: {error}", line_index + 2))?;
             if value.get("kind").and_then(serde_json::Value::as_str) != Some("entry")
-                || value.get("type").and_then(serde_json::Value::as_str) != Some("message")
                 || value.get("lane").and_then(serde_json::Value::as_str) != Some("main")
             {
                 return Err(format!(
@@ -132,6 +140,54 @@ impl SessionSnapshot {
                 .get("timestamp")
                 .and_then(serde_json::Value::as_i64)
                 .ok_or_else(|| format!("session entry {} has invalid timestamp", line_index + 2))?;
+            let entry_type = value
+                .get("type")
+                .and_then(serde_json::Value::as_str)
+                .ok_or_else(|| format!("session entry {} is missing type", line_index + 2))?;
+            if entry_type != "message" {
+                let record = match entry_type {
+                    "model_change" => SessionConfigRecord::ModelChanged {
+                        provider: value
+                            .get("provider")
+                            .and_then(serde_json::Value::as_str)
+                            .ok_or_else(|| {
+                                format!("session entry {} is missing provider", line_index + 2)
+                            })?
+                            .to_owned(),
+                        model_id: value
+                            .get("modelId")
+                            .and_then(serde_json::Value::as_str)
+                            .ok_or_else(|| {
+                                format!("session entry {} is missing modelId", line_index + 2)
+                            })?
+                            .to_owned(),
+                    },
+                    "thinking_level_change" => SessionConfigRecord::ThinkingLevelChanged {
+                        level: serde_json::from_value(
+                            value.get("thinkingLevel").cloned().ok_or_else(|| {
+                                format!("session entry {} is missing thinkingLevel", line_index + 2)
+                            })?,
+                        )
+                        .map_err(|error| format!("invalid thinkingLevel: {error}"))?,
+                    },
+                    _ => {
+                        return Err(format!(
+                            "unsupported session mutation at line {}",
+                            line_index + 2
+                        ))
+                    }
+                };
+                snapshot.sequence = seq;
+                snapshot.leaf_id = Some(id.clone());
+                snapshot.config_records.push(SessionConfigEntry {
+                    id,
+                    seq,
+                    parent_id,
+                    timestamp,
+                    record,
+                });
+                continue;
+            }
             let message =
                 serde_json::from_value(value.get("message").cloned().ok_or_else(|| {
                     format!("session entry {} is missing message", line_index + 2)
@@ -162,6 +218,10 @@ impl SessionSnapshot {
 
     /// Encode the message lane using Pi's JSONL v4 header/entry shape.
     /// Filesystem writes stay outside this pure projection function.
+    #[allow(
+        clippy::too_many_lines,
+        reason = "JSONL encoding keeps the Pi record union explicit"
+    )]
     pub fn to_jsonl(&self, session_id: &str, created_at: i64, cwd: &str) -> String {
         let mut lines = Vec::with_capacity(self.entries.len() + 1);
         lines.push(
@@ -174,22 +234,61 @@ impl SessionSnapshot {
             })
             .to_string(),
         );
-        lines.extend(self.entries.iter().map(|session_entry| {
-            let mut entry = serde_json::json!({
-                "kind": "entry",
-                "lane": "main",
-                "type": "message",
-                "id": session_entry.id,
-                "parentId": session_entry.parent_id,
-                "seq": session_entry.seq,
-                "timestamp": session_entry.timestamp,
-                "message": session_entry.message,
-            });
-            if session_entry.terminate {
-                entry["terminate"] = serde_json::Value::Bool(true);
-            }
+        let mut entry_lines = self
+            .entries
+            .iter()
+            .map(|session_entry| {
+                let mut entry = serde_json::json!({
+                    "kind": "entry",
+                    "lane": "main",
+                    "type": "message",
+                    "id": session_entry.id,
+                    "parentId": session_entry.parent_id,
+                    "seq": session_entry.seq,
+                    "timestamp": session_entry.timestamp,
+                    "message": session_entry.message,
+                });
+                if session_entry.terminate {
+                    entry["terminate"] = serde_json::Value::Bool(true);
+                }
+                entry.to_string()
+            })
+            .collect::<Vec<_>>();
+        entry_lines.extend(self.config_records.iter().map(|session_entry| {
+            let (entry_type, mut entry) = match &session_entry.record {
+                SessionConfigRecord::ModelChanged { provider, model_id } => (
+                    "model_change",
+                    serde_json::json!({
+                        "provider": provider,
+                        "modelId": model_id,
+                    }),
+                ),
+                SessionConfigRecord::ThinkingLevelChanged { level } => (
+                    "thinking_level_change",
+                    serde_json::json!({
+                        "thinkingLevel": level,
+                    }),
+                ),
+            };
+            entry["kind"] = serde_json::Value::String("entry".into());
+            entry["lane"] = serde_json::Value::String("main".into());
+            entry["type"] = serde_json::Value::String(entry_type.into());
+            entry["id"] = serde_json::Value::String(session_entry.id.clone());
+            entry["parentId"] = session_entry
+                .parent_id
+                .clone()
+                .map_or(serde_json::Value::Null, serde_json::Value::String);
+            entry["seq"] = serde_json::Value::Number(session_entry.seq.into());
+            entry["timestamp"] = serde_json::Value::Number(session_entry.timestamp.into());
             entry.to_string()
         }));
+        entry_lines.sort_by_key(|line| {
+            serde_json::from_str::<serde_json::Value>(line)
+                .ok()
+                .and_then(|value| value.get("seq").and_then(serde_json::Value::as_u64))
+                .unwrap_or_default()
+        });
+        lines.extend(entry_lines);
         format!("{}\n", lines.join("\n"))
     }
 }
@@ -240,7 +339,21 @@ impl SessionActor {
                         let _ = reply.send(());
                     }
                     Command::Config(record, reply) => {
-                        state.config_records.push(record);
+                        state.sequence += 1;
+                        let id = format!("entry-{}", next_id);
+                        next_id += 1;
+                        let entry = SessionConfigEntry {
+                            id: id.clone(),
+                            seq: state.sequence,
+                            parent_id: state.leaf_id.clone(),
+                            // Configuration events carry no Pi timestamp;
+                            // the journal uses a deterministic zero until a
+                            // source timestamp is added to the event.
+                            timestamp: 0,
+                            record,
+                        };
+                        state.leaf_id = Some(id);
+                        state.config_records.push(entry);
                         let _ = snapshot_tx.send(state.clone());
                         let _ = reply.send(());
                     }
@@ -462,18 +575,21 @@ mod tests {
             level: crate::types::ThinkingLevel::High,
         });
         actor.flush().await;
-        assert_eq!(
-            actor.snapshot().config_records,
-            vec![
-                SessionConfigRecord::ModelChanged {
-                    provider: "provider-1".into(),
-                    model_id: "model-1".into(),
-                },
-                SessionConfigRecord::ThinkingLevelChanged {
-                    level: crate::types::ThinkingLevel::High,
-                },
-            ]
-        );
+        let records = actor.snapshot().config_records;
+        assert_eq!(records.len(), 2);
+        assert!(matches!(
+            records[0].record,
+            SessionConfigRecord::ModelChanged { ref provider, ref model_id }
+                if provider == "provider-1" && model_id == "model-1"
+        ));
+        assert!(matches!(
+            records[1].record,
+            SessionConfigRecord::ThinkingLevelChanged {
+                level: crate::types::ThinkingLevel::High
+            }
+        ));
+        assert_eq!(records[0].seq, 1);
+        assert_eq!(records[1].parent_id.as_deref(), Some("entry-1"));
     }
 
     #[tokio::test]
@@ -537,6 +653,28 @@ mod tests {
         assert!(jsonl.contains("\"terminate\":true"));
         let (_, _, imported) = SessionSnapshot::from_jsonl(&jsonl).expect("valid JSONL");
         assert!(imported.entries[0].terminate);
+    }
+
+    #[test]
+    fn jsonl_round_trip_preserves_configuration_records() {
+        let snapshot = SessionSnapshot {
+            sequence: 1,
+            leaf_id: Some("entry-1".into()),
+            entries: Vec::new(),
+            config_records: vec![SessionConfigEntry {
+                id: "entry-1".into(),
+                seq: 1,
+                parent_id: None,
+                timestamp: 0,
+                record: SessionConfigRecord::ThinkingLevelChanged {
+                    level: crate::types::ThinkingLevel::High,
+                },
+            }],
+        };
+        let jsonl = snapshot.to_jsonl("session-1", 5, "/workspace");
+        assert!(jsonl.contains("\"type\":\"thinking_level_change\""));
+        let (_, _, imported) = SessionSnapshot::from_jsonl(&jsonl).expect("valid JSONL");
+        assert_eq!(imported.config_records, snapshot.config_records);
     }
 
     #[tokio::test]
