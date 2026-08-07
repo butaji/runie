@@ -1321,6 +1321,7 @@ pub struct UiAssertions {
     pub model_selector_query: Option<String>,
     pub model_selector_index: Option<usize>,
     pub model_selector_scoped_only: Option<bool>,
+    pub session_info_open: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Default, Clone, Copy)]
@@ -4891,6 +4892,14 @@ pub async fn render_visual_buffer(
                 ));
             }
         }
+        if let Some(value) = expected.session_info_open {
+            if palette.session_info_open != value {
+                return Err(format!(
+                    "ui.session_info_open mismatch: expected {value}, got {}",
+                    palette.session_info_open
+                ));
+            }
+        }
     }
     // Grok clears the idle welcome surface as soon as editing begins; the
     // synthetic idle events above must not remain in the typed frame.
@@ -5246,6 +5255,11 @@ fn draw_visual_frame(
                 )
                 .with_theme(theme)
                 .render(f.area(), f.buffer_mut());
+            }
+            if palette.session_info_open {
+                crate::widgets::SessionInfoWidget::new(&app.session_snapshot())
+                    .with_theme(theme)
+                    .render(f.area(), f.buffer_mut());
             }
             if palette.shortcuts_open {
                 crate::widgets::shortcuts::render(f.area(), f.buffer_mut(), theme);

@@ -35,6 +35,7 @@ pub enum UiMsg {
     ActivateModelSelector,
     SetModelSelectorResultCount(usize),
     SetModelSelectorRows(Vec<String>),
+    ToggleSessionInfo,
     Reset,
 }
 
@@ -92,6 +93,7 @@ pub struct UiState {
     pub model_selector_scoped_only: bool,
     pub model_selector_result_count: usize,
     pub model_selector_rows: Vec<String>,
+    pub session_info_open: bool,
 }
 
 impl UiState {
@@ -160,6 +162,7 @@ impl UiState {
                     self.model_selector_index = 0;
                 }
             }
+            UiMsg::ToggleSessionInfo => self.session_info_open = !self.session_info_open,
             UiMsg::SetModelSelectorResultCount(count) => {
                 self.model_selector_result_count = count;
                 self.model_selector_index = self.model_selector_index.min(count.saturating_sub(1));

@@ -53,11 +53,12 @@ provider-specific contract”. The source of truth is the current Pi tree at
    pure macro-generated `runie-core::commands` registry (P64). `/new`,
    `/hotkeys`, `/model`, `/name`, `/compact`, and `/quit` now have a shared
    async route through their owning actor/event boundaries, with YAML action or
-   post-state coverage. Model catalog selection and the remaining commands
+   post-state coverage. Model catalog selection, scoped-model filtering, and
+   session-info projection now have actor/YAML coverage; the remaining commands
    remain open.
    The model selector contract is now implemented through catalog/UI/loop
    actors, including async search, scoped rows, Ctrl-L routing, selection
-   commit, `/scoped-models`, and YAML state/render coverage. Remaining command gaps are the
+   commit, `/scoped-models`, `/session`, and YAML state/render coverage. Remaining command gaps are the
    other Pi commands not yet backed by an executable Runie capability.
 3. Cast-wide zero-diff coverage for every Pi lifecycle/error/abort family,
    including terminal capability variants and dynamic timing metadata.

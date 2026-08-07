@@ -77,6 +77,12 @@ same `KeyboardShortcuts` and `Quit` variants instead of dropping them. The new
 transition without recompilation. Grok-only slash/skill actions remain
 excluded until their corresponding Pi-core contract exists.
 
+Pi command projection update (2026-08-08): Runie now also exposes the
+Pi-supported `/scoped-models` and `/session` paths. The former projects catalog
+rows through `ModelCatalogActor`; the latter projects `SessionActor` stats
+through a read-only `SessionInfoWidget`. Neither renderer owns or mutates the
+underlying state. YAML fixtures cover both whole-screen overlays.
+
 Complete source inventory (2026-08-08): `xai-grok-pager/src/views/modal.rs:366`
 defines the source palette as these sections and entries:
 

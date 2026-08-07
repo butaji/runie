@@ -1,0 +1,16 @@
+name: visual-slash-session
+description: Pi's /session command projects actor-owned session stats in a pure overlay.
+events: []
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    steps:
+      - "/session"
+      - Enter
+    ui:
+      session_info_open: true
+    screen_text:
+      - "Session Info"
+      - "Messages: 0"
+      - "Sequence: 0"

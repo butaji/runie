@@ -1,6 +1,6 @@
 # P64 — Pi built-in slash-command contract
 
-Status: registry implemented; seven commands have actor-owned execution and
+Status: registry implemented; eight commands have actor-owned execution and
 YAML coverage, remaining commands stay explicitly unsupported
 (2026-08-08)
 
@@ -42,7 +42,9 @@ awaits the session actor, and `/quit` is consumed only by the live application
 exit boundary. `/scoped-models` opens the actor-owned model selector in
 scoped-only mode and re-runs catalog search through the catalog actor before
 projecting rows. `visual-slash-scoped-models.yaml` seeds an editable catalog,
-asserts the scoped row, and verifies the whole selector screen. Other unsupported commands
+asserts the scoped row, and verifies the whole selector screen. `/session`
+projects the session actor's immutable stats through a pure overlay, covered
+by `visual-slash-session.yaml`. Other unsupported commands
 remain ordinary prompt text. `visual-slash-hotkeys.yaml` proves the route without a
 provider submission; `visual-slash-new.yaml` proves reset clears the resulting
 actor-owned message/feed projection, and `visual-slash-model.yaml` proves the

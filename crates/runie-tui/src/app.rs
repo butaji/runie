@@ -434,6 +434,10 @@ impl App {
                     .await;
                 true
             }
+            MappableBuiltinCommand::SessionInfo => {
+                self.ui.send(UiMsg::ToggleSessionInfo).await;
+                true
+            }
             MappableBuiltinCommand::Name { name } => {
                 self.bus
                     .publish(runie_core::types::AgentEvent::SessionNameChanged { name });

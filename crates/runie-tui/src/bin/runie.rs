@@ -848,6 +848,11 @@ async fn run_app(
                         if view.slots().any(|slot| slot == runie_tui::view::Slot::ModelSelectorOverlay) {
                             render_model_selector(frame_area, buf, &document.props.ui, status.theme());
                         }
+                        if app.ui.snapshot().session_info_open {
+                            runie_tui::widgets::SessionInfoWidget::new(&app.session_snapshot())
+                                .with_theme(status.theme())
+                                .render(frame_area, buf);
+                        }
                         let header = &document.props.header;
                         render_header(layout.header, buf, &header.meter, header.theme);
                         runie_tui::terminal_color::quantize_buffer(buf, color_level);

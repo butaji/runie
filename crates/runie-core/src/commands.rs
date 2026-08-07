@@ -81,6 +81,7 @@ pub enum MappableBuiltinCommand {
     Quit,
     Model { reference: String },
     ScopedModels,
+    SessionInfo,
     Name { name: String },
     Compact { instructions: Option<String> },
 }
@@ -94,6 +95,7 @@ pub fn parse_mappable_builtin_command(input: &str) -> Option<MappableBuiltinComm
         "/hotkeys" => Some(MappableBuiltinCommand::Hotkeys),
         "/quit" => Some(MappableBuiltinCommand::Quit),
         "/scoped-models" => Some(MappableBuiltinCommand::ScopedModels),
+        "/session" => Some(MappableBuiltinCommand::SessionInfo),
         "/compact" => Some(MappableBuiltinCommand::Compact { instructions: None }),
         value if value.starts_with("/compact ") => {
             let instructions = value[9..].trim();
