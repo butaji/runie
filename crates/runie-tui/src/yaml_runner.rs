@@ -14,7 +14,9 @@ use crate::widgets::{FeedSnapshot, Line, LineKind, Scrollback, ScrollbackMsg, To
 use parking_lot::Mutex;
 use ratatui::buffer::Buffer;
 use runie_core::events::{EventBus, Subscriber};
-use runie_core::provider::stream_fn::{AssistantMessageEventStream, StreamError, StreamFn};
+use runie_core::provider::stream_fn::{
+    AssistantMessageEventStream, StreamError, StreamFn, WebSocketAdapter,
+};
 use runie_core::provider::ProviderActor;
 use runie_core::queues::{FollowUpQueueActor, SteeringQueueActor};
 use runie_core::r#loop::{LoopActor, LoopDeps};
@@ -1449,6 +1451,21 @@ impl StreamFn for ScenarioStream {
     }
 }
 
+#[async_trait::async_trait]
+impl WebSocketAdapter for ScenarioStream {
+    async fn stream_websocket(
+        &self,
+        model: &Model,
+        context: &AgentContext,
+        options: Option<SimpleStreamOptions>,
+    ) -> Result<AssistantMessageEventStream, StreamError> {
+        // The YAML harness deliberately reuses the deterministic event source;
+        // the actor boundary is the behavior under test, while provider wire
+        // framing remains the responsibility of a concrete adapter.
+        self.stream(model, context, options).await
+    }
+}
+
 /// Echo tool that returns its args verbatim.
 pub struct EchoTool {
     parameters: Option<serde_json::Value>,
@@ -2226,6 +2243,10 @@ async fn submit_scenario(actor: LoopActor, scenario: &Scenario) {
     }
 }
 
+#[allow(
+    clippy::too_many_lines,
+    reason = "the YAML harness keeps deterministic actor wiring in one declarative path"
+)]
 fn build_scenario_loop(
     scenario: &Scenario,
 ) -> Result<(EventBus, LoopActor, ProviderOptionsLog), ScenarioError> {
@@ -2235,7 +2256,7 @@ fn build_scenario_loop(
         register_scenario_tool(&mut registry, tool)?;
     }
     let options_seen = Arc::new(Mutex::new(Vec::new()));
-    let provider = ProviderActor::new(Arc::new(ScenarioStream {
+    let scenario_stream = Arc::new(ScenarioStream {
         events: scenario
             .events
             .iter()
@@ -2248,7 +2269,9 @@ fn build_scenario_loop(
         // snapshots before joining the deliberately pending continuation.
         pending_after_first: false,
         options_seen: options_seen.clone(),
-    }));
+    });
+    let provider =
+        ProviderActor::new_with_websocket(scenario_stream.clone(), Some(scenario_stream));
     let deps = LoopDeps {
         state: AgentStateActor::new(),
         steering: SteeringQueueActor::new(),
@@ -4092,7 +4115,7 @@ pub async fn render_visual_buffer(
     }
     let tool_executor =
         ToolExecutorActor::new_with_timestamp(Arc::new(reg), scenario.tool_result_timestamp);
-    let provider = ProviderActor::new(Arc::new(ScenarioStream {
+    let scenario_stream = Arc::new(ScenarioStream {
         events: scenario
             .events
             .iter()
@@ -4102,7 +4125,9 @@ pub async fn render_visual_buffer(
         calls: Mutex::new(0),
         pending_after_first: scenario.capture_while_waiting,
         options_seen: Arc::new(Mutex::new(Vec::new())),
-    }));
+    });
+    let provider =
+        ProviderActor::new_with_websocket(scenario_stream.clone(), Some(scenario_stream));
     let deps = LoopDeps {
         state,
         steering,

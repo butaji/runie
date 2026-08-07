@@ -1,6 +1,6 @@
 # p37 — Pi provider transport boundary
 
-Status: in progress (HTTP/replay boundary complete; WebSocket adapter is a planned provider-specific slice)
+Status: in progress (HTTP/replay boundary complete; provider capability seam and YAML route coverage complete; concrete Codex wire adapter remains open)
 
 The Pi `ProviderRequestOptions` contract is broader than Runie's current
 `HttpActor` abstraction. This task records the exact boundary so parity work
@@ -91,6 +91,17 @@ classified until that boundary exists.
 
 The YAML fixture asserts `websocket_connect_timeout_ms: 2500`, preserving this
 Pi option for a future WebSocket adapter without claiming behavioral support.
+
+## YAML capability-route coverage (2026-08-08)
+
+The replay harness now injects its deterministic `ScenarioStream` through both
+the ordinary `StreamFn` capability and the provider-scoped `WebSocketAdapter`
+capability. `provider-websocket.yaml` selects `transport: websocket` and
+asserts the effective transport, handshake timeout, complete Pi event order,
+and resulting transcript. This proves the event/state route without pretending
+that the fixture implements Codex's real socket URL, envelope, decoder,
+continuation cache, fallback policy, or cleanup semantics. Those remain
+provider-adapter work and cannot be supplied by generic YAML replay.
 
 ## WebSocket source audit (2026-08-07)
 

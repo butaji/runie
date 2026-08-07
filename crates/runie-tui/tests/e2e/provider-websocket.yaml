@@ -1,0 +1,38 @@
+name: provider-websocket
+description: >-
+  The YAML replay provider opts into the provider-scoped WebSocket capability;
+  the loop still receives the ordinary Pi assistant event contract.
+initial_prompt: "Hey"
+provider_options:
+  transport: websocket
+  websocket_connect_timeout_ms: 2500
+events:
+  - start
+  - text_delta: "websocket-reply"
+  - done: { stop_reason: stop }
+assertions:
+  provider_options:
+    transport: websocket
+    websocket_connect_timeout_ms: 2500
+  exact_events:
+    - agent_start
+    - turn_start
+    - message_start
+    - message_end
+    - message_start
+    - message_update
+    - message_end
+    - turn_end
+    - agent_end
+  pi_events:
+    - agent_start
+    - turn_start
+    - message_start
+    - message_end
+    - message_start
+    - message_update
+    - message_end
+    - turn_end
+    - agent_end
+  transcript_contains:
+    - "websocket-reply"
