@@ -33,6 +33,10 @@ pub enum SessionConfigRecord {
         summary: String,
         details: Option<serde_json::Value>,
     },
+    CustomSessionEntryCreated {
+        custom_type: String,
+        data: Option<serde_json::Value>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -214,6 +218,16 @@ impl SessionSnapshot {
                             .cloned()
                             .filter(|value| !value.is_null()),
                     },
+                    "custom" => SessionConfigRecord::CustomSessionEntryCreated {
+                        custom_type: value
+                            .get("customType")
+                            .and_then(serde_json::Value::as_str)
+                            .ok_or_else(|| {
+                                format!("session entry {} is missing customType", line_index + 2)
+                            })?
+                            .to_owned(),
+                        data: value.get("data").cloned().filter(|value| !value.is_null()),
+                    },
                     _ => {
                         return Err(format!(
                             "unsupported session mutation at line {}",
@@ -324,6 +338,10 @@ impl SessionSnapshot {
                 } => (
                     "branch_summary",
                     serde_json::json!({ "fromId": from_id, "summary": summary, "details": details }),
+                ),
+                SessionConfigRecord::CustomSessionEntryCreated { custom_type, data } => (
+                    "custom",
+                    serde_json::json!({ "customType": custom_type, "data": data }),
                 ),
             };
             entry["kind"] = serde_json::Value::String("entry".into());
@@ -523,6 +541,19 @@ impl SessionActor {
                             break;
                         }
                     }
+                    AgentEvent::CustomSessionEntryCreated { custom_type, data } => {
+                        if !mailbox_ack!(tx, |reply| {
+                            Command::Config(
+                                SessionConfigRecord::CustomSessionEntryCreated {
+                                    custom_type,
+                                    data,
+                                },
+                                reply,
+                            )
+                        }) {
+                            break;
+                        }
+                    }
                     AgentEvent::ToolExecutionEnd {
                         tool_call_id,
                         result,
@@ -557,6 +588,10 @@ impl SessionActor {
     /// Apply session-owned configuration facts from a replay event sequence.
     /// The reducer remains the actor boundary; callers do not mutate the
     /// snapshot or manufacture message entries.
+    #[allow(
+        clippy::too_many_lines,
+        reason = "session event dispatch keeps each journal variant explicit"
+    )]
     pub async fn apply_event(&self, event: &AgentEvent) {
         match event {
             AgentEvent::ModelChanged { model } => {
@@ -585,6 +620,13 @@ impl SessionActor {
                     from_id: from_id.clone(),
                     summary: summary.clone(),
                     details: details.clone(),
+                })
+                .await;
+            }
+            AgentEvent::CustomSessionEntryCreated { custom_type, data } => {
+                self.record_config(SessionConfigRecord::CustomSessionEntryCreated {
+                    custom_type: custom_type.clone(),
+                    data: data.clone(),
                 })
                 .await;
             }

@@ -56,8 +56,8 @@ timestamp metadata. The YAML `visual-status-working.yaml` fixture asserts the
 ordered kind after the same event sequence that drives the TUI status.
 
 `active_tools_change` now has a typed application event, actor reduction, YAML
-replay coverage, and JSONL round-trip coverage. Compaction, custom entries, and
-operation-lane records remain separate follow-up work.
+replay coverage, and JSONL round-trip coverage. Compaction and operation-lane
+records remain separate follow-up work.
 
 ## Branch-summary boundary audit (2026-08-07)
 
@@ -70,8 +70,12 @@ the same actor-owned ordered journal. Full branch navigation/context
 reconstruction remains separate; this slice does not pretend that a summary
 record alone implements navigation.
 
+Custom extension records now also use `CustomSessionEntryCreated` and preserve
+`customType`/`data` through the actor journal and JSONL. YAML replay covers the
+payload path without compiling extension-specific test code.
+
 ## Explicitly separate
 
-Compaction/full branch navigation, custom entries, and operation-lane records
+Compaction/full branch navigation and operation-lane records
 remain separate follow-up work until their Pi source semantics, storage
 lifecycle, and actor events are mapped in detail.

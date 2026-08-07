@@ -200,6 +200,9 @@ impl AgentStateActor {
             AgentEvent::BranchSummaryCreated { .. } => {
                 // SessionActor owns branch-summary journal records.
             }
+            AgentEvent::CustomSessionEntryCreated { .. } => {
+                // Extension-owned session data belongs to SessionActor.
+            }
             AgentEvent::MessageStart { message } if is_assistant(&message) => {
                 state.is_streaming = true;
                 state.streaming_message = Some(message);

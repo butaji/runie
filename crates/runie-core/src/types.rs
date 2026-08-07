@@ -971,6 +971,12 @@ pub enum AgentEvent {
         summary: String,
         details: Option<serde_json::Value>,
     },
+    /// Extension-owned session journal payload. It is preserved as data and
+    /// never interpreted by core or the TUI.
+    CustomSessionEntryCreated {
+        custom_type: String,
+        data: Option<serde_json::Value>,
+    },
     ToolDisplayModeChanged {
         tool_call_id: String,
         mode: ToolDisplayMode,

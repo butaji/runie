@@ -19,6 +19,9 @@ macro_rules! agent_event_kind {
             $crate::types::AgentEvent::ModelChanged { .. } => "ModelChanged",
             $crate::types::AgentEvent::ActiveToolsChanged { .. } => "ActiveToolsChanged",
             $crate::types::AgentEvent::BranchSummaryCreated { .. } => "BranchSummaryCreated",
+            $crate::types::AgentEvent::CustomSessionEntryCreated { .. } => {
+                "CustomSessionEntryCreated"
+            }
             $crate::types::AgentEvent::ToolDisplayModeChanged { .. } => "ToolDisplayModeChanged",
             $crate::types::AgentEvent::TurnEnd { .. } => "TurnEnd",
             $crate::types::AgentEvent::MessageStart { .. } => "MessageStart",

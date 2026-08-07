@@ -11,6 +11,10 @@ events:
       summary: "Earlier branch"
       details:
         source: replay
+  - custom_entry:
+      custom_type: replay.marker
+      data:
+        value: 42
   - text_delta: "working"
 assertions:
   state:
@@ -22,6 +26,7 @@ assertions:
       - thinking_level_change
       - active_tools_change
       - branch_summary
+      - custom
   visual:
     cols: 80
     rows: 24

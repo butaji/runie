@@ -313,6 +313,9 @@ pub enum EventSpec {
     BranchSummary {
         branch_summary: BranchSummarySpec,
     },
+    CustomEntry {
+        custom_entry: CustomEntrySpec,
+    },
     ToolMode {
         tool_mode: ToolModeSpec,
     },
@@ -431,6 +434,13 @@ pub struct BranchSummarySpec {
     pub summary: String,
     #[serde(default)]
     pub details: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct CustomEntrySpec {
+    pub custom_type: String,
+    #[serde(default)]
+    pub data: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -651,6 +661,7 @@ impl EventSpec {
             Self::ThinkingLevel { .. } => None,
             Self::ActiveTools { .. } => None,
             Self::BranchSummary { .. } => None,
+            Self::CustomEntry { .. } => None,
             Self::ToolMode { .. } => None,
             Self::ToolFold { .. } => None,
             Self::ToolSelect { .. } => None,
@@ -695,6 +706,10 @@ impl EventSpec {
                 from_id: branch_summary.from_id.clone(),
                 summary: branch_summary.summary.clone(),
                 details: branch_summary.details.clone(),
+            }),
+            Self::CustomEntry { custom_entry } => Some(AgentEvent::CustomSessionEntryCreated {
+                custom_type: custom_entry.custom_type.clone(),
+                data: custom_entry.data.clone(),
             }),
             Self::ToolMode { tool_mode } => Some(AgentEvent::ToolDisplayModeChanged {
                 tool_call_id: tool_mode.tool_call_id.clone(),
@@ -2454,6 +2469,9 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
                 runie_core::session::SessionConfigRecord::BranchSummaryCreated { .. } => {
                     "branch_summary".to_owned()
                 }
+                runie_core::session::SessionConfigRecord::CustomSessionEntryCreated { .. } => {
+                    "custom".to_owned()
+                }
             })
             .collect::<Vec<_>>();
         if actual_records.as_slice() != expected_records.as_slice() {
@@ -3050,6 +3068,7 @@ fn event_kind(event: &runie_core::types::AgentEvent) -> &'static str {
         ModelChanged { .. } => "model_changed",
         ActiveToolsChanged { .. } => "active_tools_changed",
         BranchSummaryCreated { .. } => "branch_summary_created",
+        CustomSessionEntryCreated { .. } => "custom_session_entry_created",
         ToolDisplayModeChanged { .. } => "tool_display_mode_changed",
         TurnEnd { .. } => "turn_end",
         MessageStart { .. } => "message_start",
