@@ -48,6 +48,15 @@ hiding the reducer or delivery boundary.
 4. Add YAML assertions for every new rejection, admission, and snapshot
    transition before changing production behavior.
 
+## Typed operation migration slice (2026-08-08)
+
+Queue lifecycle producers now use the closed internal `QueueRecordKind` enum;
+only its `wire_name()` conversion emits Pi-compatible `queue_enqueued` and
+`queue_cancelled` strings. The session/event compatibility shape remains
+unchanged, so this slice removes producer-side string drift without creating a
+second journal representation. The remaining migration is to carry the same
+typed fact through `AgentEvent` and the session reducer before the JSONL edge.
+
 ## Non-negotiable checks
 
 - No cross-actor direct mutation.

@@ -75,9 +75,24 @@ fn reduce_control(snapshot: &mut LoopControlSnapshot, event: LoopControlEvent) {
     }
 }
 
-fn publish_queue_record(bus: &EventBus, record_type: &str, data: serde_json::Value) {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum QueueRecordKind {
+    Enqueued,
+    Cancelled,
+}
+
+impl QueueRecordKind {
+    const fn wire_name(self) -> &'static str {
+        match self {
+            Self::Enqueued => "queue_enqueued",
+            Self::Cancelled => "queue_cancelled",
+        }
+    }
+}
+
+fn publish_queue_record(bus: &EventBus, kind: QueueRecordKind, data: serde_json::Value) {
     bus.publish(AgentEvent::OperationRecordCreated {
-        record_type: record_type.to_owned(),
+        record_type: kind.wire_name().to_owned(),
         data,
     });
 }
@@ -347,7 +362,7 @@ impl LoopActor {
         if let Some(entry_id) = self.inner.deps.steering.push(msg).await {
             publish_queue_record(
                 &self.inner.deps.bus,
-                "queue_enqueued",
+                QueueRecordKind::Enqueued,
                 serde_json::json!({
                     "id": entry_id,
                     "queue": "steer",
@@ -362,7 +377,7 @@ impl LoopActor {
         if let Some(entry_id) = self.inner.deps.follow_up.push(msg).await {
             publish_queue_record(
                 &self.inner.deps.bus,
-                "queue_enqueued",
+                QueueRecordKind::Enqueued,
                 serde_json::json!({
                     "id": entry_id,
                     "queue": "followUp",
@@ -377,7 +392,7 @@ impl LoopActor {
         for entry_id in self.inner.deps.steering.clear().await {
             publish_queue_record(
                 &self.inner.deps.bus,
-                "queue_cancelled",
+                QueueRecordKind::Cancelled,
                 serde_json::json!({"id": entry_id, "entryId": entry_id}),
             );
         }
@@ -388,7 +403,7 @@ impl LoopActor {
         for entry_id in self.inner.deps.follow_up.clear().await {
             publish_queue_record(
                 &self.inner.deps.bus,
-                "queue_cancelled",
+                QueueRecordKind::Cancelled,
                 serde_json::json!({"id": entry_id, "entryId": entry_id}),
             );
         }
@@ -539,6 +554,12 @@ fn spawn_pi_subscriber_bridge(bus: &EventBus, subscribers: &SubscriberRegistry) 
 mod tests {
     use super::*;
     use crate::types::AgentEvent;
+
+    #[test]
+    fn queue_record_kind_has_only_pi_wire_names() {
+        assert_eq!(QueueRecordKind::Enqueued.wire_name(), "queue_enqueued");
+        assert_eq!(QueueRecordKind::Cancelled.wire_name(), "queue_cancelled");
+    }
 
     #[test]
     fn control_events_reduce_to_one_snapshot() {
