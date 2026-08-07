@@ -1,0 +1,22 @@
+name: visual-slash-new
+description: Pi's /new command resets the loop and actor-owned projections without provider submission.
+initial_prompt: hi
+events:
+  - start
+  - text_delta: hello
+  - done: { stop_reason: stop }
+assertions:
+  state:
+    messages: 2
+  visual:
+    cols: 80
+    rows: 24
+    steps:
+      - "/new"
+      - Enter
+    state:
+      messages: 0
+      is_streaming: false
+    screen_excludes:
+      - "❯ hi"
+      - "hello"

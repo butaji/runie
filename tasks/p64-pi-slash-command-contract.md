@@ -38,7 +38,8 @@ live binary and YAML runner: `/new` awaits the loop reset, `/hotkeys` sends a
 `ToggleShortcuts` mailbox message, and `/quit` is consumed only by the live
 application exit boundary. `/compact` and other unsupported commands remain
 ordinary prompt text. `visual-slash-hotkeys.yaml` proves the route without a
-provider submission.
+provider submission; `visual-slash-new.yaml` proves reset clears the resulting
+actor-owned message/feed projection.
 
 Required next evidence:
 
