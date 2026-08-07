@@ -8,7 +8,9 @@ use std::{
 use tokio::sync::{mpsc, oneshot, watch};
 
 use runie_core::types::AgentEvent;
-use runie_core::{mailbox_ack, spawn_actor_worker, spawn_owned_worker, task_owner::TaskOwner};
+use runie_core::{
+    mailbox_ack, mailbox_batch_ack, spawn_actor_worker, spawn_owned_worker, task_owner::TaskOwner,
+};
 
 use crate::widgets::{FeedSnapshot, LineKind, Scrollback, ScrollbackMsg};
 use runie_tui_model::FeedState;
@@ -80,9 +82,7 @@ impl ScrollbackActor {
 
     pub async fn apply_event(&self, event: &AgentEvent) {
         let messages = bus_messages_for_event(event.clone());
-        if !messages.is_empty() {
-            self.apply_batch(messages).await;
-        }
+        self.apply_batch(messages).await;
     }
 
     pub fn snapshot(&self) -> Scrollback {
@@ -172,7 +172,9 @@ async fn run_bus_projection(
         } else {
             messages
         };
-        if !messages.is_empty() && !mailbox_ack!(tx, |reply| Command::ApplyBatch(messages, reply)) {
+        if !mailbox_batch_ack!(tx, messages, |messages, reply| {
+            Command::ApplyBatch(messages, reply)
+        }) {
             break;
         }
     }

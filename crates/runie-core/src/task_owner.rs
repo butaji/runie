@@ -59,6 +59,23 @@ macro_rules! mailbox_ack {
 
 pub use crate::mailbox_ack;
 
+/// Actor DSL for reducing a non-empty batch through one acknowledged mailbox
+/// command. Empty batches are a successful no-op, which keeps event mappers
+/// declarative without repeating queue guards at every actor boundary.
+#[macro_export]
+macro_rules! mailbox_batch_ack {
+    ($tx:expr, $messages:expr, $command:expr) => {{
+        let messages = $messages;
+        if messages.is_empty() {
+            true
+        } else {
+            $crate::mailbox_ack!($tx, |reply| ($command)(messages, reply))
+        }
+    }};
+}
+
+pub use crate::mailbox_batch_ack;
+
 /// Keeps an actor's worker task attached to the actor's lifetime.
 ///
 /// The handle is shared because public actor handles are cheap clones. The
@@ -105,6 +122,7 @@ mod tests {
     async fn mailbox_ack_waits_for_actor_reduction() {
         let (tx, mut rx) = mpsc::channel::<tokio::sync::oneshot::Sender<()>>(1);
         // OWNER: mailbox_ack test; the handle is awaited before the test exits.
+        // OWNER: mailbox batch DSL test; the handle is awaited before exit.
         let worker = tokio::spawn(async move {
             if let Some(reply) = rx.recv().await {
                 let _ = reply.send(());
@@ -112,5 +130,19 @@ mod tests {
         });
         assert!(mailbox_ack!(tx, |reply| reply));
         worker.await.expect("ack worker completes");
+    }
+
+    #[tokio::test]
+    async fn mailbox_batch_ack_skips_empty_batches() {
+        let (tx, mut rx) = mpsc::channel::<tokio::sync::oneshot::Sender<()>>(1);
+        // OWNER: mailbox batch DSL test; the handle is awaited before exit.
+        let worker = tokio::spawn(async move {
+            assert!(rx.recv().await.is_none());
+        });
+        assert!(mailbox_batch_ack!(tx, Vec::<u8>::new(), |_, reply| reply));
+        // The empty batch must not enqueue; close the mailbox explicitly so
+        // the worker can prove it observed no command.
+        drop(tx);
+        worker.await.expect("empty batch does not enqueue");
     }
 }

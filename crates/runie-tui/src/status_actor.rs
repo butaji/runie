@@ -3,7 +3,9 @@
 use std::sync::Arc;
 
 use runie_core::types::AgentEvent;
-use runie_core::{mailbox_ack, spawn_actor_worker, spawn_owned_worker, task_owner::TaskOwner};
+use runie_core::{
+    mailbox_ack, mailbox_batch_ack, spawn_actor_worker, spawn_owned_worker, task_owner::TaskOwner,
+};
 use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::widgets::{StatusBar, StatusMsg, StatusSnapshot};
@@ -68,10 +70,9 @@ impl StatusActor {
                     Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
                 };
                 let messages = status_messages_for_event(&event);
-                if messages.is_empty() {
-                    continue;
-                }
-                if !mailbox_ack!(tx, |reply| Command::ApplyBatch(messages, reply)) {
+                if !mailbox_batch_ack!(tx, messages, |messages, reply| {
+                    Command::ApplyBatch(messages, reply)
+                }) {
                     break;
                 }
             }
@@ -87,10 +88,9 @@ impl StatusActor {
     /// Unknown events are intentionally a no-op for this projection.
     pub async fn apply_event(&self, event: &AgentEvent) {
         let messages = status_messages_for_event(event);
-        if messages.is_empty() {
-            return;
-        }
-        let _ = mailbox_ack!(self.tx, |reply| Command::ApplyBatch(messages, reply));
+        let _ = mailbox_batch_ack!(self.tx, messages, |messages, reply| {
+            Command::ApplyBatch(messages, reply)
+        });
     }
 
     pub fn snapshot(&self) -> StatusBar {

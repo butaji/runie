@@ -24,3 +24,10 @@ reduce in their original YAML order through the scrollback actor. Previously
 the runner grouped folds before selections, which could hide ordering bugs in
 selection → fold sequences. This keeps YAML as the executable event sequence
 oracle while preserving the actor/reducer boundary.
+
+Mailbox batch DSL (2026-08-07): `mailbox_batch_ack!` now centralizes the
+repeated actor boundary for a mapped event batch. It preserves the explicit
+command constructor and acknowledgement semantics, while making an empty
+projection a successful no-op. Status and scrollback bus adapters use it;
+YAML remains the runtime declarative layer and the macro remains infrastructure
+only, so fixture edits still require no recompilation.
