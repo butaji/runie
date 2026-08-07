@@ -200,17 +200,16 @@ hiding output/result rows; truncated cards keep the first output/result row.
 The mixed activity and truncated activity YAML fixtures exercise these rules
 independently, including a complete fixed-grid replay assertion.
 
-The immediate task remains broader tool-card parity (specialized execute/edit/
-search/web/background cards), followed by theme palette propagation and the
-remaining YAML state/effect matrix. Strict feed, waiting, collapsed, mixed, and
-truncated fixed-grid replays are green.
+The remaining task is the cast-wide YAML state/effect matrix and exact
+specialized-card geometry. Strict feed, waiting, collapsed, mixed, truncated,
+selection, and background/workflow fixed-grid replays are green.
 
 Tool-member navigation replay slice (2026-08-07): `visual-tool-selection.yaml`
 now drives two `tool_select: next` events through the feed actor after three
 Pi tool calls and asserts the resulting selected call ID, transcript entry,
 and Grok dense-group member index. This closes the missing runtime-editable
-state oracle for keyboard member navigation; mouse selection, selection-box
-actions, and the remaining card-specific interaction contracts remain open.
+state oracle for keyboard member navigation; mouse selection and selection-box
+actions are covered separately by `visual-selection-range.yaml`.
 
 Typed tool-block projection (2026-08-06): Runie now exposes a pure
 `Scrollback::tool_blocks()` projection over the actor snapshot, aligned with
