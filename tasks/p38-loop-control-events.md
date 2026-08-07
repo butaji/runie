@@ -60,9 +60,18 @@ emits typed control snapshots without changing Pi's closed `AgentEvent` wire
 contract. The remaining boundary here is migrating the compatibility widget
 adapter to pure event-to-view projection fed by actor snapshots.
 
-Replace compatibility widget mutation with a pure event-to-view projection
-fed by the actor snapshot. The renderer should only consume immutable
-snapshots and terminal frame inputs.
+## Production renderer boundary (2026-08-06)
+
+`EventRenderer` now separates its legacy compatibility adapter from the live
+path. Live and replay actor paths use `apply_actor_metadata` only for ephemeral
+event sequencing metadata; status/feed changes are delivered as acknowledged
+actor messages and rendered from snapshots. The old `apply_event` method still
+exists for focused legacy-widget tests, but production actor projections no
+longer call it or mutate compatibility widgets. This keeps the migration
+incremental without creating a second production state owner.
+
+The remaining work is retiring the legacy adapter and moving any focused tests
+that still require it onto actor-backed replay fixtures.
 
 ## Verification
 

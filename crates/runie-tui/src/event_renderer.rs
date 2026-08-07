@@ -533,7 +533,7 @@ impl EventRenderer {
                             } else if let Some(tool_end) = actor_tool_end {
                                 scrollback_actor.apply(tool_end).await;
                             } else {
-                                self.apply_event(event);
+                                self.apply_actor_metadata(event);
                             }
                         }
                         Err(broadcast::error::RecvError::Lagged(n)) => {
@@ -646,7 +646,7 @@ impl EventRenderer {
         if let Some(message) = tool_message {
             scrollback_actor.apply(message).await;
         } else {
-            self.apply_event(event);
+            self.apply_actor_metadata(event);
         }
     }
 
@@ -730,6 +730,52 @@ impl EventRenderer {
                 let _ = self.handle_tool_end(tool_call_id, tool_name, result, is_error);
             }
             AgentEvent::BackgroundWorkStarted { .. }
+            | AgentEvent::BackgroundWorkProgress { .. }
+            | AgentEvent::BackgroundWorkFinished { .. }
+            | AgentEvent::BackgroundWorkCancelled { .. }
+            | AgentEvent::WorkflowStarted { .. }
+            | AgentEvent::WorkflowProgress { .. }
+            | AgentEvent::WorkflowFinished { .. } => {}
+        }
+    }
+
+    /// Maintain renderer-local event metadata needed to construct the next
+    /// actor message batch. This deliberately has no projection writes: the
+    /// production path has already delivered the event to the status and
+    /// scrollback actors, while the legacy `apply_event` adapter remains
+    /// available only to compatibility tests.
+    fn apply_actor_metadata(&mut self, event: AgentEvent) {
+        match event {
+            AgentEvent::AgentStart => {
+                self.emit_welcome = false;
+            }
+            AgentEvent::AgentEnd { .. } => {
+                self.turn_started = false;
+            }
+            AgentEvent::TurnStart => {
+                self.turn_started = true;
+            }
+            AgentEvent::Reset => {
+                self.thinking_elapsed_ms = None;
+                self.turn_started = false;
+                self.in_assistant_stream = false;
+                self.in_reasoning = false;
+                self.reasoning_buffer.clear();
+                self.streaming_buffer.clear();
+            }
+            AgentEvent::MessageStart { message } => self.handle_message_start(message),
+            AgentEvent::MessageUpdate { event, .. } => self.handle_message_update(event),
+            AgentEvent::MessageEnd { message } => self.handle_message_end(message),
+            AgentEvent::ToolExecutionStart { .. }
+            | AgentEvent::ToolExecutionUpdate { .. }
+            | AgentEvent::ToolExecutionEnd { .. }
+            | AgentEvent::Error { .. }
+            | AgentEvent::ThinkingLevelChanged { .. }
+            | AgentEvent::Waiting { .. }
+            | AgentEvent::ThemeChanged { .. }
+            | AgentEvent::ToolDisplayModeChanged { .. }
+            | AgentEvent::TurnEnd { .. }
+            | AgentEvent::BackgroundWorkStarted { .. }
             | AgentEvent::BackgroundWorkProgress { .. }
             | AgentEvent::BackgroundWorkFinished { .. }
             | AgentEvent::BackgroundWorkCancelled { .. }
