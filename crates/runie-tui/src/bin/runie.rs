@@ -58,6 +58,32 @@ enum InputConfig {
     SelectionOrigin { row: u16, column: u16 },
 }
 
+fn mouse_selection_input(
+    kind: MouseEventKind,
+    row: u16,
+    column: u16,
+    origin: (u16, u16),
+) -> Option<InputEvent> {
+    let position = || {
+        (
+            row.saturating_sub(origin.0),
+            column.saturating_sub(origin.1),
+        )
+    };
+    match kind {
+        MouseEventKind::Down(MouseButton::Left) => {
+            let (row, column) = position();
+            Some(InputEvent::MouseSelectionStart(row, column))
+        }
+        MouseEventKind::Drag(MouseButton::Left) => {
+            let (row, column) = position();
+            Some(InputEvent::MouseSelectionExtend(row, column))
+        }
+        MouseEventKind::Up(MouseButton::Left) => Some(InputEvent::MouseSelectionCommit),
+        _ => None,
+    }
+}
+
 fn render_command_palette(
     area: Rect,
     buf: &mut Buffer,
@@ -440,24 +466,16 @@ async fn run_app(
                             if input_tx.send(InputEvent::Key(key)).await.is_err() { break; }
                         }
                         Event::Mouse(mouse) => {
-                            match mouse.kind {
-                                MouseEventKind::Down(MouseButton::Left) => {
-                                    if input_tx.send(InputEvent::MouseSelectionStart(
-                                        mouse.row.saturating_sub(selection_origin.0),
-                                        mouse.column.saturating_sub(selection_origin.1),
-                                    )).await.is_err() { break; }
+                            if let Some(selection) = mouse_selection_input(
+                                mouse.kind,
+                                mouse.row,
+                                mouse.column,
+                                selection_origin,
+                            ) {
+                                if input_tx.send(selection).await.is_err() {
+                                    break;
                                 }
-                                MouseEventKind::Drag(MouseButton::Left) => {
-                                    if input_tx.send(InputEvent::MouseSelectionExtend(
-                                        mouse.row.saturating_sub(selection_origin.0),
-                                        mouse.column.saturating_sub(selection_origin.1),
-                                    )).await.is_err() { break; }
-                                }
-                                MouseEventKind::Up(MouseButton::Left) => {
-                                    if input_tx.send(InputEvent::MouseSelectionCommit).await.is_err() { break; }
-                                }
-                                MouseEventKind::ScrollUp | MouseEventKind::ScrollDown => {}
-                                _ => continue,
+                                continue;
                             }
                             let direction = match mouse.kind {
                                 MouseEventKind::ScrollUp => runie_tui_model::ScrollDirection::Up,
@@ -801,7 +819,11 @@ fn _key_marker(_k: KeyEvent) {}
 
 #[cfg(test)]
 mod tests {
-    use super::{current_branch, render_header, render_live_ready_footer, repository_label};
+    use super::{
+        current_branch, mouse_selection_input, render_header, render_live_ready_footer,
+        repository_label, InputEvent,
+    };
+    use crossterm::event::{MouseButton, MouseEventKind};
     use ratatui::buffer::Buffer;
     use ratatui::layout::Rect;
     use ratatui::style::Modifier;
@@ -836,5 +858,22 @@ mod tests {
         let shortcut = buffer.cell((19, 0)).expect("second shortcut");
         assert_eq!(shortcut.symbol(), "C");
         assert!(shortcut.modifier.contains(Modifier::BOLD));
+    }
+
+    #[test]
+    fn mouse_selection_input_is_pure_and_origin_relative() {
+        assert!(matches!(
+            mouse_selection_input(MouseEventKind::Down(MouseButton::Left), 12, 18, (5, 7)),
+            Some(InputEvent::MouseSelectionStart(7, 11))
+        ));
+        assert!(matches!(
+            mouse_selection_input(MouseEventKind::Drag(MouseButton::Left), 8, 10, (5, 7)),
+            Some(InputEvent::MouseSelectionExtend(3, 3))
+        ));
+        assert!(matches!(
+            mouse_selection_input(MouseEventKind::Up(MouseButton::Left), 8, 10, (5, 7)),
+            Some(InputEvent::MouseSelectionCommit)
+        ));
+        assert!(mouse_selection_input(MouseEventKind::Moved, 8, 10, (5, 7)).is_none());
     }
 }
