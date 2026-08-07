@@ -62,6 +62,12 @@ activity-group chrome. Removed Runie's special-case `❙` prefix for settled
 five-space full-mode gutter. A fresh capture and the visual suite are the
 validation boundary for the remaining timestamp and telemetry differences.
 
+**Assistant timestamp audit (2026-08-06):** The attempted removal of Runie's
+two-cell non-wrapping offset did not change the fresh frame because this
+scenario takes the wrapped-row reservation branch. The change was reverted;
+the remaining timestamp mismatch is specifically in that branch's effective
+reserved width and needs a separate source-backed audit.
+
 **Latest parity note (2026-08-05):** `LoopActor::continue_run` now drains
 queued steering before follow-up messages when the context ends in an
 assistant, matching pi's continuation behavior; `LastIsAssistant` remains the
