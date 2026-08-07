@@ -107,6 +107,15 @@ publish immutable `watch` snapshots to the pure view.
   `App::spawn_renderer` constructs `EventRenderer::with_actors`. No production
   TUI projection has a mutex-backed source of truth.
 
+- **Continuation audit (2026-08-06):** Rechecked the same boundary while
+  reviewing the typed-member work. The remaining `Arc<Mutex<...>>` paths are
+  confined to compatibility constructors/tests and YAML fixture telemetry;
+  typed feed selection, member identity, and navigation all reduce through the
+  actor mailbox and immutable snapshots. No production mutex conversion is
+  justified by the current source evidence; the next architectural work is
+  removing or separately naming the compatibility adapters, not introducing a
+  second state owner.
+
 ## Latest progress
 
 - **Tool completion reduction (2026-08-06):** `ScrollbackActor` now owns the
