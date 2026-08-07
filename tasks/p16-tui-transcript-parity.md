@@ -634,3 +634,9 @@ structure are preserved; rows that are reflowed or wrapped remain on the
 renderer's normal text path until their physical-row identity is carried
 explicitly. This keeps the partial migration honest while making header,
 content, success, error, and muted semantics available at the render boundary.
+
+Wrapped-row carryover (2026-08-06): physical rows now resolve card identity
+for wrapped segments when their source text is recoverable from the logical
+line. This extends semantic token resolution to common wrapped tool output
+without changing row geometry. Exact identity propagation through every
+reflow operation remains the stronger follow-up for duplicate-text cards.

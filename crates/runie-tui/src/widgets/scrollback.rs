@@ -1290,10 +1290,11 @@ impl Scrollback {
         ) {
             return None;
         }
-        let line = self
-            .lines
-            .iter()
-            .find(|line| line.kind == kind && line.text == text)?;
+        let line = self.lines.iter().find(|line| {
+            line.kind == kind
+                && (line.text == text
+                    || (!text.trim().is_empty() && line.text.contains(text.trim())))
+        })?;
         let id = line.tool_call_id.as_deref()?;
         let rows = project_tool_card_rows(
             &self.lines,
