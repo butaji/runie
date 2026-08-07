@@ -34,7 +34,28 @@ pub enum UiMsg {
 pub fn ui_messages_for_event(event: &AgentEvent) -> Vec<UiMsg> {
     match event {
         AgentEvent::Reset => vec![UiMsg::Reset],
-        _ => Vec::new(),
+        AgentEvent::AgentStart
+        | AgentEvent::AgentEnd { .. }
+        | AgentEvent::Error { .. }
+        | AgentEvent::ThinkingLevelChanged { .. }
+        | AgentEvent::TurnStart
+        | AgentEvent::Waiting { .. }
+        | AgentEvent::ThemeChanged { .. }
+        | AgentEvent::ToolDisplayModeChanged { .. }
+        | AgentEvent::TurnEnd { .. }
+        | AgentEvent::MessageStart { .. }
+        | AgentEvent::MessageUpdate { .. }
+        | AgentEvent::MessageEnd { .. }
+        | AgentEvent::ToolExecutionStart { .. }
+        | AgentEvent::ToolExecutionUpdate { .. }
+        | AgentEvent::ToolExecutionEnd { .. }
+        | AgentEvent::BackgroundWorkStarted { .. }
+        | AgentEvent::BackgroundWorkProgress { .. }
+        | AgentEvent::BackgroundWorkFinished { .. }
+        | AgentEvent::BackgroundWorkCancelled { .. }
+        | AgentEvent::WorkflowStarted { .. }
+        | AgentEvent::WorkflowProgress { .. }
+        | AgentEvent::WorkflowFinished { .. } => Vec::new(),
     }
 }
 

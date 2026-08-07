@@ -200,7 +200,21 @@ fn bus_messages_for_event(event: AgentEvent) -> Vec<ScrollbackMsg> {
         | AgentEvent::BackgroundWorkProgress { .. }
         | AgentEvent::BackgroundWorkFinished { .. }
         | AgentEvent::BackgroundWorkCancelled { .. }) => background_messages_for_event(event),
-        _ => Vec::new(),
+        AgentEvent::AgentStart
+        | AgentEvent::AgentEnd { .. }
+        | AgentEvent::Error { .. }
+        | AgentEvent::ThinkingLevelChanged { .. }
+        | AgentEvent::TurnStart
+        | AgentEvent::Waiting { .. }
+        | AgentEvent::TurnEnd { .. }
+        | AgentEvent::MessageStart { .. }
+        | AgentEvent::MessageUpdate { .. }
+        | AgentEvent::MessageEnd { .. }
+        | AgentEvent::ToolExecutionUpdate { .. }
+        | AgentEvent::ToolExecutionEnd { .. }
+        | AgentEvent::WorkflowStarted { .. }
+        | AgentEvent::WorkflowProgress { .. }
+        | AgentEvent::WorkflowFinished { .. } => Vec::new(),
     }
 }
 

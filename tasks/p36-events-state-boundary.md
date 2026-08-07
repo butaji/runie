@@ -42,6 +42,10 @@ classified. The same exhaustive-table treatment should be applied to the
 remaining feed and UI projection tables as their compatibility paths are
 retired.
 
+The UI reset mapper and actor-owned feed bus mapper now use the same explicit
+classification. New core events must therefore be assigned to a projection,
+or deliberately listed as a no-op, before the workspace compiles.
+
 The capture helper remains an external instrument, not production state. Its
 bounded polling is intentionally limited to detecting terminal readiness and
 settled output; it does not mutate Runie's state.
