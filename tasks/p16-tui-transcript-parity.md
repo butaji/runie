@@ -713,3 +713,8 @@ matching. The mixed-activity YAML fixture asserts the ordered member indices
 through the same actor snapshot path. This is the first slice of the remaining
 typed block/member model; fold range semantics and full cast reconciliation
 remain open.
+
+Member-index correction (2026-08-06): the ordinal is now assigned once per
+logical tool call and shared by all of that member's header/content/status rows;
+it is no longer a physical-row counter. The mixed fixture caught and pins this
+distinction (`[0, 1, 0, 0, 0, 1]` for two interleaved projected members).
