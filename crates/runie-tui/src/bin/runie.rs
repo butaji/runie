@@ -50,10 +50,15 @@ enum InputEvent {
     Mouse(MouseEventKind),
 }
 
+const GROK_DEFAULT_EVENTS_PER_WHEEL_TICK: i32 = 3;
+const GROK_DEFAULT_LINES_PER_WHEEL_TICK: i32 = 3;
+const GROK_DEFAULT_LINES_PER_RAW_WHEEL_EVENT: i32 =
+    GROK_DEFAULT_LINES_PER_WHEEL_TICK / GROK_DEFAULT_EVENTS_PER_WHEEL_TICK;
+
 fn mouse_scroll_delta(kind: MouseEventKind) -> Option<i32> {
     match kind {
-        MouseEventKind::ScrollUp => Some(-3),
-        MouseEventKind::ScrollDown => Some(3),
+        MouseEventKind::ScrollUp => Some(-GROK_DEFAULT_LINES_PER_RAW_WHEEL_EVENT),
+        MouseEventKind::ScrollDown => Some(GROK_DEFAULT_LINES_PER_RAW_WHEEL_EVENT),
         _ => None,
     }
 }
@@ -746,8 +751,8 @@ mod tests {
 
     #[test]
     fn mouse_wheel_maps_to_actor_scroll_deltas() {
-        assert_eq!(mouse_scroll_delta(MouseEventKind::ScrollUp), Some(-3));
-        assert_eq!(mouse_scroll_delta(MouseEventKind::ScrollDown), Some(3));
+        assert_eq!(mouse_scroll_delta(MouseEventKind::ScrollUp), Some(-1));
+        assert_eq!(mouse_scroll_delta(MouseEventKind::ScrollDown), Some(1));
         assert_eq!(mouse_scroll_delta(MouseEventKind::Moved), None);
     }
 }

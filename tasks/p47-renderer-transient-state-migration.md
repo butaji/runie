@@ -269,8 +269,10 @@ behavior required before this slice can be marked parity-complete:
 - direction, carry, duplicate terminal reports, stream caps, and viewport
   bounds are normalized before the actor receives the final line delta.
 
-Runie's current ±3 mapping intentionally covers only the default wheel case;
-the normalizer and its YAML/event-sequence oracle remain open.
+Runie's input boundary now applies the Grok default ratio of one line per raw
+wheel event (3 events per 3-line tick). Stream timing, terminal profiles, and
+trackpad accumulation remain open; the ratio and its focused mapping test are
+not a claim that the complete normalizer is finished.
 
 Mouse capture lifecycle closure (2026-08-07): the interactive terminal now
 enables crossterm mouse capture together with the alternate screen and disables
