@@ -17,4 +17,4 @@ assertions:
     rows: 24
     screen_text:
       - "❯ animate"
-      - "❙  ◆ Thought for 0.9s"
+      - "     ◆ Thought for 0.9s"

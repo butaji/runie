@@ -1677,7 +1677,10 @@ impl Scrollback {
             for (index, part) in parts.iter().enumerate() {
                 let prefix = if line.kind == LineKind::TurnSummary && width >= 50 {
                     if line.text.contains("◆ Thought") {
-                        "❙  "
+                        // Grok's settled thought block owns its diamond and
+                        // uses the transcript gutter; the activity rail is
+                        // reserved for grouped tool rows.
+                        "     "
                     } else if width < 70 || self.navigation.live_grok_layout {
                         "   "
                     } else {
@@ -3051,19 +3054,13 @@ mod tests {
     }
 
     #[test]
-    fn thought_summary_uses_groks_accent_rail() {
+    fn thought_summary_uses_groks_transcript_gutter() {
         let mut scrollback = Scrollback::new();
         scrollback.append(Line::new(LineKind::TurnSummary, "◆ Thought for 0.2s"));
         let mut buffer = Buffer::empty(Rect::new(0, 0, 60, 1));
         scrollback.render(Rect::new(0, 0, 60, 1), &mut buffer);
-        assert_eq!(buffer.cell((0, 0)).expect("thought rail").symbol(), "❙");
-        assert_eq!(
-            buffer.cell((0, 0)).expect("thought rail").fg,
-            appearance::thought_accent_style_for(ThemeKind::GrokNight)
-                .fg
-                .expect("thought accent token")
-        );
-        assert_eq!(buffer.cell((3, 0)).expect("thought marker").symbol(), "◆");
+        assert_eq!(buffer.cell((0, 0)).expect("thought gutter").symbol(), " ");
+        assert_eq!(buffer.cell((5, 0)).expect("thought marker").symbol(), "◆");
     }
 
     #[test]

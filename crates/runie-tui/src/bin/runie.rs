@@ -171,8 +171,9 @@ fn render_header(area: Rect, buf: &mut Buffer, meter: &str, theme: runie_core::t
             runie_tui::appearance::base_style_for(theme)
                 .add_modifier(ratatui::style::Modifier::DIM),
         ),
+        ratatui::text::Span::raw(" "),
         ratatui::text::Span::styled(
-            format!(" {}", repository_label()),
+            repository_label(),
             runie_tui::appearance::header_path_style_for(theme),
         ),
     ]));

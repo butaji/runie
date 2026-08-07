@@ -1584,3 +1584,20 @@ from the current source. Its timestamp predates the current actor boundary
 work, so this pair is invalid evidence for renderer parity. Fresh paired PTY
 captures must be produced before promoting any resulting glyph/style delta to
 an implementation change.
+
+**Fresh settled-frame audit (2026-08-08):** Private tmux/asciinema captures
+were produced for Grok and Runie at 62×32 and 80×24 using the `q Hey`
+scenario. These are the valid paired geometries; larger Grok captures that did
+not reach a settled phase were excluded. The first deterministic style
+mismatch was x=9, y=2: the header separator inherited Runie's path foreground
+instead of Grok's default foreground. The renderer now emits that separator as
+an unstyled cell and styles only the repository label. The first content
+mismatch was the settled thought row: Grok uses five transcript-gutter spaces
+before `◆`, while Runie incorrectly used the grouped activity rail. The feed
+projection and YAML/snapshot oracles now use the transcript gutter.
+
+Remaining live-capture deltas are dynamic or scenario-boundary differences:
+wall-clock timestamps, provider response text, worked-for duration, footer
+capability hints, and compact-mode hints. They are not treated as color or
+layout regressions until both implementations share a deterministic event
+sequence and clock.
