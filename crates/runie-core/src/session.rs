@@ -1030,6 +1030,82 @@ enum Command {
     },
 }
 
+enum StorageCommand {
+    Publish {
+        path: String,
+        contents: String,
+        reply: oneshot::Sender<Result<(), String>>,
+    },
+}
+
+/// Actor-owned atomic JSONL publication. Serialization stays outside this
+/// actor; no caller can observe a partially written destination file.
+#[derive(Clone)]
+pub struct SessionStorageActor {
+    tx: mpsc::Sender<StorageCommand>,
+    _owner: Arc<TaskOwner>,
+}
+
+impl SessionStorageActor {
+    pub fn new() -> Self {
+        let (tx, owner) =
+            spawn_actor_worker!(8, |mut rx: mpsc::Receiver<StorageCommand>| async move {
+                while let Some(command) = rx.recv().await {
+                    match command {
+                        StorageCommand::Publish {
+                            path,
+                            contents,
+                            reply,
+                        } => {
+                            let temporary = format!("{path}.tmp");
+                            let result = async {
+                                tokio::fs::write(&temporary, contents)
+                                    .await
+                                    .map_err(|error| format!("stage session JSONL: {error}"))?;
+                                if let Err(error) = tokio::fs::rename(&temporary, &path).await {
+                                    let _ = tokio::fs::remove_file(&temporary).await;
+                                    return Err(format!("publish session JSONL: {error}"));
+                                }
+                                Ok(())
+                            }
+                            .await;
+                            let _ = reply.send(result);
+                        }
+                    }
+                }
+            });
+        Self { tx, _owner: owner }
+    }
+
+    pub async fn publish_snapshot(
+        &self,
+        path: impl Into<String>,
+        snapshot: &SessionSnapshot,
+        session_id: &str,
+        created_at: i64,
+        cwd: &str,
+    ) -> Result<(), String> {
+        let (reply_tx, reply_rx) = oneshot::channel();
+        self.tx
+            .send(StorageCommand::Publish {
+                path: path.into(),
+                contents: snapshot.to_jsonl(session_id, created_at, cwd),
+                reply: reply_tx,
+            })
+            .await
+            .map_err(|_| "session storage actor is closed".to_owned())?;
+        reply_rx
+            .await
+            .map_err(|_| "session storage response was dropped".to_owned())?
+    }
+}
+
+impl Default for SessionStorageActor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Clone)]
 pub struct SessionActor {
     tx: mpsc::Sender<Command>,
@@ -1637,6 +1713,32 @@ mod tests {
             .expect("non-empty preparation");
         assert_eq!(preparation.retained_indices, vec![1]);
         assert_eq!(actor.snapshot().entries.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn storage_actor_publishes_a_complete_jsonl_file_atomically() {
+        let path = std::env::temp_dir().join(format!(
+            "runie-session-{}-{}.jsonl",
+            std::process::id(),
+            std::thread::current().name().unwrap_or("test")
+        ));
+        let path_string = path.to_string_lossy().into_owned();
+        let storage = SessionStorageActor::new();
+        let snapshot = SessionSnapshot::default();
+        storage
+            .publish_snapshot(&path_string, &snapshot, "session-1", 1, "/tmp")
+            .await
+            .expect("publish");
+        let contents = tokio::fs::read_to_string(&path).await.expect("read");
+        let header: serde_json::Value =
+            serde_json::from_str(contents.lines().next().expect("header line"))
+                .expect("header JSON");
+        assert_eq!(header["kind"], "header");
+        assert_eq!(header["version"], 4);
+        assert!(!tokio::fs::try_exists(format!("{path_string}.tmp"))
+            .await
+            .expect("temporary file check"));
+        let _ = tokio::fs::remove_file(path).await;
     }
 
     #[test]

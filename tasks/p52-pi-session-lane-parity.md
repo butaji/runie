@@ -103,6 +103,15 @@ result asynchronously. The actor remains the sole reader of live session
 state; no caller mutates or races a snapshot. Summary generation and the
 event-owned `CompactionCreated` journal mutation remain the next boundary.
 
+## Completed slice (2026-08-07, atomic storage actor)
+
+`SessionStorageActor` now stages serialized JSONL at a sibling `.tmp` path and
+atomically renames it into place. A failed rename removes the staged file and
+returns an error; serialization remains a pure `SessionSnapshot::to_jsonl`
+operation before the storage mailbox receives the contents. The actor owns
+the asynchronous filesystem task, and its test validates the v4 header and
+absence of the temporary file after publication.
+
 ## Current Runie mapping
 
 `runie-core/src/session.rs` owns parent-linked message/config entries and
