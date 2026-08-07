@@ -399,3 +399,11 @@ the computed scrollback height to the owned input worker through a bounded
 flush cap without mutating the worker from the renderer. The worker keeps its
 24-row fallback only until the first layout measurement arrives; post-gap
 backlog drain and an explicit runtime test of resize timing remain open.
+
+Flush-observation oracle slice (2026-08-07): `ScenarioOutcome` now carries
+the ordered pure scroll flush trace, and `StateAssertions.scroll_flushes`
+compares each YAML-declared record's timestamp, emitted lines, remaining
+backlog, and dropped amount. `visual-scroll-flush.yaml` therefore proves the
+two capped cadence flushes (`6/5` lines with backlog `5/0`) and the zero-burst
+finalization path. This closes the previous evidence gap without making the
+feed actor own duplicate scroll state.

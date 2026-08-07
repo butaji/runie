@@ -998,6 +998,8 @@ pub struct StateAssertions {
     pub selection_head: Option<usize>,
     pub autoscroll: Option<bool>,
     pub scroll_offset: Option<usize>,
+    /// Ordered cadence flush/finalize records from declarative scroll input.
+    pub scroll_flushes: Option<Vec<ScrollFlushAssertion>>,
     pub measured_content_rows: Option<usize>,
     pub measured_viewport_rows: Option<usize>,
     pub measured_anchor_row: Option<usize>,
@@ -1028,6 +1030,15 @@ pub struct StateAssertions {
     pub workflows: Option<BTreeMap<String, WorkflowStateAssertion>>,
     /// Exact actor-owned background-work projections keyed by work ID.
     pub background_work: Option<BTreeMap<String, BackgroundWorkStateAssertion>>,
+}
+
+#[derive(Debug, Deserialize, Default, Clone, PartialEq, Eq)]
+pub struct ScrollFlushAssertion {
+    pub kind: String,
+    pub at_ms: Option<u64>,
+    pub lines: i32,
+    pub backlog: i32,
+    pub dropped: i32,
 }
 
 #[derive(Debug, Deserialize, Default, Clone, PartialEq, Eq)]
@@ -1636,6 +1647,16 @@ pub struct ScenarioOutcome {
     pub abort_requested: bool,
     pub tool_execution: ToolExecutionMode,
     pub listener_events: Vec<String>,
+    pub scroll_flushes: Vec<ScrollFlushObservation>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ScrollFlushObservation {
+    pub kind: String,
+    pub at_ms: Option<u64>,
+    pub lines: i32,
+    pub backlog: i32,
+    pub dropped: i32,
 }
 
 struct ScenarioListener {
@@ -1742,6 +1763,7 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
         abort_requested: control.abort_requested,
         tool_execution: scenario.tool_execution.unwrap_or_default(),
         listener_events,
+        scroll_flushes: declared_scroll_trace(scenario),
     })
 }
 
@@ -1974,6 +1996,70 @@ fn declared_scrolls(scenario: &Scenario) -> Vec<ScrollbackMsg> {
         }
     }
     messages
+}
+
+#[allow(
+    clippy::too_many_lines,
+    reason = "the YAML flush oracle keeps raw, cadence, and finalization records in source order"
+)]
+fn declared_scroll_trace(scenario: &Scenario) -> Vec<ScrollFlushObservation> {
+    let mut normalizer = runie_tui_model::ScrollNormalizer::default();
+    let mut state = runie_tui_model::ScrollFlushState::new(normalizer, 24);
+    let mut trace = Vec::new();
+    for event in &scenario.events {
+        match event {
+            EventSpec::ScrollRawInput { scroll_raw_input } => {
+                normalizer = configure_scroll_normalizer(normalizer, scroll_raw_input);
+                let direction = match scroll_raw_input.direction.as_str() {
+                    "up" => runie_tui_model::ScrollDirection::Up,
+                    "down" => runie_tui_model::ScrollDirection::Down,
+                    _ => continue,
+                };
+                let (next, _) = state
+                    .with_normalizer(normalizer)
+                    .input_at(scroll_raw_input.at_ms, direction);
+                state = next;
+                normalizer = state.normalizer_for_replay();
+            }
+            EventSpec::ScrollFlush { scroll_flush } => {
+                let (next, flush) = state
+                    .with_viewport_rows(scroll_flush.viewport_rows)
+                    .flush_at(scroll_flush.at_ms);
+                state = next;
+                trace.push(ScrollFlushObservation {
+                    kind: "flush".into(),
+                    at_ms: Some(scroll_flush.at_ms),
+                    lines: flush.lines,
+                    backlog: flush.backlog,
+                    dropped: 0,
+                });
+            }
+            EventSpec::ScrollFinalize => {
+                let (next, finalized) = state.finalize();
+                state = next;
+                trace.push(ScrollFlushObservation {
+                    kind: "finalize".into(),
+                    at_ms: None,
+                    lines: finalized.flushed,
+                    backlog: finalized.backlog,
+                    dropped: finalized.dropped,
+                });
+            }
+            EventSpec::Bare(value) if value == "scroll_finalize" => {
+                let (next, finalized) = state.finalize();
+                state = next;
+                trace.push(ScrollFlushObservation {
+                    kind: "finalize".into(),
+                    at_ms: None,
+                    lines: finalized.flushed,
+                    backlog: finalized.backlog,
+                    dropped: finalized.dropped,
+                });
+            }
+            _ => {}
+        }
+    }
+    trace
 }
 
 fn configure_scroll_normalizer(
@@ -2790,6 +2876,24 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
             return Err(format!(
                 "state scroll_offset mismatch: expected {expected}, got {}",
                 outcome.feed.scroll_offset
+            ));
+        }
+    }
+    if let Some(expected) = &expected.scroll_flushes {
+        let actual = outcome
+            .scroll_flushes
+            .iter()
+            .map(|record| ScrollFlushAssertion {
+                kind: record.kind.clone(),
+                at_ms: record.at_ms,
+                lines: record.lines,
+                backlog: record.backlog,
+                dropped: record.dropped,
+            })
+            .collect::<Vec<_>>();
+        if &actual != expected {
+            return Err(format!(
+                "state scroll_flushes mismatch: expected {expected:?}, got {actual:?}"
             ));
         }
     }
