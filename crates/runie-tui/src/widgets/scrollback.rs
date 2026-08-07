@@ -12,8 +12,8 @@ use crate::appearance;
 use crate::view::PaintIntent;
 use runie_core::types::ThemeKind;
 pub use runie_tui_model::{
-    project_tool_card_rows, FeedNavigation, FeedSnapshot, FeedState, Line, LineKind, ScrollbackMsg,
-    ToolBlock, ToolCardKind, ToolCardPaintIntent, ToolCardRowKind,
+    logical_tool_member_index, project_tool_card_rows, FeedNavigation, FeedSnapshot, FeedState,
+    Line, LineKind, ScrollbackMsg, ToolBlock, ToolCardKind, ToolCardPaintIntent, ToolCardRowKind,
 };
 
 // Grok reserves a visible gutter between the first assistant row and its
@@ -694,25 +694,7 @@ impl Scrollback {
     pub fn model_snapshot(&self) -> FeedSnapshot {
         let selected_member_index = self.navigation.selected_entry.and_then(|entry| {
             let selected_id = self.lines.get(entry)?.tool_call_id.as_ref()?;
-            let mut indices = HashMap::new();
-            let mut next = 0usize;
-            for line in &self.lines {
-                let Some(id) = line.tool_call_id.as_ref() else {
-                    continue;
-                };
-                let index = if let Some(index) = indices.get(id) {
-                    *index
-                } else {
-                    let index = next;
-                    next += 1;
-                    indices.insert(id.clone(), index);
-                    index
-                };
-                if id == selected_id {
-                    return Some(index);
-                }
-            }
-            None
+            logical_tool_member_index(&self.lines, selected_id)
         });
         FeedSnapshot {
             lines: self.lines.clone(),
@@ -1343,23 +1325,7 @@ impl Scrollback {
             })
             .nth(occurrence)?;
         let id = line.tool_call_id.as_deref()?;
-        let mut member_indices = HashMap::new();
-        let mut next_member_index = 0usize;
-        let member_index = self
-            .lines
-            .iter()
-            .filter_map(|candidate| candidate.tool_call_id.as_ref())
-            .find_map(|candidate_id| {
-                let index = if let Some(index) = member_indices.get(candidate_id) {
-                    *index
-                } else {
-                    let index = next_member_index;
-                    next_member_index += 1;
-                    member_indices.insert(candidate_id.clone(), index);
-                    index
-                };
-                (candidate_id == id).then_some(index)
-            })?;
+        let member_index = logical_tool_member_index(&self.lines, id)?;
         let rows = project_tool_card_rows(
             &self.lines,
             &self.navigation.tool_names,

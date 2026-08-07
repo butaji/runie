@@ -739,3 +739,8 @@ resolves the source line's logical member ordinal and requires the matching
 `ToolCardRow.member_index` before applying theme intent. Duplicate text can no
 longer silently borrow the first card's paint role; the renderer consumes the
 actor/model identity instead of rebuilding card ownership from text alone.
+
+Member identity SSOT (2026-08-06): logical member ordinal derivation is now
+centralized in the pure `runie-tui-model::logical_tool_member_index` helper.
+Feed snapshots, compatibility snapshots, and renderer paint resolution all use
+that same function; no layer independently reconstructs member ownership.

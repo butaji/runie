@@ -193,6 +193,30 @@ pub struct ToolCardRow {
     pub is_error: bool,
 }
 
+/// Return the logical member ordinal for a tool call in transcript order.
+/// This is the single identity calculation shared by snapshots and renderers.
+pub fn logical_tool_member_index(lines: &[Line], tool_call_id: &str) -> Option<usize> {
+    let mut indices = HashMap::new();
+    let mut next = 0usize;
+    for line in lines {
+        let Some(id) = line.tool_call_id.as_deref() else {
+            continue;
+        };
+        let index = if let Some(index) = indices.get(id) {
+            *index
+        } else {
+            let index = next;
+            next += 1;
+            indices.insert(id.to_owned(), index);
+            index
+        };
+        if id == tool_call_id {
+            return Some(index);
+        }
+    }
+    None
+}
+
 impl ToolCardRow {
     pub fn paint_intent(&self) -> ToolCardPaintIntent {
         match self.row_kind {
@@ -931,25 +955,7 @@ impl FeedState {
     fn selected_member_index(&self) -> Option<usize> {
         let entry = self.navigation.selected_entry?;
         let selected_id = self.lines.get(entry)?.tool_call_id.as_ref()?;
-        let mut indices = HashMap::new();
-        let mut next = 0usize;
-        for line in &self.lines {
-            let Some(id) = line.tool_call_id.as_ref() else {
-                continue;
-            };
-            let index = if let Some(index) = indices.get(id) {
-                *index
-            } else {
-                let index = next;
-                next += 1;
-                indices.insert(id.clone(), index);
-                index
-            };
-            if id == selected_id {
-                return Some(index);
-            }
-        }
-        None
+        logical_tool_member_index(&self.lines, selected_id)
     }
 
     #[allow(
