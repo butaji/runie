@@ -1036,6 +1036,10 @@ enum StorageCommand {
         contents: String,
         reply: oneshot::Sender<Result<(), String>>,
     },
+    Load {
+        path: String,
+        reply: oneshot::Sender<Result<(String, String, SessionSnapshot), String>>,
+    },
 }
 
 /// Actor-owned atomic JSONL publication. Serialization stays outside this
@@ -1071,6 +1075,17 @@ impl SessionStorageActor {
                             .await;
                             let _ = reply.send(result);
                         }
+                        StorageCommand::Load { path, reply } => {
+                            let result = async {
+                                let contents = tokio::fs::read_to_string(&path)
+                                    .await
+                                    .map_err(|error| format!("read session JSONL: {error}"))?;
+                                let repaired = SessionSnapshot::repair_jsonl_torn_tail(&contents)?;
+                                SessionSnapshot::from_jsonl(&repaired)
+                            }
+                            .await;
+                            let _ = reply.send(result);
+                        }
                     }
                 }
             });
@@ -1090,6 +1105,23 @@ impl SessionStorageActor {
             .send(StorageCommand::Publish {
                 path: path.into(),
                 contents: snapshot.to_jsonl(session_id, created_at, cwd),
+                reply: reply_tx,
+            })
+            .await
+            .map_err(|_| "session storage actor is closed".to_owned())?;
+        reply_rx
+            .await
+            .map_err(|_| "session storage response was dropped".to_owned())?
+    }
+
+    pub async fn load_snapshot(
+        &self,
+        path: impl Into<String>,
+    ) -> Result<(String, String, SessionSnapshot), String> {
+        let (reply_tx, reply_rx) = oneshot::channel();
+        self.tx
+            .send(StorageCommand::Load {
+                path: path.into(),
                 reply: reply_tx,
             })
             .await
@@ -1735,6 +1767,10 @@ mod tests {
                 .expect("header JSON");
         assert_eq!(header["kind"], "header");
         assert_eq!(header["version"], 4);
+        let (session_id, cwd, loaded) = storage.load_snapshot(&path_string).await.expect("load");
+        assert_eq!(session_id, "session-1");
+        assert_eq!(cwd, "/tmp");
+        assert_eq!(loaded.sequence, snapshot.sequence);
         assert!(!tokio::fs::try_exists(format!("{path_string}.tmp"))
             .await
             .expect("temporary file check"));

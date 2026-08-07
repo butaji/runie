@@ -112,6 +112,11 @@ operation before the storage mailbox receives the contents. The actor owns
 the asynchronous filesystem task, and its test validates the v4 header and
 absence of the temporary file after publication.
 
+The same actor now owns loading: it reads the file, applies the pure Pi
+torn-tail repair boundary, and returns validated `(session_id, cwd, snapshot)`
+data through its mailbox. Caller code does not perform filesystem reads or
+direct snapshot replacement.
+
 ## Current Runie mapping
 
 `runie-core/src/session.rs` owns parent-linked message/config entries and
