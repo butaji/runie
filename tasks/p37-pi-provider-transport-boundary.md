@@ -74,9 +74,9 @@ Not yet implemented behaviorally:
 - `maxRetryDelayMs`: retry delay is capped by the option, with provider
   `retry-after` metadata taking precedence before the cap and injectable
   delay/jitter hooks keeping replay deterministic.
-- named temperature/cache-retention fields: Runie's current provider boundary
-  does not construct provider-specific payloads, so promoting them requires a
-  concrete adapter contract rather than merely deserializing unused fields.
+- provider-specific temperature/cache marker generation: the generic actor
+  now carries both options, but concrete payload mapping still requires an
+  adapter contract and must not be inferred from transport metadata alone.
 - WebSocket open-handshake timeout is carried as separate request metadata;
   the current HTTP actor still does not open WebSockets.
 
