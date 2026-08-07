@@ -126,6 +126,14 @@ Storage integration coverage now appends an invalid final physical line and
 loads it through the actor, proving the Pi torn-tail rule at the filesystem
 boundary rather than only in a pure parser test.
 
+## Completed slice (2026-08-07, lane event DSL)
+
+`session_lane_event!` and `session_lane_record_name!` provide explicit macro
+arms for all nine Pi operation-lane families. Rust adapters now get a typed
+family choice while retaining Pi's JSON payload shape; unknown strings cannot
+be created through this DSL. A test constructs every family and verifies the
+wire names.
+
 ## Current Runie mapping
 
 `runie-core/src/session.rs` owns parent-linked message/config entries and

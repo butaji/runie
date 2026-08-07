@@ -43,6 +43,50 @@ macro_rules! agent_event_kind {
     }};
 }
 
+/// Construct a Pi session-lane event with an explicit compile-time family.
+/// The payload remains JSON because Pi's wire record fields differ per family;
+/// the macro prevents unknown record-type strings at Rust call sites.
+#[macro_export]
+macro_rules! session_lane_event {
+    ($kind:ident, $data:expr) => {
+        $crate::types::AgentEvent::OperationRecordCreated {
+            record_type: $crate::session_lane_record_name!($kind).to_owned(),
+            data: $data,
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! session_lane_record_name {
+    (operation_started) => {
+        "operation_started"
+    };
+    (abort_requested) => {
+        "abort_requested"
+    };
+    (operation_finished) => {
+        "operation_finished"
+    };
+    (step_attempt) => {
+        "step_attempt"
+    };
+    (tool_started) => {
+        "tool_started"
+    };
+    (queue_enqueued) => {
+        "queue_enqueued"
+    };
+    (queue_cancelled) => {
+        "queue_cancelled"
+    };
+    (write_deferred) => {
+        "write_deferred"
+    };
+    (usage) => {
+        "usage"
+    };
+}
+
 #[macro_export]
 macro_rules! assistant_event_kind {
     ($event:expr) => {{
@@ -245,6 +289,32 @@ mod tests {
 
         let repeated = crate::event_sequence![crate::types::AgentEvent::Reset; 2];
         assert_eq!(repeated.len(), 2);
+    }
+
+    #[test]
+    fn session_lane_macro_covers_every_pi_record_family() {
+        let events = vec![
+            crate::session_lane_event!(operation_started, serde_json::json!({"id": "op"})),
+            crate::session_lane_event!(abort_requested, serde_json::json!({"runId": "op"})),
+            crate::session_lane_event!(operation_finished, serde_json::json!({"runId": "op"})),
+            crate::session_lane_event!(step_attempt, serde_json::json!({"runId": "op"})),
+            crate::session_lane_event!(tool_started, serde_json::json!({"runId": "op"})),
+            crate::session_lane_event!(queue_enqueued, serde_json::json!({"runId": "op"})),
+            crate::session_lane_event!(queue_cancelled, serde_json::json!({"id": "queue"})),
+            crate::session_lane_event!(write_deferred, serde_json::json!({"runId": "op"})),
+            crate::session_lane_event!(usage, serde_json::json!({"entryId": "entry"})),
+        ];
+        assert_eq!(events.len(), 9);
+        assert!(matches!(
+            &events[0],
+            crate::types::AgentEvent::OperationRecordCreated { record_type, .. }
+                if record_type == "operation_started"
+        ));
+        assert!(matches!(
+            &events[8],
+            crate::types::AgentEvent::OperationRecordCreated { record_type, .. }
+                if record_type == "usage"
+        ));
     }
 
     #[test]
