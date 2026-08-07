@@ -522,3 +522,11 @@ returned as message data and reduced by `ScrollbackActor`. Direct legacy row
 replacement, settling, output append, and argument removal were removed. The
 obsolete row mutation helpers were deleted after the compiler confirmed they
 had no remaining callers.
+
+**Message lifecycle helper migration (2026-08-08):** Message start/update/end
+events are now treated as actor-owned transcript/status transitions in
+`apply_actor_event`; the compatibility metadata hook no longer dispatches
+them into a second projection. Direct assistant/reasoning mutation helpers
+and the renderer-local `ScrollbackExt` adapter were deleted. The 23 renderer
+unit tests, YAML replay suite, and visual snapshots continue to validate the
+actor event → snapshot → pure render path.

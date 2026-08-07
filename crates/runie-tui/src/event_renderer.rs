@@ -7,8 +7,11 @@ use runie_core::types::AssistantContent;
 use runie_core::types::{AgentEvent, AssistantMessageEvent};
 use tokio::sync::broadcast;
 
-use crate::widgets::{Line, LineKind, Scrollback, ScrollbackMsg, Status, StatusBar, StatusMsg};
+use crate::widgets::{Line, LineKind, Scrollback, ScrollbackMsg, StatusBar, StatusMsg};
 use crate::{ScrollbackActor, StatusActor};
+
+#[cfg(test)]
+use crate::widgets::Status;
 
 pub use runie_tui_model::status_messages_for_event;
 
@@ -277,17 +280,6 @@ pub struct EventRenderer {
 }
 
 impl EventRenderer {
-    fn assistant_stream_open(&self) -> bool {
-        if let Some(actor) = &self.scrollback_actor {
-            actor.model_snapshot().assistant_stream_open
-        } else {
-            self.scrollback
-                .lock()
-                .model_snapshot()
-                .assistant_stream_open
-        }
-    }
-
     fn with_projections(
         scrollback: Projection<Scrollback>,
         status: Projection<StatusBar>,
@@ -669,9 +661,12 @@ impl EventRenderer {
                 }
             }
             AgentEvent::Reset => {}
-            AgentEvent::MessageStart { message } => self.handle_message_start(message),
-            AgentEvent::MessageUpdate { event, .. } => self.handle_message_update(event),
-            AgentEvent::MessageEnd { message } => self.handle_message_end(message),
+            // Transcript and assistant lifecycle events are reduced by the
+            // actor-backed feed above; this compatibility metadata hook must
+            // not recreate a second message projection.
+            AgentEvent::MessageStart { .. }
+            | AgentEvent::MessageUpdate { .. }
+            | AgentEvent::MessageEnd { .. } => {}
             AgentEvent::ToolExecutionStart { .. }
             | AgentEvent::ToolExecutionUpdate { .. }
             | AgentEvent::ToolExecutionEnd { .. }
@@ -895,165 +890,6 @@ impl EventRenderer {
         }
     }
 
-    #[allow(clippy::too_many_lines)]
-    fn handle_message_start(&mut self, message: runie_core::types::AgentMessage) {
-        use runie_core::types::AgentMessage;
-        match message {
-            AgentMessage::User(user) => {
-                if self.scrollback_actor.is_none() && user.timestamp >= LIVE_TIMESTAMP_SECONDS_MIN {
-                    self.scrollback
-                        .lock()
-                        .set_prompt_timestamp(Some(format_clock_timestamp(user.timestamp)));
-                }
-                let text = user
-                    .content
-                    .iter()
-                    .map(|content| match content {
-                        runie_core::types::UserContent::Text { text } => text.as_str(),
-                        runie_core::types::UserContent::Image { .. } => "[image]",
-                    })
-                    .collect::<Vec<_>>()
-                    .join("");
-                if self.scrollback_actor.is_none() {
-                    self.scrollback
-                        .lock()
-                        .append(Line::new(LineKind::User, text).with_vpad(true));
-                }
-            }
-            AgentMessage::Assistant(_) => {
-                if self.scrollback_actor.is_none() {
-                    self.scrollback
-                        .lock()
-                        .apply(ScrollbackMsg::AssistantStreamStart);
-                }
-                if self.scrollback_actor.is_none() {
-                    let mut scrollback = self.scrollback.lock();
-                    scrollback.append(Line::new(LineKind::Separator, ""));
-                    scrollback.append(Line::new(LineKind::ThinkingStatus, "◆ Thinking…"));
-                    scrollback.append(Line::new(LineKind::Separator, ""));
-                    scrollback.append(Line::new(LineKind::Assistant, String::new()));
-                }
-            }
-            AgentMessage::ToolResult(_)
-            | AgentMessage::CompactionSummary(_)
-            | AgentMessage::Custom(_) => {}
-        }
-    }
-
-    #[allow(clippy::cognitive_complexity)]
-    fn handle_message_end(&mut self, message: runie_core::types::AgentMessage) {
-        if let runie_core::types::AgentMessage::Assistant(assistant) = message {
-            if self.scrollback_actor.is_none() {
-                self.scrollback
-                    .lock()
-                    .apply(ScrollbackMsg::AssistantStreamEnd);
-            }
-            if self.scrollback_actor.is_none() {
-                let mut scrollback = self.scrollback.lock();
-                let has_reasoning = scrollback
-                    .lines()
-                    .iter()
-                    .any(|line| line.kind == LineKind::Reasoning && !line.text.is_empty());
-                if !scrollback.reasoning_expanded() {
-                    if let Some(reasoning) = scrollback.last_mut_by_kind(LineKind::Reasoning) {
-                        reasoning.text = "Thought".into();
-                    }
-                }
-                // Grok commits the provisional thinking indicator as a compact
-                // session event in collapsed mode. Expanded mode keeps the
-                // reasoning event as the authoritative body projection.
-                if has_reasoning && scrollback.reasoning_expanded() {
-                    scrollback.remove_kind(LineKind::ThinkingStatus);
-                } else if has_reasoning {
-                    if let Some(thinking) = scrollback.last_mut_by_kind(LineKind::ThinkingStatus) {
-                        thinking.kind = LineKind::TurnSummary;
-                        thinking.text = thinking_summary(self.thinking_elapsed_ms());
-                    }
-                    scrollback.remove_kind(LineKind::Reasoning);
-                } else {
-                    // Plain responses do not create a Grok Thinking block; the
-                    // provisional working indicator is transient only.
-                    scrollback.remove_kind(LineKind::ThinkingStatus);
-                }
-            }
-            if let Some(error) = assistant.error_message {
-                if self.status_actor.is_none() {
-                    self.status.lock().set(Status::Error(error.clone()));
-                }
-                if self.scrollback_actor.is_none() {
-                    self.scrollback
-                        .lock()
-                        .append(Line::new(LineKind::System, format!("error: {error}")));
-                }
-            }
-        }
-    }
-
-    #[allow(
-        clippy::too_many_lines,
-        reason = "message lifecycle keeps compatibility feed and actor status transition aligned"
-    )]
-    #[allow(clippy::cognitive_complexity)]
-    fn handle_message_update(&mut self, event: AssistantMessageEvent) {
-        match event {
-            AssistantMessageEvent::TextDelta { delta, .. } if self.assistant_stream_open() => {
-                if self.status_actor.is_none() {
-                    self.status.lock().set(Status::Streaming);
-                }
-                if self.scrollback_actor.is_none() {
-                    self.append_assistant_delta(&delta);
-                }
-            }
-            AssistantMessageEvent::ThinkingDelta { delta, .. } if self.assistant_stream_open() => {
-                if self.status_actor.is_none() {
-                    self.status.lock().set(Status::Thinking);
-                }
-                if self.scrollback_actor.is_none() {
-                    self.append_reasoning_delta(&delta);
-                }
-            }
-            AssistantMessageEvent::Done {
-                stop_reason, usage, ..
-            } => {
-                if self.status_actor.is_none() {
-                    let mut status = self.status.lock();
-                    status.finish_turn(usage, stop_reason);
-                    status.set(Status::Ready);
-                }
-            }
-            AssistantMessageEvent::Error { error, .. } => {
-                if self.status_actor.is_none() {
-                    self.status.lock().set(Status::Error(error.error_text()));
-                }
-                if self.scrollback_actor.is_none() {
-                    self.scrollback.lock().append(Line::new(
-                        LineKind::System,
-                        format!("error: {}", error.error_text()),
-                    ));
-                }
-            }
-            AssistantMessageEvent::ToolCallDelta { .. }
-            | AssistantMessageEvent::ToolCallStart { .. }
-            | AssistantMessageEvent::ToolCallEnd { .. }
-            | AssistantMessageEvent::Start { .. }
-            | AssistantMessageEvent::TextStart { .. }
-            | AssistantMessageEvent::TextEnd { .. }
-            | AssistantMessageEvent::ThinkingStart { .. }
-            | AssistantMessageEvent::ThinkingEnd { .. }
-            | AssistantMessageEvent::TextDelta { .. }
-            | AssistantMessageEvent::ThinkingDelta { .. } => {}
-        }
-    }
-
-    fn append_assistant_delta(&self, delta: &str) {
-        let mut sb = self.scrollback.lock();
-        if let Some(last) = sb.lines_mut_last_assistant() {
-            last.text.push_str(delta);
-        } else {
-            sb.append(Line::new(LineKind::Assistant, delta.to_string()));
-        }
-    }
-
     fn tool_row_index(&self, tool_call_id: &str) -> Option<usize> {
         if self.scrollback_actor.is_some() {
             return None;
@@ -1187,15 +1023,6 @@ impl EventRenderer {
             .get(tool_call_id)
             .cloned()
             .unwrap_or(serde_json::Value::Null)
-    }
-
-    fn append_reasoning_delta(&self, delta: &str) {
-        let mut sb = self.scrollback.lock();
-        if let Some(last) = sb.last_mut_by_kind(LineKind::Reasoning) {
-            last.text.push_str(delta);
-        } else {
-            sb.append(Line::new(LineKind::Reasoning, delta.to_string()));
-        }
     }
 }
 
@@ -1753,17 +1580,6 @@ pub fn welcome_modal_lines() -> Vec<Line> {
     ]
 }
 
-// Extension methods on Scrollback for last-line replacement. Kept here to
-// avoid touching the widget from the renderer module.
-trait ScrollbackExt {
-    fn lines_mut_last_assistant(&mut self) -> Option<&mut Line>;
-}
-impl ScrollbackExt for Scrollback {
-    fn lines_mut_last_assistant(&mut self) -> Option<&mut Line> {
-        self.last_mut_by_kind(LineKind::Assistant)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1954,7 +1770,14 @@ mod tests {
                 partial: Default::default(),
             },
         });
-        assert!(!renderer.assistant_stream_open());
+        assert!(
+            !renderer
+                .scrollback_actor
+                .as_ref()
+                .expect("actor-backed renderer")
+                .model_snapshot()
+                .assistant_stream_open
+        );
     }
 
     #[tokio::test]
