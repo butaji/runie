@@ -148,6 +148,8 @@ macro_rules! session_config_record {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SessionConfigEntry {
     pub id: String,
+    /// Canonical Pi session-lane identity for configuration facts.
+    pub lane: String,
     pub seq: u64,
     pub parent_id: Option<String>,
     pub timestamp: i64,
@@ -1993,6 +1995,7 @@ impl SessionSnapshot {
             sequence += 1;
             fork.config_records.push(SessionConfigEntry {
                 id: format!("fork-fact-{sequence}"),
+                lane: "main".into(),
                 seq: sequence,
                 parent_id: Some(target_id.to_owned()),
                 timestamp: 0,
@@ -2007,6 +2010,7 @@ impl SessionSnapshot {
             sequence += 1;
             fork.config_records.push(SessionConfigEntry {
                 id: format!("fork-fact-{sequence}"),
+                lane: "main".into(),
                 seq: sequence,
                 parent_id: Some(target_id.to_owned()),
                 timestamp: 0,
@@ -2354,6 +2358,12 @@ impl SessionSnapshot {
                 reduce_operation_record(&mut snapshot, entry_type, &value);
                 snapshot.config_records.push(SessionConfigEntry {
                     id,
+                    lane: value
+                        .get("lane")
+                        .and_then(serde_json::Value::as_str)
+                        .filter(|lane| !lane.is_empty())
+                        .unwrap_or("main")
+                        .to_owned(),
                     seq,
                     parent_id,
                     timestamp,
@@ -2541,7 +2551,7 @@ impl SessionSnapshot {
                 }
             }
             entry["kind"] = serde_json::Value::String("entry".into());
-            entry["lane"] = serde_json::Value::String("main".into());
+            entry["lane"] = serde_json::Value::String(session_entry.lane.clone());
             entry["type"] = serde_json::Value::String(entry_type.into());
             entry["id"] = serde_json::Value::String(session_entry.id.clone());
             entry["parentId"] = session_entry
@@ -3129,6 +3139,7 @@ impl SessionActor {
                         next_id += 1;
                         let entry = SessionConfigEntry {
                             id: id.clone(),
+                            lane: "main".into(),
                             seq: state.sequence,
                             parent_id: state.leaf_id.clone(),
                             // Configuration events carry no Pi timestamp;
@@ -3411,6 +3422,7 @@ impl SessionActor {
                         next_id += 1;
                         let entry = SessionConfigEntry {
                             id: id.clone(),
+                            lane: "main".into(),
                             seq: state.sequence,
                             parent_id: state.leaf_id.clone(),
                             timestamp: 0,
@@ -4534,6 +4546,7 @@ mod tests {
             }],
             config_records: vec![SessionConfigEntry {
                 id: "entry-2".into(),
+                lane: "main".into(),
                 seq: 2,
                 parent_id: Some("entry-1".into()),
                 timestamp: 7,
@@ -4931,6 +4944,7 @@ mod tests {
         ];
         snapshot.config_records = vec![SessionConfigEntry {
             id: "config-3".into(),
+            lane: "main".into(),
             seq: 3,
             parent_id: Some("message-2".into()),
             timestamp: 0,
@@ -5370,6 +5384,7 @@ mod tests {
             ],
             config_records: vec![SessionConfigEntry {
                 id: "entry-3".into(),
+                lane: "main".into(),
                 seq: 3,
                 parent_id: Some("entry-2".into()),
                 timestamp: 0,
@@ -5431,6 +5446,7 @@ mod tests {
             ],
             config_records: vec![SessionConfigEntry {
                 id: "summary".into(),
+                lane: "main".into(),
                 seq: 4,
                 parent_id: Some("root".into()),
                 timestamp: 9,
@@ -5672,6 +5688,7 @@ mod tests {
         });
         snapshot.config_records.push(SessionConfigEntry {
             id: "summary-1".into(),
+            lane: "main".into(),
             seq: 2,
             parent_id: Some("entry-1".into()),
             timestamp: 0,
@@ -5876,6 +5893,7 @@ mod tests {
             config_records: vec![
                 SessionConfigEntry {
                     id: "entry-1".into(),
+                    lane: "main".into(),
                     seq: 1,
                     parent_id: None,
                     timestamp: 0,
@@ -5885,6 +5903,7 @@ mod tests {
                 },
                 SessionConfigEntry {
                     id: "entry-2".into(),
+                    lane: "main".into(),
                     seq: 2,
                     parent_id: Some("entry-1".into()),
                     timestamp: 0,
@@ -6044,7 +6063,7 @@ mod tests {
         })
         .to_string();
         let extension = serde_json::json!({
-            "kind": "entry", "lane": "main", "type": "plugin_event",
+            "kind": "entry", "lane": "secondary", "type": "plugin_event",
             "id": "plugin-1", "parentId": null, "seq": 1, "timestamp": 7,
             "plugin": "example", "payload": {"enabled": true}
         });
@@ -6055,8 +6074,10 @@ mod tests {
             Some(SessionConfigRecord::OperationRecordCreated { record_type, data })
                 if record_type == "plugin_event" && data["payload"]["enabled"] == true
         ));
+        assert_eq!(snapshot.config_records[0].lane, "secondary");
         let exported = snapshot.to_jsonl("s", 5, "/w");
         assert!(exported.contains("\"type\":\"plugin_event\""));
+        assert!(exported.contains("\"lane\":\"secondary\""));
         assert!(exported.contains("\"enabled\":true"));
     }
 

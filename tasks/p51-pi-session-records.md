@@ -7,6 +7,8 @@ implemented; broader Pi record families remain open (2026-08-07)
 now preserves unknown extension `type` values and payloads as
 `OperationRecordCreated` facts. They remain actor-owned journal records and
 are not fabricated as messages or reduced as typed operation capabilities.
+Configuration records now also retain their explicit Pi `lane` across the
+actor snapshot and JSONL round-trip; export no longer hard-codes `main`.
 
 ## Source contract
 
