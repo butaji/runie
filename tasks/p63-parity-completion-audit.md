@@ -33,8 +33,10 @@ provider-specific contract”. The source of truth is the current Pi tree at
    connector/socket lifecycle, URL/header/envelope construction, Responses
    message validation/decoding, explicit fallback capability, and close/error
    cleanup. `TokioCodexWebSocketConnector` now supplies the production socket
-   and timeout/header/frame boundary; full cached live-session continuation and
-   deployment wiring remain adapter integration work.
+   and timeout/header/frame boundary; cached continuation retry, bounded
+   pre-stream fallback, and provider-owned cleanup are implemented in the
+   adapter. Live-environment deployment evidence remains separate from the
+   deterministic replay/actor contract.
    Runie's replay adapter now also accepts Pi's OpenAI Responses text-delta and
    completion event names, plus function-call argument deltas keyed by
    `output_index`, and normalizes them to the ordinary assistant event
