@@ -262,7 +262,7 @@ impl EventRenderer {
     #[allow(
         clippy::cognitive_complexity,
         clippy::too_many_lines,
-        reason = "event loop coordinates owned status/feed projections and shutdown"
+        reason = "event loop coordinates owned status/feed projections and shutdown from one atomic FeedSnapshot read per delivery"
     )]
     pub async fn run(
         mut self,
@@ -331,7 +331,13 @@ impl EventRenderer {
                                 )),
                                 _ => None,
                             };
-                            let turn_was_started = scrollback_actor.model_snapshot().turn_started;
+                            // One atomic `FeedSnapshot` read per bus delivery.
+                            // Everything below this point is synchronous, so
+                            // the turn flag and the assistant-finalize inputs
+                            // observe the same scrollback generation instead
+                            // of two independently torn reads.
+                            let scrollback_snapshot = scrollback_actor.model_snapshot();
+                            let turn_was_started = scrollback_snapshot.turn_started;
                             let mut feed_messages = scrollback_messages_for_event(&event);
                             if matches!(event, AgentEvent::TurnStart) {
                                 feed_messages.push(ScrollbackMsg::TurnStart);
@@ -354,7 +360,7 @@ impl EventRenderer {
                                 message: runie_core::types::AgentMessage::Assistant(_),
                             } = &event
                             {
-                                let feed_snapshot = scrollback_actor.model_snapshot();
+                                let feed_snapshot = &scrollback_snapshot;
                                 let has_reasoning = feed_snapshot.lines.iter().any(|line| {
                                     line.kind == LineKind::Reasoning && !line.text.is_empty()
                                 });
@@ -438,7 +444,7 @@ impl EventRenderer {
     #[allow(
         clippy::cognitive_complexity,
         clippy::too_many_lines,
-        reason = "actor replay keeps one event-to-projection transaction explicit"
+        reason = "actor replay keeps one event-to-projection transaction explicit on a single atomic FeedSnapshot read"
     )]
     pub async fn apply_actor_event(&mut self, event: AgentEvent) {
         let status_actor = self.status_actor.clone();
@@ -470,7 +476,12 @@ impl EventRenderer {
             )),
             _ => None,
         };
-        let turn_was_started = scrollback_actor.model_snapshot().turn_started;
+        // One atomic `FeedSnapshot` read per replayed event. The remainder of
+        // this body is synchronous, so the turn flag and the
+        // assistant-finalize inputs observe the same scrollback generation
+        // instead of two independently torn reads.
+        let scrollback_snapshot = scrollback_actor.model_snapshot();
+        let turn_was_started = scrollback_snapshot.turn_started;
         let mut messages = scrollback_messages_for_event(&event);
         if matches!(event, AgentEvent::TurnStart) {
             messages.push(ScrollbackMsg::TurnStart);
@@ -482,7 +493,7 @@ impl EventRenderer {
             message: runie_core::types::AgentMessage::Assistant(_),
         } = &event
         {
-            let feed_snapshot = scrollback_actor.model_snapshot();
+            let feed_snapshot = &scrollback_snapshot;
             let has_reasoning = feed_snapshot
                 .lines
                 .iter()

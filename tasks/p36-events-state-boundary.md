@@ -735,3 +735,47 @@ both `handle_tool_start` and `handle_tool_update` now state the
 atomic-snapshot guarantee. The full `just ci` (fmt-check, clippy,
 lint, test, parity, source inventory, Pi event contract, feed-actor
 boundary) is green.
+
+**`MessageEnd::Assistant` atomic snapshot coalesce (2026-08-08):** the live
+`EventRenderer::run` bus arm and the replay `EventRenderer::apply_actor_event`
+path in `crates/runie-tui/src/event_renderer.rs` each walked
+`scrollback_actor.model_snapshot()` twice per event: once for
+`let turn_was_started = scrollback_actor.model_snapshot().turn_started;` and
+again inside the `AgentEvent::MessageEnd { message: AgentMessage::Assistant(_) }`
+branch for `let feed_snapshot = scrollback_actor.model_snapshot();`, which
+supplies `has_reasoning` (a `LineKind::Reasoning` scan over
+`feed_snapshot.lines`), `reasoning_expanded`, and the
+`feed_snapshot.tool_blocks.is_empty()` half of `settled_no_tool_phase`. Each
+call clones the entire `FeedSnapshot` — `lines`, `tool_blocks`, `tool_names`,
+and the navigation projection — out of the actor's `watch` cell
+(`ScrollbackActor::model_snapshot` at `crates/runie-tui/src/scrollback_actor.rs:110`
+is `self.snapshot.borrow().clone()`), so an assistant closure paid two full
+clones and, worse, could observe two different scrollback generations: an
+`apply_batch` landing between the two reads would let the turn-summary
+eligibility flag disagree with the reasoning/tool-block facts used to build
+`ScrollbackMsg::FinalizeAssistant`. Both paths now bind one
+`let scrollback_snapshot = scrollback_actor.model_snapshot();` at the top of
+the per-event projection body — immediately before
+`scrollback_messages_for_event(&event)` — read `turn_was_started` from that
+cached value, and reuse it in the `MessageEnd::Assistant` branch via
+`let feed_snapshot = &scrollback_snapshot;`, so `turn_was_started`,
+`has_reasoning`, `reasoning_expanded`, and `settled_no_tool_phase` all observe
+the same atomic `FeedSnapshot`. The clippy allow reasons on both functions now
+state that guarantee. Placement is deliberate: the binding sits at the start of
+the feed-message-building block rather than the literal first statement of the
+function. In `run` the literal top is outside the `loop`, which would freeze one
+snapshot for the whole session; in both functions the literal top also precedes
+`status_actor.apply_event(&event).await`, and moving a scrollback read backwards
+across an await point would widen — not close — the window in which a concurrent
+mailbox writer can change the feed. Everything from the new binding to the
+`FinalizeAssistant` push is synchronous, so the coalesced read is exactly
+equivalent to the previous first read and strictly narrower than the previous
+second one. The `FinalizeAssistant` payload shape and message ordering are
+unchanged. The 25 `event_renderer::tests` unit tests (including
+`actor_agent_end_emits_worked_for_only_after_turn_start`,
+`actor_message_update_appends_text_to_assistant_line`, and
+`live_and_replay_assistant_start_preserve_layout_parity_contract`), the 219
+`runie-tui` lib unit tests, the 5 `runie` binary unit tests, the 28
+`visual_snapshots` replay tests, and the full `just ci` (fmt-check, clippy,
+lint, test, parity, source inventory, Pi event contract, feed-actor boundary)
+are green.
