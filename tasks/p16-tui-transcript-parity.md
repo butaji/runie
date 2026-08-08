@@ -649,6 +649,10 @@ Web-fetch metadata fill increment (2026-08-08): response metadata rows now
 extend the Grok panel background through trailing physical cells, with a
 focused renderer regression for the `status:` row.
 
+Web-fetch title metadata increment (2026-08-08): optional `title:` response
+fields join `status:` and `content_type:` in the typed muted metadata family;
+body content remains a separate content row.
+
 Typed-card row vocabulary slice (2026-08-06): added model-owned
 `ToolCardRowKind`/`ToolCardRow` projections for header, content, and status
 semantics. The existing truncation projection now consumes those rows for

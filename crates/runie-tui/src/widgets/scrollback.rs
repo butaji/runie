@@ -1100,6 +1100,7 @@ impl Scrollback {
                     || text.trim_start().starts_with("Sources:")
                     || text.trim_start().starts_with("status:")
                     || text.trim_start().starts_with("content_type:")
+                    || text.trim_start().starts_with("title:")
                     || (text
                         .trim_start()
                         .as_bytes()

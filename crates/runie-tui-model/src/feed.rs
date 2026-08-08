@@ -1605,7 +1605,9 @@ fn is_memory_metadata(text: &str) -> bool {
 
 fn is_web_fetch_metadata(text: &str) -> bool {
     let trimmed = text.trim_start();
-    trimmed.starts_with("status:") || trimmed.starts_with("content_type:")
+    trimmed.starts_with("status:")
+        || trimmed.starts_with("content_type:")
+        || trimmed.starts_with("title:")
 }
 
 /// Project transcript rows into semantic card rows in transcript order.
@@ -3126,13 +3128,15 @@ mod tests {
             Line::new(LineKind::Tool, "Fetch https://example.com").for_tool("fetch-1"),
             Line::new(LineKind::ToolOutput, "status: 200").for_tool("fetch-1"),
             Line::new(LineKind::ToolOutput, "content_type: text/html").for_tool("fetch-1"),
+            Line::new(LineKind::ToolOutput, "title: Release notes").for_tool("fetch-1"),
             Line::new(LineKind::ToolOutput, "body").for_tool("fetch-1"),
         ];
         let names = HashMap::from([(String::from("fetch-1"), String::from("web_fetch"))]);
         let rows = project_tool_card_rows(&lines, &names, &HashMap::new());
         assert_eq!(rows[1].row_kind, ToolCardRowKind::Metadata);
         assert_eq!(rows[2].row_kind, ToolCardRowKind::Metadata);
-        assert_eq!(rows[3].row_kind, ToolCardRowKind::Content);
+        assert_eq!(rows[3].row_kind, ToolCardRowKind::Metadata);
+        assert_eq!(rows[4].row_kind, ToolCardRowKind::Content);
     }
 
     #[test]
