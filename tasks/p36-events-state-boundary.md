@@ -798,3 +798,22 @@ function were removed. A focused unit test
 `event_renderer::tests` unit tests, the 65 `runie-tui-model` lib unit
 tests, and the full `just ci` (fmt-check, clippy, lint, test, parity,
 source inventory, Pi event contract, feed-actor boundary) are green.
+
+Prompt-timestamp extraction (2026-08-08): `runie-tui-model::feed` now owns
+the live-prompt short-clock projection. `ScrollbackActor` no longer
+references the renderer's `LIVE_TIMESTAMP_SECONDS_MIN`,
+`format_clock_timestamp`, or `local_clock_parts`; the renderer-side copies
+were deleted and the `libc = "0.2"` dependency moved with them to
+`runie-tui-model`. `ScrollbackActor::scrollback_messages_for_event` now
+compares `user.timestamp` against the model-owned
+`PROMPT_TIMESTAMP_LIVE_THRESHOLD` and projects the user-message wall clock
+through `runie_tui_model::format_clock_timestamp`, so the model remains
+the single owner of the `H:MM AM/PM` shape and the UTC-derived 12-hour
+fallback. A focused unit test
+`format_clock_timestamp_pins_short_clock_shape` pins the short-clock
+shape across midnight, the 12-hour rollover, and the single-digit minute
+zero-padding, so replay and live paths share one identity. The 66
+`runie-tui-model` lib unit tests (including the new
+`format_clock_timestamp_pins_short_clock_shape`), the 218 `runie-tui` lib
+unit tests, and the full `just ci` (fmt-check, clippy, lint, test, parity,
+source inventory, Pi event contract, feed-actor boundary) are green.

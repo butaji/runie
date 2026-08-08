@@ -769,7 +769,6 @@ dependencies = [
  "crossterm",
  "futures",
  "insta",
- "libc",
  "opaline",
  "parking_lot",
  "ratatui",
@@ -790,6 +789,7 @@ dependencies = [
 name = "runie-tui-model"
 version = "0.1.0"
 dependencies = [
+ "libc",
  "runie-core",
  "serde",
  "serde_json",

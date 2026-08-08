@@ -9,6 +9,7 @@ description = "Pure actor-derived view models for the Grok-style Runie TUI"
 runie-core = { path = "../runie-core" }
 serde = { workspace = true }
 serde_json = { workspace = true }
+libc = "0.2"
 
 [lints]
 workspace = true

@@ -17,8 +17,6 @@ pub use runie_tui_model::status_messages_for_event;
 pub use runie_tui_model::thinking_summary;
 use runie_tui_model::FeedSnapshot;
 
-const LIVE_TIMESTAMP_SECONDS_MIN: i64 = 1_000_000_000;
-
 #[allow(
     clippy::too_many_lines,
     reason = "the event projection table keeps actor-owned mappings declarative"
@@ -41,9 +39,9 @@ pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
                 ScrollbackMsg::ActivityReset,
                 ScrollbackMsg::Append(Line::new(LineKind::User, text).with_vpad(true)),
             ];
-            if user.timestamp >= LIVE_TIMESTAMP_SECONDS_MIN {
+            if user.timestamp >= runie_tui_model::PROMPT_TIMESTAMP_LIVE_THRESHOLD {
                 messages.push(ScrollbackMsg::SetPromptTimestamp(Some(
-                    format_clock_timestamp(user.timestamp),
+                    runie_tui_model::format_clock_timestamp(user.timestamp),
                 )));
             }
             messages
@@ -787,39 +785,6 @@ fn activity_counts_with_start(
         None => {}
     }
     (dirs, files, commands, subagents, failures)
-}
-
-fn format_clock_timestamp(timestamp: i64) -> String {
-    let (hour24, minute) = local_clock_parts(timestamp).unwrap_or_else(|| {
-        const SECONDS_PER_DAY: i64 = 86_400;
-        const SECONDS_PER_HOUR: i64 = 3_600;
-        const SECONDS_PER_MINUTE: i64 = 60;
-        let seconds = timestamp.rem_euclid(SECONDS_PER_DAY);
-        (
-            seconds / SECONDS_PER_HOUR,
-            (seconds % SECONDS_PER_HOUR) / SECONDS_PER_MINUTE,
-        )
-    });
-    let hour12 = match hour24 % 12 {
-        0 => 12,
-        hour => hour,
-    };
-    let meridiem = if hour24 < 12 { "AM" } else { "PM" };
-    format!("{hour12}:{minute:02} {meridiem}")
-}
-
-fn local_clock_parts(timestamp: i64) -> Option<(i64, i64)> {
-    let raw = timestamp as libc::time_t;
-    let mut local = std::mem::MaybeUninit::<libc::tm>::uninit();
-    // SAFETY: `localtime_r` writes a complete `tm` into the valid pointer or
-    // returns null. No global libc timezone state is exposed to the caller.
-    let result = unsafe { libc::localtime_r(&raw, local.as_mut_ptr()) };
-    if result.is_null() {
-        return None;
-    }
-    // SAFETY: a non-null result means libc initialized the structure.
-    let local = unsafe { local.assume_init() };
-    Some((i64::from(local.tm_hour), i64::from(local.tm_min)))
 }
 
 #[allow(
@@ -2339,15 +2304,6 @@ mod tests {
         );
         assert_eq!(make_relative_path(cwd.to_string_lossy().as_ref()), ".");
         assert_eq!(make_relative_path("/tmp/other/file"), "/tmp/other/file");
-    }
-
-    #[test]
-    fn live_prompt_timestamp_uses_grok_short_clock_format() {
-        for timestamp in [13 * 3_600 + 7 * 60, 0] {
-            let formatted = format_clock_timestamp(timestamp);
-            assert!(formatted.contains(':'), "{formatted}");
-            assert!(formatted.ends_with(" AM") || formatted.ends_with(" PM"));
-        }
     }
 
     #[test]

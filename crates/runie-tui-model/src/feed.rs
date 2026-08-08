@@ -401,6 +401,51 @@ pub fn thinking_summary(elapsed_ms: Option<u64>) -> String {
     format!("◆ Thought for {:.1}s", elapsed_ms as f64 / 1_000.0)
 }
 
+/// Minimum unix-timestamp value (seconds) treated as a live prompt timestamp.
+/// Values below this are either absent or fixtures; values at or above are
+/// rendered with the short clock format. Centralized here so the renderer
+/// and any replay path share one threshold.
+pub const PROMPT_TIMESTAMP_LIVE_THRESHOLD: i64 = 1_000_000_000;
+
+/// Render a unix-timestamp (seconds) as Grok's short clock label (e.g.
+/// `3:07 PM`). Falls back to a UTC-derived 12-hour clock when libc cannot
+/// resolve the local timezone, so the label is always well-formed.
+pub fn format_clock_timestamp(timestamp: i64) -> String {
+    let (hour24, minute) = local_clock_parts(timestamp).unwrap_or_else(|| {
+        const SECONDS_PER_DAY: i64 = 86_400;
+        const SECONDS_PER_HOUR: i64 = 3_600;
+        const SECONDS_PER_MINUTE: i64 = 60;
+        let seconds = timestamp.rem_euclid(SECONDS_PER_DAY);
+        (
+            seconds / SECONDS_PER_HOUR,
+            (seconds % SECONDS_PER_HOUR) / SECONDS_PER_MINUTE,
+        )
+    });
+    let hour12 = match hour24 % 12 {
+        0 => 12,
+        hour => hour,
+    };
+    let meridiem = if hour24 < 12 { "AM" } else { "PM" };
+    format!("{hour12}:{minute:02} {meridiem}")
+}
+
+/// Resolve the local 24-hour clock parts for a unix-timestamp. Returns
+/// `None` when libc cannot produce a `tm` for the input (e.g. out-of-range
+/// year on the host), letting callers fall back to a UTC-derived clock.
+pub(crate) fn local_clock_parts(timestamp: i64) -> Option<(i64, i64)> {
+    let raw = timestamp as libc::time_t;
+    let mut local = std::mem::MaybeUninit::<libc::tm>::uninit();
+    // SAFETY: `localtime_r` writes a complete `tm` into the valid pointer or
+    // returns null. No global libc timezone state is exposed to the caller.
+    let result = unsafe { libc::localtime_r(&raw, local.as_mut_ptr()) };
+    if result.is_null() {
+        return None;
+    }
+    // SAFETY: a non-null result means libc initialized the structure.
+    let local = unsafe { local.assume_init() };
+    Some((i64::from(local.tm_hour), i64::from(local.tm_min)))
+}
+
 /// Append the streaming tool-update fragment to a retained tool header. The
 /// serialized partial result is the transport payload verbatim; a payload that
 /// cannot be serialized degrades to an empty fragment so the header stays
@@ -1201,6 +1246,37 @@ mod tests {
         // Pin the observed path: an explicit elapsed value overrides the
         // default and renders the same "◆ Thought for …" shape.
         assert_eq!(super::thinking_summary(Some(2_500)), "◆ Thought for 2.5s");
+    }
+
+    #[test]
+    fn format_clock_timestamp_pins_short_clock_shape() {
+        // Pin the fallback path: when libc cannot resolve the local clock,
+        // the UTC-derived 12-hour shape with a zero-padded minute is still
+        // emitted so the label stays well-formed for replay and live paths.
+        for timestamp in [0, 13 * 3_600 + 7 * 60, 12 * 3_600] {
+            let formatted = super::format_clock_timestamp(timestamp);
+            assert!(formatted.contains(':'), "{formatted}");
+            assert!(
+                formatted.ends_with(" AM") || formatted.ends_with(" PM"),
+                "{formatted}"
+            );
+            // Pin the zero-padded minute shape: the colon-aligned header
+            // must keep minutes as exactly two digits regardless of
+            // meridiem or 12-hour rollover.
+            let minute_segment = formatted
+                .split(':')
+                .nth(1)
+                .unwrap_or_else(|| panic!("missing minute segment: {formatted}"));
+            let minute_part = minute_segment
+                .split(' ')
+                .next()
+                .unwrap_or_else(|| panic!("missing minute digits: {formatted}"));
+            assert_eq!(
+                minute_part.len(),
+                2,
+                "minute must be zero-padded to two digits: {formatted}"
+            );
+        }
     }
 
     #[test]
