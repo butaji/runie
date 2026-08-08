@@ -87,6 +87,7 @@ pub enum MappableBuiltinCommand {
     Fork { target_id: String },
     Tree { target_id: String },
     Export { path: String },
+    Import { path: String },
 }
 
 /// Classification at the slash-command boundary. Unsupported Pi commands are
@@ -149,6 +150,12 @@ pub fn parse_mappable_builtin_command(input: &str) -> Option<MappableBuiltinComm
         value if value.starts_with("/export ") => {
             let path = value[8..].trim();
             (path.ends_with(".jsonl") && !path.is_empty()).then(|| MappableBuiltinCommand::Export {
+                path: path.to_owned(),
+            })
+        }
+        value if value.starts_with("/import ") => {
+            let path = value[8..].trim();
+            (path.ends_with(".jsonl") && !path.is_empty()).then(|| MappableBuiltinCommand::Import {
                 path: path.to_owned(),
             })
         }
@@ -257,6 +264,12 @@ mod tests {
         assert_eq!(
             classify_builtin_command("/export session.jsonl"),
             BuiltinCommandDisposition::Mappable(MappableBuiltinCommand::Export {
+                path: "session.jsonl".into()
+            })
+        );
+        assert_eq!(
+            classify_builtin_command("/import session.jsonl"),
+            BuiltinCommandDisposition::Mappable(MappableBuiltinCommand::Import {
                 path: "session.jsonl".into()
             })
         );

@@ -588,6 +588,17 @@ impl App {
                 }
                 true
             }
+            MappableBuiltinCommand::Import { path } => {
+                let result = async {
+                    let (_, _, snapshot) = self.session_storage.load_snapshot(path).await?;
+                    self.session_actor.restore_snapshot(snapshot).await
+                }
+                .await;
+                if let Err(error) = result {
+                    self.bus.publish(AgentEvent::Error { message: error });
+                }
+                true
+            }
             MappableBuiltinCommand::Quit => false,
         }
     }

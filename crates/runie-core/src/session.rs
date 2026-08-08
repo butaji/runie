@@ -3443,6 +3443,16 @@ impl SessionActor {
         Ok((session_id, cwd))
     }
 
+    /// Restore a validated snapshot through the same mailbox used by JSONL
+    /// import. Storage actors own parsing; this method owns publication into
+    /// the session actor without exposing mutable state to callers.
+    pub async fn restore_snapshot(&self, snapshot: SessionSnapshot) -> Result<(), String> {
+        if !mailbox_ack!(self.tx, |reply| Command::Import(snapshot, reply)) {
+            return Err("session actor restore was not acknowledged".into());
+        }
+        Ok(())
+    }
+
     pub fn snapshot(&self) -> SessionSnapshot {
         self.snapshot.borrow().clone()
     }
@@ -3549,6 +3559,19 @@ mod tests {
         assert_eq!(snapshot.entries.len(), 1);
         assert!(actor.fork_at_message("missing".into()).await.is_err());
         assert_eq!(actor.snapshot().entries.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn restore_snapshot_replaces_state_only_through_import_mailbox() {
+        let source = SessionActor::new();
+        source.append(user("restored")).await;
+        let target = SessionActor::new();
+        target.append(user("discarded")).await;
+        target
+            .restore_snapshot(source.snapshot())
+            .await
+            .expect("restore snapshot");
+        assert_eq!(target.snapshot().entries[0].message, user("restored"));
     }
 
     #[tokio::test]

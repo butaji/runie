@@ -115,3 +115,8 @@ Export increment (2026-08-09): `/export <path>` now routes through the existing
 only supplies the destination and immutable session snapshot; staged writes
 and rename/error cleanup remain owned by the storage actor. HTML rendering and
 remote sharing remain separate unsupported capabilities.
+
+Import increment (2026-08-09): `/import <path>.jsonl` now uses the storage
+actor's validated loader and publishes the resulting immutable snapshot through
+the session actor's import mailbox. Invalid or unreadable files become typed
+application errors; callers cannot replace session state directly.
