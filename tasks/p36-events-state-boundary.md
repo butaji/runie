@@ -280,6 +280,12 @@ claim attribute parity.
 
 ## Exhaustiveness hardening
 
+Feed dispatch exhaustiveness increment (2026-08-08): the background and
+actor-feed event tables now enumerate every intentionally ignored
+`AgentEvent` variant instead of using wildcard no-op arms. Adding a new core
+event therefore requires an explicit feed classification before the workspace
+can compile.
+
 `status_messages_for_event` now names every intentionally ignored outer
 `AgentEvent` variant and every intentionally ignored assistant sub-event.
 This removes the wildcard fallback at the status boundary: adding a Pi event

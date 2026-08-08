@@ -933,7 +933,33 @@ pub fn background_messages_for_event(event: &runie_core::types::AgentEvent) -> V
             status: status.clone(),
             elapsed_ms: *elapsed_ms,
         }],
-        _ => Vec::new(),
+        runie_core::types::AgentEvent::AgentStart
+        | runie_core::types::AgentEvent::AgentEnd { .. }
+        | runie_core::types::AgentEvent::Error { .. }
+        | runie_core::types::AgentEvent::Reset
+        | runie_core::types::AgentEvent::ThemeChanged { .. }
+        | runie_core::types::AgentEvent::ModelChanged { .. }
+        | runie_core::types::AgentEvent::ThinkingLevelChanged { .. }
+        | runie_core::types::AgentEvent::TurnStart
+        | runie_core::types::AgentEvent::Waiting { .. }
+        | runie_core::types::AgentEvent::ActiveToolsChanged { .. }
+        | runie_core::types::AgentEvent::SessionLabelChanged { .. }
+        | runie_core::types::AgentEvent::SessionNameChanged { .. }
+        | runie_core::types::AgentEvent::SessionLaneChanged { .. }
+        | runie_core::types::AgentEvent::SessionEntryAppended { .. }
+        | runie_core::types::AgentEvent::BranchSummaryCreated { .. }
+        | runie_core::types::AgentEvent::CustomSessionEntryCreated { .. }
+        | runie_core::types::AgentEvent::CompactionCreated { .. }
+        | runie_core::types::AgentEvent::OperationRecordCreated { .. }
+        | runie_core::types::AgentEvent::TypedOperationRecordCreated { .. }
+        | runie_core::types::AgentEvent::TurnEnd { .. }
+        | runie_core::types::AgentEvent::MessageStart { .. }
+        | runie_core::types::AgentEvent::MessageUpdate { .. }
+        | runie_core::types::AgentEvent::MessageEnd { .. }
+        | runie_core::types::AgentEvent::ToolDisplayModeChanged { .. }
+        | runie_core::types::AgentEvent::ToolExecutionStart { .. }
+        | runie_core::types::AgentEvent::ToolExecutionUpdate { .. }
+        | runie_core::types::AgentEvent::ToolExecutionEnd { .. } => Vec::new(),
     }
 }
 
@@ -974,7 +1000,31 @@ pub fn bus_messages_for_event(event: &runie_core::types::AgentEvent) -> Vec<Scro
         | runie_core::types::AgentEvent::BackgroundWorkCancelled { .. } => {
             background_messages_for_event(event)
         }
-        _ => Vec::new(),
+        runie_core::types::AgentEvent::AgentStart
+        | runie_core::types::AgentEvent::AgentEnd { .. }
+        | runie_core::types::AgentEvent::Error { .. }
+        | runie_core::types::AgentEvent::ThinkingLevelChanged { .. }
+        | runie_core::types::AgentEvent::TurnStart
+        | runie_core::types::AgentEvent::Waiting { .. }
+        | runie_core::types::AgentEvent::ActiveToolsChanged { .. }
+        | runie_core::types::AgentEvent::SessionLabelChanged { .. }
+        | runie_core::types::AgentEvent::SessionNameChanged { .. }
+        | runie_core::types::AgentEvent::SessionLaneChanged { .. }
+        | runie_core::types::AgentEvent::SessionEntryAppended { .. }
+        | runie_core::types::AgentEvent::BranchSummaryCreated { .. }
+        | runie_core::types::AgentEvent::CustomSessionEntryCreated { .. }
+        | runie_core::types::AgentEvent::CompactionCreated { .. }
+        | runie_core::types::AgentEvent::OperationRecordCreated { .. }
+        | runie_core::types::AgentEvent::TypedOperationRecordCreated { .. }
+        | runie_core::types::AgentEvent::TurnEnd { .. }
+        | runie_core::types::AgentEvent::MessageStart { .. }
+        | runie_core::types::AgentEvent::MessageUpdate { .. }
+        | runie_core::types::AgentEvent::MessageEnd { .. }
+        | runie_core::types::AgentEvent::ToolExecutionUpdate { .. }
+        | runie_core::types::AgentEvent::ToolExecutionEnd { .. }
+        | runie_core::types::AgentEvent::WorkflowStarted { .. }
+        | runie_core::types::AgentEvent::WorkflowProgress { .. }
+        | runie_core::types::AgentEvent::WorkflowFinished { .. } => Vec::new(),
     }
 }
 
