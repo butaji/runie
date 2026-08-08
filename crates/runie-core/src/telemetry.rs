@@ -333,6 +333,7 @@ impl TelemetryActor {
                 TelemetrySpan {
                     actor: self.clone(),
                     id,
+                    noop: false,
                 }
                 .event(name, attributes)
                 .await;
@@ -342,6 +343,7 @@ impl TelemetryActor {
                 TelemetrySpan {
                     actor: self.clone(),
                     id,
+                    noop: false,
                 }
                 .set_attributes(attributes)
                 .await;
@@ -351,6 +353,7 @@ impl TelemetryActor {
                 TelemetrySpan {
                     actor: self.clone(),
                     id,
+                    noop: false,
                 }
                 .status_with_error(status, error)
                 .await;
@@ -360,6 +363,7 @@ impl TelemetryActor {
                 TelemetrySpan {
                     actor: self.clone(),
                     id,
+                    noop: false,
                 }
                 .end()
                 .await;
@@ -393,6 +397,7 @@ impl TelemetryActor {
         Some(TelemetrySpan {
             actor: self.clone(),
             id: result.await.ok()??,
+            noop: false,
         })
     }
 
@@ -441,6 +446,7 @@ impl Default for TelemetryActor {
 pub struct TelemetrySpan {
     actor: TelemetryActor,
     pub id: u64,
+    noop: bool,
 }
 
 impl TelemetrySpan {
@@ -449,6 +455,9 @@ impl TelemetrySpan {
         name: impl Into<String>,
         attributes: HashMap<String, serde_json::Value>,
     ) {
+        if self.noop {
+            return;
+        }
         let (reply, acknowledged) = oneshot::channel();
         let _ = self
             .actor
@@ -464,6 +473,9 @@ impl TelemetrySpan {
     }
 
     pub async fn set_attributes(&self, attributes: HashMap<String, serde_json::Value>) {
+        if self.noop {
+            return;
+        }
         let (reply, acknowledged) = oneshot::channel();
         let _ = self
             .actor
@@ -482,6 +494,9 @@ impl TelemetrySpan {
     }
 
     pub async fn status_with_error(&self, status: SpanStatus, error: Option<SpanError>) {
+        if self.noop {
+            return;
+        }
         let (reply, acknowledged) = oneshot::channel();
         let _ = self
             .actor
@@ -497,6 +512,9 @@ impl TelemetrySpan {
     }
 
     pub async fn end(&self) {
+        if self.noop {
+            return;
+        }
         let (reply, acknowledged) = oneshot::channel();
         let _ = self
             .actor
@@ -526,9 +544,33 @@ impl TelemetrySpan {
         Fut: Future<Output = Result<T, E>>,
         E: std::fmt::Display,
     {
-        self.actor
-            .with_span(Some(self.id), name, attributes, callback)
-            .await
+        let child = self.actor.start_span(Some(self.id), name, attributes).await;
+        // Pi's settled-span context remains callable: the callback executes,
+        // but all operations on the detached child are inert. Preserve that
+        // behavior without creating a second recorded span.
+        let span = child.unwrap_or_else(|| TelemetrySpan {
+            actor: self.actor.clone(),
+            id: 0,
+            noop: true,
+        });
+        let result = callback(span.clone()).await;
+        if !span.noop {
+            match &result {
+                Ok(_) => span.status(SpanStatus::Ok).await,
+                Err(error) => {
+                    span.status_with_error(
+                        SpanStatus::Error,
+                        Some(SpanError {
+                            name: "Error".to_owned(),
+                            message: error.to_string(),
+                        }),
+                    )
+                    .await;
+                }
+            }
+            span.end().await;
+        }
+        Some(result)
     }
 }
 
@@ -595,6 +637,23 @@ mod tests {
         span.event("late", HashMap::new()).await;
         assert!(span.child("late-child", HashMap::new()).await.is_none());
         assert!(actor.snapshot().spans[0].events.is_empty());
+    }
+
+    #[tokio::test]
+    async fn settled_span_child_callback_remains_callable_without_recording() {
+        let actor = TelemetryActor::new();
+        let span = actor.start_span(None, "run", HashMap::new()).await.unwrap();
+        span.end().await;
+        let child = span
+            .with_child("late-child", HashMap::new(), |child| async move {
+                child.event("ignored", HashMap::new()).await;
+                Ok::<_, &'static str>(child.id)
+            })
+            .await
+            .expect("settled callback result")
+            .expect("settled callback success");
+        assert_eq!(child, 0);
+        assert_eq!(actor.snapshot().spans.len(), 1);
     }
 
     #[tokio::test]

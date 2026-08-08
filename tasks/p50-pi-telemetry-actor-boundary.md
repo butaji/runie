@@ -127,3 +127,9 @@ before creating the span; extension/general spans remain accepted by the
 generic telemetry actor. This closes schema validation for the provider span,
 while the complete Pi harness schema and backend exporter conformance remain
 open.
+
+Settled-child callback increment (2026-08-09): Pi's in-memory context executes
+the callback passed to a child span even when the parent has already settled,
+using a detached no-op span. `TelemetrySpan::with_child` now preserves that
+passive callback behavior while rejecting any late recorded span or mutation;
+the regression pins callback execution and the unchanged span count.
