@@ -828,15 +828,7 @@ pub(crate) fn tool_header(workspace: &str, tool_name: &str, args: &serde_json::V
 /// the host's username; the workspace anchor is owned by the renderer.
 #[cfg(test)]
 fn make_relative_path(workspace: &str, path: &str) -> String {
-    let path_string = path.strip_prefix(workspace).map_or_else(
-        || path.to_owned(),
-        |relative| relative.strip_prefix('/').unwrap_or(relative).to_owned(),
-    );
-    if path_string.is_empty() || path_string == "." {
-        ".".to_owned()
-    } else {
-        path_string
-    }
+    runie_tui_model::make_relative_path(workspace, path)
 }
 
 fn structured_memory_lines(output: &str) -> Vec<String> {

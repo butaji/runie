@@ -714,6 +714,24 @@ pub const PROMPT_TIMESTAMP_LIVE_THRESHOLD: i64 = 1_000_000_000;
 /// share one indent width.
 pub const USER_PREFIX_INDENT: usize = 5;
 
+/// Strip an absolute `workspace` prefix from a tool-supplied path so
+/// the rendered header shows a workspace-relative path. The relative
+/// path is normalized to a single leading separator and the empty
+/// case collapses to `.` so the renderer never sees `<workspace>/`.
+/// Centralized here so the actor-owned workspace anchor and the
+/// renderer share one path-projection rule.
+pub fn make_relative_path(workspace: &str, path: &str) -> String {
+    let path_string = path.strip_prefix(workspace).map_or_else(
+        || path.to_owned(),
+        |relative| relative.strip_prefix('/').unwrap_or(relative).to_owned(),
+    );
+    if path_string.is_empty() || path_string == "." {
+        ".".to_owned()
+    } else {
+        path_string
+    }
+}
+
 /// Render a unix-timestamp (seconds) as Grok's short clock label (e.g.
 /// `3:07 PM`). Falls back to a UTC-derived 12-hour clock when libc cannot
 /// resolve the local timezone, so the label is always well-formed.
@@ -1857,6 +1875,28 @@ mod tests {
         for row in &rows[1..] {
             assert_eq!(row.0, super::LineKind::User);
         }
+    }
+
+    #[test]
+    fn make_relative_path_strips_workspace_and_collapses_to_dot() {
+        // Pin the smoke path: the workspace-only path collapses to `.`
+        // so the rendered header is a clean directory anchor.
+        assert_eq!(super::make_relative_path("/work", "/work"), ".");
+        // Pin the workspace-relative path: a leading separator is
+        // stripped so the rendered header never shows `<workspace>/`.
+        assert_eq!(super::make_relative_path("/work", "/work/file"), "file");
+        // Pin the nested path: a deeper workspace-relative path keeps
+        // its directory structure intact.
+        assert_eq!(
+            super::make_relative_path("/work", "/work/dir/sub/file"),
+            "dir/sub/file"
+        );
+        // Pin the negative path: a path outside the workspace is
+        // returned verbatim so the renderer can decide how to label it.
+        assert_eq!(
+            super::make_relative_path("/work", "/tmp/other/file"),
+            "/tmp/other/file"
+        );
     }
 
     #[test]

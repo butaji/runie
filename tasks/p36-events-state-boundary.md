@@ -1256,3 +1256,22 @@ prompts. The 103 `runie-tui-model` lib unit tests (101 pre-existing +
 tests, the 28 `visual_snapshots` replay tests, and the full `just ci`
 (fmt-check, clippy, lint, test, parity, source inventory, Pi event
 contract, feed-actor boundary) are green.
+
+**`make_relative_path` retirement (2026-08-08):** the workspace-relative
+path projection now lives in `runie-tui-model::feed` so the
+actor-owned workspace anchor and the renderer share one path rule.
+The renderer-local `fn make_relative_path` at
+`crates/runie-tui/src/event_renderer.rs:830` was collapsed to a thin
+`runie_tui_model::make_relative_path` delegate, so the existing
+`structured_tools_use_grok_headers_and_preserve_output_rows` and
+`absolute_tool_paths_are_workspace_relative` tests keep their helper
+but lose the duplicate projection. The new
+`make_relative_path_strips_workspace_and_collapses_to_dot` test in
+`crates/runie-tui-model/src/feed.rs` pins the workspace-only `.`
+collapse, the leading-separator stripping, the nested directory
+preservation, and the out-of-workspace passthrough. The 104
+`runie-tui-model` lib unit tests (103 pre-existing + 1 new), the 220
+`runie-tui` lib unit tests, the 5 `runie` binary unit tests, the 28
+`visual_snapshots` replay tests, and the full `just ci` (fmt-check,
+clippy, lint, test, parity, source inventory, Pi event contract,
+feed-actor boundary) are green.
