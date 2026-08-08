@@ -29,6 +29,11 @@ provider-specific contract”. The source of truth is the current Pi tree at
    `openai-codex-responses.ts`: URL resolution, Responses envelope, socket
    decoder, continuation cache, pre-stream retry, SSE fallback, and owned
    session/account cleanup. The generic HTTP actor must not emulate these.
+   Runie's provider-scoped `CodexWebSocketAdapter` now owns the injected
+   connector/socket lifecycle, URL/header/envelope construction, Responses
+   message validation/decoding, explicit fallback capability, and close/error
+   cleanup. A real production connector and full cached live-session execution
+   remain adapter deployment work.
    Runie's replay adapter now also accepts Pi's OpenAI Responses text-delta and
    completion event names, plus function-call argument deltas keyed by
    `output_index`, and normalizes them to the ordinary assistant event
@@ -66,6 +71,12 @@ provider-specific contract”. The source of truth is the current Pi tree at
    other Pi commands not yet backed by an executable Runie capability.
 3. Cast-wide zero-diff coverage for every Pi lifecycle/error/abort family,
    including terminal capability variants and dynamic timing metadata.
+
+The Runie side of p53 runtime resize evidence is now complete: all four
+standard initial geometries observed the declared `80×12` and `100×24`
+transitions with valid reports. Paired Grok settled-frame cell comparison is
+still excluded from closure because the current Grok capture does not produce
+valid settled artifacts under the same schedule.
 
 ## Required evidence for closure
 
