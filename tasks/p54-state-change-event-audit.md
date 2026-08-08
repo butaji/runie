@@ -89,6 +89,13 @@ The event DSL now constructs the typed variant as well, so YAML/replay event
 sequences exercise the same closed producer family. TUI/status projections
 explicitly ignore both operation-event forms; only `SessionActor` reduces them.
 
+Typed actor API increment (2026-08-08): `SessionActor::record_typed_operation`
+now accepts the validated internal `SessionLaneRecord` union directly, while
+the legacy kind/data helper decodes once and delegates to it. A session actor
+regression verifies the persisted wire projection and typed round-trip, keeping
+generic `(record_type, data)` compatibility at the event/storage edge rather
+than in live producer callers.
+
 ## Non-negotiable checks
 
 - No cross-actor direct mutation.

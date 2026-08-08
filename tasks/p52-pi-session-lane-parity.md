@@ -619,3 +619,9 @@ consumers. The JSONL-facing `record_type` and lossless `data` fields remain
 unchanged for Pi compatibility, while callers no longer need to independently
 decode or match the persisted JSON shape. Core session and replay regressions
 cover the boundary; the wire representation remains intentionally generic.
+
+Typed producer API increment (2026-08-08): `SessionActor::record_typed_operation`
+now accepts an already-decoded `SessionLaneRecord` and publishes it through the
+same mailbox reducer used by the kind/data compatibility helper. This narrows
+the remaining generic transport edge to event and JSONL boundaries rather than
+requiring live callers to reconstruct Pi wire names.

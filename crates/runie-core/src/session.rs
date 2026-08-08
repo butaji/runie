@@ -3425,6 +3425,13 @@ impl SessionActor {
     ) -> Result<(), String> {
         let record = SessionLaneRecord::decode(kind.wire_name(), &data)
             .map_err(|error| format!("invalid session operation: {error}"))?;
+        self.record_typed_operation(record).await
+    }
+
+    /// Record a validated operation-lane union through the session actor.
+    /// Callers that already possess the typed fact do not need to reconstruct
+    /// the generic `(record_type, data)` compatibility edge.
+    pub async fn record_typed_operation(&self, record: SessionLaneRecord) -> Result<(), String> {
         self.record_config(SessionConfigRecord::TypedOperation(record))
             .await
     }
@@ -3970,6 +3977,30 @@ mod tests {
         bus.publish(AgentEvent::Reset);
         tokio::task::yield_now().await;
         assert!(actor.snapshot().entries.is_empty());
+    }
+
+    #[tokio::test]
+    async fn typed_operation_api_publishes_the_internal_lane_union() {
+        let actor = SessionActor::new();
+        actor
+            .record_typed_operation(SessionLaneRecord::OperationStarted(
+                serde_json::json!({"id": "typed-run", "intent": {"kind": "run"}}),
+            ))
+            .await
+            .expect("typed operation admission");
+
+        let snapshot = actor.snapshot();
+        assert_eq!(snapshot.lane_records.len(), 1);
+        assert_eq!(snapshot.lane_records[0].record_type, "operation_started");
+        assert_eq!(
+            snapshot.lane_records[0]
+                .typed_record()
+                .expect("typed record"),
+            SessionLaneRecord::OperationStarted(serde_json::json!({
+                "id": "typed-run",
+                "intent": {"kind": "run"}
+            }))
+        );
     }
 
     #[tokio::test]
