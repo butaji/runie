@@ -17,8 +17,8 @@ pub use events::{is_actor_feed_event, status_messages_for_event};
 pub use feed::{
     activity_text, append_wrapped, append_wrapped_words, atx_heading, classify_activity_tool,
     completed_tool_header_with_args, default_tool_display_mode, format_clock_timestamp,
-    format_elapsed, format_error, is_fence, is_output_tool, is_table_row, is_table_separator,
-    is_transport_only_update, logical_tool_member_index, project_tool_blocks,
+    format_elapsed, format_error, is_fence, is_output_tool, is_quit_command, is_table_row,
+    is_table_separator, is_transport_only_update, logical_tool_member_index, project_tool_blocks,
     project_tool_card_rows, running_bullet, structured_update_text, table_bottom_border,
     thinking_summary, tool_header, tool_mode_for_line, tool_mode_override_for_line,
     tool_result_text, tool_update_header_text, version_badge, web_search_site_count,

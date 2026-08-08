@@ -33,10 +33,7 @@ pub enum Action {
 
 /// Whether a submitted prompt is an immediate quit command.
 pub fn is_quit_command(text: &str) -> bool {
-    matches!(
-        text.trim().to_ascii_lowercase().as_str(),
-        "exit" | "quit" | ":q"
-    )
+    runie_tui_model::is_quit_command(text)
 }
 
 /// Map a key event to actions.

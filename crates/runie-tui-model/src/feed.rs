@@ -618,6 +618,17 @@ pub fn version_badge(variant: VersionBadgeVariant) -> String {
     }
 }
 
+/// Whether a submitted prompt text is an immediate quit command. The
+/// trim/lowercase normalization matches the Grok-style `exit` / `quit`
+/// / `:q` vocabulary so the keymap and any replay path share one
+/// definition.
+pub fn is_quit_command(text: &str) -> bool {
+    matches!(
+        text.trim().to_ascii_lowercase().as_str(),
+        "exit" | "quit" | ":q"
+    )
+}
+
 /// Minimum unix-timestamp value (seconds) treated as a live prompt timestamp.
 /// Values below this are either absent or fixtures; values at or above are
 /// rendered with the short clock format. Centralized here so the renderer
@@ -1648,6 +1659,30 @@ mod tests {
         let inline = super::version_badge(super::VersionBadgeVariant::HeroInline);
         assert!(inline.starts_with("runie v"), "{inline}");
         assert!(!inline.contains("Beta"), "{inline}");
+    }
+
+    #[test]
+    fn is_quit_command_pins_grok_vocab_with_trim_and_lowercase() {
+        // Pin the smoke path: the three Grok quit commands are detected.
+        assert!(super::is_quit_command("exit"));
+        assert!(super::is_quit_command("quit"));
+        assert!(super::is_quit_command(":q"));
+        // Pin the normalization path: leading/trailing whitespace and
+        // mixed-case input are accepted as quit commands.
+        assert!(super::is_quit_command("  QUIT  "));
+        assert!(super::is_quit_command("Exit"));
+        assert!(super::is_quit_command(":Q"));
+    }
+
+    #[test]
+    fn is_quit_command_rejects_non_quit_inputs() {
+        // Pin the negative paths: prose, partial matches, and empty input
+        // are not quit commands so the router treats them as regular text.
+        assert!(!super::is_quit_command(""));
+        assert!(!super::is_quit_command("hello"));
+        assert!(!super::is_quit_command("exiting"));
+        assert!(!super::is_quit_command("quitting"));
+        assert!(!super::is_quit_command(":quit"));
     }
 
     #[test]

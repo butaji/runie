@@ -1180,3 +1180,20 @@ unit tests (95 pre-existing + 1 new), the 220 `runie-tui` lib unit
 tests, the 5 `runie` binary unit tests, the 28 `visual_snapshots` replay
 tests, and the full `just ci` (fmt-check, clippy, lint, test, parity,
 source inventory, Pi event contract, feed-actor boundary) are green.
+
+**Quit command predicate retirement (2026-08-08):** the `is_quit_command`
+text predicate now lives in `runie-tui-model::feed` so the keymap and
+any replay path share one Grok-style `exit` / `quit` / `:q` vocabulary.
+The renderer-local `pub fn is_quit_command` at
+`crates/runie-tui/src/key.rs:35` was collapsed to a thin
+`runie_tui_model::is_quit_command` delegate, so the keymap keeps its
+public symbol but loses the duplicate projection. The new
+`is_quit_command_pins_grok_vocab_with_trim_and_lowercase` and
+`is_quit_command_rejects_non_quit_inputs` tests in
+`crates/runie-tui-model/src/feed.rs` pin the smoke path (the three
+quit commands), the trim/lowercase normalization, and the negative
+paths (empty, prose, partial matches, `:quit`). The 98 `runie-tui-model`
+lib unit tests (96 pre-existing + 2 new), the 220 `runie-tui` lib unit
+tests, the 5 `runie` binary unit tests, the 28 `visual_snapshots` replay
+tests, and the full `just ci` (fmt-check, clippy, lint, test, parity,
+source inventory, Pi event contract, feed-actor boundary) are green.
