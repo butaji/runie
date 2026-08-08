@@ -2066,6 +2066,19 @@ fn styled_line_for(kind: LineKind, text: &str, theme: ThemeKind) -> RatLine<'sta
                 Span::styled(url.to_owned(), appearance::header_path_style_for(theme)),
             ]);
         }
+        for label in ["Use", "Used", "Todo"] {
+            if let Some(rest) = body
+                .strip_prefix(label)
+                .and_then(|rest| rest.strip_prefix(' '))
+            {
+                return RatLine::from(vec![
+                    Span::styled(prefix.to_owned(), style),
+                    Span::styled(label.to_owned(), style.add_modifier(Modifier::BOLD)),
+                    Span::styled(" ".to_owned(), style),
+                    Span::styled(rest.to_owned(), appearance::header_path_style_for(theme)),
+                ]);
+            }
+        }
         for label in ["Read", "List", "Edit"] {
             let Some(path) = body
                 .strip_prefix(label)
@@ -2968,6 +2981,21 @@ mod tests {
             rendered.spans[1].style.fg,
             appearance::base_style_for(ThemeKind::GrokNight).fg
         );
+    }
+
+    #[test]
+    fn use_and_todo_headers_style_their_action_name_and_target() {
+        for text in ["◆ Use git_status", "◆ Used git_status", "◆ Todo release"] {
+            let rendered = styled_line_for(LineKind::Tool, text, ThemeKind::GrokNight);
+            assert!(rendered.spans[1]
+                .style
+                .add_modifier
+                .contains(Modifier::BOLD));
+            assert_eq!(
+                rendered.spans[3].style.fg,
+                appearance::header_path_style_for(ThemeKind::GrokNight).fg
+            );
+        }
     }
 
     #[test]
