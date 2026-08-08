@@ -120,3 +120,8 @@ Import increment (2026-08-09): `/import <path>.jsonl` now uses the storage
 actor's validated loader and publishes the resulting immutable snapshot through
 the session actor's import mailbox. Invalid or unreadable files become typed
 application errors; callers cannot replace session state directly.
+
+Clone increment (2026-08-09): `/clone <path>.jsonl` uses the storage actor's
+validated fork publication at the current selected leaf, preserving the live
+session actor and its alternate branches. Empty sessions and invalid paths
+return actor-delivered errors; no second mutable session state is introduced.

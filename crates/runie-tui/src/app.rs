@@ -599,6 +599,23 @@ impl App {
                 }
                 true
             }
+            MappableBuiltinCommand::Clone { path } => {
+                let result = async {
+                    let snapshot = self.session_actor.snapshot();
+                    let target_id = snapshot
+                        .leaf_id
+                        .clone()
+                        .ok_or_else(|| "cannot clone an empty session".to_owned())?;
+                    self.session_storage
+                        .fork_snapshot(&path, &snapshot, &target_id, "runie-clone", 0, "")
+                        .await
+                }
+                .await;
+                if let Err(error) = result {
+                    self.bus.publish(AgentEvent::Error { message: error });
+                }
+                true
+            }
             MappableBuiltinCommand::Quit => false,
         }
     }

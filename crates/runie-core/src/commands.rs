@@ -88,6 +88,7 @@ pub enum MappableBuiltinCommand {
     Tree { target_id: String },
     Export { path: String },
     Import { path: String },
+    Clone { path: String },
 }
 
 /// Classification at the slash-command boundary. Unsupported Pi commands are
@@ -156,6 +157,12 @@ pub fn parse_mappable_builtin_command(input: &str) -> Option<MappableBuiltinComm
         value if value.starts_with("/import ") => {
             let path = value[8..].trim();
             (path.ends_with(".jsonl") && !path.is_empty()).then(|| MappableBuiltinCommand::Import {
+                path: path.to_owned(),
+            })
+        }
+        value if value.starts_with("/clone ") => {
+            let path = value[7..].trim();
+            (path.ends_with(".jsonl") && !path.is_empty()).then(|| MappableBuiltinCommand::Clone {
                 path: path.to_owned(),
             })
         }
@@ -271,6 +278,12 @@ mod tests {
             classify_builtin_command("/import session.jsonl"),
             BuiltinCommandDisposition::Mappable(MappableBuiltinCommand::Import {
                 path: "session.jsonl".into()
+            })
+        );
+        assert_eq!(
+            classify_builtin_command("/clone copy.jsonl"),
+            BuiltinCommandDisposition::Mappable(MappableBuiltinCommand::Clone {
+                path: "copy.jsonl".into()
             })
         );
         assert_eq!(
