@@ -156,3 +156,12 @@ removes repeated one-shot plumbing; the `UiMsg` payload, actor mailbox, and
 acknowledgement boundary remain visible at the call site. This is the accepted
 DSL pattern for future actors: reduce ceremony, never hide ownership or state
 reduction.
+
+Compatibility measurement re-audit (2026-08-10): the remaining synchronous
+compatibility methods in `App` only apply actor messages or read immutable
+snapshots. `chat_layout_with_prompt_height` consumes the declarative
+`LayoutEntry` stack and the prompt actor's intrinsic `render_height`; the
+scrollback renderer receives the resulting `Rect` and does not feed measured
+widget state back into layout. No active compatibility-derived overlay or
+layout measurement path was found, so this boundary is closed until a new
+component supplies a source-backed intrinsic measurement requirement.
