@@ -172,6 +172,9 @@ require Pi's closed `intent.kind` set (`run`, `compaction`, or `navigation`), a
 non-empty lane, and no other active operation on that lane. Unknown kinds and
 lane-local duplicate starts are rejected before reduction; the raw journal
 projection therefore cannot expose an operation lifecycle Pi would reject.
+`visual-operation-admission.yaml` now replays an unknown `workflow` kind
+alongside the duplicate start and asserts the same admitted record projection.
+
 ## Latest increment
 
 - P60 adds Pi label facts as actor-delivered events with JSONL round-trip

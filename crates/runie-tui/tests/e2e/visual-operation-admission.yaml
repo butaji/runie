@@ -22,6 +22,15 @@ events:
         intent:
           kind: run
   - operation_record:
+      record_type: operation_started
+      data:
+        id: op-unknown-kind
+        lane: main
+        seq: 2
+        timestamp: 2
+        intent:
+          kind: workflow
+  - operation_record:
       record_type: operation_finished
       data:
         outcome: completed
