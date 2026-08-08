@@ -885,3 +885,9 @@ uses one pure signed delta for arbitrary multi-row movement in either direction,
 with event-driven coverage for upward, downward, and missing-anchor cases.
 This keeps responsive wrapping corrections in the feed model and avoids
 renderer-local cursor state; generalized logical-member reflow remains open.
+
+Wrapped-anchor identity increment (2026-08-08): measured selection anchors now
+probe a stable leading fragment of the selected logical row, allowing narrow
+wrapped rows to retain their anchor instead of searching for text that cannot
+fit in one physical fragment. Duplicate logical occurrences remain selected by
+occurrence index, with focused coverage for both duplicate and wrapped rows.

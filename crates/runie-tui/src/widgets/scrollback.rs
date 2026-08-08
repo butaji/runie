@@ -1424,11 +1424,18 @@ impl Scrollback {
             .iter()
             .filter(|line| line.kind == selected.kind && line.text == text)
             .count();
+        // A wrapped physical row contains only a fragment of the logical
+        // text. Use a leading fragment as the identity probe, while keeping
+        // the full text for short rows; occurrence selection still prevents
+        // duplicate logical rows from collapsing onto the first match.
+        let anchor_probe: String = text.chars().take(8).collect();
         let compact = crate::layout::grok_effective_compact(false, terminal_rows);
         self.physical_rows(area.width as usize, compact, area.height)
             .iter()
             .enumerate()
-            .filter(|(_, (kind, candidate, _))| *kind == selected.kind && candidate.contains(text))
+            .filter(|(_, (kind, candidate, _))| {
+                *kind == selected.kind && candidate.contains(&anchor_probe)
+            })
             .nth(occurrence)
             .map(|(index, _)| index)
     }
@@ -2542,6 +2549,21 @@ mod tests {
         assert_eq!(
             scrollback.measured_anchor_row(Rect::new(0, 0, 40, 4), 24),
             Some(1)
+        );
+    }
+
+    #[test]
+    fn measured_anchor_row_finds_wrapped_logical_text_fragment() {
+        let mut scrollback = Scrollback::new();
+        scrollback.append(Line::new(
+            LineKind::Assistant,
+            "A long assistant row that must reflow across narrow terminals",
+        ));
+        scrollback.navigation.selected_entry = Some(0);
+
+        assert_eq!(
+            scrollback.measured_anchor_row(Rect::new(0, 0, 18, 8), 24),
+            Some(0)
         );
     }
 
