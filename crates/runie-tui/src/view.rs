@@ -682,4 +682,29 @@ mod tests {
         assert_eq!(entries[1].grow, 1);
         assert_eq!(entries[1].min_size, 2);
     }
+
+    #[test]
+    fn stack_allocator_respects_caps_and_missing_intrinsic_sizes() {
+        let entries = [
+            LayoutEntry {
+                slot: Slot::Header,
+                basis: LayoutSize::Auto,
+                grow: 1,
+                shrink: 1,
+                min_size: 1,
+                max_size: Some(2),
+            },
+            LayoutEntry::grow(Slot::Scrollback, 0),
+        ];
+        let stack = StackLayout {
+            direction: LayoutDirection::Vertical,
+            gap: 1,
+            entries: &entries,
+        };
+
+        // The omitted second intrinsic size is zero, but the growable entry
+        // still receives the remainder after the first entry reaches its cap.
+        assert_eq!(stack.allocate(&[9], Some(6)), vec![2, 3]);
+        assert_eq!(stack.allocate(&[], None), vec![1, 0]);
+    }
 }
