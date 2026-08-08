@@ -667,6 +667,10 @@ impl App {
     /// Preparation and journal publication belong to `SessionActor`; summary
     /// generation belongs to `ProviderActor`; the bus transfers the resulting
     /// fact to every interested projection.
+    #[allow(
+        clippy::too_many_lines,
+        reason = "compaction keeps preparation, provider settlement, and journal publication explicit"
+    )]
     pub async fn compact_session(
         &self,
         previous_summary: Option<String>,
@@ -682,17 +686,48 @@ impl App {
         else {
             return Ok(());
         };
+        let compaction_id = format!(
+            "compaction-{}",
+            snapshot
+                .lane_records
+                .iter()
+                .filter(|record| record.id.starts_with("compaction-"))
+                .count()
+                .saturating_add(1)
+        );
+        self.session_actor
+            .record_operation(
+                runie_core::session::SessionOperationKind::Started,
+                serde_json::json!({
+                    "id": compaction_id.clone(),
+                    "lane": "main",
+                    "intent": {"kind": "compaction"},
+                }),
+            )
+            .await?;
         let request = runie_core::session::CompactionSummaryRequest::from_preparation(
             &preparation,
             &snapshot.entries,
             previous_summary,
         )?
         .with_custom_instructions(custom_instructions);
-        let summary = self
-            .loop_actor
-            .summarize_compaction(request)
-            .await
-            .map_err(|error| error.to_string())?;
+        let summary = match self.loop_actor.summarize_compaction(request).await {
+            Ok(summary) => summary,
+            Err(error) => {
+                let _ = self
+                    .session_actor
+                    .record_operation(
+                        runie_core::session::SessionOperationKind::Finished,
+                        serde_json::json!({
+                            "id": compaction_id,
+                            "outcome": "error",
+                            "error": {"message": error.to_string()},
+                        }),
+                    )
+                    .await;
+                return Err(error.to_string());
+            }
+        };
         let retained_tail = compaction_retained_tail(&snapshot, &preparation);
         self.bus.publish(AgentEvent::CompactionCreated {
             summary: summary.summary,
@@ -702,6 +737,15 @@ impl App {
             usage: summary.usage,
         });
         self.session_actor.flush().await;
+        self.session_actor
+            .record_operation(
+                runie_core::session::SessionOperationKind::Finished,
+                serde_json::json!({
+                    "id": compaction_id,
+                    "outcome": "success",
+                }),
+            )
+            .await?;
         Ok(())
     }
 

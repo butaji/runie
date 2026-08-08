@@ -412,6 +412,15 @@ emits `abort_requested`; queue actor transitions emit enqueue/cancel facts;
 transitions. `visual-operation-lane-families.yaml`, the live session actor
 tests, and the full replay suite cover these nine families without sleeps.
 
+### Compaction operation lifecycle increment (2026-08-08)
+
+Manual compaction now admits a typed `operation_started` fact with
+`intent.kind: compaction` through `SessionActor` before provider summarization,
+and settles it as `success` or structured `error` through the same actor after
+publication/provider failure. The provider remains responsible only for the
+summary capability; the TUI does not mutate the session projection or invent
+a provider result.
+
 ### Typed identity boundary (2026-08-08)
 
 `SessionLaneRecord` now owns the Pi identity-shape table through typed
