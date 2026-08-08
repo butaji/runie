@@ -633,6 +633,13 @@ Memory metadata fill increment (2026-08-08): the physical-row adapter now
 extends Grok's panel background through metadata-row trailing cells as well as
 snippet rows, with a renderer regression covering both row classes.
 
+Structured metadata span increment (2026-08-09): the final card paint pass no
+longer flattens muted metadata rows after `styled_line` has assigned
+source-backed spans. Web-fetch keys remain dim/muted while primary values
+retain the base foreground; a buffer-level renderer regression covers the
+post-paint result. This closes the metadata span distinction for the current
+memory/web card families; generalized card reflow remains open.
+
 Web-search metadata increment (2026-08-08): canonical `Sources:` summary rows
 now use the same typed metadata role and muted semantic paint intent as memory
 source/location rows. The web-search YAML oracle asserts the new row kind.

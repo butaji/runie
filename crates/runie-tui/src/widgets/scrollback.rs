@@ -756,10 +756,17 @@ impl Scrollback {
                     ToolCardPaintIntent::Error => PaintIntent::Error,
                     ToolCardPaintIntent::Muted => PaintIntent::Muted,
                 };
-                let semantic_style = appearance::style_for_intent(self.navigation.theme, paint);
-                for span in &mut line.spans {
-                    if let Some(foreground) = semantic_style.fg {
-                        span.style = span.style.fg(foreground);
+                // Structured metadata already carries source-backed span
+                // roles (muted key, primary value, muted location/score).
+                // Do not flatten those spans with the row-level muted intent.
+                if !(paint == PaintIntent::Muted
+                    && self.tool_row_is_metadata(*kind, text, occurrence))
+                {
+                    let semantic_style = appearance::style_for_intent(self.navigation.theme, paint);
+                    for span in &mut line.spans {
+                        if let Some(foreground) = semantic_style.fg {
+                            span.style = span.style.fg(foreground);
+                        }
                     }
                 }
             }
@@ -1180,6 +1187,45 @@ impl Scrollback {
                 row.tool_call_id == id && row.text == text && row.member_index == member_index
             })
             .map(|row| row.paint_intent())
+    }
+
+    fn tool_row_is_metadata(&self, kind: LineKind, text: &str, occurrence: usize) -> bool {
+        if !matches!(
+            kind,
+            LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError | LineKind::ToolOutput
+        ) {
+            return false;
+        }
+        let Some(line) = self
+            .lines
+            .iter()
+            .filter(|line| {
+                line.kind == kind
+                    && (line.text == text
+                        || (!text.trim().is_empty() && line.text.contains(text.trim())))
+            })
+            .nth(occurrence)
+        else {
+            return false;
+        };
+        let Some(id) = line.tool_call_id.as_deref() else {
+            return false;
+        };
+        let Some(member_index) = logical_tool_member_index(&self.lines, id) else {
+            return false;
+        };
+        project_tool_card_rows(
+            &self.lines,
+            &self.navigation.tool_names,
+            &self.navigation.tool_modes,
+        )
+        .into_iter()
+        .any(|row| {
+            row.tool_call_id == id
+                && row.text == text
+                && row.member_index == member_index
+                && row.row_kind == ToolCardRowKind::Metadata
+        })
     }
 
     #[allow(
@@ -2819,6 +2865,49 @@ mod tests {
                 .expect("full fetch metadata background")
                 .bg,
             Color::Rgb(36, 36, 36)
+        );
+    }
+
+    #[test]
+    fn web_fetch_metadata_keeps_primary_value_foreground_after_card_paint() {
+        let mut scrollback = Scrollback::new();
+        scrollback.apply(ScrollbackMsg::SetToolName(
+            "fetch-1".into(),
+            "web_fetch".into(),
+        ));
+        scrollback.apply(ScrollbackMsg::ToolStart {
+            tool_call_id: "fetch-1".into(),
+            header: "Fetch https://example.com".into(),
+            activity: None,
+        });
+        scrollback.apply(ScrollbackMsg::ToolEnd {
+            tool_call_id: "fetch-1".into(),
+            header: "Fetch https://example.com".into(),
+            activity: None,
+            output: vec![(LineKind::ToolOutput, "status: 200".into())],
+        });
+        scrollback.set_tool_mode("fetch-1", runie_core::types::ToolDisplayMode::Expanded);
+        scrollback.set_live_grok_layout(true);
+        let rows = scrollback.physical_rows(80, false, 24);
+        let row = rows
+            .iter()
+            .position(|(_, text, _)| text.contains("status: 200"))
+            .expect("fetch metadata row") as u16;
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 80, 8));
+        scrollback.render_with_terminal_height(Rect::new(0, 0, 80, 8), 24, &mut buffer);
+        let value_cell = (0..80)
+            .find_map(|x| {
+                buffer
+                    .cell((x, row))
+                    .filter(|cell| cell.symbol() == "2")
+                    .map(|cell| cell.fg)
+            })
+            .expect("status value cell");
+        assert_eq!(
+            value_cell,
+            appearance::base_style_for(ThemeKind::GrokNight)
+                .fg
+                .expect("base foreground")
         );
     }
 
