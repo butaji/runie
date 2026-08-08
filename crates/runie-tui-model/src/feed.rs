@@ -823,6 +823,119 @@ pub fn structured_update_messages(
     }
 }
 
+/// Project a `BackgroundWork*` event into the canonical scrollback
+/// messages. The helper is pure so the actor-owned background work
+/// projection and the renderer agree on the subagent lifecycle
+/// messages.
+#[allow(
+    clippy::too_many_lines,
+    reason = "background lifecycle formatting keeps Grok card variants explicit"
+)]
+pub fn background_messages_for_event(event: &runie_core::types::AgentEvent) -> Vec<ScrollbackMsg> {
+    match event {
+        runie_core::types::AgentEvent::BackgroundWorkStarted {
+            work_id,
+            description,
+            background,
+        } => vec![
+            ScrollbackMsg::SetToolName(work_id.clone(), "subagent".into()),
+            ScrollbackMsg::SetToolMode(
+                work_id.clone(),
+                runie_core::types::ToolDisplayMode::Collapsed,
+            ),
+            ScrollbackMsg::ToolStart {
+                tool_call_id: work_id.clone(),
+                header: format!(
+                    "Subagent {}: {description:?}",
+                    if *background { "started" } else { "running" }
+                ),
+                activity: None,
+            },
+        ],
+        runie_core::types::AgentEvent::BackgroundWorkProgress {
+            work_id,
+            description,
+            activity,
+        } => vec![ScrollbackMsg::ToolUpdate {
+            tool_call_id: work_id.clone(),
+            header: Some(format!("Subagent running: {description:?} — {activity}")),
+            output: Vec::new(),
+        }],
+        runie_core::types::AgentEvent::BackgroundWorkFinished {
+            work_id,
+            description,
+            is_error,
+            elapsed_ms,
+            error,
+        } => {
+            let mut messages = vec![ScrollbackMsg::ToolEnd {
+                tool_call_id: work_id.clone(),
+                header: format!(
+                    "Subagent {}{}{}: {description:?}",
+                    if *is_error { "failed" } else { "completed" },
+                    format_elapsed(*elapsed_ms),
+                    format_error(*is_error, error.as_deref())
+                ),
+                activity: None,
+                output: Vec::new(),
+            }];
+            if *is_error {
+                messages.push(ScrollbackMsg::MarkToolError(work_id.clone()));
+            }
+            messages
+        }
+        runie_core::types::AgentEvent::BackgroundWorkCancelled {
+            work_id,
+            description,
+            elapsed_ms,
+        } => vec![
+            ScrollbackMsg::ToolEnd {
+                tool_call_id: work_id.clone(),
+                header: format!(
+                    "Subagent cancelled{}: {description:?}",
+                    format_elapsed(*elapsed_ms)
+                ),
+                activity: None,
+                output: Vec::new(),
+            },
+            ScrollbackMsg::MarkToolError(work_id.clone()),
+        ],
+        runie_core::types::AgentEvent::WorkflowStarted {
+            run_id,
+            name,
+            objective,
+        } => vec![
+            ScrollbackMsg::SetToolName(run_id.clone(), "workflow".into()),
+            ScrollbackMsg::WorkflowStart {
+                run_id: run_id.clone(),
+                name: name.clone(),
+                objective: objective.clone(),
+            },
+        ],
+        runie_core::types::AgentEvent::WorkflowProgress {
+            run_id,
+            phase,
+            state,
+            active_agents,
+        } => vec![ScrollbackMsg::WorkflowProgress {
+            run_id: run_id.clone(),
+            phase: phase.clone(),
+            state: state.clone(),
+            active_agents: *active_agents,
+        }],
+        runie_core::types::AgentEvent::WorkflowFinished {
+            run_id,
+            status,
+            elapsed_ms,
+        } => vec![ScrollbackMsg::WorkflowEnd {
+            run_id: run_id.clone(),
+            status: status.clone(),
+            elapsed_ms: *elapsed_ms,
+        }],
+        _ => Vec::new(),
+    }
+}
+
 /// Detect whether an `Activity` line exists between the latest user
 /// message and the end of the transcript. The classifier is pure so
 /// the actor-owned activity projection and the renderer share one
@@ -2425,6 +2538,65 @@ mod tests {
             super::current_tool_args(&snapshot, "absent"),
             serde_json::Value::Null
         );
+    }
+
+    #[test]
+    fn background_messages_for_event_emits_subagent_setup() {
+        // Pin the smoke path: a `BackgroundWorkStarted` event emits a
+        // `SetToolName` + `SetToolMode` + `ToolStart` triple so the
+        // actor-owned background projection agrees with the renderer.
+        use runie_core::types::AgentEvent;
+        let event = AgentEvent::BackgroundWorkStarted {
+            work_id: "subagent-1".into(),
+            description: "research".into(),
+            background: false,
+        };
+        let messages = super::background_messages_for_event(&event);
+        assert_eq!(messages.len(), 3);
+        assert!(matches!(
+            &messages[0],
+            super::ScrollbackMsg::SetToolName(id, name)
+                if id == "subagent-1" && name == "subagent"
+        ));
+        assert!(matches!(
+            &messages[1],
+            super::ScrollbackMsg::SetToolMode(id, _)
+                if id == "subagent-1"
+        ));
+    }
+
+    #[test]
+    fn background_messages_for_event_emits_subagent_tool_start() {
+        // Pin the third message of the subagent lifecycle: the
+        // `ToolStart` row carries the `Subagent running: ...` header
+        // and a `None` activity.
+        use runie_core::types::AgentEvent;
+        let event = AgentEvent::BackgroundWorkStarted {
+            work_id: "subagent-1".into(),
+            description: "research".into(),
+            background: false,
+        };
+        let messages = super::background_messages_for_event(&event);
+        assert!(matches!(
+            &messages[2],
+            super::ScrollbackMsg::ToolStart {
+                tool_call_id,
+                header,
+                activity
+            } if tool_call_id == "subagent-1"
+                && header == "Subagent running: \"research\""
+                && activity.is_none()
+        ));
+    }
+
+    #[test]
+    fn background_messages_for_event_returns_empty_for_non_background() {
+        // Pin the negative path: a non-background event returns an
+        // empty vector so the model's caller can keep the
+        // pass-through behavior.
+        use runie_core::types::AgentEvent;
+        let event = AgentEvent::AgentStart;
+        assert!(super::background_messages_for_event(&event).is_empty());
     }
 
     #[test]

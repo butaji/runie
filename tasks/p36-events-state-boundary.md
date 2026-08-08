@@ -1463,3 +1463,24 @@ and the 20-tick `Worked for 1.0s` one-second threshold. The 127
 `visual_snapshots` replay tests, and the full `just ci` (fmt-check,
 clippy, lint, test, parity, source inventory, Pi event contract,
 feed-actor boundary) are green.
+
+**`background_messages_for_event` retirement (2026-08-08):** the
+`BackgroundWork*` and `Workflow*` event projection now lives in
+`runie-tui-model::feed` so the actor-owned background and workflow
+projection and the renderer share one canonical shape. The
+renderer-local `fn background_messages_for_event` at
+`crates/runie-tui/src/scrollback_actor.rs:421` was collapsed to a
+thin `runie_tui_model::background_messages_for_event(&event)`
+delegate. The function carries an `#[allow(clippy::too_many_lines)]`
+attribute since the unified background-and-workflow projection
+includes both lifecycle event families. The three new focused tests
+`background_messages_for_event_emits_subagent_setup`,
+`background_messages_for_event_emits_subagent_tool_start`, and
+`background_messages_for_event_returns_empty_for_non_background` in
+`crates/runie-tui-model/src/feed.rs` pin the subagent lifecycle
+triple, the `ToolStart` row shape, and the non-background passthrough.
+The 130 `runie-tui-model` lib unit tests (127 pre-existing + 3 new),
+the 220 `runie-tui` lib unit tests, the 5 `runie` binary unit tests,
+the 28 `visual_snapshots` replay tests, and the full `just ci`
+(fmt-check, clippy, lint, test, parity, source inventory, Pi event
+contract, feed-actor boundary) are green.
