@@ -772,6 +772,19 @@ pub fn model_selector_rows(
         .collect()
 }
 
+/// Format a repository directory as a `~/relative` label when the path
+/// lives under the user's home, and as the full path otherwise.
+/// Centralized here so the actor-owned repository projection and the
+/// renderer agree on the displayed repository label.
+pub fn repository_label(path: &std::path::Path, home: Option<&std::path::Path>) -> String {
+    if let Some(home) = home {
+        if let Ok(relative) = path.strip_prefix(home) {
+            return format!("~/{}", relative.display());
+        }
+    }
+    path.display().to_string()
+}
+
 /// Render a unix-timestamp (seconds) as Grok's short clock label (e.g.
 /// `3:07 PM`). Falls back to a UTC-derived 12-hour clock when libc cannot
 /// resolve the local timezone, so the label is always well-formed.
@@ -2020,6 +2033,35 @@ mod tests {
         use runie_core::model_catalog::ModelCatalogSnapshot;
         let snapshot = ModelCatalogSnapshot::default();
         assert!(super::model_selector_rows(&snapshot).is_empty());
+    }
+
+    #[test]
+    fn repository_label_renders_home_relative_path() {
+        // Pin the home-relative path: a path under the home is rendered
+        // with the `~/` prefix so the header stays compact.
+        let home = std::path::Path::new("/home/user");
+        let path = std::path::Path::new("/home/user/proj/runie");
+        assert_eq!(super::repository_label(path, Some(home)), "~/proj/runie");
+    }
+
+    #[test]
+    fn repository_label_renders_full_path_outside_home() {
+        // Pin the negative path: a path outside the home is rendered
+        // verbatim so the user can navigate from the absolute path.
+        let home = std::path::Path::new("/home/user");
+        let path = std::path::Path::new("/tmp/other/runie");
+        assert_eq!(
+            super::repository_label(path, Some(home)),
+            "/tmp/other/runie"
+        );
+    }
+
+    #[test]
+    fn repository_label_returns_full_path_when_home_is_missing() {
+        // Pin the missing-home path: a `None` home means the absolute
+        // path is rendered as-is so the renderer never has to guess.
+        let path = std::path::Path::new("/var/runie");
+        assert_eq!(super::repository_label(path, None), "/var/runie");
     }
 
     #[test]

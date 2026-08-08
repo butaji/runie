@@ -169,12 +169,7 @@ fn current_branch() -> &'static str {
 fn repository_label() -> String {
     let path = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("runie"));
     let home = std::env::var_os("HOME").map(std::path::PathBuf::from);
-    if let Some(home) = home {
-        if let Ok(relative) = path.strip_prefix(home) {
-            return format!("~/{}", relative.display());
-        }
-    }
-    path.display().to_string()
+    runie_tui_model::repository_label(&path, home.as_deref())
 }
 
 fn render_header(area: Rect, buf: &mut Buffer, meter: &str, theme: runie_core::types::ThemeKind) {

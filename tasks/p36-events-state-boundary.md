@@ -1332,3 +1332,23 @@ the three-glyph dot fallback. The 109 `runie-tui-model` lib unit tests
 `runie` binary unit tests, the 28 `visual_snapshots` replay tests, and
 the full `just ci` (fmt-check, clippy, lint, test, parity, source
 inventory, Pi event contract, feed-actor boundary) are green.
+
+**Repository label retirement (2026-08-08):** the `repository_label`
+text projection now lives in `runie-tui-model::feed` so the
+actor-owned repository projection and the renderer agree on the
+displayed label shape. The renderer-local `fn repository_label` at
+`crates/runie-tui/src/bin/runie.rs:169` was collapsed to a thin
+`runie_tui_model::repository_label` delegate that calls the model
+helper with the resolved `current_dir` and `HOME` environment
+variables. The function takes the home path as an injected argument
+so the model-side projection stays pure and deterministic. The three
+new focused tests `repository_label_renders_home_relative_path`,
+`repository_label_renders_full_path_outside_home`, and
+`repository_label_returns_full_path_when_home_is_missing` in
+`crates/runie-tui-model/src/feed.rs` pin the `~/` prefix, the
+out-of-home passthrough, and the missing-home fallback. The 112
+`runie-tui-model` lib unit tests (109 pre-existing + 3 new), the 220
+`runie-tui` lib unit tests, the 5 `runie` binary unit tests, the 28
+`visual_snapshots` replay tests, and the full `just ci` (fmt-check,
+clippy, lint, test, parity, source inventory, Pi event contract,
+feed-actor boundary) are green.
