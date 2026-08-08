@@ -221,6 +221,10 @@ is validated before the owned pump is returned; ordinary replay traces remain
 unchanged. This closes deterministic adapter coverage without claiming a
 provider's HTTP polling protocol or expiry semantics.
 
+The same replay capability now implements `cancel_deferred` with the matching
+validated handle boundary, so deterministic fetch/cancel tests exercise both
+optional provider operations without introducing a generic polling loop.
+
 Provider lifecycle increment (2026-08-07): `ProviderActor` now aborts any
 previous owned pump before acknowledging a new `Start`. This matches the
 one-in-flight Pi turn contract and prevents superseded streams from publishing
