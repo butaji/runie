@@ -1186,6 +1186,35 @@ impl CellSelection {
     }
 }
 
+/// Project a committed terminal-cell selection into clipboard text without
+/// touching a platform clipboard. Rows are clamped to the feed, columns are
+/// Unicode-scalar positions, and line breaks are preserved for downstream
+/// clipboard adapters.
+pub fn selected_cell_text(lines: &[Line], selection: CellSelection) -> String {
+    let (start, end) = selection.normalized();
+    if lines.is_empty() || usize::from(start.row) >= lines.len() {
+        return String::new();
+    }
+    let last_row = usize::from(end.row).min(lines.len().saturating_sub(1));
+    (usize::from(start.row)..=last_row)
+        .map(|row| {
+            let chars = lines[row].text.chars().collect::<Vec<_>>();
+            let from = if row == usize::from(start.row) {
+                usize::from(start.column).min(chars.len())
+            } else {
+                0
+            };
+            let to = if row == last_row {
+                usize::from(end.column).min(chars.len())
+            } else {
+                chars.len()
+            };
+            chars[from..to].iter().collect::<String>()
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LineKind {
     User,
@@ -1907,6 +1936,30 @@ mod tests {
         assert!(state.snapshot().copy_selection.is_none());
         state.reduce(super::ScrollbackMsg::ClearCellSelection);
         assert!(state.snapshot().cell_selection.is_none());
+    }
+
+    #[test]
+    fn selected_cell_text_projects_normalized_rows_without_clipboard_side_effects() {
+        let lines = vec![
+            super::Line::new(super::LineKind::User, "hello"),
+            super::Line::new(super::LineKind::Assistant, "世界"),
+        ];
+        let selection = super::CellSelection {
+            anchor: super::CellPosition { row: 1, column: 1 },
+            head: super::CellPosition { row: 0, column: 3 },
+        };
+
+        assert_eq!(super::selected_cell_text(&lines, selection), "lo\n世");
+        assert_eq!(
+            super::selected_cell_text(
+                &lines,
+                super::CellSelection {
+                    anchor: super::CellPosition { row: 9, column: 0 },
+                    head: super::CellPosition { row: 9, column: 1 },
+                },
+            ),
+            ""
+        );
     }
 
     #[test]

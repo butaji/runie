@@ -585,3 +585,7 @@ test call it through `crate::widgets::welcome_modal_lines()`. The
 to `runie_tui__widgets__welcome__tests__welcome_modal.snap` to match the
 new test home. No behavior change; this is a code-ownership cleanup that
 keeps the idle chrome formatter next to the widget that renders it.
+**Clipboard payload projection (2026-08-08):** `selected_cell_text` now
+projects a committed `CellSelection` into deterministic, newline-preserving
+text in `runie-tui-model`. The projection is pure and tested independently of
+any platform clipboard; clipboard adapter wiring remains open.
