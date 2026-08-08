@@ -22,10 +22,11 @@ pub use feed::{
     project_tool_card_rows, running_bullet, structured_update_text, table_bottom_border,
     thinking_summary, tool_header, tool_mode_for_line, tool_mode_override_for_line,
     tool_result_text, tool_update_header_text, version_badge, web_search_site_count,
-    web_search_sources_line, workflow_text, ActivityKind, CellPosition, CellSelection,
-    FeedNavigation, FeedSnapshot, FeedState, Line, LineKind, ScrollbackMsg, ToolBlock,
-    ToolCardKind, ToolCardPaintIntent, ToolCardRow, ToolCardRowKind, VersionBadgeVariant,
-    DEFAULT_THINKING_ELAPSED_MS, PROMPT_TIMESTAMP_LIVE_THRESHOLD, RUNNING_BULLETS,
+    web_search_sources_line, welcome_modal_lines, workflow_text, ActivityKind, CellPosition,
+    CellSelection, FeedNavigation, FeedSnapshot, FeedState, Line, LineKind, ScrollbackMsg,
+    ToolBlock, ToolCardKind, ToolCardPaintIntent, ToolCardRow, ToolCardRowKind,
+    VersionBadgeVariant, DEFAULT_THINKING_ELAPSED_MS, PROMPT_TIMESTAMP_LIVE_THRESHOLD,
+    RUNNING_BULLETS,
 };
 pub use memory::{memory_display_lines, parse_memory_results, MemoryResult};
 pub use prompt::{cycle_input_mode, InputMode, PromptOutcome, PromptSnapshot};

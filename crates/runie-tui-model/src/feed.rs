@@ -629,6 +629,22 @@ pub fn is_quit_command(text: &str) -> bool {
     )
 }
 
+/// Render the welcome modal chrome as a sequence of `LineKind::System`
+/// rows. Centralized here so the actor-owned welcome payload and the
+/// renderer share the same idle chrome projection; the `env!` macro
+/// resolves to the workspace version at compile time.
+pub fn welcome_modal_lines() -> Vec<Line> {
+    let version = env!("CARGO_PKG_VERSION");
+    vec![
+        Line::new(LineKind::System, format!("╭─ Runie  v{version} ─")),
+        Line::new(LineKind::System, String::from("│ main runie")),
+        Line::new(LineKind::System, String::from("│ Model · runie-core")),
+        Line::new(LineKind::System, String::from("│ /help for commands")),
+        Line::new(LineKind::System, String::from("╰─")),
+        Line::new(LineKind::System, String::from("◆ session_start")),
+    ]
+}
+
 /// Minimum unix-timestamp value (seconds) treated as a live prompt timestamp.
 /// Values below this are either absent or fixtures; values at or above are
 /// rendered with the short clock format. Centralized here so the renderer
@@ -1683,6 +1699,28 @@ mod tests {
         assert!(!super::is_quit_command("exiting"));
         assert!(!super::is_quit_command("quitting"));
         assert!(!super::is_quit_command(":quit"));
+    }
+
+    #[test]
+    fn welcome_modal_lines_pins_idle_chrome_shape() {
+        // Pin the smoke path: the modal emits exactly six `LineKind::System`
+        // rows so the actor-owned welcome payload and the renderer agree
+        // on the chrome line count.
+        let lines = super::welcome_modal_lines();
+        assert_eq!(lines.len(), 6);
+        for line in &lines {
+            assert_eq!(line.kind, super::LineKind::System);
+        }
+        // Pin the chrome shape: the surrounding `╭─` and `╰─` glyphs mark
+        // the modal borders, `◆ session_start` closes the modal, and the
+        // middle rows carry the model/help breadcrumb.
+        let texts: Vec<&str> = lines.iter().map(|line| line.text.as_str()).collect();
+        assert!(texts[0].starts_with("╭─ Runie  v"), "{}", texts[0]);
+        assert_eq!(texts[1], "│ main runie");
+        assert_eq!(texts[2], "│ Model · runie-core");
+        assert_eq!(texts[3], "│ /help for commands");
+        assert_eq!(texts[4], "╰─");
+        assert_eq!(texts[5], "◆ session_start");
     }
 
     #[test]

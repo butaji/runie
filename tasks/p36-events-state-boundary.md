@@ -1197,3 +1197,23 @@ lib unit tests (96 pre-existing + 2 new), the 220 `runie-tui` lib unit
 tests, the 5 `runie` binary unit tests, the 28 `visual_snapshots` replay
 tests, and the full `just ci` (fmt-check, clippy, lint, test, parity,
 source inventory, Pi event contract, feed-actor boundary) are green.
+
+**Welcome modal retirement (2026-08-08):** the `welcome_modal_lines`
+idle chrome helper now lives in `runie-tui-model::feed` so the
+actor-owned welcome payload and the renderer share one projection. The
+renderer-local `pub fn welcome_modal_lines` at
+`crates/runie-tui/src/widgets/welcome.rs:200` was collapsed to a thin
+`runie_tui_model::welcome_modal_lines` delegate, so the widget's
+existing callers — the YAML runner and the pre-injection test — keep
+their public symbol but lose the duplicated projection. The model-side
+`env!("CARGO_PKG_VERSION")` resolves to the workspace version at
+compile time, matching the prior behavior. The new
+`welcome_modal_lines_pins_idle_chrome_shape` test in
+`crates/runie-tui-model/src/feed.rs` pins the six-row count, the
+uniform `LineKind::System` classification, and the source-backed
+`╭─ Runie  v…` / `│ main runie` / `│ Model · runie-core` / `│ /help for
+commands` / `╰─` / `◆ session_start` chrome shape. The 99 `runie-tui-model`
+lib unit tests (98 pre-existing + 1 new), the 220 `runie-tui` lib unit
+tests, the 5 `runie` binary unit tests, the 28 `visual_snapshots` replay
+tests, and the full `just ci` (fmt-check, clippy, lint, test, parity,
+source inventory, Pi event contract, feed-actor boundary) are green.

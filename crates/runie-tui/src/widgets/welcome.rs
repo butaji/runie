@@ -7,7 +7,7 @@ use ratatui::text::{Line as RatLine, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget};
 
 use crate::appearance;
-use crate::widgets::scrollback::{Line, LineKind};
+use crate::widgets::scrollback::Line;
 use runie_core::types::ThemeKind;
 
 /// The full-mode welcome surface shown before the first prompt is submitted.
@@ -198,15 +198,7 @@ fn render_wide_hero_actions(area: Rect, buf: &mut Buffer) {
 /// The widget owns its own idle prompt text so the formatter lives with the
 /// surface that renders it.
 pub fn welcome_modal_lines() -> Vec<Line> {
-    let version = env!("CARGO_PKG_VERSION");
-    vec![
-        Line::new(LineKind::System, format!("╭─ Runie  v{version} ─")),
-        Line::new(LineKind::System, String::from("│ main runie")),
-        Line::new(LineKind::System, String::from("│ Model · runie-core")),
-        Line::new(LineKind::System, String::from("│ /help for commands")),
-        Line::new(LineKind::System, String::from("╰─")),
-        Line::new(LineKind::System, String::from("◆ session_start")),
-    ]
+    runie_tui_model::welcome_modal_lines()
 }
 
 #[cfg(test)]
