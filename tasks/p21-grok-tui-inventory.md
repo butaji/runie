@@ -742,6 +742,12 @@ matching only for compatibility rows. Duplicate live cards no longer style or
 retain output as selected merely because their provider IDs match; focused
 renderer tests and the full CI gate pass.
 
+Selection-box identity increment (2026-08-10): the selected dense-group key
+projection now narrows same-call-ID rows to the selected actor row while still
+including other members of the selected group. Duplicate live cards therefore
+cannot borrow one another's selection surface; focused dense-selection tests,
+replay, and the full CI gate pass.
+
 Workflow status formatter audit (2026-08-06): compared against Grok's
 `WorkflowBlockStatus` renderer and added exact tests for `failed`, `cancelled`,
 and `paused` elapsed wording. Cancelled/paused statuses now use `after 1.2s`

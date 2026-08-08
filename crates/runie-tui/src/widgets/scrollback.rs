@@ -752,10 +752,13 @@ impl Scrollback {
             .lines
             .iter()
             .filter_map(|line| {
-                line.tool_call_id
-                    .as_ref()
-                    .filter(|id| selected_tool_ids.contains(*id))
-                    .map(|_| (line.kind, line.text.clone()))
+                let id = line.tool_call_id.as_ref()?;
+                let selected = if self.navigation.selected_tool_id.as_ref() == Some(id) {
+                    self.is_selected_tool_line(line)
+                } else {
+                    selected_tool_ids.contains(id)
+                };
+                selected.then(|| (line.kind, line.text.clone()))
             })
             .collect::<Vec<_>>();
 
