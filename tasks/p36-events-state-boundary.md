@@ -1084,3 +1084,21 @@ third `workspace` argument the renderer now threads through
 `tool_header`. The full `just ci` (fmt-check, clippy, lint, test,
 parity, source inventory, Pi event contract, feed-actor boundary) is
 green.
+
+**Running bullet retirement (2026-08-08):** the Grok running tool bullet
+vocabulary (`⋅ `, `: `, `⸬ `, `⁙ `) and the `running_bullet(frame)`
+projector now live in `runie-tui-model::feed` alongside the other
+animation-frame helpers. The renderer-local `const RUNNING_BULLETS` at
+`crates/runie-tui/src/widgets/scrollback.rs:2119` and the local
+`fn running_bullet(frame)` wrapper were retired; the sole renderer call
+site at the `LineKind::ToolRunning` prefix branch now invokes
+`runie_tui_model::running_bullet(self.navigation.animation_frame)`
+directly. The new `running_bullet_pins_grok_frame_vocabulary_and_wraps`
+test in `crates/runie-tui-model/src/feed.rs` pins the four source-backed
+Grok frames in order, the direct `frame` index projection, and the
+wrap-around for `frame == 4` and `frame == usize::MAX`. The 88
+`runie-tui-model` lib unit tests (87 pre-existing + 1 new), the 220
+`runie-tui` lib unit tests, the 5 `runie` binary unit tests, the 28
+`visual_snapshots` replay tests, and the full `just ci` (fmt-check,
+clippy, lint, test, parity, source inventory, Pi event contract,
+feed-actor boundary) are green.

@@ -1654,7 +1654,7 @@ impl Scrollback {
                         _ => "⌄ ",
                     }
                 } else if line.kind == LineKind::ToolRunning {
-                    running_bullet(self.navigation.animation_frame)
+                    runie_tui_model::running_bullet(self.navigation.animation_frame)
                 } else {
                     line.kind.prefix()
                 };
@@ -2114,12 +2114,6 @@ fn styled_line_for(kind: LineKind, text: &str, theme: ThemeKind) -> RatLine<'sta
         return RatLine::from(text.to_owned()).style(style);
     }
     styled_assistant_line(text, style)
-}
-
-const RUNNING_BULLETS: [&str; 4] = ["⋅ ", ": ", "⸬ ", "⁙ "];
-
-fn running_bullet(frame: usize) -> &'static str {
-    RUNNING_BULLETS[frame % RUNNING_BULLETS.len()]
 }
 
 fn styled_thought_summary(text: &str, style: Style, theme: ThemeKind) -> RatLine<'static> {

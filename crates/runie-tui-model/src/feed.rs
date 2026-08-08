@@ -470,6 +470,19 @@ pub fn thinking_summary(elapsed_ms: Option<u64>) -> String {
     format!("◆ Thought for {:.1}s", elapsed_ms as f64 / 1_000.0)
 }
 
+/// Animation frames for the running tool bullet. The first three characters
+/// are non-breaking whitespace followed by a single trailing space so the
+/// bullet occupies the same terminal width as Grok's source-backed default
+/// prefix; the fourth frame is a Braille dot-cluster for the same width.
+pub const RUNNING_BULLETS: [&str; 4] = ["⋅ ", ": ", "⸬ ", "⁙ "];
+
+/// Render the running tool bullet for a given animation frame. Centralized
+/// here so the actor-owned animation frame and any replay path share one
+/// vocabulary; the frame index wraps via modular arithmetic.
+pub fn running_bullet(frame: usize) -> &'static str {
+    RUNNING_BULLETS[frame % RUNNING_BULLETS.len()]
+}
+
 /// Minimum unix-timestamp value (seconds) treated as a live prompt timestamp.
 /// Values below this are either absent or fixtures; values at or above are
 /// rendered with the short clock format. Centralized here so the renderer
@@ -1315,6 +1328,23 @@ mod tests {
         // Pin the observed path: an explicit elapsed value overrides the
         // default and renders the same "◆ Thought for …" shape.
         assert_eq!(super::thinking_summary(Some(2_500)), "◆ Thought for 2.5s");
+    }
+
+    #[test]
+    fn running_bullet_pins_grok_frame_vocabulary_and_wraps() {
+        // Pin the four source-backed Grok frames in order; the renderer
+        // depends on the exact glyphs and trailing space.
+        assert_eq!(super::RUNNING_BULLETS, ["⋅ ", ": ", "⸬ ", "⁙ "]);
+        // Pin the frame projection: index 0..4 yields the vocabulary in
+        // order, and index 4 wraps back to the first frame.
+        assert_eq!(super::running_bullet(0), "⋅ ");
+        assert_eq!(super::running_bullet(1), ": ");
+        assert_eq!(super::running_bullet(2), "⸬ ");
+        assert_eq!(super::running_bullet(3), "⁙ ");
+        assert_eq!(super::running_bullet(4), "⋅ ");
+        // Pin the wrap-around for a large frame index so the actor-owned
+        // animation frame never panics on overflow.
+        assert_eq!(super::running_bullet(usize::MAX), "⁙ ");
     }
 
     #[test]
