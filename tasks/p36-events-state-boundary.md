@@ -1296,3 +1296,21 @@ user-compact override, and the pre-compact ambient window. The 106
 `visual_snapshots` replay tests, and the full `just ci` (fmt-check,
 clippy, lint, test, parity, source inventory, Pi event contract,
 feed-actor boundary) are green.
+
+**Model selector rows retirement (2026-08-08):** the `model_selector_rows`
+projection now lives in `runie-tui-model::feed` so the actor-owned
+selector projection and the renderer share one `provider/model` label
+shape. The renderer-local `fn model_selector_rows` at
+`crates/runie-tui/src/app.rs:53` was collapsed to a thin
+`runie_tui_model::model_selector_rows` delegate, so the model selector
+call site keeps its function but loses the duplicate projection. The
+two new focused tests
+`model_selector_rows_renders_provider_slash_model_pairs` and
+`model_selector_rows_returns_empty_for_empty_snapshot` in
+`crates/runie-tui-model/src/feed.rs` pin the canonical `provider/id`
+rendering, the empty-snapshot passthrough, and the
+multi-model preservation order. The 108 `runie-tui-model` lib unit
+tests (106 pre-existing + 2 new), the 220 `runie-tui` lib unit tests,
+the 5 `runie` binary unit tests, the 28 `visual_snapshots` replay
+tests, and the full `just ci` (fmt-check, clippy, lint, test, parity,
+source inventory, Pi event contract, feed-actor boundary) are green.

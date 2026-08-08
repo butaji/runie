@@ -51,11 +51,7 @@ fn initial_ui_state(show_welcome: bool) -> UiState {
 }
 
 fn model_selector_rows(snapshot: &runie_core::model_catalog::ModelCatalogSnapshot) -> Vec<String> {
-    snapshot
-        .results
-        .iter()
-        .map(|model| format!("{}/{}", model.provider, model.id))
-        .collect()
+    runie_tui_model::model_selector_rows(snapshot)
 }
 
 type UiMailbox = (UiMsg, tokio::sync::oneshot::Sender<()>);

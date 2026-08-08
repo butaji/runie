@@ -759,6 +759,19 @@ pub const fn grok_small_screen_tip_visible(terminal_rows: u16) -> bool {
     terminal_rows > GROK_AUTO_COMPACT_MAX_ROWS && terminal_rows <= GROK_SMALL_SCREEN_TIP_MAX_ROWS
 }
 
+/// Render the model-selector row labels for a `ModelCatalogSnapshot`.
+/// Each row is the canonical `provider/model` shape, so the actor-owned
+/// selector projection and the renderer agree on the displayed text.
+pub fn model_selector_rows(
+    snapshot: &runie_core::model_catalog::ModelCatalogSnapshot,
+) -> Vec<String> {
+    snapshot
+        .results
+        .iter()
+        .map(|model| format!("{}/{}", model.provider, model.id))
+        .collect()
+}
+
 /// Render a unix-timestamp (seconds) as Grok's short clock label (e.g.
 /// `3:07 PM`). Falls back to a UTC-derived 12-hour clock when libc cannot
 /// resolve the local timezone, so the label is always well-formed.
@@ -1969,6 +1982,44 @@ mod tests {
         assert!(!super::grok_small_screen_tip_visible(
             super::GROK_SMALL_SCREEN_TIP_MAX_ROWS + 1
         ));
+    }
+
+    #[test]
+    fn model_selector_rows_renders_provider_slash_model_pairs() {
+        use runie_core::model_catalog::ModelCatalogSnapshot;
+        use runie_core::types::Model;
+        let snapshot = ModelCatalogSnapshot {
+            catalog: runie_core::model_catalog::ModelCatalog::new(Vec::new(), Vec::new()),
+            query: String::new(),
+            scoped_only: false,
+            results: vec![
+                Model {
+                    id: "gpt-4o".into(),
+                    name: "GPT-4o".into(),
+                    api: "openai".into(),
+                    provider: "openai".into(),
+                    ..Default::default()
+                },
+                Model {
+                    id: "claude-3-5-sonnet".into(),
+                    name: "Claude".into(),
+                    api: "anthropic".into(),
+                    provider: "anthropic".into(),
+                    ..Default::default()
+                },
+            ],
+            selected: None,
+            last_event: None,
+        };
+        let rows = super::model_selector_rows(&snapshot);
+        assert_eq!(rows, vec!["openai/gpt-4o", "anthropic/claude-3-5-sonnet"]);
+    }
+
+    #[test]
+    fn model_selector_rows_returns_empty_for_empty_snapshot() {
+        use runie_core::model_catalog::ModelCatalogSnapshot;
+        let snapshot = ModelCatalogSnapshot::default();
+        assert!(super::model_selector_rows(&snapshot).is_empty());
     }
 
     #[test]
