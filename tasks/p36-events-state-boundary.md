@@ -635,3 +635,21 @@ publishes `ToolExecutionEnd` and asserts the block is no longer running.
 The 219 `runie-tui` unit tests, the 28 `visual_snapshots` replay tests,
 and the full `just ci` (fmt-check, clippy, lint, test, parity, source
 inventory, Pi event contract, feed-actor boundary) are green.
+
+**Long-burst prompt reducer regression (2026-08-08):** the
+`prompt_actor_reduces_each_press_key_independently` 5-char burst
+covered the snapshot-staleness contract but left a long-burst gap: a
+regression that quietly dropped characters (or coalesced keys) would
+have surfaced only as a wrong `text == expected` final assertion on a
+short input. The new
+`prompt_actor_reduces_one_hundred_twenty_eight_keys_into_snapshot`
+unit test in `crates/runie-tui/src/bin/runie.rs` mirrors the sibling
+`App`/`PromptActor` wiring, drives 128 distinct char keys (26
+lowercase + 26 uppercase + 10 digits + 66 symbols) through
+`app.prompt.handle_key(key).await`, asserts after every awaited
+dispatch that `app.prompt.snapshot().text()` ends with the cumulative
+prefix, and finally asserts the verbatim equality of the snapshot
+against the concatenated input. The five `runie` binary unit tests,
+the 220 `runie-tui` unit tests, the 28 `visual_snapshots` replay
+tests, and the full `just ci` (fmt-check, clippy, lint, test, parity,
+source inventory, Pi event contract, feed-actor boundary) are green.

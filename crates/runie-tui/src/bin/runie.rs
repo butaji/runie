@@ -1103,4 +1103,118 @@ mod tests {
             );
         }
     }
+
+    /// Pin down that the prompt snapshot reflects every key in a long
+    /// burst after a single `handle_key` await, and that the final
+    /// snapshot equals the concatenated input verbatim. Mirrors the
+    /// wiring in `prompt_actor_reduces_each_press_key_independently`
+    /// so the live main loop's `dispatch_key` path stays consistent
+    /// across a 128-key press. A regression that batches keys through a
+    /// single awaited reducer would surface here as a stale snapshot
+    /// mid-burst, while a regression that drops characters would fail
+    /// the verbatim equality check at the end.
+    #[tokio::test]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "self-contained App wiring mirrors the runie.rs bin for fidelity"
+    )]
+    async fn prompt_actor_reduces_one_hundred_twenty_eight_keys_into_snapshot() {
+        use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+        use runie_core::events::EventBus;
+        use runie_core::provider::stream_fn::{AssistantMessageEventStream, StreamError, StreamFn};
+        use runie_core::provider::ProviderActor;
+        use runie_core::queues::{FollowUpQueueActor, SteeringQueueActor};
+        use runie_core::r#loop::{LoopActor, LoopDeps};
+        use runie_core::state::AgentStateActor;
+        use runie_core::tools::executor::ToolExecHooks;
+        use runie_core::tools::{ToolExecutorActor, ToolRegistry};
+        use runie_core::types::{AgentContext, Model, SimpleStreamOptions, ToolExecutionMode};
+        use runie_tui::app::App;
+        use std::sync::Arc;
+
+        struct NoopStream;
+        #[async_trait::async_trait]
+        impl StreamFn for NoopStream {
+            async fn stream(
+                &self,
+                _model: &Model,
+                _context: &AgentContext,
+                _options: Option<SimpleStreamOptions>,
+            ) -> Result<AssistantMessageEventStream, StreamError> {
+                use futures::stream;
+                Ok(Box::pin(stream::iter(std::iter::empty())))
+            }
+        }
+
+        let bus = EventBus::new();
+        let state = AgentStateActor::new();
+        let steering = SteeringQueueActor::new();
+        let follow_up = FollowUpQueueActor::new();
+        let tool_executor = ToolExecutorActor::new_live(Arc::new(ToolRegistry::new()));
+        let provider = ProviderActor::new(Arc::new(NoopStream));
+        let deps = LoopDeps {
+            state,
+            steering,
+            follow_up,
+            tool_executor,
+            provider,
+            bus: bus.clone(),
+            subscribers: runie_core::events::SubscriberRegistry::new(),
+            hooks: ToolExecHooks::default(),
+            turn_hooks: runie_core::hooks::TurnHooks::default(),
+            transform_context: None,
+            api_key_resolver: None,
+            convert_to_llm: None,
+            stream_options: Default::default(),
+            abort: None,
+            tool_execution_mode: ToolExecutionMode::Parallel,
+            steering_mode: runie_core::types::QueueMode::OneAtATime,
+            follow_up_mode: runie_core::types::QueueMode::OneAtATime,
+        };
+        let actor = LoopActor::new(deps);
+        let app = App::new(actor, bus);
+
+        // 128 distinct char keys: 26 lowercase + 26 uppercase + 10 digits
+        // + 66 symbols (32 ASCII printable + space + 33 Latin-1 supplement).
+        // Building from disjoint ranges and literals guarantees uniqueness.
+        let pool: Vec<char> = {
+            let mut p = Vec::with_capacity(128);
+            p.extend('a'..='z');
+            p.extend('A'..='Z');
+            p.extend('0'..='9');
+            p.extend("!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~".chars());
+            p.push(' ');
+            p.extend("¡¢£¤¥¦§¨©ª«¬®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂ".chars());
+            debug_assert_eq!(p.len(), 128, "pool must contain exactly 128 distinct chars");
+            p
+        };
+
+        let mut expected = String::new();
+        for (i, &ch) in pool.iter().enumerate() {
+            let key = KeyEvent {
+                code: KeyCode::Char(ch),
+                modifiers: KeyModifiers::NONE,
+                kind: KeyEventKind::Press,
+                state: crossterm::event::KeyEventState::NONE,
+            };
+            app.prompt.handle_key(key).await;
+            expected.push(ch);
+            // After every awaited dispatch the prompt snapshot must end
+            // with the cumulative prefix; a regression that defers the
+            // snapshot until a later tick would surface here as a stale
+            // text after `i + 1` keys.
+            let text = app.prompt.snapshot().text();
+            assert!(
+                text.ends_with(&expected),
+                "after key {i} ({ch:?}) the prompt text {text:?} must end with {expected:?}"
+            );
+        }
+        // The buffer starts empty and we only ever insert chars, so the
+        // final snapshot must equal the concatenated input verbatim.
+        assert_eq!(
+            app.prompt.snapshot().text(),
+            expected,
+            "final snapshot must equal the concatenated input verbatim"
+        );
+    }
 }
