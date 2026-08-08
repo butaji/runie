@@ -28,8 +28,8 @@ use runie_core::tools::{ToolExecutorActor, ToolRegistry};
 use runie_core::types::{
     AgentContext, AgentEvent, AgentMessage, AgentTool, AgentToolResult, AssistantContent,
     AssistantMessage, AssistantMessageEvent, CacheRetention, DeferredHandle, Model,
-    SimpleStreamOptions, StopReason, ThinkingLevel, ToolExecutionMode, ToolResultContent, Usage,
-    UserContent, UserMessage, WaitingReason,
+    OperationRecordKind, SimpleStreamOptions, StopReason, ThinkingLevel, ToolExecutionMode,
+    ToolResultContent, Usage, UserContent, UserMessage, WaitingReason,
 };
 use serde::Deserialize;
 use tokio::sync::broadcast;
@@ -861,10 +861,16 @@ impl EventSpec {
                 usage: compaction.usage.clone(),
             }),
             Self::OperationRecord { operation_record } => {
-                Some(AgentEvent::OperationRecordCreated {
-                    record_type: operation_record.record_type.clone(),
-                    data: operation_record.data.clone(),
-                })
+                match OperationRecordKind::from_wire_name(&operation_record.record_type) {
+                    Some(kind) => Some(AgentEvent::TypedOperationRecordCreated {
+                        kind,
+                        data: operation_record.data.clone(),
+                    }),
+                    None => Some(AgentEvent::OperationRecordCreated {
+                        record_type: operation_record.record_type.clone(),
+                        data: operation_record.data.clone(),
+                    }),
+                }
             }
             Self::ToolMode { tool_mode } => Some(AgentEvent::ToolDisplayModeChanged {
                 tool_call_id: tool_mode.tool_call_id.clone(),

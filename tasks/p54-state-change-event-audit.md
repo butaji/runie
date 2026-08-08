@@ -174,3 +174,9 @@ and `handle_tool_end` are now each a single atomic read against a
 caller-bound `snapshot`. The full `just ci` (fmt-check, clippy, lint,
 test, parity, source inventory, Pi event contract, feed-actor
 boundary) is green.
+
+Typed YAML admission increment (2026-08-08): declarative operation records
+now decode known Pi wire names into `TypedOperationRecordCreated` before replay
+delivery. Unknown extension record names retain the generic compatibility
+event, keeping the lossless wire edge while removing free-form strings from
+the known internal event path.

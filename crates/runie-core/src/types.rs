@@ -904,6 +904,24 @@ impl OperationRecordKind {
             Self::Usage => "usage",
         }
     }
+
+    /// Decode a Pi wire record name at the compatibility edge. Producers and
+    /// internal events should use the closed enum; unknown names remain
+    /// available to the lossless legacy record path.
+    pub fn from_wire_name(name: &str) -> Option<Self> {
+        match name {
+            "operation_started" => Some(Self::OperationStarted),
+            "abort_requested" => Some(Self::AbortRequested),
+            "operation_finished" => Some(Self::OperationFinished),
+            "step_attempt" => Some(Self::StepAttempt),
+            "tool_started" => Some(Self::ToolStarted),
+            "queue_enqueued" => Some(Self::QueueEnqueued),
+            "queue_cancelled" => Some(Self::QueueCancelled),
+            "write_deferred" => Some(Self::WriteDeferred),
+            "usage" => Some(Self::Usage),
+            _ => None,
+        }
+    }
 }
 
 /// Event emitted by the agent for UI updates and for downstream subscribers.
@@ -1882,5 +1900,21 @@ mod tests {
         let override_json = serde_json::to_value(override_result).expect("override serializes");
         assert_eq!(override_json["isError"], true);
         assert_eq!(override_json["terminate"], false);
+    }
+
+    #[test]
+    fn operation_record_wire_names_decode_only_known_pi_families() {
+        assert_eq!(
+            OperationRecordKind::from_wire_name("operation_started"),
+            Some(OperationRecordKind::OperationStarted)
+        );
+        assert_eq!(
+            OperationRecordKind::OperationFinished.wire_name(),
+            "operation_finished"
+        );
+        assert_eq!(
+            OperationRecordKind::from_wire_name("extension_record"),
+            None
+        );
     }
 }
