@@ -146,6 +146,13 @@ request as SSE. A provider adapter can therefore be added behind the existing
 `StreamFn` boundary without changing the Pi event contract or creating a
 second state owner.
 
+Codex wire seam increment (2026-08-09): runie-core now provides pure helpers
+for source-backed /codex/responses URL resolution, https/http to wss/ws
+conversion, the Responses WebSocket beta header, and the response.create
+envelope tag. Unit tests pin URL edge cases and object-only envelope
+validation. Socket acquisition, continuation caching, fallback, and cleanup
+remain provider-adapter responsibilities.
+
 Transport audit continuation (2026-08-07): the source-to-boundary comparison
 was rechecked against Pi's `processWebSocketStream`, continuation cache, and
 session cleanup helpers. The remaining implementation data is concrete and

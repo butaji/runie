@@ -1,6 +1,7 @@
 //! Provider layer: `StreamFn` trait and `ProviderActor`.
 
 pub mod actor;
+pub mod codex;
 pub mod http;
 pub mod replay;
 pub mod stream_fn;
