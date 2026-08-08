@@ -183,6 +183,12 @@ typed validator; generic extension spans remain schema-agnostic.
 `pi-ai-request-end.yaml` adds runtime-editable replay coverage for the
 provider-shaped start and terminal attribute projection.
 
+Status vocabulary reconciliation (2026-08-08): Pi's public telemetry callback
+status is the closed `ok`/`error` vocabulary. Runie's internal `Unset` value is
+retained because spans begin unsettled and settlement defaults an unmodified
+span to `ok`; it is not exposed as a Pi callback status. Removing it would
+collapse an actor lifecycle state rather than improve source parity.
+
 Stream chunk-count increment (2026-08-09): the owned provider pump now counts
 non-terminal assistant update events and publishes Pi's
 `pi.ai.stream.chunk_count` at terminal span settlement for both successful and

@@ -695,6 +695,13 @@ Execute-card truncation parity (2026-08-06): Grok's default execute preview
 keeps the first two and last three output lines and renders the hidden count as
 `… +N lines`. Runie now applies that contract to typed shell execute cards;
 the pure renderer test covers the resulting preview and omitted middle.
+
+Read-card metadata reconciliation (2026-08-08): the current Pi tool-result
+event carries opaque result JSON, arguments, range headers, and media metadata.
+Runie's actor/YAML boundary already preserves that payload and the renderer
+projects the read-card fields from it. A parallel typed read-metadata event
+would duplicate Pi's wire contract, so this inventory item is closed unless
+the upstream event shape changes or a new Grok-only card variant is identified.
 ### Fold transition closure: running generic tools
 
 Grok's `OtherToolCallBlock::next_fold_mode` is state-dependent. While the
