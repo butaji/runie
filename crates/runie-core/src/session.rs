@@ -2344,12 +2344,10 @@ impl SessionSnapshot {
                             data: value.clone(),
                         }
                     }
-                    _ => {
-                        return Err(format!(
-                            "unsupported session mutation at line {}",
-                            line_index + 2
-                        ))
-                    }
+                    _ => SessionConfigRecord::OperationRecordCreated {
+                        record_type: entry_type.to_owned(),
+                        data: value.clone(),
+                    },
                 };
                 snapshot.sequence = seq;
                 snapshot.leaf_id = Some(id.clone());
@@ -2462,12 +2460,7 @@ impl SessionSnapshot {
                 entry.to_string()
             })
             .collect::<Vec<_>>();
-        entry_lines.extend(self.config_records.iter().filter(|session_entry| {
-            !matches!(
-                session_entry.record,
-                SessionConfigRecord::OperationRecordCreated { .. }
-            )
-        }).map(|session_entry| {
+        entry_lines.extend(self.config_records.iter().map(|session_entry| {
             let (entry_type, mut entry) = match &session_entry.record {
                 SessionConfigRecord::ModelChanged { provider, model_id } => (
                     "model_change",
@@ -6039,9 +6032,32 @@ mod tests {
         assert!(SessionSnapshot::from_jsonl(&broken_parent).is_err());
         let unsupported_kind = format!(
             "{header}\n{}\n",
-            entry(1, serde_json::Value::Null, "branch")
+            entry(1, serde_json::Value::Null, "not-entry")
         );
         assert!(SessionSnapshot::from_jsonl(&unsupported_kind).is_err());
+    }
+
+    #[test]
+    fn jsonl_round_trips_opaque_extension_records() {
+        let header = serde_json::json!({
+            "kind": "header", "version": 4, "id": "s", "createdAt": 5, "cwd": "/w"
+        })
+        .to_string();
+        let extension = serde_json::json!({
+            "kind": "entry", "lane": "main", "type": "plugin_event",
+            "id": "plugin-1", "parentId": null, "seq": 1, "timestamp": 7,
+            "plugin": "example", "payload": {"enabled": true}
+        });
+        let (_, _, snapshot) = SessionSnapshot::from_jsonl(&format!("{header}\n{}\n", extension))
+            .expect("opaque extension record");
+        assert!(matches!(
+            snapshot.config_records.first().map(|entry| &entry.record),
+            Some(SessionConfigRecord::OperationRecordCreated { record_type, data })
+                if record_type == "plugin_event" && data["payload"]["enabled"] == true
+        ));
+        let exported = snapshot.to_jsonl("s", 5, "/w");
+        assert!(exported.contains("\"type\":\"plugin_event\""));
+        assert!(exported.contains("\"enabled\":true"));
     }
 
     #[test]

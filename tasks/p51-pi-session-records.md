@@ -3,6 +3,11 @@
 Status: in progress — all three configuration records and JSONL round-trip
 implemented; broader Pi record families remain open (2026-08-07)
 
+**Opaque record compatibility (2026-08-08):** Validated JSONL v4 import/export
+now preserves unknown extension `type` values and payloads as
+`OperationRecordCreated` facts. They remain actor-owned journal records and
+are not fabricated as messages or reduced as typed operation capabilities.
+
 ## Source contract
 
 Pi's `packages/agent/src/harness/session/types.ts` defines non-message JSONL
