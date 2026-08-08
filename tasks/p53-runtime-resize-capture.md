@@ -1,7 +1,7 @@
 # p53 — Runtime resize capture contract
 
-Status: implemented in capture tooling; runtime parity evidence pending
-(2026-08-08)
+Status: Runie runtime resize evidence complete; paired Grok cell parity remains
+pending (2026-08-09)
 
 ## Why
 
@@ -84,3 +84,13 @@ settled-response probe timed out after the resize, so its cast is marked
 invalid and was not used for a cell comparison. This isolates the remaining
 issue to obtaining a settled Grok frame under the resize schedule, not to the
 resize event or observation path.
+
+Runie four-geometry runtime matrix (2026-08-09):
+`capture-scenario.sh crates/runie-tui/tests/e2e/visual-resize.yaml` completed
+for initial terminals `62×32`, `80×24`, `100×30`, and `120×36` with
+`--terminal-native` and truecolor. Every `.resize.json` report was valid and
+observed `80×12` at 250 ms followed by `100×24` at 500 ms; each run also
+produced cast, raw, settled ANSI, metadata, and Grok-diagnostic artifacts.
+This closes the Runie runtime schedule/observation evidence. It does not claim
+the remaining paired Grok cell comparison, whose settled-frame capture is
+still unavailable in the current checkout.
