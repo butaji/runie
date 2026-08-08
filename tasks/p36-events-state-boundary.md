@@ -473,3 +473,35 @@ removes the separator at `feed_messages.get(1)`, after the intentional
 five-message projection. The parity test drives `MessageStart::Assistant`
 through `with_live_actors`/live bus and `with_actors`/replay, asserting four
 live rows versus five replay rows; the pure-table oracle remains at five.
+
+**Immediate-render key dispatch (2026-08-08):** the `runie` binary's
+`run_app` loop used to push every Press key into a `pending_keys`
+`VecDeque` from the input arm and then drain the queue inside the 50 ms
+`tick` arm, awaiting each key through the prompt/UI actor in order and
+drawing a single terminal frame only after the last queued key had been
+reduced. A fast burst like `Hey` only became visible after five
+sequential mailbox awaits plus one render, so the first character
+lagged the typist by tens of milliseconds and burst keystrokes could
+appear in one frame. The input arm now drops the FIFO entirely:
+`tokio::select!` uses `biased;` to prefer the input branch, and every
+`InputEvent::Key(key)` is dispatched immediately through a new
+`dispatch_key` inner helper that moves the `ui_commands` broadcast
+receiver in and returns it back across the await. After the dispatch
+returns, the input arm calls a new `render_frame` helper (placeholder
+visibility update + the same `terminal.draw` block that the tick arm
+used to run) so a single key produces a single frame. The tick arm is
+now render-only and covers animation and agent activity refreshes.
+Mouse events, the model-selector and command-palette routing, the
+`map_key` action table, the mappable-builtin and `is_quit_command`
+prompt-submit paths, the renderer-shutdown teardown for the `Quit`
+action, and the bias for input over tick are all preserved. The
+existing `full_mode_typed_prompt_snapshot` (`crates/runie-tui/tests/
+e2e/visual-typed.yaml`) and 27 sibling visual snapshots still pass, and
+a new `prompt_actor_reduces_each_press_key_independently` unit test
+in `crates/runie-tui/src/bin/runie.rs` drives `handle_key` for the
+five `hello` characters and asserts the prompt text contains the
+growing prefix after every individual `await`, so a future regression
+that batches keys through a single awaited reducer would surface as
+a stale snapshot. The full `just ci` (fmt-check, clippy, lint, test,
+parity, source inventory, Pi event contract, feed-actor boundary) is
+green.

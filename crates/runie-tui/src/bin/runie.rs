@@ -4,7 +4,6 @@
 //! shell — the loop will publish events but no real LLM stream will drive
 //! it. A `StreamFn` adapter is a follow-up task.
 
-use std::collections::VecDeque;
 use std::io::{self, Stdout};
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
@@ -42,7 +41,8 @@ use futures::StreamExt;
 use runie_tui::app::{App, AppExit, PaletteAction, UiCommand};
 use runie_tui::key::{is_quit_command, map_key, Action};
 use runie_tui::widgets::{PromptOutcome, PromptWidget, Scrollback, Status, StatusBar};
-use tokio::sync::mpsc;
+use tokio::sync::{broadcast, mpsc, watch};
+use tokio::task::JoinHandle;
 
 /// Placeholder StreamFn: emits a single "Hello from runie!" then Done.
 struct PlaceholderStream;
@@ -439,7 +439,7 @@ async fn run_app(
         );
     })?;
 
-    let (renderer_handle, renderer_shutdown) = app.spawn_renderer();
+    let (mut renderer_handle, renderer_shutdown) = app.spawn_renderer();
 
     // OWNER: interactive input actor; the mailbox and worker live until the
     // terminal loop exits, and the owned task is dropped on shutdown.
@@ -539,17 +539,374 @@ async fn run_app(
     });
 
     let mut tick = tokio::time::interval(Duration::from_millis(50));
-    // Preserve every key delivered by the owned input actor. A single
-    // pending-key slot loses fast multi-character prompts before the render
-    // tick can route them (for example, `Hey` became only `y`).
-    let mut pending_keys = VecDeque::new();
+
+    // Routing for a single key event. The helper is invoked synchronously
+    // from the input arm so every key crosses the prompt/UI actor mailbox
+    // and the render frame observes the reduced state without waiting for
+    // the next animation tick. The broadcast receiver is moved in and
+    // returned back so the caller retains ownership across the await.
+    #[allow(
+        clippy::cognitive_complexity,
+        clippy::too_many_lines,
+        reason = "key routing table is intentionally co-located"
+    )]
+    async fn dispatch_key(
+        app: &App,
+        mut ui_commands: broadcast::Receiver<UiCommand>,
+        renderer_shutdown: &watch::Sender<bool>,
+        renderer_handle: &mut JoinHandle<()>,
+        key: KeyEvent,
+    ) -> Result<broadcast::Receiver<UiCommand>, AppExit> {
+        if app.ui.snapshot().model_selector_open {
+            match key.code {
+                KeyCode::Esc => {
+                    app.model_selector_key(runie_tui::app::UiMsg::ModelSelectorEscape)
+                        .await;
+                }
+                KeyCode::Backspace => {
+                    app.model_selector_key(runie_tui::app::UiMsg::ModelSelectorBackspace)
+                        .await;
+                }
+                KeyCode::Up => {
+                    app.model_selector_key(runie_tui::app::UiMsg::ModelSelectorMove(-1))
+                        .await;
+                }
+                KeyCode::Down => {
+                    app.model_selector_key(runie_tui::app::UiMsg::ModelSelectorMove(1))
+                        .await;
+                }
+                KeyCode::Tab => {
+                    app.model_selector_key(runie_tui::app::UiMsg::ModelSelectorToggleScope)
+                        .await;
+                }
+                KeyCode::Enter => {
+                    let _ = app.activate_model_selector().await;
+                }
+                KeyCode::Char(ch) if key.modifiers.is_empty() => {
+                    app.model_selector_key(runie_tui::app::UiMsg::ModelSelectorChar(ch))
+                        .await;
+                }
+                _ => {}
+            }
+            return Ok(ui_commands);
+        }
+        if app.ui.snapshot().command_palette_open && key.code == KeyCode::Esc {
+            app.command_palette_key(runie_tui::app::UiMsg::CommandPaletteEscape)
+                .await;
+            return Ok(ui_commands);
+        }
+        if app.ui.snapshot().command_palette_open {
+            match key.code {
+                KeyCode::Char(ch) if key.modifiers.is_empty() => {
+                    app.command_palette_key(runie_tui::app::UiMsg::CommandPaletteChar(ch))
+                        .await;
+                }
+                KeyCode::Backspace => {
+                    app.command_palette_key(runie_tui::app::UiMsg::CommandPaletteBackspace)
+                        .await;
+                }
+                KeyCode::Up => {
+                    app.command_palette_key(runie_tui::app::UiMsg::CommandPaletteMove(-1))
+                        .await;
+                }
+                KeyCode::Down => {
+                    app.command_palette_key(runie_tui::app::UiMsg::CommandPaletteMove(1))
+                        .await;
+                }
+                KeyCode::Enter => {
+                    let _ = app.activate_command_palette().await;
+                    match ui_commands.recv().await {
+                        Ok(UiCommand::ActivatePaletteEntry(PaletteAction::NewSession)) => {
+                            let _ = app.reset_session().await;
+                        }
+                        Ok(UiCommand::ActivatePaletteEntry(PaletteAction::KeyboardShortcuts)) => {
+                            app.toggle_shortcuts().await;
+                        }
+                        Ok(UiCommand::ActivatePaletteEntry(PaletteAction::Quit)) => {
+                            let _ = renderer_shutdown.send(true);
+                            let _ = renderer_handle.await;
+                            return Err(AppExit::Quit);
+                        }
+                        _ => {}
+                    }
+                }
+                _ => {}
+            }
+            return Ok(ui_commands);
+        }
+        let status = app.status_snapshot().current().clone();
+        let streaming = matches!(status, Status::Thinking | Status::Streaming);
+        let prompt_model = app.model_snapshot().prompt;
+        match map_key(key, !prompt_model.is_empty(), streaming) {
+            Action::ClearPrompt => {
+                app.prompt.clear().await;
+                return Ok(ui_commands);
+            }
+            Action::Abort => {
+                app.loop_actor.abort().await;
+                return Ok(ui_commands);
+            }
+            Action::ModeCycle => {
+                app.prompt.cycle_mode().await;
+                return Ok(ui_commands);
+            }
+            Action::OpenShortcuts => {
+                app.toggle_shortcuts().await;
+                return Ok(ui_commands);
+            }
+            Action::OpenCommandPalette => {
+                app.toggle_command_palette().await;
+                return Ok(ui_commands);
+            }
+            Action::OpenModelSelector => {
+                app.toggle_model_selector().await;
+                return Ok(ui_commands);
+            }
+            Action::OpenFileSearch => {
+                app.prompt.open_file_search().await;
+                return Ok(ui_commands);
+            }
+            Action::ToggleFold => {
+                app.toggle_selected_tool_fold().await;
+                return Ok(ui_commands);
+            }
+            Action::SelectNextTool => {
+                app.select_next_tool().await;
+                return Ok(ui_commands);
+            }
+            Action::SelectPreviousTool => {
+                app.select_previous_tool().await;
+                return Ok(ui_commands);
+            }
+            Action::SelectNextEntry => {
+                app.select_next_entry().await;
+                return Ok(ui_commands);
+            }
+            Action::SelectPreviousEntry => {
+                app.select_previous_entry().await;
+                return Ok(ui_commands);
+            }
+            Action::ExtendSelectionNext => {
+                app.extend_selection(1).await;
+                return Ok(ui_commands);
+            }
+            Action::ExtendSelectionPrevious => {
+                app.extend_selection(-1).await;
+                return Ok(ui_commands);
+            }
+            Action::ScrollUp => {
+                app.scroll_scrollback_by(-1).await;
+                return Ok(ui_commands);
+            }
+            Action::ScrollDown => {
+                app.scroll_scrollback_by(1).await;
+                return Ok(ui_commands);
+            }
+            Action::Quit => {
+                let _ = renderer_shutdown.send(true);
+                let _ = renderer_handle.await;
+                return Err(AppExit::Quit);
+            }
+            _ => {}
+        }
+        if key.modifiers.is_empty() {
+            match key.code {
+                KeyCode::Char(_) => {
+                    app.prompt.handle_key(key).await;
+                }
+                KeyCode::Backspace => {
+                    app.prompt.handle_key(key).await;
+                }
+                KeyCode::Enter => {
+                    let outcome = app.prompt.handle_key(key).await;
+                    if let PromptOutcome::Submitted(text) = outcome {
+                        if let Some(command) = parse_mappable_builtin_command(&text) {
+                            if matches!(command, MappableBuiltinCommand::Quit) {
+                                return Err(AppExit::Quit);
+                            }
+                            let _ = app.route_mappable_command(command).await;
+                            return Ok(ui_commands);
+                        }
+                        if is_quit_command(&text) {
+                            return Err(AppExit::Quit);
+                        }
+                        let _ = app
+                            .handle_prompt_outcome(PromptOutcome::Submitted(text))
+                            .await;
+                    }
+                }
+                _ => {}
+            }
+        } else if key.modifiers.contains(KeyModifiers::SHIFT)
+            && matches!(key.code, KeyCode::Char(_))
+        {
+            // Crossterm reports an uppercase character
+            // as Shift+Char. It is still prompt input;
+            // dropping it makes `Hey` become `y`.
+            app.prompt.handle_key(key).await;
+        } else if matches!(key.code, KeyCode::Enter) {
+            app.prompt.handle_key(key).await;
+        }
+        Ok(ui_commands)
+    }
+
+    // One terminal frame. Called from the input arm after a key is
+    // dispatched and from the tick arm for animation/agent activity
+    // refreshes, so a fast key burst is visible key-by-key instead of
+    // after a tick-batched draw.
+    #[allow(
+        clippy::cognitive_complexity,
+        clippy::too_many_lines,
+        reason = "terminal draw is intentionally co-located with state update"
+    )]
+    async fn render_frame(
+        app: &App,
+        terminal: &mut Terminal<CrosstermBackend<Stdout>>,
+        input_config_tx: &mpsc::Sender<InputConfig>,
+        color_level: runie_tui::terminal_color::ColorLevel,
+    ) -> Result<(), String> {
+        let model = app.model_snapshot();
+        if matches!(model.status.state, Status::Ready) && !model.feed.is_empty() {
+            // In Grok's settled conversation view the prompt keeps
+            // only its cursor marker; placeholder text is an idle
+            // empty-session affordance.
+            app.prompt.set_placeholder_visible(false).await;
+        }
+        if let Err(e) = terminal.draw(|f| {
+            use ratatui::layout::Rect;
+            use ratatui::widgets::Widget;
+            use runie_tui::layout::chat_layout;
+            let layout = chat_layout(f.area());
+            let _ = input_config_tx.try_send(InputConfig::ScrollViewport(layout.scrollback.height));
+            let _ = input_config_tx.try_send(InputConfig::SelectionOrigin {
+                row: layout.scrollback.y,
+                column: layout.scrollback.x,
+            });
+            // Wrap each render in catch_unwind so a widget bug
+            // doesn't kill the binary — log + continue.
+            let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                let frame_area = f.area();
+                let buf = f.buffer_mut();
+                let model = app.model_snapshot();
+                let document = App::view_document_from_model(&model);
+                let view = &document.root;
+                let status = StatusBar::from_model_snapshot(document.props.status.clone());
+                buf.set_style(
+                    frame_area,
+                    runie_tui::appearance::background_style_for(status.theme()),
+                );
+                let turn_status = status.turn_status();
+                if matches!(status.current(), Status::Ready) {
+                    render_live_ready_footer(layout.status, buf, status.theme());
+                } else {
+                    status.render(layout.status, buf);
+                }
+                let mut scrollback = Scrollback::from_model_snapshot(document.props.feed.clone());
+                scrollback.set_live_grok_layout(true);
+                scrollback.remove_kind(runie_tui::widgets::LineKind::SessionStart);
+                scrollback.normalize_live_completed_assistants();
+                scrollback.add_live_assistant_timestamp(layout.scrollback.width as usize);
+                scrollback.render_with_terminal_height(layout.scrollback, frame_area.height, buf);
+                if view
+                    .slots()
+                    .any(|slot| slot == runie_tui::view::Slot::CompactModeHint)
+                    && runie_tui::layout::grok_small_screen_tip_visible(frame_area.height)
+                {
+                    render_compact_hint(layout.prompt, buf, status.theme());
+                }
+                if let Some(turn_status) = turn_status {
+                    turn_status.render(
+                        ratatui::layout::Rect {
+                            x: layout.scrollback.x,
+                            y: layout.prompt.y.saturating_sub(2),
+                            width: layout.scrollback.width,
+                            height: 1,
+                        },
+                        buf,
+                    );
+                }
+                let prompt = PromptWidget::from_model_snapshot(document.props.prompt.clone());
+                Widget::render(prompt, layout.prompt, buf);
+                if view
+                    .slots()
+                    .any(|slot| slot == runie_tui::view::Slot::ShortcutsOverlay)
+                {
+                    runie_tui::widgets::shortcuts::render(frame_area, buf, status.theme());
+                }
+                if view
+                    .slots()
+                    .any(|slot| slot == runie_tui::view::Slot::CommandPaletteOverlay)
+                {
+                    render_command_palette(
+                        frame_area,
+                        buf,
+                        &document.props.ui.command_palette_query,
+                        document.props.ui.command_palette_index,
+                        status.theme(),
+                    );
+                }
+                if view
+                    .slots()
+                    .any(|slot| slot == runie_tui::view::Slot::ModelSelectorOverlay)
+                {
+                    render_model_selector(frame_area, buf, &document.props.ui, status.theme());
+                }
+                if app.ui.snapshot().session_info_open {
+                    runie_tui::widgets::SessionInfoWidget::new(&app.session_snapshot())
+                        .with_theme(status.theme())
+                        .render(frame_area, buf);
+                }
+                let header = &document.props.header;
+                render_header(layout.header, buf, &header.meter, header.theme);
+                runie_tui::terminal_color::quantize_buffer(buf, color_level);
+                f.set_cursor_position(
+                    PromptWidget::from_model_snapshot(document.props.prompt.clone())
+                        .cursor_position(layout.prompt),
+                );
+                let _ = Rect::default();
+            }));
+            if let Err(e) = res {
+                eprintln!("render panic: {:?}", e);
+                std::panic::resume_unwind(e);
+            }
+        }) {
+            return Err(format!("draw: {e}"));
+        }
+        Ok(())
+    }
 
     loop {
         tokio::select! {
-                input = input_rx.recv() => {
-                    let Some(input) = input else { return Ok(AppExit::Quit) };
-                    match input {
-                        InputEvent::Key(key) => pending_keys.push_back(key),
+            biased;
+            input = input_rx.recv() => {
+                let Some(input) = input else { return Ok(AppExit::Quit) };
+                match input {
+                    InputEvent::Key(key) => {
+                        if key.kind == KeyEventKind::Press {
+                            ui_commands = match dispatch_key(
+                                &app,
+                                ui_commands,
+                                &renderer_shutdown,
+                                &mut renderer_handle,
+                                key,
+                            )
+                            .await
+                            {
+                                Ok(rx) => rx,
+                                Err(exit) => return Ok(exit),
+                            };
+                            if let Err(err) = render_frame(
+                                &app,
+                                terminal,
+                                &input_config_tx,
+                                color_level,
+                            )
+                            .await
+                            {
+                                return Ok(AppExit::Error(err));
+                            }
+                        }
+                    }
                     InputEvent::Mouse(delta) => app.scroll_scrollback_by(delta).await,
                     InputEvent::MouseSelectionStart(row, column) => {
                         app.mouse_selection_start(runie_tui::widgets::CellPosition { row, column }).await;
@@ -557,317 +914,18 @@ async fn run_app(
                     InputEvent::MouseSelectionExtend(row, column) => {
                         app.mouse_selection_extend(runie_tui::widgets::CellPosition { row, column }).await;
                     }
-                        InputEvent::MouseSelectionCommit => app.mouse_selection_commit().await,
-                    }
-                    // Wake key dispatch immediately after the owned input
-                    // actor delivers an event. `reset()` would move the next
-                    // deadline a full cadence into the future, adding up to
-                    // 50 ms of latency for every key in a fast prompt.
-                    tick.reset_immediately();
+                    InputEvent::MouseSelectionCommit => app.mouse_selection_commit().await,
+                }
             }
             _ = tick.tick() => {
-                // Input has already crossed the owned async input actor's
-                // mailbox; rendering never touches the terminal reader.
-                // Drain the owned FIFO in this dispatch turn. Input delivery
-                // must not be paced by the render cadence: every queued key
-                // is awaited through the prompt/UI actor in order, and the
-                // next terminal frame observes the complete reduced state.
-                while let Some(key) = pending_keys.pop_front() {
-                        if key.kind == KeyEventKind::Press {
-                            if app.ui.snapshot().model_selector_open {
-                                match key.code {
-                                    KeyCode::Esc => app.model_selector_key(runie_tui::app::UiMsg::ModelSelectorEscape).await,
-                                    KeyCode::Backspace => app.model_selector_key(runie_tui::app::UiMsg::ModelSelectorBackspace).await,
-                                    KeyCode::Up => app.model_selector_key(runie_tui::app::UiMsg::ModelSelectorMove(-1)).await,
-                                    KeyCode::Down => app.model_selector_key(runie_tui::app::UiMsg::ModelSelectorMove(1)).await,
-                                    KeyCode::Tab => app.model_selector_key(runie_tui::app::UiMsg::ModelSelectorToggleScope).await,
-                                    KeyCode::Enter => { let _ = app.activate_model_selector().await; },
-                                    KeyCode::Char(ch) if key.modifiers.is_empty() => app.model_selector_key(runie_tui::app::UiMsg::ModelSelectorChar(ch)).await,
-                                    _ => {}
-                                }
-                                continue;
-                            }
-                            if app.ui.snapshot().command_palette_open
-                                && key.code == KeyCode::Esc
-                            {
-                                app.command_palette_key(
-                                    runie_tui::app::UiMsg::CommandPaletteEscape,
-                                )
-                                .await;
-                                continue;
-                            }
-                            if app.ui.snapshot().command_palette_open {
-                                match key.code {
-                                    KeyCode::Char(ch) if key.modifiers.is_empty() => {
-                                        app.command_palette_key(
-                                            runie_tui::app::UiMsg::CommandPaletteChar(ch),
-                                        )
-                                        .await;
-                                    }
-                                    KeyCode::Backspace => {
-                                        app.command_palette_key(
-                                            runie_tui::app::UiMsg::CommandPaletteBackspace,
-                                        )
-                                        .await;
-                                    }
-                                    KeyCode::Up => {
-                                        app.command_palette_key(
-                                            runie_tui::app::UiMsg::CommandPaletteMove(-1),
-                                        )
-                                        .await;
-                                    }
-                                    KeyCode::Down => {
-                                        app.command_palette_key(
-                                            runie_tui::app::UiMsg::CommandPaletteMove(1),
-                                        )
-                                        .await;
-                                    }
-                                    KeyCode::Enter => {
-                                        app.activate_command_palette().await;
-                                        match ui_commands.recv().await {
-                                            Ok(UiCommand::ActivatePaletteEntry(PaletteAction::NewSession)) => {
-                                                let _ = app.reset_session().await;
-                                            }
-                                            Ok(UiCommand::ActivatePaletteEntry(PaletteAction::KeyboardShortcuts)) => {
-                                                app.toggle_shortcuts().await;
-                                            }
-                                            Ok(UiCommand::ActivatePaletteEntry(PaletteAction::Quit)) => {
-                                                let _ = renderer_shutdown.send(true);
-                                                let _ = renderer_handle.await;
-                                                return Ok(AppExit::Quit);
-                                            }
-                                            _ => {}
-                                        }
-                                    }
-                                    _ => {}
-                                }
-                                continue;
-                            }
-                            let status = app.status_snapshot().current().clone();
-                            let streaming = matches!(status, Status::Thinking | Status::Streaming);
-                            let prompt_model = app.model_snapshot().prompt;
-                            match map_key(key, !prompt_model.is_empty(), streaming) {
-                                Action::ClearPrompt => {
-                                    app.prompt.clear().await;
-                                    continue;
-                                }
-                                Action::Abort => {
-                                    app.loop_actor.abort().await;
-                                    continue;
-                                }
-                                Action::ModeCycle => {
-                                    app.prompt.cycle_mode().await;
-                                    continue;
-                                }
-                                Action::OpenShortcuts => {
-                                    app.toggle_shortcuts().await;
-                                    continue;
-                                }
-                                Action::OpenCommandPalette => {
-                                    app.toggle_command_palette().await;
-                                    continue;
-                                }
-                                Action::OpenModelSelector => {
-                                    app.toggle_model_selector().await;
-                                    continue;
-                                }
-                                Action::OpenFileSearch => {
-                                    app.prompt.open_file_search().await;
-                                    continue;
-                                }
-                                Action::ToggleFold => {
-                                    app.toggle_selected_tool_fold().await;
-                                    continue;
-                                }
-                                Action::SelectNextTool => {
-                                    app.select_next_tool().await;
-                                    continue;
-                                }
-                                Action::SelectPreviousTool => {
-                                    app.select_previous_tool().await;
-                                    continue;
-                                }
-                                Action::SelectNextEntry => {
-                                    app.select_next_entry().await;
-                                    continue;
-                                }
-                                Action::SelectPreviousEntry => {
-                                    app.select_previous_entry().await;
-                                    continue;
-                                }
-                                Action::ExtendSelectionNext => {
-                                    app.extend_selection(1).await;
-                                    continue;
-                                }
-                                Action::ExtendSelectionPrevious => {
-                                    app.extend_selection(-1).await;
-                                    continue;
-                                }
-                                Action::ScrollUp => {
-                                    app.scroll_scrollback_by(-1).await;
-                                    continue;
-                                }
-                                Action::ScrollDown => {
-                                    app.scroll_scrollback_by(1).await;
-                                    continue;
-                                }
-                                Action::Quit => {
-                                    let _ = renderer_shutdown.send(true);
-                                    let _ = renderer_handle.await;
-                                    return Ok(AppExit::Quit);
-                                }
-                                _ => {}
-                            }
-                            if key.modifiers.is_empty() {
-                                match key.code {
-                                    KeyCode::Char(_) => {
-                                        app.prompt.handle_key(key).await;
-                                    }
-                                    KeyCode::Backspace => {
-                                        app.prompt.handle_key(key).await;
-                                    }
-                                    KeyCode::Enter => {
-                                        let outcome = app.prompt.handle_key(key).await;
-                                        if let PromptOutcome::Submitted(text) = outcome {
-                                            if let Some(command) =
-                                                parse_mappable_builtin_command(&text)
-                                            {
-                                                if matches!(command, MappableBuiltinCommand::Quit) {
-                                                    return Ok(AppExit::Quit);
-                                                }
-                                                let _ = app.route_mappable_command(command).await;
-                                                continue;
-                                            }
-                                            if is_quit_command(&text) {
-                                                return Ok(AppExit::Quit);
-                                            }
-                                            let _ = app.handle_prompt_outcome(
-                                                PromptOutcome::Submitted(text),
-                                            ).await;
-                                        }
-                                    }
-                                    _ => {}
-                                }
-                            } else if key.modifiers.contains(KeyModifiers::SHIFT)
-                                && matches!(key.code, KeyCode::Char(_))
-                            {
-                                // Crossterm reports an uppercase character
-                                // as Shift+Char. It is still prompt input;
-                                // dropping it makes `Hey` become `y`.
-                                app.prompt.handle_key(key).await;
-                            } else if matches!(key.code, KeyCode::Enter) {
-                                app.prompt.handle_key(key).await;
-                            }
-                        }
-                    }
-                let model = app.model_snapshot();
-                if matches!(model.status.state, Status::Ready) && !model.feed.is_empty()
+                // Animation and agent activity refreshes run on the tick
+                // cadence; key events render in the input arm so a fast
+                // burst is visible key-by-key instead of waiting for the
+                // tick to drain a queued batch.
+                if let Err(err) =
+                    render_frame(&app, terminal, &input_config_tx, color_level).await
                 {
-                    // In Grok's settled conversation view the prompt keeps
-                    // only its cursor marker; placeholder text is an idle
-                    // empty-session affordance.
-                    app.prompt.set_placeholder_visible(false).await;
-                }
-                if let Err(e) = terminal.draw(|f| {
-                    use ratatui::layout::Rect;
-                    use ratatui::widgets::Widget;
-                    use runie_tui::layout::chat_layout;
-                    let layout = chat_layout(f.area());
-                    let _ = input_config_tx.try_send(InputConfig::ScrollViewport(
-                        layout.scrollback.height,
-                    ));
-                    let _ = input_config_tx.try_send(InputConfig::SelectionOrigin {
-                        row: layout.scrollback.y,
-                        column: layout.scrollback.x,
-                    });
-                    // Wrap each render in catch_unwind so a widget bug
-                    // doesn't kill the binary — log + continue.
-                    let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                        let frame_area = f.area();
-                        let buf = f.buffer_mut();
-                        let model = app.model_snapshot();
-                        let document = App::view_document_from_model(&model);
-                        let view = &document.root;
-                        let status = StatusBar::from_model_snapshot(document.props.status.clone());
-                        buf.set_style(
-                            frame_area,
-                            runie_tui::appearance::background_style_for(status.theme()),
-                        );
-                        let turn_status = status.turn_status();
-                        if matches!(status.current(), Status::Ready) {
-                            render_live_ready_footer(layout.status, buf, status.theme());
-                        } else {
-                            status.render(layout.status, buf);
-                        }
-                        let mut scrollback = Scrollback::from_model_snapshot(document.props.feed.clone());
-                        scrollback.set_live_grok_layout(true);
-                        scrollback.remove_kind(runie_tui::widgets::LineKind::SessionStart);
-                        scrollback.normalize_live_completed_assistants();
-                        scrollback.add_live_assistant_timestamp(layout.scrollback.width as usize);
-                        scrollback.render_with_terminal_height(
-                            layout.scrollback,
-                            frame_area.height,
-                            buf,
-                        );
-                if view.slots().any(|slot| slot == runie_tui::view::Slot::CompactModeHint)
-                    && runie_tui::layout::grok_small_screen_tip_visible(frame_area.height)
-                {
-                    render_compact_hint(layout.prompt, buf, status.theme());
-                }
-                        if let Some(turn_status) = turn_status {
-                            turn_status.render(
-                                ratatui::layout::Rect {
-                                    x: layout.scrollback.x,
-                                    y: layout.prompt.y.saturating_sub(2),
-                                    width: layout.scrollback.width,
-                                    height: 1,
-                                },
-                                buf,
-                            );
-                        }
-                        let prompt = PromptWidget::from_model_snapshot(document.props.prompt.clone());
-                        Widget::render(prompt, layout.prompt, buf);
-                        if view
-                            .slots()
-                            .any(|slot| slot == runie_tui::view::Slot::ShortcutsOverlay)
-                        {
-                            runie_tui::widgets::shortcuts::render(frame_area, buf, status.theme());
-                        }
-                        if view
-                            .slots()
-                            .any(|slot| slot == runie_tui::view::Slot::CommandPaletteOverlay)
-                        {
-                            render_command_palette(
-                                frame_area,
-                                buf,
-                                &document.props.ui.command_palette_query,
-                                document.props.ui.command_palette_index,
-                                status.theme(),
-                            );
-                        }
-                        if view.slots().any(|slot| slot == runie_tui::view::Slot::ModelSelectorOverlay) {
-                            render_model_selector(frame_area, buf, &document.props.ui, status.theme());
-                        }
-                        if app.ui.snapshot().session_info_open {
-                            runie_tui::widgets::SessionInfoWidget::new(&app.session_snapshot())
-                                .with_theme(status.theme())
-                                .render(frame_area, buf);
-                        }
-                        let header = &document.props.header;
-                        render_header(layout.header, buf, &header.meter, header.theme);
-                        runie_tui::terminal_color::quantize_buffer(buf, color_level);
-                        f.set_cursor_position(
-                            PromptWidget::from_model_snapshot(document.props.prompt.clone())
-                                .cursor_position(layout.prompt),
-                        );
-                        let _ = Rect::default();
-                    }));
-                    if let Err(e) = res {
-                        eprintln!("render panic: {:?}", e);
-                        std::panic::resume_unwind(e);
-                    }
-                }) {
-                    return Ok(AppExit::Error(format!("draw: {e}")));
+                    return Ok(AppExit::Error(err));
                 }
             }
         }
@@ -935,5 +993,95 @@ mod tests {
             Some(InputEvent::MouseSelectionCommit)
         ));
         assert!(mouse_selection_input(MouseEventKind::Moved, 8, 10, (5, 7)).is_none());
+    }
+
+    /// Pin down the contract that the live main loop's `dispatch_key`
+    /// helper relies on: every Press key in a burst crosses the
+    /// `PromptActor` mailbox in order and updates the prompt snapshot
+    /// synchronously, so a render after each key is sufficient to make
+    /// the typed text visible. A regression that batches keys through a
+    /// single awaited reducer would surface here as a stale snapshot
+    /// after `N` awaits.
+    #[tokio::test]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "self-contained App wiring mirrors the runie.rs bin for fidelity"
+    )]
+    async fn prompt_actor_reduces_each_press_key_independently() {
+        use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+        use runie_core::events::EventBus;
+        use runie_core::provider::stream_fn::{AssistantMessageEventStream, StreamError, StreamFn};
+        use runie_core::provider::ProviderActor;
+        use runie_core::queues::{FollowUpQueueActor, SteeringQueueActor};
+        use runie_core::r#loop::{LoopActor, LoopDeps};
+        use runie_core::state::AgentStateActor;
+        use runie_core::tools::executor::ToolExecHooks;
+        use runie_core::tools::{ToolExecutorActor, ToolRegistry};
+        use runie_core::types::{AgentContext, Model, SimpleStreamOptions, ToolExecutionMode};
+        use runie_tui::app::App;
+        use std::sync::Arc;
+
+        struct NoopStream;
+        #[async_trait::async_trait]
+        impl StreamFn for NoopStream {
+            async fn stream(
+                &self,
+                _model: &Model,
+                _context: &AgentContext,
+                _options: Option<SimpleStreamOptions>,
+            ) -> Result<AssistantMessageEventStream, StreamError> {
+                use futures::stream;
+                Ok(Box::pin(stream::iter(std::iter::empty())))
+            }
+        }
+
+        let bus = EventBus::new();
+        let state = AgentStateActor::new();
+        let steering = SteeringQueueActor::new();
+        let follow_up = FollowUpQueueActor::new();
+        let tool_executor = ToolExecutorActor::new_live(Arc::new(ToolRegistry::new()));
+        let provider = ProviderActor::new(Arc::new(NoopStream));
+        let deps = LoopDeps {
+            state,
+            steering,
+            follow_up,
+            tool_executor,
+            provider,
+            bus: bus.clone(),
+            subscribers: runie_core::events::SubscriberRegistry::new(),
+            hooks: ToolExecHooks::default(),
+            turn_hooks: runie_core::hooks::TurnHooks::default(),
+            transform_context: None,
+            api_key_resolver: None,
+            convert_to_llm: None,
+            stream_options: Default::default(),
+            abort: None,
+            tool_execution_mode: ToolExecutionMode::Parallel,
+            steering_mode: runie_core::types::QueueMode::OneAtATime,
+            follow_up_mode: runie_core::types::QueueMode::OneAtATime,
+        };
+        let actor = LoopActor::new(deps);
+        let app = App::new(actor, bus);
+
+        let mut expected = String::new();
+        for ch in "hello".chars() {
+            let key = KeyEvent {
+                code: KeyCode::Char(ch),
+                modifiers: KeyModifiers::NONE,
+                kind: KeyEventKind::Press,
+                state: crossterm::event::KeyEventState::NONE,
+            };
+            app.prompt.handle_key(key).await;
+            expected.push(ch);
+            // The typed text must appear in the prompt snapshot after a
+            // single `handle_key` await, not deferred to a later tick. The
+            // `dispatch_key` helper relies on this so a render right after
+            // a key produces the visible character.
+            let text = app.prompt.snapshot().text();
+            assert!(
+                text.contains(&expected),
+                "after typing {expected:?} the prompt text {text:?} must include it"
+            );
+        }
     }
 }
