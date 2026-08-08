@@ -538,6 +538,63 @@ pub fn table_bottom_border(text: &str) -> String {
     format!("└{}┘", widths.join("┴"))
 }
 
+/// Append a wrapped line of text to the row buffer, splitting at the
+/// given `width` so the renderer can project the result onto a wider
+/// terminal geometry. The `code` flag lets callers mark the row as a
+/// formatted code block (`true`) or normal text (`false`). Centralized
+/// here so the actor-owned text projection and the renderer share one
+/// wrapping rule.
+pub fn append_wrapped(
+    rows: &mut Vec<(LineKind, String, bool)>,
+    kind: LineKind,
+    text: String,
+    code: bool,
+    width: usize,
+) {
+    if width == 0 || text.chars().count() <= width {
+        rows.push((kind, text, code));
+        return;
+    }
+    let mut chars: Vec<char> = text.chars().collect();
+    while !chars.is_empty() {
+        let head: String = chars.drain(..width.min(chars.len())).collect();
+        rows.push((kind, head, code));
+    }
+}
+
+/// Append word-wrapped text to the row buffer. Whitespace acts as the
+/// break point; the leading whitespace of the source line is preserved
+/// on each emitted row so the projected widget keeps its original
+/// indentation.
+pub fn append_wrapped_words(
+    rows: &mut Vec<(LineKind, String, bool)>,
+    kind: LineKind,
+    text: String,
+    width: usize,
+) {
+    let leading: String = text.chars().take_while(|ch| ch.is_whitespace()).collect();
+    let mut line = leading.clone();
+    for word in text.split_whitespace() {
+        let candidate = if line.trim().is_empty() {
+            word.to_owned()
+        } else {
+            format!("{line} {word}")
+        };
+        if !line.trim().is_empty() && candidate.chars().count() > width {
+            rows.push((kind, std::mem::replace(&mut line, leading.clone()), false));
+        }
+        if line.trim().is_empty() {
+            line.push_str(word);
+        } else {
+            line.push(' ');
+            line.push_str(word);
+        }
+    }
+    if !line.is_empty() {
+        rows.push((kind, line, false));
+    }
+}
+
 /// Minimum unix-timestamp value (seconds) treated as a live prompt timestamp.
 /// Values below this are either absent or fixtures; values at or above are
 /// rendered with the short clock format. Centralized here so the renderer
@@ -1477,6 +1534,79 @@ mod tests {
         // Pin the noise-tolerance path: surrounding whitespace is trimmed
         // and does not change the border shape.
         assert_eq!(super::table_bottom_border("  | x | y |  "), "└───┴───┘");
+    }
+
+    #[test]
+    fn append_wrapped_splits_long_lines_at_width_boundary() {
+        // Pin the smoke path: a short string fits in a single row with the
+        // supplied `code` flag preserved.
+        let mut rows = Vec::new();
+        super::append_wrapped(
+            &mut rows,
+            super::LineKind::Assistant,
+            "hello".into(),
+            true,
+            10,
+        );
+        assert_eq!(
+            rows,
+            vec![(super::LineKind::Assistant, "hello".to_owned(), true)]
+        );
+        // Pin the wrap path: a long string splits into fixed-width chunks
+        // until the source is exhausted.
+        rows.clear();
+        super::append_wrapped(
+            &mut rows,
+            super::LineKind::Assistant,
+            "abcdefghij".into(),
+            false,
+            3,
+        );
+        assert_eq!(
+            rows,
+            vec![
+                (super::LineKind::Assistant, "abc".to_owned(), false),
+                (super::LineKind::Assistant, "def".to_owned(), false),
+                (super::LineKind::Assistant, "ghi".to_owned(), false),
+                (super::LineKind::Assistant, "j".to_owned(), false),
+            ]
+        );
+        // Pin the zero-width edge case: a zero width yields a single row
+        // holding the original text so the caller can decide how to handle
+        // unbounded feeds.
+        rows.clear();
+        super::append_wrapped(&mut rows, super::LineKind::User, "x".into(), false, 0);
+        assert_eq!(rows, vec![(super::LineKind::User, "x".to_owned(), false)]);
+    }
+
+    #[test]
+    fn append_wrapped_words_breaks_on_whitespace_and_preserves_indent() {
+        // Pin the word-break path: a long phrase wraps at the most recent
+        // whitespace without breaking a word in half.
+        let mut rows = Vec::new();
+        super::append_wrapped_words(
+            &mut rows,
+            super::LineKind::Assistant,
+            "the quick brown fox jumps over the lazy dog".into(),
+            10,
+        );
+        let projected: Vec<&str> = rows.iter().map(|(_, text, _)| text.as_str()).collect();
+        assert_eq!(
+            projected,
+            vec!["the quick", "brown fox", "jumps over", "the lazy", "dog"]
+        );
+        // Pin the leading-indent path: a leading whitespace run is
+        // preserved across the wrap so the projected widget keeps its
+        // original indentation.
+        rows.clear();
+        super::append_wrapped_words(
+            &mut rows,
+            super::LineKind::User,
+            "    indented prompt".into(),
+            8,
+        );
+        let projected: Vec<&str> = rows.iter().map(|(_, text, _)| text.as_str()).collect();
+        assert_eq!(projected, vec!["    indented", "    prompt"]);
     }
 
     #[test]

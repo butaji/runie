@@ -1688,7 +1688,7 @@ impl Scrollback {
                                 ),
                                 false,
                             ));
-                            append_wrapped_words(
+                            runie_tui_model::append_wrapped_words(
                                 &mut rows,
                                 line.kind,
                                 format!(
@@ -1726,7 +1726,13 @@ impl Scrollback {
                         width,
                     );
                 } else {
-                    append_wrapped(&mut rows, line.kind, text, code_block && !fence, width);
+                    runie_tui_model::append_wrapped(
+                        &mut rows,
+                        line.kind,
+                        text,
+                        code_block && !fence,
+                        width,
+                    );
                 }
                 if line.kind == LineKind::Assistant
                     && is_table_row(part)
@@ -1738,8 +1744,12 @@ impl Scrollback {
                     } else {
                         " ".repeat(prefix.chars().count())
                     };
-                    let border = format!("{}{}", border_prefix, table_bottom_border(part));
-                    append_wrapped(&mut rows, line.kind, border, false, width);
+                    let border = format!(
+                        "{}{}",
+                        border_prefix,
+                        runie_tui_model::table_bottom_border(part)
+                    );
+                    runie_tui_model::append_wrapped(&mut rows, line.kind, border, false, width);
                 }
             }
             if fence {
@@ -1784,24 +1794,6 @@ impl Scrollback {
     }
 }
 
-fn append_wrapped(
-    rows: &mut Vec<(LineKind, String, bool)>,
-    kind: LineKind,
-    text: String,
-    code: bool,
-    width: usize,
-) {
-    if width == 0 || text.chars().count() <= width {
-        rows.push((kind, text, code));
-        return;
-    }
-    let mut chars: Vec<char> = text.chars().collect();
-    while !chars.is_empty() {
-        let head: String = chars.drain(..width.min(chars.len())).collect();
-        rows.push((kind, head, code));
-    }
-}
-
 fn append_user_with_timestamp(
     rows: &mut Vec<(LineKind, String, bool)>,
     text: String,
@@ -1830,41 +1822,12 @@ fn append_user_with_timestamp(
     ));
     let indent = " ".repeat(LineKind::User.prefix().chars().count());
     let rest: String = chars.into_iter().collect();
-    append_wrapped_words(
+    runie_tui_model::append_wrapped_words(
         rows,
         LineKind::User,
         format!("{indent}{}", rest.trim_start()),
         first_width,
     );
-}
-
-fn append_wrapped_words(
-    rows: &mut Vec<(LineKind, String, bool)>,
-    kind: LineKind,
-    text: String,
-    width: usize,
-) {
-    let leading: String = text.chars().take_while(|ch| ch.is_whitespace()).collect();
-    let mut line = leading.clone();
-    for word in text.split_whitespace() {
-        let candidate = if line.trim().is_empty() {
-            word.to_owned()
-        } else {
-            format!("{line} {word}")
-        };
-        if !line.trim().is_empty() && candidate.chars().count() > width {
-            rows.push((kind, std::mem::replace(&mut line, leading.clone()), false));
-        }
-        if line.trim().is_empty() {
-            line.push_str(word);
-        } else {
-            line.push(' ');
-            line.push_str(word);
-        }
-    }
-    if !line.is_empty() {
-        rows.push((kind, line, false));
-    }
 }
 
 /// Render the small CommonMark subset that is visible in Grok's normal
@@ -2244,10 +2207,6 @@ fn table_spans(text: &str, base: Style) -> Vec<Span<'static>> {
 
 fn is_table_separator(text: &str) -> bool {
     runie_tui_model::is_table_separator(text)
-}
-
-fn table_bottom_border(text: &str) -> String {
-    runie_tui_model::table_bottom_border(text)
 }
 
 fn atx_heading(text: &str) -> Option<&str> {

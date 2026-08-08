@@ -1139,3 +1139,23 @@ lib unit tests (92 pre-existing + 1 new), the 220 `runie-tui` lib unit
 tests, the 5 `runie` binary unit tests, the 28 `visual_snapshots` replay
 tests, and the full `just ci` (fmt-check, clippy, lint, test, parity,
 source inventory, Pi event contract, feed-actor boundary) are green.
+
+**Text wrapper retirement (2026-08-08):** the renderer-local
+`append_wrapped` and `append_wrapped_words` text wrappers at
+`crates/runie-tui/src/widgets/scrollback.rs:1787, 1841` now live in
+`runie-tui-model::feed` next to the markdown predicates. Both helpers
+preserve the `Vec<(LineKind, String, bool)>` row shape and the
+whitespace/word-break splitting behavior, so the actor-owned row
+projection and the renderer agree on the line layout. The renderer
+call sites at lines 1691, 1729, 1742, and 1840 now call
+`runie_tui_model::append_wrapped` / `runie_tui_model::append_wrapped_words`
+directly; the local `fn append_wrapped` and `fn append_wrapped_words`
+are removed. The new `append_wrapped_splits_long_lines_at_width_boundary`
+and `append_wrapped_words_breaks_on_whitespace_and_preserves_indent`
+tests in `crates/runie-tui-model/src/feed.rs` pin the fixed-width chunk
+splitting, the zero-width edge case, the word-boundary wrap, and the
+leading-indent preservation across rows. The 95 `runie-tui-model` lib
+unit tests (93 pre-existing + 2 new), the 220 `runie-tui` lib unit
+tests, the 5 `runie` binary unit tests, the 28 `visual_snapshots` replay
+tests, and the full `just ci` (fmt-check, clippy, lint, test, parity,
+source inventory, Pi event contract, feed-actor boundary) are green.
