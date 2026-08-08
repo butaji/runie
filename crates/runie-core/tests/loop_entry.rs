@@ -29,6 +29,46 @@ struct SignalCaptureStream {
     seen: tokio::sync::watch::Sender<bool>,
 }
 
+struct DeferredCapabilityStream;
+
+#[async_trait::async_trait]
+impl StreamFn for DeferredCapabilityStream {
+    async fn stream(
+        &self,
+        _model: &Model,
+        _context: &AgentContext,
+        _options: Option<SimpleStreamOptions>,
+    ) -> Result<AssistantMessageEventStream, StreamError> {
+        Err(StreamError::Invalid("ordinary stream unused".into()))
+    }
+
+    async fn fetch_deferred(
+        &self,
+        _model: &Model,
+        handle: &runie_core::types::DeferredHandle,
+        _options: Option<SimpleStreamOptions>,
+    ) -> Result<AssistantMessageEventStream, StreamError> {
+        Ok(Box::pin(stream::iter([AssistantMessageEvent::Done {
+            stop_reason: StopReason::Stop,
+            usage: Usage::default(),
+            message: Some(AssistantMessage {
+                content: vec![],
+                api: handle.id.clone(),
+                ..AssistantMessage::default()
+            }),
+        }])))
+    }
+
+    async fn cancel_deferred(
+        &self,
+        _model: &Model,
+        _handle: &runie_core::types::DeferredHandle,
+        _options: Option<SimpleStreamOptions>,
+    ) -> Result<(), StreamError> {
+        Ok(())
+    }
+}
+
 struct SettlingSubscriber {
     entered: tokio::sync::watch::Sender<bool>,
     release: Option<tokio::sync::watch::Receiver<bool>>,
@@ -100,6 +140,38 @@ fn user(text: &str, ts: i64) -> AgentMessage {
         content: vec![UserContent::Text { text: text.into() }],
         timestamp: ts,
     })
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn deferred_provider_capabilities_cross_the_loop_boundary() {
+    let test = TestLoopBuilder::new(Arc::new(DeferredCapabilityStream)).build();
+    let handle = runie_core::types::DeferredHandle {
+        provider: "test".into(),
+        model_id: "model".into(),
+        api: "responses".into(),
+        id: "deferred-loop".into(),
+        expires_at: None,
+        poll_after_ms: None,
+        data: None,
+    };
+
+    let mut events = test
+        .actor
+        .fetch_deferred(Model::default(), handle.clone(), None)
+        .await
+        .expect("deferred fetch should cross the loop boundary");
+    let event = events.recv().await.expect("deferred event");
+    match event {
+        AssistantMessageEvent::Done { message, .. } => {
+            assert_eq!(message.expect("deferred message").api, handle.id);
+        }
+        other => panic!("unexpected deferred event: {other:?}"),
+    }
+
+    test.actor
+        .cancel_deferred(Model::default(), handle, None)
+        .await
+        .expect("deferred cancellation should cross the loop boundary");
 }
 
 #[tokio::test(flavor = "multi_thread")]
