@@ -46,8 +46,11 @@ provider-specific contract”. The source of truth is the current Pi tree at
 2. Provider-specific deferred-response polling/decoding and cancellation.
    Runie already exposes actor-owned `fetch_deferred` and `cancel_deferred`
    capability commands. An injected adapter contract now proves both commands
-   cross the `ProviderActor` mailbox and publish a deferred terminal event;
-   provider-specific polling/decoding and a real provider fixture remain open.
+   cross the `ProviderActor` mailbox and publish a deferred terminal event.
+   The injected replay adapter now also proves ordered provider-scoped polling
+   batches, cancellation, handle-scope validation, and exhaustion errors.
+   Provider-specific live polling/decoding and a real provider fixture remain
+   open; replay polling must not be mistaken for live adapter parity.
 3. Full Pi telemetry callback/span nesting and provider-specific diagnostics;
    generic lifecycle events are not evidence of span parity.
    Provider cancellation and supersession now settle the active request span

@@ -1,6 +1,6 @@
 # p37 — Pi provider transport boundary
 
-Status: in progress (HTTP/replay boundary complete; provider capability seam and YAML route coverage complete; Codex WebSocket adapter lifecycle, production wiring, and source-aligned retry boundary implemented; provider-specific deferred polling remains open)
+Status: in progress (HTTP/replay boundary complete; provider capability seam and YAML route coverage complete; Codex WebSocket adapter lifecycle, production wiring, and source-aligned retry boundary implemented; provider-specific live deferred decoding remains open)
 
 The Pi `ProviderRequestOptions` contract is broader than Runie's current
 `HttpActor` abstraction. This task records the exact boundary so parity work
@@ -405,5 +405,9 @@ injected WebSocket capability. Its production connector owns the handshake,
 headers, frame receive, timeout, and close boundary. The adapter's bounded
 pre-stream retries match Pi for connection-limit and missing-continuation
 errors; post-stream transport failures propagate, and initial failures use the
-explicit SSE fallback policy. Provider-specific deferred polling/decoding
-remains the separate open contract.
+explicit SSE fallback policy. Provider-specific live deferred polling/decoding
+remains the separate open contract. The replay capability itself is
+implemented: `ReplayProvider` accepts an ordered poll sequence, enforces the
+provider-scoped handle, rejects cancellation and exhausted polls, and is
+covered by focused async tests. This is replay transport evidence, not a
+claim that a real provider adapter can poll or decode a live deferred response.
