@@ -86,6 +86,7 @@ pub enum MappableBuiltinCommand {
     Compact { instructions: Option<String> },
     Fork { target_id: String },
     Tree { target_id: String },
+    Export { path: String },
 }
 
 /// Classification at the slash-command boundary. Unsupported Pi commands are
@@ -143,6 +144,12 @@ pub fn parse_mappable_builtin_command(input: &str) -> Option<MappableBuiltinComm
             let target_id = value[6..].trim();
             (!target_id.is_empty()).then(|| MappableBuiltinCommand::Tree {
                 target_id: target_id.to_owned(),
+            })
+        }
+        value if value.starts_with("/export ") => {
+            let path = value[8..].trim();
+            (path.ends_with(".jsonl") && !path.is_empty()).then(|| MappableBuiltinCommand::Export {
+                path: path.to_owned(),
             })
         }
         _ => None,
@@ -248,10 +255,10 @@ mod tests {
     #[test]
     fn classifier_exposes_known_unsupported_capabilities() {
         assert_eq!(
-            classify_builtin_command("/export session.html"),
-            BuiltinCommandDisposition::Unsupported {
-                name: "export".into()
-            }
+            classify_builtin_command("/export session.jsonl"),
+            BuiltinCommandDisposition::Mappable(MappableBuiltinCommand::Export {
+                path: "session.jsonl".into()
+            })
         );
         assert_eq!(
             classify_builtin_command("/login openai"),

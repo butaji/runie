@@ -21,7 +21,7 @@ use crate::widgets::{
     FeedSnapshot, PromptOutcome, PromptSnapshot, PromptWidget, Scrollback, Status, StatusBar,
     StatusSnapshot, TuiSnapshot,
 };
-use runie_core::session::{SessionActor, SessionSnapshot};
+use runie_core::session::{SessionActor, SessionSnapshot, SessionStorageActor};
 pub use runie_tui_model::{ui_messages_for_event, UiCommand, UiMsg, UiState};
 
 #[derive(Debug)]
@@ -412,6 +412,7 @@ pub struct App {
     pub status_actor: StatusActor,
     pub scrollback_actor: ScrollbackActor,
     pub session_actor: SessionActor,
+    pub session_storage: SessionStorageActor,
     pub loop_actor: LoopActor,
     pub bus: EventBus,
     pub ui: UiActor,
@@ -459,6 +460,7 @@ impl App {
             // can reduce the same core event concurrently.
             scrollback_actor: ScrollbackActor::new(),
             session_actor: SessionActor::new_with_bus(&bus),
+            session_storage: SessionStorageActor::new(),
             loop_actor,
             bus,
             ui,
@@ -478,6 +480,7 @@ impl App {
             // renderer delivers core events to this actor's mailbox.
             scrollback_actor: ScrollbackActor::new(),
             session_actor: SessionActor::new_with_bus(&bus),
+            session_storage: SessionStorageActor::new(),
             loop_actor,
             bus,
             ui,
@@ -574,6 +577,16 @@ impl App {
                         true
                     }
                 }
+            }
+            MappableBuiltinCommand::Export { path } => {
+                let result = self
+                    .session_storage
+                    .publish_snapshot(path, &self.session_actor.snapshot(), "runie-session", 0, "")
+                    .await;
+                if let Err(error) = result {
+                    self.bus.publish(AgentEvent::Error { message: error });
+                }
+                true
             }
             MappableBuiltinCommand::Quit => false,
         }

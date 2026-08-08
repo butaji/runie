@@ -109,3 +109,9 @@ Tree navigation increment (2026-08-09): `/tree <entry-id>` now uses a separate
 typed command and `SessionActor` mailbox reduction. It validates an existing
 journal node, moves only the selected leaf, preserves alternate entries, and
 is covered by `visual-slash-tree.yaml` plus an invalid-target actor test.
+
+Export increment (2026-08-09): `/export <path>` now routes through the existing
+`SessionStorageActor` atomic JSONL publication boundary. The TUI command path
+only supplies the destination and immutable session snapshot; staged writes
+and rename/error cleanup remain owned by the storage actor. HTML rendering and
+remote sharing remain separate unsupported capabilities.
