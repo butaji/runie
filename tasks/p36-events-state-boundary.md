@@ -894,3 +894,35 @@ the new model test (`cycle_input_mode_pins_trio_and_file_self_loops`),
 the 66 `runie-tui-model` lib unit tests, the 218 `runie-tui` lib unit
 tests, and the full `just ci` (fmt-check, clippy, lint, test, parity,
 source inventory, Pi event contract, feed-actor boundary) are green.
+
+Renderer-local `activity_text` retirement (2026-08-08): the Grok
+grouped tool activity label now has a single owner. The renderer-local
+`pub(crate) fn activity_text` at `crates/runie-tui/src/event_renderer.rs:1179-1221`
+(the `dirs`/`files`/`commands`/`subagents`/`failures`/`running`
+projection with the `◈` prefix and `Listing`/`Listed`/`Reading`/`Read`/
+`Running`/`Ran` verb alternation) and its helper
+`fn append_failure_suffix` at `crates/runie-tui/src/event_renderer.rs:1223-1228`
+(append the `· N failed` suffix only when `failures > 0 && !running`)
+were removed; the two call sites at lines 582 (`handle_tool_start`
+running activity, `running = true`) and 679 (`handle_tool_end`
+settled activity, `running = false`) now invoke
+`runie_tui_model::activity_text` directly via the new
+`pub use runie_tui_model::activity_text;` re-export placed next to
+`status_messages_for_event` and `thinking_summary` at
+`crates/runie-tui/src/event_renderer.rs:16`. The six focused assertions
+in `event_renderer::tests::activity_group_labels_match_grok_rich_recording`
+at lines 2365, 2369, 2372, 2374, 2378, and 2382 (the running pair
+`Listing 1 dir, Reading 1 file` / `Listed 1 dir, Read 1 file`, the
+plural `Listed 2 dirs`, the cross-family `Listed 1 dir, Ran 1 command`,
+the `Ran 2 commands · 1 failed` failure suffix, and the heterogeneous
+`Read 1 file, Ran 1 subagent`) now exercise the model helper, so the
+renderer no longer keeps a duplicate projection of the same Grok
+activity vocabulary. No model changes were needed: `runie_tui_model::activity_text`
+already lives at `crates/runie-tui-model/src/feed.rs:189-231` and is
+re-exported via `crates/runie-tui-model/src/lib.rs`, so the renderer
+call sites needed no signature rewrites and the model-side test
+`activity_group_labels_match_grok_rich_recording` already lives next
+to the canonical helper. The 67 `runie-tui-model` lib unit tests,
+the 218 `runie-tui` lib unit tests, and the full `just ci`
+(fmt-check, clippy, lint, test, parity, source inventory, Pi event
+contract, feed-actor boundary) are green.

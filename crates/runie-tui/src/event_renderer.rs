@@ -13,6 +13,7 @@ use crate::{ScrollbackActor, StatusActor};
 #[cfg(test)]
 use crate::widgets::Status;
 
+pub use runie_tui_model::activity_text;
 pub use runie_tui_model::status_messages_for_event;
 pub use runie_tui_model::thinking_summary;
 use runie_tui_model::FeedSnapshot;
@@ -1174,57 +1175,6 @@ fn session_start_messages() -> Vec<ScrollbackMsg> {
         )),
         ScrollbackMsg::Append(Line::new(LineKind::Separator, "")),
     ]
-}
-
-#[allow(
-    clippy::cognitive_complexity,
-    reason = "activity vocabulary remains one pure Grok label projection"
-)]
-pub(crate) fn activity_text(
-    dirs: usize,
-    files: usize,
-    commands: usize,
-    subagents: usize,
-    failures: usize,
-    running: bool,
-) -> String {
-    let dir_verb = if running { "Listing" } else { "Listed" };
-    let file_verb = if running { "Reading" } else { "Read" };
-    let command_verb = if running { "Running" } else { "Ran" };
-    let subagent_verb = if running { "Running" } else { "Ran" };
-    let mut parts = Vec::new();
-    if dirs > 0 {
-        parts.push(format!(
-            "{dir_verb} {dirs} dir{}",
-            if dirs == 1 { "" } else { "s" }
-        ));
-    }
-    if files > 0 {
-        parts.push(format!(
-            "{file_verb} {files} file{}",
-            if files == 1 { "" } else { "s" }
-        ));
-    }
-    if commands > 0 {
-        parts.push(format!(
-            "{command_verb} {commands} command{}",
-            if commands == 1 { "" } else { "s" }
-        ));
-    }
-    if subagents > 0 {
-        parts.push(format!(
-            "{subagent_verb} {subagents} subagent{}",
-            if subagents == 1 { "" } else { "s" }
-        ));
-    }
-    append_failure_suffix(format!("◈ {}", parts.join(", ")), failures, running)
-}
-
-fn append_failure_suffix(mut text: String, failures: usize, running: bool) -> String {
-    if failures > 0 && !running {
-        text.push_str(&format!(" · {failures} failed"));
-    }
-    text
 }
 
 #[cfg(test)]
