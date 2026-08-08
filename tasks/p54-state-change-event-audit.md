@@ -85,6 +85,10 @@ publish `TypedOperationRecordCreated` with a closed nine-family
 the replay/legacy compatibility edge, and event-sequence assertions explicitly
 exclude both persistence-only forms.
 
+The event DSL now constructs the typed variant as well, so YAML/replay event
+sequences exercise the same closed producer family. TUI/status projections
+explicitly ignore both operation-event forms; only `SessionActor` reduces them.
+
 ## Non-negotiable checks
 
 - No cross-actor direct mutation.
