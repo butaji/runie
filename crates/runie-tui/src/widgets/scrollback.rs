@@ -2058,6 +2058,14 @@ fn styled_line_for(kind: LineKind, text: &str, theme: ThemeKind) -> RatLine<'sta
                 ]);
             }
         }
+        if let Some(url) = body.strip_prefix("Fetch ") {
+            return RatLine::from(vec![
+                Span::styled(prefix.to_owned(), style),
+                Span::styled("Fetch".to_owned(), style.add_modifier(Modifier::BOLD)),
+                Span::styled(" ".to_owned(), style),
+                Span::styled(url.to_owned(), appearance::header_path_style_for(theme)),
+            ]);
+        }
         for label in ["Read", "List", "Edit"] {
             let Some(path) = body
                 .strip_prefix(label)
@@ -2914,6 +2922,24 @@ mod tests {
         assert_eq!(
             rendered.spans[2].style.fg,
             appearance::muted_style_for(ThemeKind::GrokDay).fg
+        );
+    }
+
+    #[test]
+    fn web_fetch_header_styles_url_as_a_specialized_path() {
+        let rendered = styled_line_for(
+            LineKind::Tool,
+            "◆ Fetch https://example.com/release",
+            ThemeKind::GrokNight,
+        );
+        assert!(rendered.spans[1]
+            .style
+            .add_modifier
+            .contains(Modifier::BOLD));
+        assert_eq!(rendered.spans[3].content, "https://example.com/release");
+        assert_eq!(
+            rendered.spans[3].style.fg,
+            appearance::header_path_style_for(ThemeKind::GrokNight).fg
         );
     }
 
