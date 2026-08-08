@@ -879,3 +879,9 @@ cards likewise separate elapsed/status text and agent-count metadata while
 retaining semantic phase marker colors. These changes add visible card-family
 identity without moving state ownership into the widget; typed block reflow and
 cast-wide reconciliation remain open.
+
+Measured-anchor reflow increment (2026-08-09): manual viewport correction now
+uses one pure signed delta for arbitrary multi-row movement in either direction,
+with event-driven coverage for upward, downward, and missing-anchor cases.
+This keeps responsive wrapping corrections in the feed model and avoids
+renderer-local cursor state; generalized logical-member reflow remains open.

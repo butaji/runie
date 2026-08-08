@@ -3195,6 +3195,14 @@ mod tests {
     }
 
     #[test]
+    fn measured_anchor_tracks_multi_row_reflow_in_both_directions() {
+        assert_eq!(super::measured_anchor_delta(Some(4), Some(11)), 7);
+        assert_eq!(super::measured_anchor_delta(Some(11), Some(4)), -7);
+        assert_eq!(super::measured_anchor_delta(None, Some(4)), 0);
+        assert_eq!(super::measured_anchor_delta(Some(4), None), 0);
+    }
+
+    #[test]
     fn web_search_sources_line_dedups_and_keeps_first_seen_order() {
         assert_eq!(
             super::web_search_sources_line(
@@ -3680,6 +3688,15 @@ pub fn find_all_containing(lines: &[Line], needle: &str) -> Vec<usize> {
         .collect()
 }
 
+/// Return the physical-row correction needed to keep a manually selected
+/// logical row anchored while responsive wrapping changes its position.
+fn measured_anchor_delta(previous: Option<usize>, current: Option<usize>) -> isize {
+    match (previous, current) {
+        (Some(previous), Some(current)) => current as isize - previous as isize,
+        _ => 0,
+    }
+}
+
 /// Inputs accepted by the actor-owned transcript reducer.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ScrollbackMsg {
@@ -3986,21 +4003,13 @@ impl FeedState {
                 anchor_row,
             } => {
                 if !self.navigation.autoscroll {
-                    if let (Some(previous), Some(current)) =
-                        (self.navigation.measured_anchor_row, anchor_row)
-                    {
-                        if current >= previous {
-                            self.navigation.scroll_offset = self
-                                .navigation
-                                .scroll_offset
-                                .saturating_add(current - previous);
-                        } else {
-                            self.navigation.scroll_offset = self
-                                .navigation
-                                .scroll_offset
-                                .saturating_sub(previous - current);
-                        }
-                    }
+                    self.navigation.scroll_offset = self
+                        .navigation
+                        .scroll_offset
+                        .saturating_add_signed(measured_anchor_delta(
+                            self.navigation.measured_anchor_row,
+                            anchor_row,
+                        ));
                 }
                 self.navigation.measured_content_rows = content_rows;
                 self.navigation.measured_viewport_rows = viewport_rows;
