@@ -209,6 +209,16 @@ impl CodexWebSocketAdapter {
             self.cache.lock().await.mark_sse_fallback(&key.session_id);
         }
     }
+
+    /// Remove continuation and fallback state for one provider session.
+    pub async fn clear_session(&self, session_id: &str) {
+        self.cache.lock().await.clear_session(session_id);
+    }
+
+    /// Clear all provider-owned continuation and fallback state.
+    pub async fn clear(&self) {
+        self.cache.lock().await.clear();
+    }
 }
 
 #[allow(
@@ -879,6 +889,12 @@ mod tests {
         assert!(stream.next().await.is_some());
         assert!(closed.load(std::sync::atomic::Ordering::Acquire));
         assert!(adapter
+            .cache
+            .lock()
+            .await
+            .is_sse_fallback_active("fallback-session"));
+        adapter.clear_session("fallback-session").await;
+        assert!(!adapter
             .cache
             .lock()
             .await

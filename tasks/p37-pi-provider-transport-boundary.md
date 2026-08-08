@@ -367,3 +367,8 @@ failures now mark the session/account key as SSE-fallback-active inside the
 adapter-owned cache. Subsequent cached requests honor that state when a
 fallback capability is available, and the lifecycle regression asserts the
 state transition; generic HTTP remains uninvolved.
+
+Cleanup API increment (2026-08-08): `CodexWebSocketAdapter` now exposes
+acknowledged async `clear_session` and `clear` methods over its owned cache.
+They remove continuation IDs and fallback markers after socket lifecycle
+settlement; generic `ProviderActor` does not mutate the cache directly.
