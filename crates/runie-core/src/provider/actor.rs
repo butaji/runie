@@ -214,27 +214,30 @@ async fn run_provider_worker(
                 pumps.abort_all();
                 settle_aborted_telemetry_span(&mut active_telemetry_span).await;
                 let (event_tx, _) = broadcast::channel(STREAM_CAPACITY);
+                let telemetry_attributes = HashMap::from([
+                    ("pi.ai.operation".into(), serde_json::json!("stream")),
+                    (
+                        "pi.ai.provider".into(),
+                        serde_json::json!(model.provider.clone()),
+                    ),
+                    ("pi.ai.model".into(), serde_json::json!(model.id.clone())),
+                    ("pi.ai.api".into(), serde_json::json!(model.api.clone())),
+                    ("pi.ai.streaming".into(), serde_json::json!(true)),
+                ]);
                 let telemetry_span = if let Some(telemetry) = options
                     .as_ref()
                     .as_ref()
                     .and_then(|options| options.telemetry.clone())
                 {
-                    telemetry
-                        .start_span(
-                            None,
-                            "pi.ai.request",
-                            HashMap::from([
-                                ("pi.ai.operation".into(), serde_json::json!("stream")),
-                                (
-                                    "pi.ai.provider".into(),
-                                    serde_json::json!(model.provider.clone()),
-                                ),
-                                ("pi.ai.model".into(), serde_json::json!(model.id.clone())),
-                                ("pi.ai.api".into(), serde_json::json!(model.api.clone())),
-                                ("pi.ai.streaming".into(), serde_json::json!(true)),
-                            ]),
-                        )
-                        .await
+                    if crate::telemetry::validate_pi_ai_request_attributes(&telemetry_attributes)
+                        .is_ok()
+                    {
+                        telemetry
+                            .start_span(None, "pi.ai.request", telemetry_attributes)
+                            .await
+                    } else {
+                        None
+                    }
                 } else {
                     None
                 };

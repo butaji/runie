@@ -50,6 +50,49 @@ pub struct TelemetrySnapshot {
     pub spans: Vec<SpanSnapshot>,
 }
 
+/// Validate the source-defined start vocabulary for Pi's `pi.ai.request`
+/// span. The generic actor remains schema-agnostic so extension spans can be
+/// recorded, while provider adapters can opt into this typed boundary.
+pub fn validate_pi_ai_request_attributes(
+    attributes: &HashMap<String, serde_json::Value>,
+) -> Result<(), String> {
+    const REQUIRED: [&str; 5] = [
+        "pi.ai.operation",
+        "pi.ai.provider",
+        "pi.ai.model",
+        "pi.ai.api",
+        "pi.ai.streaming",
+    ];
+    for key in REQUIRED {
+        if !attributes.contains_key(key) {
+            return Err(format!("missing Pi telemetry attribute {key}"));
+        }
+    }
+    let operation = attributes["pi.ai.operation"]
+        .as_str()
+        .ok_or_else(|| "Pi telemetry pi.ai.operation must be a string".to_owned())?;
+    if !matches!(
+        operation,
+        "stream" | "fetch_deferred" | "cancel_deferred" | "generate_images"
+    ) {
+        return Err(format!("unsupported Pi telemetry operation {operation}"));
+    }
+    for key in ["pi.ai.provider", "pi.ai.model", "pi.ai.api"] {
+        if !attributes[key].is_string() {
+            return Err(format!("Pi telemetry {key} must be a string"));
+        }
+    }
+    if !attributes["pi.ai.streaming"].is_boolean() {
+        return Err("Pi telemetry pi.ai.streaming must be a boolean".to_owned());
+    }
+    if let Some(deferred) = attributes.get("pi.ai.deferred") {
+        if !deferred.is_boolean() {
+            return Err("Pi telemetry pi.ai.deferred must be a boolean".to_owned());
+        }
+    }
+    Ok(())
+}
+
 #[async_trait::async_trait]
 pub trait TelemetryExporter: Send + Sync + 'static {
     async fn export(&self, snapshot: TelemetrySnapshot) -> Result<(), String>;
@@ -523,6 +566,25 @@ mod tests {
         assert_eq!(snapshot.spans[1].status, SpanStatus::Ok);
         assert!(snapshot.spans[1].ended);
         assert_eq!(child, snapshot.spans[1].id);
+    }
+
+    #[test]
+    fn pi_ai_request_schema_rejects_missing_invalid_and_unknown_operations() {
+        let mut attributes = HashMap::from([
+            ("pi.ai.operation".into(), serde_json::json!("stream")),
+            ("pi.ai.provider".into(), serde_json::json!("openai")),
+            ("pi.ai.model".into(), serde_json::json!("model")),
+            ("pi.ai.api".into(), serde_json::json!("responses")),
+            ("pi.ai.streaming".into(), serde_json::json!(true)),
+        ]);
+        assert!(validate_pi_ai_request_attributes(&attributes).is_ok());
+        attributes.insert("pi.ai.operation".into(), serde_json::json!("unknown"));
+        assert!(validate_pi_ai_request_attributes(&attributes).is_err());
+        attributes.insert("pi.ai.operation".into(), serde_json::json!("stream"));
+        attributes.insert("pi.ai.streaming".into(), serde_json::json!("true"));
+        assert!(validate_pi_ai_request_attributes(&attributes).is_err());
+        attributes.remove("pi.ai.model");
+        assert!(validate_pi_ai_request_attributes(&attributes).is_err());
     }
 
     #[tokio::test]

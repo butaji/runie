@@ -119,3 +119,11 @@ the telemetry actor before acknowledging the control command. This closes the
 previous dropped-span lifecycle gap without making the renderer or transport
 actor mutate telemetry state directly; a pending-provider regression proves the
 ended error snapshot without sleeps.
+
+Typed schema increment (2026-08-09): `validate_pi_ai_request_attributes`
+enforces Pi's required provider-span attributes, operation closed set, and
+primitive types. The provider actor validates its `pi.ai.request` attributes
+before creating the span; extension/general spans remain accepted by the
+generic telemetry actor. This closes schema validation for the provider span,
+while the complete Pi harness schema and backend exporter conformance remain
+open.
