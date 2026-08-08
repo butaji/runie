@@ -19,7 +19,7 @@ pub use feed::{
     default_tool_display_mode, format_clock_timestamp, format_elapsed, format_error, is_fence,
     is_output_tool, is_table_row, is_table_separator, is_transport_only_update,
     logical_tool_member_index, project_tool_blocks, project_tool_card_rows, running_bullet,
-    structured_update_text, thinking_summary, tool_header, tool_mode_for_line,
+    structured_update_text, table_bottom_border, thinking_summary, tool_header, tool_mode_for_line,
     tool_mode_override_for_line, tool_result_text, tool_update_header_text, web_search_site_count,
     web_search_sources_line, workflow_text, ActivityKind, CellPosition, CellSelection,
     FeedNavigation, FeedSnapshot, FeedState, Line, LineKind, ScrollbackMsg, ToolBlock,

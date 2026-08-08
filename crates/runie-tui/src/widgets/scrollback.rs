@@ -2247,13 +2247,7 @@ fn is_table_separator(text: &str) -> bool {
 }
 
 fn table_bottom_border(text: &str) -> String {
-    let widths = text
-        .trim()
-        .trim_matches('|')
-        .split('|')
-        .map(|cell| "─".repeat(cell.trim().chars().count() + 2))
-        .collect::<Vec<_>>();
-    format!("└{}┘", widths.join("┴"))
+    runie_tui_model::table_bottom_border(text)
 }
 
 fn atx_heading(text: &str) -> Option<&str> {

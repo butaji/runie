@@ -525,6 +525,19 @@ pub fn atx_heading(text: &str) -> Option<&str> {
         .flatten()
 }
 
+/// Render the Grok bottom border row that closes a markdown table. The
+/// column widths are derived from the cell characters plus two padding
+/// cells on each side, matching the renderer's existing border shape.
+pub fn table_bottom_border(text: &str) -> String {
+    let widths = text
+        .trim()
+        .trim_matches('|')
+        .split('|')
+        .map(|cell| "─".repeat(cell.trim().chars().count() + 2))
+        .collect::<Vec<_>>();
+    format!("└{}┘", widths.join("┴"))
+}
+
 /// Minimum unix-timestamp value (seconds) treated as a live prompt timestamp.
 /// Values below this are either absent or fixtures; values at or above are
 /// rendered with the short clock format. Centralized here so the renderer
@@ -1447,6 +1460,23 @@ mod tests {
         // Pin the empty-title edge case: a heading mark with no body still
         // returns an empty title rather than `None`.
         assert_eq!(super::atx_heading("# "), Some(""));
+    }
+
+    #[test]
+    fn table_bottom_border_aligns_with_separator_widths() {
+        // Pin the smoke path: a three single-char header drives three
+        // 3-char border segments (cell width + 2 padding) joined with `┴`.
+        assert_eq!(super::table_bottom_border("| a | b | c |"), "└───┴───┴───┘");
+        // Pin the wide-cell path: a four-cell header produces four border
+        // segments sized to `cell_width + 2` so each column aligns with
+        // the header text.
+        assert_eq!(
+            super::table_bottom_border("| a | bb | ccc | dddd |"),
+            "└───┴────┴─────┴──────┘"
+        );
+        // Pin the noise-tolerance path: surrounding whitespace is trimmed
+        // and does not change the border shape.
+        assert_eq!(super::table_bottom_border("  | x | y |  "), "└───┴───┘");
     }
 
     #[test]

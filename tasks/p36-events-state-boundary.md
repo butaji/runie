@@ -1124,3 +1124,18 @@ projection. The 92 `runie-tui-model` lib unit tests (88 pre-existing +
 tests, the 28 `visual_snapshots` replay tests, and the full `just ci`
 (fmt-check, clippy, lint, test, parity, source inventory, Pi event
 contract, feed-actor boundary) are green.
+
+**Markdown bottom border retirement (2026-08-08):** the Grok markdown
+table bottom border helper now lives in `runie-tui-model::feed` next to
+the other markdown predicates. The renderer-local `table_bottom_border`
+function at `crates/runie-tui/src/widgets/scrollback.rs:2257` was
+collapsed to a thin `runie_tui_model::table_bottom_border` delegate, so
+the actor-owned markdown formatter and the renderer share one border
+shape. The new `table_bottom_border_aligns_with_separator_widths` test
+in `crates/runie-tui-model/src/feed.rs` pins the three-cell `├───┤`
+joint projection, the wider-cell padding (`cell_width + 2` per segment),
+and the whitespace-trim noise-tolerance path. The 93 `runie-tui-model`
+lib unit tests (92 pre-existing + 1 new), the 220 `runie-tui` lib unit
+tests, the 5 `runie` binary unit tests, the 28 `visual_snapshots` replay
+tests, and the full `just ci` (fmt-check, clippy, lint, test, parity,
+source inventory, Pi event contract, feed-actor boundary) are green.
