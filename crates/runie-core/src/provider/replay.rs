@@ -23,6 +23,7 @@ use super::{
 pub struct ReplayProvider {
     events: Vec<AssistantMessageEvent>,
     deferred_events: Option<Vec<AssistantMessageEvent>>,
+    deferred_poll_events: std::sync::Mutex<Option<Vec<Vec<AssistantMessageEvent>>>>,
     deferred_handle: Option<DeferredHandle>,
     deferred_cancelled: std::sync::atomic::AtomicBool,
     /// Number of `stream()` calls. The first call replays the recorded trace;
@@ -132,6 +133,7 @@ impl ReplayProvider {
         Ok(Self {
             events,
             deferred_events: None,
+            deferred_poll_events: std::sync::Mutex::new(None),
             deferred_handle: None,
             deferred_cancelled: std::sync::atomic::AtomicBool::new(false),
             calls: AtomicUsize::new(0),
@@ -151,6 +153,17 @@ impl ReplayProvider {
     /// handle belonging to another provider/model/API lane.
     pub fn with_deferred_handle(mut self, handle: DeferredHandle) -> Self {
         self.deferred_handle = Some(handle);
+        self
+    }
+
+    /// Attach an ordered provider-owned polling sequence. Each deferred fetch
+    /// consumes one event batch, allowing a fixture to model pending progress
+    /// followed by a terminal result without introducing timing or sleeps.
+    pub fn with_deferred_poll_events(self, polls: Vec<Vec<AssistantMessageEvent>>) -> Self {
+        *self
+            .deferred_poll_events
+            .lock()
+            .expect("deferred replay poll mutex") = Some(polls);
         self
     }
 }
@@ -484,6 +497,10 @@ impl ReplayProvider {
 }
 
 #[async_trait::async_trait]
+#[allow(
+    clippy::too_many_lines,
+    reason = "the replay provider keeps each optional provider capability at one boundary"
+)]
 impl StreamFn for ReplayProvider {
     async fn stream(
         &self,
@@ -508,7 +525,14 @@ impl StreamFn for ReplayProvider {
         handle: &DeferredHandle,
         _options: Option<SimpleStreamOptions>,
     ) -> Result<AssistantMessageEventStream, StreamError> {
-        let Some(events) = self.deferred_events.as_ref() else {
+        let default_events = self.deferred_events.as_ref();
+        let has_polls = self
+            .deferred_poll_events
+            .lock()
+            .map_err(|_| StreamError::Invalid("deferred replay poll state poisoned".into()))?
+            .as_ref()
+            .is_some_and(|polls| !polls.is_empty());
+        if default_events.is_none() && !has_polls {
             return Err(StreamError::Invalid(
                 "replay provider has no deferred response fixture".into(),
             ));
@@ -535,7 +559,15 @@ impl StreamFn for ReplayProvider {
                 )));
             }
         }
-        Ok(Box::pin(stream::iter(events.clone())))
+        let events = self
+            .deferred_poll_events
+            .lock()
+            .map_err(|_| StreamError::Invalid("deferred replay poll state poisoned".into()))?
+            .as_mut()
+            .and_then(|polls| (!polls.is_empty()).then(|| polls.remove(0)))
+            .or_else(|| default_events.cloned())
+            .ok_or_else(|| StreamError::Invalid("deferred poll sequence is exhausted".into()))?;
+        Ok(Box::pin(stream::iter(events)))
     }
 
     async fn cancel_deferred(
@@ -678,6 +710,62 @@ mod tests {
             .fetch_deferred(&Model::default(), &foreign, None)
             .await
             .is_err());
+    }
+
+    #[tokio::test]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the deferred polling regression spells out both ordered provider batches"
+    )]
+    async fn deferred_replay_consumes_ordered_poll_batches() {
+        let handle = DeferredHandle {
+            provider: "replay".into(),
+            model_id: "model".into(),
+            api: "responses".into(),
+            id: "deferred-poll".into(),
+            expires_at: None,
+            poll_after_ms: Some(10),
+            data: None,
+        };
+        let provider = ReplayProvider::from_sse_body(
+            "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\"}}\n",
+        )
+        .expect("ordinary replay trace")
+        .with_deferred_handle(handle.clone())
+        .with_deferred_poll_events(vec![
+            vec![AssistantMessageEvent::Done {
+                stop_reason: StopReason::Deferred,
+                usage: Usage::default(),
+                message: None,
+            }],
+            vec![AssistantMessageEvent::Done {
+                stop_reason: StopReason::Stop,
+                usage: Usage::default(),
+                message: None,
+            }],
+        ]);
+        let mut first = provider
+            .fetch_deferred(&Model::default(), &handle, None)
+            .await
+            .expect("first deferred poll");
+        assert!(matches!(
+            first.next().await,
+            Some(AssistantMessageEvent::Done {
+                stop_reason: StopReason::Deferred,
+                ..
+            })
+        ));
+        let mut second = provider
+            .fetch_deferred(&Model::default(), &handle, None)
+            .await
+            .expect("terminal deferred poll");
+        assert!(matches!(
+            second.next().await,
+            Some(AssistantMessageEvent::Done {
+                stop_reason: StopReason::Stop,
+                ..
+            })
+        ));
     }
 
     #[tokio::test]

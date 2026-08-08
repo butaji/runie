@@ -231,6 +231,13 @@ handles, and makes a successfully cancelled handle fail subsequent fetches.
 This mirrors Pi's provider adapter contract without pretending the generic HTTP
 boundary can perform provider-specific polling or decoding.
 
+Deterministic deferred polling increment (2026-08-09): `ReplayProvider` now
+accepts an ordered provider-owned poll sequence. Repeated `fetch_deferred`
+calls consume pending and terminal event batches in order, allowing replay to
+exercise Pi's deferred polling lifecycle without a generic polling loop,
+timers, or sleeps. Provider-specific HTTP polling and response decoding remain
+adapter-owned.
+
 Provider lifecycle increment (2026-08-07): `ProviderActor` now aborts any
 previous owned pump before acknowledging a new `Start`. This matches the
 one-in-flight Pi turn contract and prevents superseded streams from publishing
