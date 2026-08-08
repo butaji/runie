@@ -873,22 +873,12 @@ impl Scrollback {
 
     /// Find the index of the first line whose `text` contains the needle.
     pub fn find_first_containing(&self, needle: &str) -> Option<usize> {
-        self.lines.iter().position(|l| l.text.contains(needle))
+        runie_tui_model::find_first_containing(&self.lines, needle)
     }
 
     /// Find all line indices whose `text` contains the needle.
     pub fn find_all_containing(&self, needle: &str) -> Vec<usize> {
-        self.lines
-            .iter()
-            .enumerate()
-            .filter_map(|(i, l)| {
-                if l.text.contains(needle) {
-                    Some(i)
-                } else {
-                    None
-                }
-            })
-            .collect()
+        runie_tui_model::find_all_containing(&self.lines, needle)
     }
 
     /// Mutable reference to the last line of `kind`, if any.

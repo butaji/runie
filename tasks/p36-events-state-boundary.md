@@ -1539,3 +1539,22 @@ tests, the 5 `runie` binary unit tests, the 28 `visual_snapshots`
 replay tests, and the full `just ci` (fmt-check, clippy, lint, test,
 parity, source inventory, Pi event contract, feed-actor boundary) are
 green.
+
+**`find_first_containing` / `find_all_containing` retirement
+(2026-08-08):** the Grok transcript search predicates now live in
+`runie-tui-model::feed` so the actor-owned transcript projection and
+the renderer share one search vocabulary. The renderer-local
+`pub fn find_first_containing` and `pub fn find_all_containing` at
+`crates/runie-tui/src/widgets/scrollback.rs:875, 880` were
+collapsed to thin `runie_tui_model::find_first_containing(&self.lines, needle)`
+and `runie_tui_model::find_all_containing(&self.lines, needle)`
+delegates. The two new focused tests
+`find_first_containing_returns_first_match_index` and
+`find_all_containing_returns_all_match_indices` in
+`crates/runie-tui-model/src/feed.rs` pin the first-match index, the
+non-matching passthrough, the all-matches index list, and the
+non-matching empty vector. The 139 `runie-tui-model` lib unit tests
+(137 pre-existing + 2 new), the 220 `runie-tui` lib unit tests, the
+5 `runie` binary unit tests, the 28 `visual_snapshots` replay tests,
+and the full `just ci` (fmt-check, clippy, lint, test, parity, source
+inventory, Pi event contract, feed-actor boundary) are green.

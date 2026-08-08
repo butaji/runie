@@ -3410,6 +3410,36 @@ mod tests {
         assert!(!non_blank.is_blank());
         assert!(!super::line_is_blank(&non_blank));
     }
+
+    #[test]
+    fn find_first_containing_returns_first_match_index() {
+        // Pin the smoke path: the first matching line is returned in
+        // order, and a non-matching needle returns `None`.
+        let lines = vec![
+            super::Line::new(super::LineKind::User, "hello"),
+            super::Line::new(super::LineKind::Assistant, "world"),
+            super::Line::new(super::LineKind::Assistant, "hello again"),
+        ];
+        assert_eq!(super::find_first_containing(&lines, "hello"), Some(0));
+        assert_eq!(super::find_first_containing(&lines, "world"), Some(1));
+        assert_eq!(super::find_first_containing(&lines, "missing"), None);
+    }
+
+    #[test]
+    fn find_all_containing_returns_all_match_indices() {
+        // Pin the smoke path: every matching line index is returned
+        // in order, and a non-matching needle returns an empty vector.
+        let lines = vec![
+            super::Line::new(super::LineKind::User, "hello"),
+            super::Line::new(super::LineKind::Assistant, "world"),
+            super::Line::new(super::LineKind::Assistant, "hello again"),
+        ];
+        assert_eq!(super::find_all_containing(&lines, "hello"), vec![0, 2]);
+        assert_eq!(
+            super::find_all_containing(&lines, "missing"),
+            Vec::<usize>::new()
+        );
+    }
 }
 
 /// Pure formatter for the Grok "Workflow name: objective" transcript row.
@@ -3523,6 +3553,30 @@ impl Line {
 /// share the blank-line vocabulary.
 pub fn line_is_blank(line: &Line) -> bool {
     line.is_blank()
+}
+
+/// Find the first index in `lines` whose `text` contains the
+/// `needle`. Centralized here so the actor-owned transcript projection
+/// and the renderer share the search predicate.
+pub fn find_first_containing(lines: &[Line], needle: &str) -> Option<usize> {
+    lines.iter().position(|l| l.text.contains(needle))
+}
+
+/// Find all line indices in `lines` whose `text` contains the
+/// `needle`. Centralized here so the actor-owned transcript projection
+/// and the renderer share the search predicate.
+pub fn find_all_containing(lines: &[Line], needle: &str) -> Vec<usize> {
+    lines
+        .iter()
+        .enumerate()
+        .filter_map(|(i, l)| {
+            if l.text.contains(needle) {
+                Some(i)
+            } else {
+                None
+            }
+        })
+        .collect()
 }
 
 /// Inputs accepted by the actor-owned transcript reducer.
