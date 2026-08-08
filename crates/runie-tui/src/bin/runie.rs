@@ -951,7 +951,15 @@ async fn run_app(
                     InputEvent::MouseSelectionExtend(row, column) => {
                         app.mouse_selection_extend(runie_tui::widgets::CellPosition { row, column }).await;
                     }
-                    InputEvent::MouseSelectionCommit => app.mouse_selection_commit().await,
+                    InputEvent::MouseSelectionCommit => {
+                        app.mouse_selection_commit().await;
+                        if let Some(text) = app.copy_selection_text().await {
+                            let _ = execute!(
+                                io::stdout(),
+                                Print(osc52_clipboard_sequence(&text))
+                            );
+                        }
+                    }
                 }
             }
             _ = tick.tick() => {

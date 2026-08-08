@@ -934,6 +934,16 @@ impl App {
             .await;
     }
 
+    /// Acknowledge the actor-owned selection request and return its immutable
+    /// text payload. The terminal clipboard effect remains in the binary.
+    pub async fn copy_selection_text(&self) -> Option<String> {
+        self.request_copy_selection().await;
+        let snapshot = self.scrollback_actor.model_snapshot();
+        snapshot
+            .copy_selection
+            .map(|selection| runie_tui_model::selected_cell_text(&snapshot.lines, selection))
+    }
+
     pub async fn clear_copy_request(&self) {
         self.scrollback_actor
             .apply(crate::widgets::ScrollbackMsg::ClearCopyRequest)

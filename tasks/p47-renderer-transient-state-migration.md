@@ -597,3 +597,9 @@ Terminal-width correction (2026-08-08): the payload projection now slices
 Unicode text by `unicode-width` terminal cells, so wide glyphs cannot be
 silently split by scalar-index coordinates. The model regression covers a
 full two-cell CJK row and retains the pure/no-clipboard boundary.
+
+Live clipboard boundary (2026-08-09): mouse-selection commit now crosses the
+`App` actor boundary to request the immutable selected payload, then the live
+binary emits the existing OSC-52 terminal effect. The feed reducer remains
+side-effect free; YAML and model replay continue to assert payload projection
+without terminal I/O.
