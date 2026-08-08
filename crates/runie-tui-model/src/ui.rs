@@ -14,6 +14,7 @@ runie_core::typed_action_registry! {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UiCommand {
     ActivatePaletteEntry(PaletteAction),
+    CopyText(String),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -36,6 +37,7 @@ pub enum UiMsg {
     SetModelSelectorResultCount(usize),
     SetModelSelectorRows(Vec<String>),
     ToggleSessionInfo,
+    CopyText(String),
     Reset,
 }
 
@@ -163,6 +165,7 @@ impl UiState {
                 }
             }
             UiMsg::ToggleSessionInfo => self.session_info_open = !self.session_info_open,
+            UiMsg::CopyText(_) => {}
             UiMsg::SetModelSelectorResultCount(count) => {
                 self.model_selector_result_count = count;
                 self.model_selector_index = self.model_selector_index.min(count.saturating_sub(1));

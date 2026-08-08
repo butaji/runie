@@ -78,6 +78,7 @@ pub fn matching_pi_builtin_slash_commands(query: &str) -> Vec<SlashCommand> {
 pub enum MappableBuiltinCommand {
     NewSession,
     Hotkeys,
+    Copy,
     Quit,
     Model { reference: String },
     ScopedModels,
@@ -113,6 +114,7 @@ pub fn parse_mappable_builtin_command(input: &str) -> Option<MappableBuiltinComm
     match input.trim() {
         "/new" => Some(MappableBuiltinCommand::NewSession),
         "/hotkeys" => Some(MappableBuiltinCommand::Hotkeys),
+        "/copy" => Some(MappableBuiltinCommand::Copy),
         "/quit" => Some(MappableBuiltinCommand::Quit),
         "/scoped-models" => Some(MappableBuiltinCommand::ScopedModels),
         "/session" => Some(MappableBuiltinCommand::SessionInfo),
@@ -253,6 +255,10 @@ mod tests {
             Some(MappableBuiltinCommand::Compact {
                 instructions: Some("preserve the latest user intent".into())
             })
+        );
+        assert_eq!(
+            parse_mappable_builtin_command("/copy"),
+            Some(MappableBuiltinCommand::Copy)
         );
         assert_eq!(
             parse_mappable_builtin_command("/name release parity"),

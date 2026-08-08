@@ -1225,6 +1225,22 @@ pub fn selected_cell_text(lines: &[Line], selection: CellSelection) -> String {
         .join("\n")
 }
 
+/// Project the latest assistant output for the platform clipboard boundary.
+pub fn last_assistant_text(lines: &[Line]) -> String {
+    let mut output = Vec::new();
+    for line in lines.iter().rev() {
+        if line.kind == LineKind::Assistant {
+            if !line.text.is_empty() {
+                output.push(line.text.as_str());
+            }
+        } else if !output.is_empty() {
+            break;
+        }
+    }
+    output.reverse();
+    output.join("\n")
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LineKind {
     User,
@@ -1980,6 +1996,18 @@ mod tests {
             ),
             ""
         );
+    }
+
+    #[test]
+    fn last_assistant_text_only_projects_the_latest_assistant_block() {
+        let lines = vec![
+            super::Line::new(super::LineKind::Assistant, "older"),
+            super::Line::new(super::LineKind::User, "next"),
+            super::Line::new(super::LineKind::Assistant, "latest"),
+            super::Line::new(super::LineKind::Assistant, "answer"),
+        ];
+        assert_eq!(super::last_assistant_text(&lines), "latest\nanswer");
+        assert_eq!(super::last_assistant_text(&[]), "");
     }
 
     #[test]

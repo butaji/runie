@@ -130,3 +130,8 @@ Resume increment (2026-08-09): `/resume <path>.jsonl` reuses the validated
 storage load and session import mailbox to replace the selected journal. It is
 deliberately a separate typed command at the UI boundary, while storage and
 reduction remain one implementation path.
+
+Copy increment (2026-08-08): `/copy` now crosses the typed command and UI
+actor boundary with the latest assistant block projected as immutable text.
+The live binary owns the terminal-side OSC 52 clipboard effect; replay and
+model tests cover the payload selection without invoking terminal I/O.

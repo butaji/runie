@@ -9,9 +9,11 @@ use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 
 use anyhow::Result;
+use base64::Engine;
 use crossterm::event::{
     Event, EventStream, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseButton, MouseEventKind,
 };
+use crossterm::style::Print;
 use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
@@ -733,6 +735,12 @@ async fn run_app(
                     if let PromptOutcome::Submitted(text) = outcome {
                         let disposition = classify_builtin_command(&text);
                         if !matches!(disposition, BuiltinCommandDisposition::NotBuiltin) {
+                            let copy_command = matches!(
+                                disposition,
+                                BuiltinCommandDisposition::Mappable(
+                                    runie_core::commands::MappableBuiltinCommand::Copy
+                                )
+                            );
                             if matches!(
                                 disposition,
                                 BuiltinCommandDisposition::Mappable(
@@ -742,6 +750,16 @@ async fn run_app(
                                 return Err(AppExit::Quit);
                             }
                             let _ = app.route_builtin_command(disposition).await;
+                            if copy_command {
+                                if let Ok(UiCommand::CopyText(text)) = ui_commands.recv().await {
+                                    let encoded =
+                                        base64::engine::general_purpose::STANDARD.encode(text);
+                                    let _ = execute!(
+                                        io::stdout(),
+                                        Print(format!("\x1b]52;c;{encoded}\x07"))
+                                    );
+                                }
+                            }
                             return Ok(ui_commands);
                         }
                         if is_quit_command(&text) {

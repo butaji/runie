@@ -15,6 +15,7 @@ name = "runie-tui-e2e"
 path = "src/bin/runie_tui_e2e.rs"
 
 [dependencies]
+base64 = "0.22"
 runie-core = { path = "../runie-core" }
 runie-tui-model = { path = "../runie-tui-model" }
 ratatui = "0.29"

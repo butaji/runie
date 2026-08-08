@@ -38,6 +38,13 @@ fn palette_command_for(state: &UiState, message: &UiMsg) -> Option<UiCommand> {
         .and_then(|entry| palette_action_for(entry).map(UiCommand::ActivatePaletteEntry))
 }
 
+fn ui_command_for(state: &UiState, message: &UiMsg) -> Option<UiCommand> {
+    match message {
+        UiMsg::CopyText(text) => Some(UiCommand::CopyText(text.clone())),
+        _ => palette_command_for(state, message),
+    }
+}
+
 fn palette_action_for(entry: &str) -> Option<PaletteAction> {
     PaletteAction::from_label(entry)
 }
@@ -149,7 +156,7 @@ async fn run_ui_actor(
             biased;
             message = rx.recv() => {
                 let Some((message, applied)) = message else { break };
-                let command = palette_command_for(&state, &message);
+                let command = ui_command_for(&state, &message);
                 state = state.update(message);
                 if let Some(command) = command {
                     let _ = command_tx.send(command);
@@ -522,6 +529,13 @@ impl App {
             }
             MappableBuiltinCommand::Hotkeys => {
                 self.toggle_shortcuts().await;
+                true
+            }
+            MappableBuiltinCommand::Copy => {
+                let text = runie_tui_model::last_assistant_text(
+                    &self.scrollback_actor.model_snapshot().lines,
+                );
+                self.ui.send(UiMsg::CopyText(text)).await;
                 true
             }
             MappableBuiltinCommand::Model { reference } => {
@@ -1145,6 +1159,18 @@ mod tests {
         assert_eq!(
             commands.recv().await.unwrap(),
             super::UiCommand::ActivatePaletteEntry(super::PaletteAction::NewSession)
+        );
+    }
+
+    #[tokio::test]
+    async fn ui_actor_publishes_copy_payload_command() {
+        let bus = EventBus::new();
+        let actor = UiActor::new(&bus);
+        let mut commands = actor.subscribe_commands();
+        actor.send(UiMsg::CopyText("latest answer".into())).await;
+        assert_eq!(
+            commands.recv().await.unwrap(),
+            super::UiCommand::CopyText("latest answer".into())
         );
     }
 
