@@ -1551,11 +1551,9 @@ impl Scrollback {
                 if let Some(tool_id) = line.tool_call_id.as_deref() {
                     if let Some((member_index, group_size)) = dense_groups.get(tool_id) {
                         let hidden = group_size.saturating_sub(GROK_GROUP_MAX_VISIBLE);
-                        let group_revealed = dense_groups
-                            .iter()
-                            .find(|(_, (index, size))| *index == 0 && *size == *group_size)
-                            .is_some_and(|(anchor, _)| {
-                                self.navigation.revealed_dense_groups.contains(anchor)
+                        let group_revealed =
+                            self.dense_group_anchor_for(tool_id).is_some_and(|anchor| {
+                                self.navigation.revealed_dense_groups.contains(&anchor)
                             });
                         if !group_revealed && hidden > 0 && *member_index < hidden {
                             if emitted_dense_headers.insert(tool_id.to_owned()) {
@@ -1824,16 +1822,13 @@ impl Scrollback {
         groups
     }
 
-    fn selected_tool_group_ids(&self) -> HashSet<String> {
-        let Some(selected) = self.navigation.selected_tool_id.as_deref() else {
-            return HashSet::new();
-        };
-        let mut groups = Vec::<Vec<String>>::new();
+    fn dense_group_anchor_for(&self, selected: &str) -> Option<String> {
         let mut members = Vec::new();
-        let flush = |groups: &mut Vec<Vec<String>>, members: &mut Vec<String>| {
-            if !members.is_empty() {
-                groups.push(std::mem::take(members));
-            }
+        let flush = |members: &mut Vec<String>| {
+            let anchor = members.first().cloned();
+            let contains = members.iter().any(|id| id == selected);
+            members.clear();
+            contains.then_some(anchor).flatten()
         };
         for line in &self.lines {
             let is_member = matches!(
@@ -1850,15 +1845,47 @@ impl Scrollback {
                 line.kind,
                 LineKind::Activity | LineKind::ToolOutput | LineKind::ToolResult
             ) {
-                flush(&mut groups, &mut members);
+                if let Some(anchor) = flush(&mut members) {
+                    return Some(anchor);
+                }
             }
         }
-        flush(&mut groups, &mut members);
-        groups
-            .into_iter()
-            .find(|group| group.iter().any(|id| id == selected))
-            .map(|group| group.into_iter().collect())
-            .unwrap_or_else(|| HashSet::from([selected.to_owned()]))
+        flush(&mut members)
+    }
+
+    fn selected_tool_group_ids(&self) -> HashSet<String> {
+        let Some(selected) = self.navigation.selected_tool_id.as_deref() else {
+            return HashSet::new();
+        };
+        let Some(anchor) = self.dense_group_anchor_for(selected) else {
+            return HashSet::from([selected.to_owned()]);
+        };
+        let mut group = HashSet::new();
+        let mut in_group = false;
+        for line in &self.lines {
+            let is_member = matches!(
+                line.kind,
+                LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
+            ) && line.tool_call_id.is_some();
+            if is_member {
+                if let Some(id) = &line.tool_call_id {
+                    if id == &anchor {
+                        in_group = true;
+                    }
+                    if in_group {
+                        group.insert(id.clone());
+                    }
+                }
+            } else if !matches!(
+                line.kind,
+                LineKind::Activity | LineKind::ToolOutput | LineKind::ToolResult
+            ) {
+                if in_group {
+                    break;
+                }
+            }
+        }
+        group
     }
 }
 
