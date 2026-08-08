@@ -127,6 +127,10 @@ ownership in one pure model-layer table. Feed admission delegates to that
 classifier, while multi-owner events such as theme/reset and assistant
 message updates retain their independent actor projections. Tests pin both
 shared ownership and the rule that status-only events cannot enter the feed.
+The classifier remains descriptive for session lifecycle events: the session
+actor also consumes reset and tool/message terminal facts needed to maintain
+its journal, so those events are not filtered at the generic compatibility
+API.
 
 **First scope slice (2026-08-06):** `runie-tui-model::is_actor_feed_event`
 now owns the actor-feed admission policy. The bus projection rejects
