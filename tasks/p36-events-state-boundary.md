@@ -562,3 +562,25 @@ regression only 15/25 times; the eight-point form caught it 25/25 while
 staying deterministic (10/10) with the fix in place. The mailbox typedef is
 now the named `UiMailbox` alias so the worker signature and the test share
 one spelling of the acknowledged-message tuple.
+
+**Input actor terminal-event bias (2026-08-08):** the owned input actor in
+`runie` ran a three-arm `tokio::select!` between `input.next()` (terminal
+events), `input_config_rx.recv()` (config from the main loop), and
+`cadence.tick()` (16 ms scroll-flush cadence) without `biased;`. When all
+three branches were ready — which happens whenever a keystroke lands in
+the same scheduler slice as a cadence tick — `tokio` picked one at random,
+so a fast typist could see a keystroke delayed by one cadence window of
+`input.next()` work and the loss felt worst while the agent was streaming
+(the cadence branch was almost always ready). The select now leads with
+`biased;` so the terminal-event arm is checked first, then config updates,
+then cadence; this matches the outer `run_app` loop, which already
+prioritized input via `biased;` and immediate `render_frame`. The input
+channel capacity was also raised from 32 to 128 so the actor can absorb
+transient render-time backpressure (the receiver briefly stalls past
+~100 ms during heavy agent-streaming frames) without forcing
+`input_tx.send(...).await` to block and drop a keystroke. No new state
+owner, no second subscription path: terminal events remain the single
+producer of `InputEvent` to the mailbox. The four `runie` binary unit
+tests, the 28 `visual_snapshots` replay tests, and the full `just ci`
+(fmt-check, clippy, lint, test, parity, source inventory, Pi event
+contract, feed-actor boundary) are green.

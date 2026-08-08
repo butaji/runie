@@ -444,7 +444,12 @@ async fn run_app(
 
     // OWNER: interactive input actor; the mailbox and worker live until the
     // terminal loop exits, and the owned task is dropped on shutdown.
-    let (input_tx, mut input_rx) = mpsc::channel::<InputEvent>(32);
+    //
+    // Capacity is sized to absorb transient render-time backpressure: the
+    // receiver in `run_app` may briefly stall past ~100 ms during heavy
+    // agent-streaming frames, and a fast typist could otherwise block the
+    // terminal-event arm on `input_tx.send(...).await` and lose keystrokes.
+    let (input_tx, mut input_rx) = mpsc::channel::<InputEvent>(128);
     let (input_config_tx, mut input_config_rx) = mpsc::channel::<InputConfig>(4);
     let _input_owner = runie_core::spawn_owned_worker!(async move {
         let mut input = EventStream::new();
@@ -482,6 +487,13 @@ async fn run_app(
         cadence.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
         loop {
             tokio::select! {
+                biased;
+                // Branch priority: terminal events first, then config updates,
+                // then the 16 ms scroll-flush cadence. Without `biased;`,
+                // tokio picks ready branches pseudo-randomly, so a keystroke
+                // queued behind a cadence tick could be delayed by one
+                // 16 ms window of `input.next()` work — visible as input lag
+                // during fast typing while the agent is streaming.
                 result = input.next() => {
                     let Some(result) = result else { break };
                     let Ok(event) = result else { continue };
