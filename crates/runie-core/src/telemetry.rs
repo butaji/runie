@@ -548,6 +548,49 @@ impl TelemetryActor {
         }
         Some(result)
     }
+
+    /// Execute a synchronous callback inside an actor-owned span. Pi accepts
+    /// both callback return shapes; keep the synchronous path explicit so the
+    /// callback itself never needs to manufacture an async wrapper.
+    pub async fn with_span_sync<F, T, E>(
+        &self,
+        parent_id: Option<u64>,
+        name: impl Into<String>,
+        attributes: HashMap<String, serde_json::Value>,
+        callback: F,
+    ) -> Option<Result<T, E>>
+    where
+        F: FnOnce(TelemetrySpan) -> Result<T, E>,
+        E: std::fmt::Display,
+    {
+        let span = self
+            .start_span(parent_id, name, attributes)
+            .await
+            .unwrap_or_else(|| TelemetrySpan {
+                actor: self.clone(),
+                id: 0,
+                noop: true,
+            });
+        let result = callback(span.clone());
+        if !span.noop {
+            match &result {
+                Ok(_) => span.status(SpanStatus::Ok).await,
+                Err(error) if !span.explicit_status() => {
+                    span.status_with_error(
+                        SpanStatus::Error,
+                        Some(SpanError {
+                            name: "Error".to_owned(),
+                            message: error.to_string(),
+                        }),
+                    )
+                    .await;
+                }
+                Err(_) => {}
+            }
+            span.end().await;
+        }
+        Some(result)
+    }
 }
 
 impl Default for TelemetryActor {
@@ -696,6 +739,45 @@ impl TelemetrySpan {
         }
         Some(result)
     }
+
+    /// Synchronous counterpart to [`Self::with_child`], matching Pi's nested
+    /// callback contract while retaining the same actor-owned settlement.
+    pub async fn with_child_sync<F, T, E>(
+        &self,
+        name: impl Into<String>,
+        attributes: HashMap<String, serde_json::Value>,
+        callback: F,
+    ) -> Option<Result<T, E>>
+    where
+        F: FnOnce(TelemetrySpan) -> Result<T, E>,
+        E: std::fmt::Display,
+    {
+        let child = self.actor.start_span(Some(self.id), name, attributes).await;
+        let span = child.unwrap_or_else(|| TelemetrySpan {
+            actor: self.actor.clone(),
+            id: 0,
+            noop: true,
+        });
+        let result = callback(span.clone());
+        if !span.noop {
+            match &result {
+                Ok(_) => span.status(SpanStatus::Ok).await,
+                Err(error) if !span.explicit_status() => {
+                    span.status_with_error(
+                        SpanStatus::Error,
+                        Some(SpanError {
+                            name: "Error".to_owned(),
+                            message: error.to_string(),
+                        }),
+                    )
+                    .await;
+                }
+                Err(_) => {}
+            }
+            span.end().await;
+        }
+        Some(result)
+    }
 }
 
 #[cfg(test)]
@@ -725,6 +807,13 @@ mod tests {
             .await
             .unwrap()
             .unwrap();
+        let sync_child = root
+            .with_child_sync("sync-request", HashMap::new(), |child| {
+                Ok::<_, &'static str>(child.id)
+            })
+            .await
+            .unwrap()
+            .unwrap();
         let snapshot = actor.snapshot();
         assert_eq!(root.id, 1);
         assert_eq!(snapshot.spans[1].parent_id, Some(root.id));
@@ -732,6 +821,9 @@ mod tests {
         assert_eq!(snapshot.spans[1].status, SpanStatus::Ok);
         assert!(snapshot.spans[1].ended);
         assert_eq!(child, snapshot.spans[1].id);
+        assert_eq!(sync_child, snapshot.spans[2].id);
+        assert_eq!(snapshot.spans[2].parent_id, Some(root.id));
+        assert!(snapshot.spans[2].ended);
     }
 
     #[tokio::test]
@@ -949,6 +1041,41 @@ mod tests {
             })
         );
         assert!(snapshot.spans.iter().all(|span| span.ended));
+    }
+
+    #[tokio::test]
+    async fn callback_scoped_failures_preserve_sync_and_async_error_values() {
+        let actor = TelemetryActor::new();
+        let sync = actor
+            .with_span_sync(None, "sync-failure", HashMap::new(), |_span| {
+                Err::<(), _>("sync error".to_owned())
+            })
+            .await
+            .expect("sync callback result");
+        let asynchronous = actor
+            .with_span(None, "async-failure", HashMap::new(), |_span| async {
+                Err::<(), _>("async error".to_owned())
+            })
+            .await
+            .expect("async callback result");
+
+        assert_eq!(sync, Err("sync error".to_owned()));
+        assert_eq!(asynchronous, Err("async error".to_owned()));
+        let snapshot = actor.snapshot();
+        assert_eq!(snapshot.spans.len(), 2);
+        assert!(snapshot.spans.iter().all(|span| span.ended));
+        assert!(snapshot
+            .spans
+            .iter()
+            .all(|span| span.status == SpanStatus::Error));
+        assert_eq!(
+            snapshot.spans[0].error.as_ref().unwrap().message,
+            "sync error"
+        );
+        assert_eq!(
+            snapshot.spans[1].error.as_ref().unwrap().message,
+            "async error"
+        );
     }
 
     #[tokio::test]

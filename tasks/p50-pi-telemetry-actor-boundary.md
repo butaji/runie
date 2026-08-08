@@ -99,6 +99,16 @@ asserts both child parent IDs and the settlement order
 `second-child < first-child < parent` without sleeping or reading wall-clock
 time.
 
+Callback-error conformance increment (2026-08-08): callback-scoped spans now
+have a regression for both synchronous and asynchronous failures. It asserts
+that the exact returned error values are preserved while each span settles
+once with the corresponding Pi error status and message.
+
+Synchronous callback increment (2026-08-08): `TelemetryActor::with_span_sync`
+and `TelemetrySpan::with_child_sync` now cover Pi's synchronous callback return
+shape in addition to the existing async APIs. The nested-span regression pins
+parent linkage and actor-owned settlement for that path.
+
 Exporter increment (2026-08-08): `TelemetryActor::new_with_exporter` accepts an
 optional actor-owned async exporter. A settled span exports the immutable
 snapshot after the reducer marks it ended; exporter failures do not mutate or
