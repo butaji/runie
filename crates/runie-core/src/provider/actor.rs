@@ -198,6 +198,7 @@ async fn run_provider_worker(
     websocket: Option<Arc<dyn WebSocketAdapter>>,
 ) {
     let mut pumps = JoinSet::new();
+    let mut active_telemetry_span = None;
     while let Some(cmd) = rx.recv().await {
         while pumps.try_join_next().is_some() {}
         match cmd {
@@ -211,6 +212,7 @@ async fn run_provider_worker(
                 // supersedes any still-running pump before its receiver is
                 // handed back, so two streams cannot publish concurrently.
                 pumps.abort_all();
+                settle_aborted_telemetry_span(&mut active_telemetry_span).await;
                 let (event_tx, _) = broadcast::channel(STREAM_CAPACITY);
                 let telemetry_span = if let Some(telemetry) = options
                     .as_ref()
@@ -263,6 +265,7 @@ async fn run_provider_worker(
                         let tx = event_tx.clone();
                         // ProviderActor owns every active pump through this
                         // JoinSet; dropping the worker aborts its children.
+                        active_telemetry_span = telemetry_span.clone();
                         pumps.spawn(pump_stream(stream, tx, telemetry_span));
                         let _ = reply.send(receiver);
                     }
@@ -295,6 +298,7 @@ async fn run_provider_worker(
                 // pump in this JoinSet, so aborting the set cancels the
                 // in-flight stream without detaching a task.
                 pumps.abort_all();
+                settle_aborted_telemetry_span(&mut active_telemetry_span).await;
                 let _ = reply.send(());
             }
             ProviderCommand::FetchDeferred {
@@ -333,6 +337,20 @@ async fn run_provider_worker(
                 let _ = reply.send(result);
             }
         }
+    }
+}
+
+async fn settle_aborted_telemetry_span(span: &mut Option<TelemetrySpan>) {
+    if let Some(span) = span.take() {
+        span.status_with_error(
+            SpanStatus::Error,
+            Some(SpanError {
+                name: "AbortError".into(),
+                message: "provider stream aborted".into(),
+            }),
+        )
+        .await;
+        span.end().await;
     }
 }
 
@@ -663,6 +681,27 @@ mod tests {
             .await
             .expect("cancel should close the stream");
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn cancel_settles_the_owned_provider_telemetry_span() {
+        let telemetry = crate::telemetry::TelemetryActor::new();
+        let actor = ProviderActor::new(std::sync::Arc::new(PendingFn));
+        let options = SimpleStreamOptions {
+            telemetry: Some(telemetry.clone()),
+            ..Default::default()
+        };
+        let mut events = actor
+            .start(Model::default(), AgentContext::default(), Some(options))
+            .await
+            .unwrap();
+        actor.cancel().await;
+        assert!(events.recv().await.is_err());
+        let snapshot = telemetry.snapshot();
+        assert_eq!(snapshot.spans.len(), 1);
+        assert!(snapshot.spans[0].ended);
+        assert_eq!(snapshot.spans[0].status, SpanStatus::Error);
+        assert_eq!(snapshot.spans[0].error.as_ref().unwrap().name, "AbortError");
     }
 
     #[tokio::test]
