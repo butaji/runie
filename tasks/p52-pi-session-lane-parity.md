@@ -9,6 +9,10 @@ Lane query correction (2026-08-08): declarative entry queries now apply the
 same lane filter to configuration records, using their preserved `lane` field
 instead of treating all configuration facts as globally matching.
 
+Branch query correction (2026-08-08): explicit-start branch reads now apply
+that same lane predicate to configuration nodes, so mixed message/configuration
+branches cannot leak a configuration record from another lane.
+
 Status: implemented (2026-08-08)
 
 ## Completed slice (2026-08-08, validated compaction publication event)

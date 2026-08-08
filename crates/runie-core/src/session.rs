@@ -788,7 +788,10 @@ impl SessionSnapshot {
                             .as_deref()
                             .is_none_or(|lane| self.entry_lane(&entry.id) == Some(lane))
                 }
-                SessionEntryRecord::Config(entry) => id_set.contains(&entry.id),
+                SessionEntryRecord::Config(entry) => {
+                    id_set.contains(&entry.id)
+                        && query.lane.as_deref().is_none_or(|lane| entry.lane == lane)
+                }
             })
             .collect::<Vec<_>>();
         if query.newest_first {
@@ -5046,6 +5049,16 @@ mod tests {
                     terminate: false,
                 },
             ],
+            config_records: vec![SessionConfigEntry {
+                id: "config-1".into(),
+                lane: "main".into(),
+                seq: 3,
+                parent_id: Some("message-2".into()),
+                timestamp: 0,
+                record: SessionConfigRecord::NameChanged {
+                    name: "main".into(),
+                },
+            }],
             leaf_id: Some("message-2".into()),
             entry_lanes: BTreeMap::from([
                 ("message-1".into(), "main".into()),
@@ -5067,7 +5080,7 @@ mod tests {
         );
         let feature_entries = snapshot
             .find_entries_on_branch(&SessionBranchEntryQuery {
-                start: "message-2".into(),
+                start: "config-1".into(),
                 lane: Some("feature".into()),
                 ..SessionBranchEntryQuery::default()
             })
