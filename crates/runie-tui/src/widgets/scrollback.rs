@@ -2006,7 +2006,19 @@ fn styled_line_for(kind: LineKind, text: &str, theme: ThemeKind) -> RatLine<'sta
                         spans.push(Span::styled(mark.to_string(), phase_style));
                     }
                     spans.push(Span::styled("]".to_owned(), body_style));
-                    spans.push(Span::styled(trail[trail_end + 1..].to_owned(), body_style));
+                    let suffix = &trail[trail_end + 1..];
+                    if let Some(metadata_start) = suffix.find("  (") {
+                        spans.push(Span::styled(
+                            suffix[..metadata_start].to_owned(),
+                            body_style,
+                        ));
+                        spans.push(Span::styled(
+                            suffix[metadata_start..].to_owned(),
+                            body_style.add_modifier(Modifier::DIM),
+                        ));
+                    } else {
+                        spans.push(Span::styled(suffix.to_owned(), body_style));
+                    }
                 } else {
                     spans.push(Span::styled(trail.to_owned(), body_style));
                 }
@@ -4011,6 +4023,13 @@ mod tests {
             running.spans[2].style.fg,
             appearance::muted_style_for(ThemeKind::GrokNight).fg
         );
+        assert!(running
+            .spans
+            .last()
+            .expect("workflow metadata span")
+            .style
+            .add_modifier
+            .contains(Modifier::DIM));
 
         let cancelled = styled_line_for(
             LineKind::Tool,
