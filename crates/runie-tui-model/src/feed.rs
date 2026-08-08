@@ -1765,6 +1765,53 @@ mod tests {
     }
 
     #[test]
+    fn tool_header_pins_search_tools_aliases_and_workspace_anchor() {
+        let workspace = "/repo/root";
+        // All three Grok aliases route through the same semantic header.
+        for alias in ["search_tools", "search-tools", "search_tool"] {
+            assert_eq!(
+                super::tool_header(alias, &serde_json::json!({"query": "alpha"}), workspace),
+                "Search Tools alpha",
+                "alias: {alias}"
+            );
+        }
+        // The `pattern` key is the documented fallback when `query` is missing.
+        assert_eq!(
+            super::tool_header(
+                "search_tools",
+                &serde_json::json!({"pattern": "alpha"}),
+                workspace,
+            ),
+            "Search Tools alpha"
+        );
+        // Missing both keys falls back to the empty placeholder.
+        assert_eq!(
+            super::tool_header("search_tools", &serde_json::json!({}), workspace),
+            "Search Tools "
+        );
+        // `query` wins over `pattern` when both keys are present.
+        assert_eq!(
+            super::tool_header(
+                "search_tools",
+                &serde_json::json!({"query": "first", "pattern": "second"}),
+                workspace,
+            ),
+            "Search Tools first"
+        );
+        // The workspace anchor is threaded through alongside the path closure
+        // even when the alias does not project it, so the renderer can keep a
+        // single call site.
+        assert_eq!(
+            super::tool_header(
+                "search_tools",
+                &serde_json::json!({"query": "alpha"}),
+                "/different/anchor",
+            ),
+            "Search Tools alpha"
+        );
+    }
+
+    #[test]
     fn completed_tool_header_with_args_routes_read_file_image_content() {
         assert_eq!(
             super::completed_tool_header_with_args(

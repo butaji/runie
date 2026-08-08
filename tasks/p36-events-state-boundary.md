@@ -1075,3 +1075,12 @@ pins the `List .` workspace-only listing collapse), and
 the `<workspace>relative` and `<workspace>/relative` edge cases).
 The full `just ci` (fmt-check, clippy, lint, test, parity, source
 inventory, Pi event contract, feed-actor boundary) is green.
+
+Semantic header pin (2026-08-08): `feed::tests::tool_header_pins_search_tools_aliases_and_workspace_anchor`
+in `crates/runie-tui-model/src/feed.rs` locks the three Grok
+`search_tools` / `search-tools` / `search_tool` aliases to the same
+header, pins the `query` → `pattern` key fallback, and exercises the
+third `workspace` argument the renderer now threads through
+`tool_header`. The full `just ci` (fmt-check, clippy, lint, test,
+parity, source inventory, Pi event contract, feed-actor boundary) is
+green.
