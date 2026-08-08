@@ -3735,6 +3735,23 @@ mod tests {
     }
 
     #[test]
+    fn selected_tool_line_prefers_actor_row_identity_for_duplicate_ids() {
+        let mut scrollback = Scrollback::new();
+        scrollback.lines = vec![
+            Line::new(LineKind::Tool, "first")
+                .for_tool("duplicate")
+                .for_tool_row(1),
+            Line::new(LineKind::Tool, "second")
+                .for_tool("duplicate")
+                .for_tool_row(2),
+        ];
+        scrollback.navigation.selected_tool_id = Some("duplicate".into());
+        scrollback.navigation.selected_tool_row_id = Some(2);
+        assert!(!scrollback.is_selected_tool_line(&scrollback.lines[0]));
+        assert!(scrollback.is_selected_tool_line(&scrollback.lines[1]));
+    }
+
+    #[test]
     fn collapsed_selected_tool_header_uses_grok_right_chevron() {
         let mut scrollback = Scrollback::new();
         scrollback.set_activity_expanded(true);

@@ -748,6 +748,11 @@ including other members of the selected group. Duplicate live cards therefore
 cannot borrow one another's selection surface; focused dense-selection tests,
 replay, and the full CI gate pass.
 
+Selection predicate regression (2026-08-10): a direct renderer regression now
+pins the selected-row predicate for duplicate call IDs, proving the actor row
+identity chooses exactly one card while the compatibility fallback remains
+available. The full workspace gate remains green.
+
 Workflow status formatter audit (2026-08-06): compared against Grok's
 `WorkflowBlockStatus` renderer and added exact tests for `failed`, `cancelled`,
 and `paused` elapsed wording. Cancelled/paused statuses now use `after 1.2s`
