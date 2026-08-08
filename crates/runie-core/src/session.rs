@@ -127,10 +127,13 @@ macro_rules! session_config_record {
                 usage: usage.clone(),
             }),
             AgentEvent::OperationRecordCreated { record_type, data } => {
-                Some(SessionConfigRecord::OperationRecordCreated {
-                    record_type: record_type.clone(),
-                    data: data.clone(),
-                })
+                match SessionLaneRecord::decode(record_type.as_ref(), &data) {
+                    Ok(operation) => Some(SessionConfigRecord::TypedOperation(operation)),
+                    Err(_) => Some(SessionConfigRecord::OperationRecordCreated {
+                        record_type: record_type.clone(),
+                        data: data.clone(),
+                    }),
+                }
             }
             _ => None,
         }
@@ -4000,6 +4003,17 @@ mod tests {
             actor.snapshot().lane_records[0].data,
             serde_json::json!({"id": "op-1"})
         );
+        let operation_event = AgentEvent::OperationRecordCreated {
+            record_type: "operation_started".into(),
+            data: serde_json::json!({"id": "op-1"}),
+        };
+        let typed = session_config_record!(&operation_event)
+            .expect("known operation event is typed at the session boundary");
+        assert!(matches!(
+            typed,
+            SessionConfigRecord::TypedOperation(SessionLaneRecord::OperationStarted(data))
+                if data == serde_json::json!({"id": "op-1"})
+        ));
         let before_rejected = actor.snapshot().lane_records.len();
         let rejected = actor
             .record_operation(
