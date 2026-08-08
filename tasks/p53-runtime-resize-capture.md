@@ -94,3 +94,9 @@ produced cast, raw, settled ANSI, metadata, and Grok-diagnostic artifacts.
 This closes the Runie runtime schedule/observation evidence. It does not claim
 the remaining paired Grok cell comparison, whose settled-frame capture is
 still unavailable in the current checkout.
+
+Comparator validation increment (2026-08-08): `cast_compare` now reads each
+capture's resize report when present and rejects invalid, incomplete, or
+geometry-mismatched observations against the declared schedule. The pure
+validator is regression-tested; paired Grok settled-frame capture remains the
+only external parity gap.

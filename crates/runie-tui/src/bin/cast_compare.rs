@@ -104,6 +104,8 @@ fn validate_capture_metadata(left: &Path, right: &Path) -> Result<()> {
     )?;
     validate_capture_metadata_shape(&left_meta, &left_path)?;
     validate_capture_metadata_shape(&right_meta, &right_path)?;
+    validate_resize_artifact(&left_meta, &left_path)?;
+    validate_resize_artifact(&right_meta, &right_path)?;
     for (path, label) in [
         ("probe.prompt", "prompt"),
         ("terminal.cols", "terminal columns"),
@@ -117,6 +119,70 @@ fn validate_capture_metadata(left: &Path, right: &Path) -> Result<()> {
         let right_value = path.split('.').fold(&right_meta, |value, key| &value[key]);
         if left_value != right_value {
             bail!("capture metadata mismatch for {label}: left={left_value} right={right_value}");
+        }
+    }
+    Ok(())
+}
+
+fn validate_resize_artifact(meta: &Value, metadata_path: &Path) -> Result<()> {
+    let Some(report_path) = meta
+        .pointer("/artifacts/resize_report")
+        .and_then(Value::as_str)
+        .map(Path::new)
+    else {
+        bail!(
+            "capture metadata resize report is missing: {}",
+            metadata_path.display()
+        );
+    };
+    if !report_path.exists() {
+        return Ok(());
+    }
+    let report: Value = serde_json::from_str(
+        &std::fs::read_to_string(report_path)
+            .with_context(|| format!("read resize report: {}", report_path.display()))?,
+    )?;
+    validate_resize_report(&report, meta["resize_schedule"].as_str().unwrap_or(""))
+        .with_context(|| format!("resize report: {}", report_path.display()))
+}
+
+fn validate_resize_report(report: &Value, schedule: &str) -> Result<()> {
+    if report.get("valid") != Some(&Value::Bool(true)) {
+        bail!("resize report is not valid");
+    }
+    let expected = schedule
+        .split(';')
+        .filter(|entry| !entry.is_empty())
+        .map(|entry| {
+            let mut parts = entry.split(',');
+            let at_ms = parts
+                .next()
+                .context("resize entry timestamp")?
+                .parse::<u64>()?;
+            let cols = parts
+                .next()
+                .context("resize entry columns")?
+                .parse::<u16>()?;
+            let rows = parts.next().context("resize entry rows")?.parse::<u16>()?;
+            anyhow::Ok((at_ms, format!("{cols},{rows}")))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let observed = report
+        .get("observed")
+        .and_then(Value::as_array)
+        .context("resize report observed array")?;
+    if observed.len() != expected.len() {
+        bail!(
+            "expected {} observed resize events, got {}",
+            expected.len(),
+            observed.len()
+        );
+    }
+    for ((expected_at, expected_geometry), actual) in expected.iter().zip(observed) {
+        let actual_at = actual.get("at_ms").and_then(Value::as_u64);
+        let actual_geometry = actual.get("geometry").and_then(Value::as_str);
+        if actual_at != Some(*expected_at) || actual_geometry != Some(expected_geometry.as_str()) {
+            bail!("observed resize does not match {expected_at}ms {expected_geometry}");
         }
     }
     Ok(())
@@ -562,7 +628,10 @@ fn main() -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::{ordered_common_frame_count, replay_frames, validate_capture_metadata_shape, Cell};
+    use super::{
+        ordered_common_frame_count, replay_frames, validate_capture_metadata_shape,
+        validate_resize_report, Cell,
+    };
     use std::path::{Path, PathBuf};
 
     fn cast(name: &str) -> PathBuf {
@@ -651,5 +720,20 @@ mod tests {
         let error = validate_capture_metadata_shape(&incomplete, Path::new("capture.meta.json"))
             .expect_err("missing provenance must fail");
         assert!(error.to_string().contains("grok_version"));
+    }
+
+    #[test]
+    fn resize_report_must_observe_declared_schedule() {
+        let report = serde_json::json!({
+            "valid": true,
+            "observed": [
+                {"at_ms": 250, "geometry": "80,12"},
+                {"at_ms": 500, "geometry": "100,24"}
+            ]
+        });
+        validate_resize_report(&report, "250,80,12;500,100,24").expect("valid report");
+        let mut invalid = report;
+        invalid["observed"][1]["geometry"] = serde_json::Value::String("99,24".into());
+        assert!(validate_resize_report(&invalid, "250,80,12;500,100,24").is_err());
     }
 }
