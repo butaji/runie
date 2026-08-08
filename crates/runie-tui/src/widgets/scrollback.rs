@@ -33,29 +33,7 @@ pub const GROK_GROUP_MAX_VISIBLE: usize = 10;
 /// entries are represented by `None`. This is deliberately pure so the actor
 /// reducer, renderer, and YAML oracle can share the same grouping semantics.
 pub fn dense_tool_group_members(tool_ids: &[Option<&str>]) -> Vec<Option<(usize, usize)>> {
-    let mut result = vec![None; tool_ids.len()];
-    let mut start = 0;
-    while start < tool_ids.len() {
-        if tool_ids[start].is_none() {
-            start += 1;
-            continue;
-        }
-        let mut end = start + 1;
-        while end < tool_ids.len() && tool_ids[end].is_some() {
-            end += 1;
-        }
-        let size = tool_ids[start..end]
-            .iter()
-            .filter(|candidate| candidate.is_some())
-            .count();
-        for (member_index, slot) in result[start..end].iter_mut().enumerate() {
-            if tool_ids[start + member_index].is_some() {
-                *slot = Some((member_index, size));
-            }
-        }
-        start = end;
-    }
-    result
+    runie_tui_model::dense_tool_group_members(tool_ids)
 }
 
 pub trait LinePresentationExt {

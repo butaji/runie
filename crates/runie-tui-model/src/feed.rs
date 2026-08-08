@@ -902,6 +902,37 @@ pub fn active_tool_count(snapshot: &FeedSnapshot) -> usize {
         .count()
 }
 
+/// Compute the dense tool-group member positions for a `tool_ids`
+/// slice. The projection returns `(member_index, group_size)` for
+/// each consecutive run of `Some` entries, with `None` for the
+/// separator slots. Centralized here so the actor-owned render
+/// projection and the renderer agree on the dense group layout.
+pub fn dense_tool_group_members(tool_ids: &[Option<&str>]) -> Vec<Option<(usize, usize)>> {
+    let mut result = vec![None; tool_ids.len()];
+    let mut start = 0;
+    while start < tool_ids.len() {
+        if tool_ids[start].is_none() {
+            start += 1;
+            continue;
+        }
+        let mut end = start + 1;
+        while end < tool_ids.len() && tool_ids[end].is_some() {
+            end += 1;
+        }
+        let size = tool_ids[start..end]
+            .iter()
+            .filter(|candidate| candidate.is_some())
+            .count();
+        for (member_index, slot) in result[start..end].iter_mut().enumerate() {
+            if tool_ids[start + member_index].is_some() {
+                *slot = Some((member_index, size));
+            }
+        }
+        start = end;
+    }
+    result
+}
+
 /// Project the activity counter tuple from the actor-owned feed
 /// snapshot. Centralized here so the renderer and the actor share
 /// one `(dirs, files, commands, subagents, failures)` shape.
@@ -2365,6 +2396,28 @@ mod tests {
             super::current_tool_args(&snapshot, "absent"),
             serde_json::Value::Null
         );
+    }
+
+    #[test]
+    fn dense_tool_group_members_projects_member_positions() {
+        // Pin the smoke path: a single contiguous group of three
+        // members emits `(member_index, size)` triples for each
+        // slot, with `None` for the separator slots.
+        let tool_ids: [Option<&str>; 5] = [Some("a"), Some("b"), Some("c"), None, Some("d")];
+        let positions = super::dense_tool_group_members(&tool_ids);
+        assert_eq!(
+            positions,
+            vec![Some((0, 3)), Some((1, 3)), Some((2, 3)), None, Some((0, 1)),]
+        );
+    }
+
+    #[test]
+    fn dense_tool_group_members_returns_empty_for_empty_input() {
+        // Pin the negative path: an empty input returns an empty
+        // projection so the renderer never has to handle a `None`
+        // index into a missing slice.
+        let positions = super::dense_tool_group_members(&[]);
+        assert!(positions.is_empty());
     }
 
     #[test]

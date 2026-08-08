@@ -1408,3 +1408,20 @@ the running-block filter, and the absent-args null fallback. The 120
 `visual_snapshots` replay tests, and the full `just ci` (fmt-check,
 clippy, lint, test, parity, source inventory, Pi event contract,
 feed-actor boundary) are green.
+
+**Dense tool group retirement (2026-08-08):** the `dense_tool_group_members`
+projection now lives in `runie-tui-model::feed` so the actor-owned
+render projection and the renderer agree on the dense group layout.
+The renderer-local `pub fn dense_tool_group_members` at
+`crates/runie-tui/src/widgets/scrollback.rs:35` was collapsed to a
+thin `runie_tui_model::dense_tool_group_members` delegate. The two
+new focused tests
+`dense_tool_group_members_projects_member_positions` and
+`dense_tool_group_members_returns_empty_for_empty_input` in
+`crates/runie-tui-model/src/feed.rs` pin the contiguous-group member
+position projection, the separator `None` slot, and the empty-input
+passthrough. The 122 `runie-tui-model` lib unit tests (120 pre-existing
++ 2 new), the 220 `runie-tui` lib unit tests, the 5 `runie` binary
+unit tests, the 28 `visual_snapshots` replay tests, and the full
+`just ci` (fmt-check, clippy, lint, test, parity, source inventory, Pi
+event contract, feed-actor boundary) are green.
