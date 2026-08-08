@@ -401,6 +401,11 @@ also use Grok's 60 ms ept=1 trackpad-promotion window; generic and remuxed
 profiles retain the 30 ms default. The threshold is actor-input model state,
 not wall-clock policy in the renderer.
 
+Acceleration profile increment (2026-08-09): VS Code-family profiles now use
+Grok's wider 25 ms fast and 50 ms medium acceleration bands; generic and
+remuxed profiles retain the 8 ms and 20 ms bands. All thresholds remain
+injected timestamp inputs to the pure normalizer.
+
 ## Grok scroll flush contract audit (2026-08-07)
 
 The authoritative implementation and tests in

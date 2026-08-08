@@ -142,6 +142,8 @@ pub struct ScrollNormalizer {
     trackpad_detect_max_interval_ms: u64,
     lines_per_tick: i32,
     trackpad_lines_per_tick: i32,
+    accel_fast_interval_ms: u64,
+    accel_medium_interval_ms: u64,
     stream_gap_ms: u64,
     last_event_ms: Option<u64>,
     speed_tenths: i32,
@@ -185,6 +187,8 @@ impl ScrollNormalizer {
             trackpad_detect_max_interval_ms: 30,
             lines_per_tick,
             trackpad_lines_per_tick: lines_per_tick,
+            accel_fast_interval_ms: 8,
+            accel_medium_interval_ms: 20,
             stream_gap_ms: 80,
             last_event_ms: None,
             speed_tenths: 10,
@@ -227,6 +231,10 @@ impl ScrollNormalizer {
             } else {
                 30
             };
+        if matches!(brand.as_str(), "vscode" | "cursor" | "windsurf") && !remuxed {
+            normalizer.accel_fast_interval_ms = 25;
+            normalizer.accel_medium_interval_ms = 50;
+        }
         normalizer
     }
 
@@ -325,9 +333,9 @@ impl ScrollNormalizer {
             self = self.classify_stream(interval);
             let multiplier = if self.stream_trackpad {
                 BASE_MULTIPLIER
-            } else if interval < 8 {
+            } else if interval < self.accel_fast_interval_ms {
                 FAST_MULTIPLIER
-            } else if interval < 20 {
+            } else if interval < self.accel_medium_interval_ms {
                 MEDIUM_MULTIPLIER
             } else {
                 BASE_MULTIPLIER
@@ -421,6 +429,10 @@ mod tests {
         let unknown = ScrollNormalizer::for_terminal_context("xterm", false);
         assert_eq!(vscode.trackpad_detect_max_interval_ms, 60);
         assert_eq!(unknown.trackpad_detect_max_interval_ms, 30);
+        assert_eq!(vscode.accel_fast_interval_ms, 25);
+        assert_eq!(vscode.accel_medium_interval_ms, 50);
+        assert_eq!(unknown.accel_fast_interval_ms, 8);
+        assert_eq!(unknown.accel_medium_interval_ms, 20);
     }
 
     #[test]
