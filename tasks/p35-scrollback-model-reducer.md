@@ -192,11 +192,10 @@ separate `update_tool` and `replace_tool` transitions and prefers active
 `tool_row_id` identity when provider call IDs repeat. The duplicate-ID
 regression passes with the expected first/second completion ownership.
 
-The old reducer helper block is compiled only for unit-test migration audits
-and is not reachable from production. This keeps the shipped TUI from carrying
-a second state-transition implementation. The remaining cleanup is mechanical
-test-code deletion only; it is not an actor-ownership or runtime event-flow
-gap. No event payload is duplicated in the renderer.
+The old test-only reducer helper block has now been deleted after a call-site
+audit found no callers. The shipped TUI and compatibility adapter therefore
+have one transition implementation, with no event payload duplicated in the
+renderer.
 
 **Verification (2026-08-06):** `scripts/validate-feed-actor-boundary.py` and
 `just ci` both pass. The boundary checker rejects widget construction or

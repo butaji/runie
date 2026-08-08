@@ -531,6 +531,11 @@ The source-boundary validator and actor/replay tests are the regression
 evidence for this closure; deleting the snapshot adapter itself would be an
 API migration rather than a renderer-state migration.
 
+Dead-reducer retirement (2026-08-08): the uncalled test-only `apply_legacy`
+transition implementation was removed after a repository call-site audit.
+`Scrollback::apply` now has no parallel reducer sibling; the remaining
+compatibility surface is snapshot rehydration only.
+
 **Tool-start helper migration (2026-08-08):** The tool-start reducer now has
 no compatibility writes. It derives Grok activity/header data from the
 actor-owned snapshot and returns `ToolStartRunning`; the `ScrollbackActor`
