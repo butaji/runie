@@ -110,3 +110,9 @@ Response usage evidence (2026-08-08): terminal Responses usage now maps
 reasoning tokens into Runie's existing `Usage` payload on the acknowledged
 assistant `Done` event. The full workspace gate and replay matrix pass; cost
 calculation and live provider transport remain adapter-specific open work.
+
+Codex transport audit correction (2026-08-09): production deployment and the
+source-aligned bounded pre-stream retry policy are now implemented and tested.
+The remaining Codex item is provider-specific deferred behavior and any
+future live-environment integration evidence; the generic HTTP actor remains
+intentionally transport-neutral.

@@ -1,6 +1,6 @@
 # p37 — Pi provider transport boundary
 
-Status: in progress (HTTP/replay boundary complete; provider capability seam and YAML route coverage complete; Codex wire adapter lifecycle is implemented, with deployment and full retry parity remaining)
+Status: in progress (HTTP/replay boundary complete; provider capability seam and YAML route coverage complete; Codex wire adapter lifecycle, production wiring, and source-aligned retry boundary implemented; provider-specific deferred polling remains open)
 
 The Pi `ProviderRequestOptions` contract is broader than Runie's current
 `HttpActor` abstraction. This task records the exact boundary so parity work
@@ -372,3 +372,12 @@ Cleanup API increment (2026-08-08): `CodexWebSocketAdapter` now exposes
 acknowledged async `clear_session` and `clear` methods over its owned cache.
 They remove continuation IDs and fallback markers after socket lifecycle
 settlement; generic `ProviderActor` does not mutate the cache directly.
+
+Codex deployment and retry closure (2026-08-09): the live TUI binary now
+constructs `CodexWebSocketAdapter::production` behind the provider actor's
+injected WebSocket capability. Its production connector owns the handshake,
+headers, frame receive, timeout, and close boundary. The adapter's bounded
+pre-stream retries match Pi for connection-limit and missing-continuation
+errors; post-stream transport failures propagate, and initial failures use the
+explicit SSE fallback policy. Provider-specific deferred polling/decoding
+remains the separate open contract.
