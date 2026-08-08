@@ -26,25 +26,26 @@ assertions:
     cols: 80
     rows: 30
     activity_expanded: false
+    steps: [Down, Down]
+    selected_tool_id: call-2
     screen_text:
-      - "Ran 12 commands"
+      - "Run two"
     screen_excludes:
-      - "Run seven"
-      - "Run twelve"
+      - "Run one"
     layout_matrix:
       - cols: 62
         rows: 32
-        screen_text: ["Ran 12 commands"]
-        screen_excludes: ["Run seven", "Run twelve"]
+        screen_text: ["Run two"]
+        screen_excludes: ["Run one"]
       - cols: 80
         rows: 24
-        screen_text: ["Ran 12 commands"]
-        screen_excludes: ["Run seven", "Run twelve"]
+        screen_text: ["Run two"]
+        screen_excludes: ["Run one"]
       - cols: 100
         rows: 30
-        screen_text: ["Ran 12 commands"]
-        screen_excludes: ["Run seven", "Run twelve"]
+        screen_text: ["Run two"]
+        screen_excludes: ["Run one"]
       - cols: 120
         rows: 36
-        screen_text: ["Ran 12 commands"]
-        screen_excludes: ["Run seven", "Run twelve"]
+        screen_text: ["Run two"]
+        screen_excludes: ["Run one"]

@@ -105,6 +105,13 @@ members, and hidden first members. This closes the documented group-break
 coverage gap through runtime YAML discovery; interactive reveal and
 viewport-preservation behavior remain separately event-driven.
 
+Hidden-member reveal increment (2026-08-09):
+`visual-activity-dense-collapsed.yaml` now drives two actor-owned Down events
+against the collapsed twelve-member group and asserts `selected_tool_id:
+call-2`. The selected hidden member is rendered through the existing group
+selection projection across the four geometry cases; no renderer-local
+selection mutation is introduced.
+
 Implementation progress (2026-08-06): `runie-tui` now exposes a pure
 `dense_tool_group_members` policy helper and the named
 `GROK_GROUP_MAX_VISIBLE` source default. Reducer/renderer integration is now
