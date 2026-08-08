@@ -395,18 +395,22 @@ regression constructs a parent-linked journal with a deferred post-boundary
 entry, while the YAML state DSL asserts the selected entry IDs through the
 real session actor path. No provider or TUI code mutates the session snapshot.
 
-The following are not yet exact Pi parity:
+The remaining exact-parity gaps are deliberately limited to the following:
 
-- the public wire boundary still carries operation records as generic
-  `(record_type, data)` values; the macro constrains Rust call sites, but the
-  persisted representation is not a typed Rust record union;
-- queue, deferred-write, tool-start, step-attempt, and usage records are
-  admitted and replayed when supplied as events, but the live Pi adapter does
-  not yet emit each family from its corresponding operation transition;
-- compaction is journaled when supplied by an event, and deterministic cut
-  preparation is actor-owned, but Runie does not yet implement Pi's complete
-  context-building, summarization, and `CompactionCreated` result publication
-  boundary.
+- the public event and JSONL edges retain generic `(record_type, data)` values
+  for Pi compatibility; the internal `SessionLaneRecord` union and typed
+  producer DSL constrain Rust admission, but the persisted representation is
+  not a Rust-tagged record union;
+- compaction does not yet implement Pi's complete context-building,
+  summarization, and result-publication lifecycle for a concrete provider.
+
+The previously open live-emission claim is now closed by source audit. The
+loop driver emits `operation_started`/`operation_finished`; abort handling
+emits `abort_requested`; queue actor transitions emit enqueue/cancel facts;
+`SessionActor` emits `step_attempt`, `usage`, `write_deferred`, and
+`tool_started` while reducing the corresponding acknowledged mailbox
+transitions. `visual-operation-lane-families.yaml`, the live session actor
+tests, and the full replay suite cover these nine families without sleeps.
 
 ### Typed identity boundary (2026-08-08)
 
