@@ -58,12 +58,19 @@ fn model_selector_rows(snapshot: &runie_core::model_catalog::ModelCatalogSnapsho
         .collect()
 }
 
+type UiMailbox = (UiMsg, tokio::sync::oneshot::Sender<()>);
+
 #[derive(Clone)]
 pub struct UiActor {
-    tx: mpsc::Sender<(UiMsg, tokio::sync::oneshot::Sender<()>)>,
+    tx: mpsc::Sender<UiMailbox>,
     snapshot: watch::Receiver<UiState>,
     commands: broadcast::Sender<UiCommand>,
     _owner: std::sync::Arc<runie_core::task_owner::TaskOwner>,
+    /// Atomic counter incremented for every event drained from the bus
+    /// subscriber. Tests rely on this to assert that queued `UiMsg`
+    /// mailbox messages are serviced before a flood of broadcast events.
+    #[allow(dead_code, reason = "read by tests via the actor's worker")]
+    event_counter: std::sync::Arc<std::sync::atomic::AtomicUsize>,
 }
 
 impl UiActor {
@@ -76,45 +83,33 @@ impl UiActor {
         let (snapshot_tx, snapshot) = watch::channel(initial.clone());
         let (commands, _) = broadcast::channel(32);
         let command_tx = commands.clone();
-        let mut events = bus.subscribe();
-        let (tx, owner) = runie_core::spawn_actor_worker!(32, |mut rx: mpsc::Receiver<(
-            UiMsg,
-            tokio::sync::oneshot::Sender<()>
-        )>| async move {
-            let mut state = initial;
-            loop {
-                tokio::select! {
-                    // Bias toward the mailbox: every interactive UI state
-                    // transition waits on a `UiMsg`, so the reducer must
-                    // service it before draining a flood of broadcast
-                    // events that have already arrived on `events`.
-                    biased;
-                    message = rx.recv() => {
-                        let Some((message, applied)) = message else { break };
-                        let command = palette_command_for(&state, &message);
-                        state = state.update(message);
-                        if let Some(command) = command {
-                            let _ = command_tx.send(command);
-                        }
-                        let _ = snapshot_tx.send(state.clone());
-                        let _ = applied.send(());
-                    }
-                    event = events.recv() => {
-                        if let Ok(event) = event {
-                            for message in ui_messages_for_event(&event) {
-                                state = state.update(message);
-                            }
-                            let _ = snapshot_tx.send(state.clone());
-                        }
-                    }
-                }
-            }
-        });
+        let events = bus.subscribe();
+        let event_counter = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let counter_for_worker = event_counter.clone();
+        // The pause hook is `None` for production-owned actors so the
+        // post-message branch in `run_ui_actor` compiles out; only the
+        // direct regression test wires up a real `(Notify, Notify)` pair
+        // to park the actor at the observation point.
+        let (tx, owner) =
+            runie_core::spawn_actor_worker!(32, |rx: mpsc::Receiver<UiMailbox>| async move {
+                run_ui_actor(
+                    rx,
+                    events,
+                    snapshot_tx,
+                    command_tx,
+                    initial,
+                    counter_for_worker,
+                    #[cfg(test)]
+                    None,
+                )
+                .await;
+            });
         Self {
             tx,
             snapshot,
             commands,
             _owner: owner,
+            event_counter,
         }
     }
 
@@ -128,6 +123,65 @@ impl UiActor {
 
     pub fn subscribe_commands(&self) -> broadcast::Receiver<UiCommand> {
         self.commands.subscribe()
+    }
+}
+
+#[allow(
+    clippy::too_many_lines,
+    reason = "ui actor keeps the mailbox and event reductions explicit and adds a test-only pause hook"
+)]
+async fn run_ui_actor(
+    mut rx: mpsc::Receiver<UiMailbox>,
+    mut events: broadcast::Receiver<AgentEvent>,
+    snapshot_tx: watch::Sender<UiState>,
+    command_tx: broadcast::Sender<UiCommand>,
+    initial: UiState,
+    event_counter: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+    #[cfg(test)] pause_hooks: Option<(
+        std::sync::Arc<tokio::sync::Notify>,
+        std::sync::Arc<tokio::sync::Notify>,
+    )>,
+) {
+    use std::sync::atomic::Ordering;
+    let mut state = initial;
+    loop {
+        tokio::select! {
+            // Bias toward the mailbox: every interactive UI state
+            // transition waits on a `UiMsg`, so the reducer must
+            // service it before draining a flood of broadcast
+            // events that have already arrived on `events`.
+            biased;
+            message = rx.recv() => {
+                let Some((message, applied)) = message else { break };
+                let command = palette_command_for(&state, &message);
+                state = state.update(message);
+                if let Some(command) = command {
+                    let _ = command_tx.send(command);
+                }
+                let _ = snapshot_tx.send(state.clone());
+                let _ = applied.send(());
+                // Test-only pause hook: every `UiMsg` is a state
+                // transition, so the regression test signals
+                // `pause_hooks.0` from this branch and waits on
+                // `pause_hooks.1` to read the post-message observation
+                // point deterministically. Production callers always pass
+                // `None`, so the pause is skipped entirely.
+                #[cfg(test)]
+                if let Some((message_done, actor_release)) = pause_hooks.as_ref() {
+                    message_done.notify_one();
+                    actor_release.notified().await;
+                }
+            }
+            event = events.recv() => {
+                event_counter.fetch_add(1, Ordering::SeqCst);
+                if let Ok(event) = event {
+                    for message in ui_messages_for_event(&event) {
+                        state = state.update(message);
+                    }
+                    let _ = snapshot_tx.send(state.clone());
+                }
+            }
+        }
     }
 }
 
@@ -1237,6 +1291,117 @@ mod tests {
         // Drop the mailbox sender so the actor's `rx.recv()` resolves with
         // `None` once it finishes draining events; otherwise `actor_task`
         // would block forever on a still-open sender.
+        drop(mailbox_tx);
+        actor_task.await.expect("actor task should join cleanly");
+    }
+
+    /// Regression test for the `biased;` select! in `run_ui_actor`: when a
+    /// `UiMsg` is already queued in the mailbox and a flood of broadcast
+    /// events is also ready, the actor must reduce the UI message before
+    /// draining the event queue. We drive `run_ui_actor` directly so we can
+    /// observe the drained-event counter from outside the actor task, and we
+    /// use a `Notify` pause to read it deterministically rather than racing
+    /// the wake-up against the actor's event drain loop. A single message
+    /// would only catch the unbiased select! about 60% of the time (the
+    /// random branch order picks the mailbox first half the time), so the
+    /// test observes `MESSAGES` consecutive pause points instead.
+    #[tokio::test(flavor = "current_thread")]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "deterministic test wires up bus + mailbox + actor + pause hooks in one place"
+    )]
+    async fn ui_actor_services_mailbox_before_draining_queued_events() {
+        use std::sync::atomic::Ordering;
+        use std::sync::Arc;
+        use tokio::sync::{broadcast, mpsc, oneshot, watch, Notify};
+
+        // Capacity large enough that the actor cannot drain all messages
+        // between the mailbox ack and the test's counter read.
+        let (event_tx, event_rx) = broadcast::channel::<AgentEvent>(65_536);
+        const N: usize = 16_384;
+        for _ in 0..N {
+            // `AgentStart` maps to no `UiMsg`, so each event costs roughly a
+            // match arm and a context switch worth of work; no snapshot churn
+            // to mask the ordering.
+            event_tx.send(AgentEvent::AgentStart).expect("send");
+        }
+        assert_eq!(
+            event_rx.len(),
+            N,
+            "broadcast receiver should hold all queued events before the actor starts"
+        );
+
+        const MESSAGES: usize = 8;
+        let (mailbox_tx, mailbox_rx) = mpsc::channel::<super::UiMailbox>(MESSAGES);
+        let (snapshot_tx, snapshot_rx) = watch::channel(UiState::new());
+        let (command_tx, _command_rx) = broadcast::channel::<super::UiCommand>(32);
+
+        let event_counter = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let counter_for_worker = event_counter.clone();
+        // `message_done` is signaled right after the actor reduces a UI
+        // message; `actor_release` is signaled by the test once it has
+        // captured the event count, so the actor is paused while we observe
+        // `event_counter` deterministically.
+        let message_done = Arc::new(Notify::new());
+        let actor_release = Arc::new(Notify::new());
+        let message_done_for_worker = message_done.clone();
+        let actor_release_for_worker = actor_release.clone();
+
+        // OWNER: test — the spawned actor task is joined at the end of the
+        // test body, so no other production code can observe it.
+        let actor_task = tokio::spawn(async move {
+            super::run_ui_actor(
+                mailbox_rx,
+                event_rx,
+                snapshot_tx,
+                command_tx,
+                UiState::new(),
+                counter_for_worker,
+                Some((message_done_for_worker, actor_release_for_worker)),
+            )
+            .await;
+        });
+
+        let mut replies = Vec::with_capacity(MESSAGES);
+        for _ in 0..MESSAGES {
+            let (reply_tx, reply_rx) = oneshot::channel();
+            mailbox_tx
+                .try_send((UiMsg::ToggleCommandPalette, reply_tx))
+                .expect("ui message enqueue should not fail");
+            replies.push(reply_rx);
+        }
+
+        // Wait for the actor to acknowledge each reduced UI message, then
+        // read the event counter while the actor is parked on the release
+        // barrier.
+        for reduced in 1..=MESSAGES {
+            message_done.notified().await;
+            assert_eq!(
+                event_counter.load(Ordering::SeqCst),
+                0,
+                "with biased select!, all {MESSAGES} queued UI messages must be reduced \
+                 before any queued event (failed after {reduced})"
+            );
+            if reduced == 1 {
+                assert!(
+                    snapshot_rx.borrow().command_palette_open,
+                    "the reduced UI message must be visible in the published snapshot"
+                );
+            }
+            // Release the actor so it can resume.
+            actor_release.notify_one();
+        }
+
+        for reply_rx in replies {
+            tokio::time::timeout(std::time::Duration::from_secs(2), reply_rx)
+                .await
+                .expect("ui message ack should fire promptly")
+                .expect("ui message ack should resolve Ok");
+        }
+
+        // Drop the mailbox sender so the actor's `rx.recv()` resolves with
+        // `None`; otherwise `actor_task` would block forever on a still-open
+        // sender.
         drop(mailbox_tx);
         actor_task.await.expect("actor task should join cleanly");
     }

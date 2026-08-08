@@ -526,3 +526,30 @@ so the production code path keeps the original four-argument
 `run_prompt_actor` signature and pays no allocation cost per event.
 The full `just ci` (fmt-check, clippy, lint, test, parity, source
 inventory, Pi event contract, feed-actor boundary) is green.
+
+**UiActor mailbox-bias regression cover (2026-08-08):** the `biased;`
+above was only pinned by a test on the prompt side; the `UiActor` worker
+carried the same bias with no executable proof, so removing it would have
+regressed palette/shortcut latency silently. The worker body was extracted
+out of the `spawn_actor_worker!` closure into a free
+`run_ui_actor(rx, events, snapshot_tx, command_tx, initial, event_counter,
+#[cfg(test)] pause_hooks)` mirroring `run_prompt_actor`, and `UiActor`
+gained the same `#[allow(dead_code)]` `event_counter: Arc<AtomicUsize>`
+field. The counter is incremented in the broadcast branch, and the mailbox
+branch parks on the test-only `(Notify, Notify)` pair after the `UiMsg` has
+been reduced, published, and acknowledged. Production construction passes
+`None`, so the pause and the sixth/seventh arguments compile out of the
+release path. The new
+`ui_actor_services_mailbox_before_draining_queued_events` test drives
+`run_ui_actor` directly with 16,384 queued `AgentStart` events (which map
+to no `UiMsg`, so they cost a match arm rather than snapshot churn) and
+eight pre-queued `UiMsg::ToggleCommandPalette` messages, then asserts
+`event_counter == 0` at each of the eight pause points plus the
+`command_palette_open` snapshot after the first reduction. Eight
+observation points rather than one is deliberate: with a single message the
+unbiased `select!` picks the mailbox branch by chance about half the time,
+and a measured 25-run sweep of the deleted-`biased;` build caught the
+regression only 15/25 times; the eight-point form caught it 25/25 while
+staying deterministic (10/10) with the fix in place. The mailbox typedef is
+now the named `UiMailbox` alias so the worker signature and the test share
+one spelling of the acknowledged-message tuple.
