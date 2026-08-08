@@ -1146,6 +1146,7 @@ pub struct StateAssertions {
     pub selection_head: Option<usize>,
     pub cell_selection: Option<CellSelectionAssertion>,
     pub copy_selection_requested: Option<bool>,
+    pub copy_selection_text: Option<String>,
     pub autoscroll: Option<bool>,
     pub scroll_offset: Option<usize>,
     /// Ordered cadence flush/finalize records from declarative scroll input.
@@ -3465,6 +3466,18 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         if actual != expected {
             return Err(format!(
                 "state copy_selection_requested mismatch: expected {expected:?}, got {actual:?}"
+            ));
+        }
+    }
+    if let Some(expected) = expected.copy_selection_text.as_deref() {
+        let actual = outcome
+            .feed
+            .copy_selection
+            .map(|selection| runie_tui_model::selected_cell_text(&outcome.feed.lines, selection))
+            .unwrap_or_default();
+        if actual != expected {
+            return Err(format!(
+                "state copy_selection_text mismatch: expected {expected:?}, got {actual:?}"
             ));
         }
     }

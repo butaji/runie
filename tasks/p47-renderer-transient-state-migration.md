@@ -589,3 +589,6 @@ keeps the idle chrome formatter next to the widget that renders it.
 projects a committed `CellSelection` into deterministic, newline-preserving
 text in `runie-tui-model`. The projection is pure and tested independently of
 any platform clipboard; clipboard adapter wiring remains open.
+
+The replay oracle now also accepts `copy_selection_text`, so YAML can assert
+the projected payload rather than only the presence of a copy request.

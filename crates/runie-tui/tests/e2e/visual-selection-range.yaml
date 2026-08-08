@@ -18,6 +18,7 @@ assertions:
       anchor: { row: 8, column: 4 }
       head: { row: 10, column: 18 }
     copy_selection_requested: true
+    copy_selection_text: ""
   visual:
     cols: 80
     rows: 24
