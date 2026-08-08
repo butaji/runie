@@ -563,6 +563,33 @@ staying deterministic (10/10) with the fix in place. The mailbox typedef is
 now the named `UiMailbox` alias so the worker signature and the test share
 one spelling of the acknowledged-message tuple.
 
+**PromptActor mailbox-bias regression parity (2026-08-08):** the
+existing `prompt_actor_services_key_mailbox_before_draining_queued_events`
+test pinned the prompt `biased;` with a single key and a single observation
+point, which left the prompt half of the same coin-flip hole the UiActor
+entry above just closed. With one pre-queued message the unbiased
+`select!` picks the mailbox branch about half the time, and a measured
+25-run sweep of the deleted-`biased;` build caught the prompt regression
+only 15/25 times; the eight-point form caught it 25/25 while staying
+deterministic (10/10) with the fix in place. The test now mirrors the
+UiActor counterpart: it lifts the message count to
+`const MESSAGES: usize = 8`, resizes the mailbox channel to `MESSAGES`,
+loops over eight distinct `KeyEvent` keys (cycling `x` / `y` / `z` so the
+buffer never spells `/history` mid-test), collects the
+`oneshot::Receiver<PromptOutcome>` into a `Vec`, and waits on
+`key_done.notified().await` at every one of the eight pause points while
+asserting `event_counter == 0` and then calling `actor_release.notify_one()`
+to unblock the actor for the next reduction. The first reduction also
+asserts `snapshot_rx.borrow().text == "x"` so the published snapshot is
+proven to reflect the typed character alongside the counter invariant.
+After all eight pauses the test drains the reply `Vec` and asserts every
+`PromptOutcome::Edited`, so a regression that drained events before keys
+now fails both at the per-iteration counter check and at the final reply
+shape. The docstring on the test records the coin-flip concern and the
+25-run sweep measurement so the next reader doesn't shrink it back to
+one. The full `just ci` (fmt-check, clippy, lint, test, parity, source
+inventory, Pi event contract, feed-actor boundary) is green.
+
 **Input actor terminal-event bias (2026-08-08):** the owned input actor in
 `runie` ran a three-arm `tokio::select!` between `input.next()` (terminal
 events), `input_config_rx.recv()` (config from the main loop), and

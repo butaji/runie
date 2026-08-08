@@ -1196,13 +1196,20 @@ mod tests {
     }
 
     /// Regression test for the `biased;` select! in `run_prompt_actor`:
-    /// when a key is already queued in the mailbox and a flood of broadcast
-    /// events is also ready, the actor must acknowledge the key before
-    /// draining the event queue. We drive `run_prompt_actor` directly so
-    /// we can observe the broadcast receiver's buffered depth from outside
-    /// the actor task, and we use a `Notify` pause to read the buffered
-    /// count deterministically rather than racing the wake-up against the
-    /// actor's event drain loop.
+    /// when keys are already queued in the mailbox and a flood of broadcast
+    /// events is also ready, the actor must acknowledge every queued key
+    /// before draining the event queue. We drive `run_prompt_actor`
+    /// directly so we can observe the broadcast receiver's buffered depth
+    /// from outside the actor task, and we use a `Notify` pause to read
+    /// the buffered count deterministically rather than racing the
+    /// wake-up against the actor's event drain loop.
+    ///
+    /// Eight observation points rather than one is deliberate: a single
+    /// message turns the bias into a coin flip because the unbiased
+    /// `select!` picks the mailbox branch by chance about half the time,
+    /// and a measured 25-run sweep of the deleted-`biased;` build caught
+    /// the regression only 15/25 times; the eight-point form caught it
+    /// 25/25 while staying deterministic (10/10) with the fix in place.
     #[tokio::test(flavor = "current_thread")]
     #[allow(
         clippy::too_many_lines,
@@ -1229,16 +1236,17 @@ mod tests {
             "broadcast receiver should hold all queued events before the actor starts"
         );
 
-        let (mailbox_tx, mailbox_rx) = mpsc::channel::<super::PromptMsg>(4);
-        let (snapshot_tx, _snapshot_rx) =
+        const MESSAGES: usize = 8;
+        let (mailbox_tx, mailbox_rx) = mpsc::channel::<super::PromptMsg>(MESSAGES);
+        let (snapshot_tx, snapshot_rx) =
             watch::channel(super::PromptWidget::new().model_snapshot());
 
         let event_counter = Arc::new(std::sync::atomic::AtomicUsize::new(0));
         let counter_for_worker = event_counter.clone();
-        // `key_done` is signaled right after the actor handles a key
+        // `key_done` is signaled right after the actor reduces a key
         // message; `actor_release` is signaled by the test once it has
         // captured the event count, so the actor is paused while we
-        // observe `event_counter` and `event_rx.len()` deterministically.
+        // observe `event_counter` deterministically.
         let key_done = Arc::new(Notify::new());
         let actor_release = Arc::new(Notify::new());
         let key_done_for_worker = key_done.clone();
@@ -1257,40 +1265,58 @@ mod tests {
             .await;
         });
 
-        let (reply_tx, reply_rx) = oneshot::channel();
-        mailbox_tx
-            .try_send(super::PromptMsg::Key(
-                KeyEvent {
-                    code: KeyCode::Char('x'),
-                    modifiers: KeyModifiers::NONE,
-                    kind: KeyEventKind::Press,
-                    state: KeyEventState::NONE,
-                },
-                reply_tx,
-            ))
-            .expect("key enqueue should not fail");
+        let mut replies = Vec::with_capacity(MESSAGES);
+        for i in 0..MESSAGES {
+            let (reply_tx, reply_rx) = oneshot::channel();
+            // Cycle `x` / `y` / `z` so every queued key carries a
+            // distinct character — this also keeps the buffer from ever
+            // spelling `/history`, which would flip the prompt into
+            // history-search mode mid-test.
+            let key = KeyEvent {
+                code: KeyCode::Char((b'x' + (i % 3) as u8) as char),
+                modifiers: KeyModifiers::NONE,
+                kind: KeyEventKind::Press,
+                state: KeyEventState::NONE,
+            };
+            mailbox_tx
+                .try_send(super::PromptMsg::Key(key, reply_tx))
+                .expect("key enqueue should not fail");
+            replies.push(reply_rx);
+        }
 
-        // Wait for the actor to acknowledge it has reduced the key, then
-        // read the event counter while the actor is parked on the release
+        // Wait for the actor to acknowledge each reduced key, then read
+        // the event counter while the actor is parked on the release
         // barrier.
-        key_done.notified().await;
-        let count_at_key = event_counter.load(Ordering::SeqCst);
-        assert_eq!(
-            count_at_key, 0,
-            "with biased select!, the key must be processed before any queued event"
-        );
-        // Release the actor so it can resume draining.
-        actor_release.notify_one();
+        for reduced in 1..=MESSAGES {
+            key_done.notified().await;
+            assert_eq!(
+                event_counter.load(Ordering::SeqCst),
+                0,
+                "with biased select!, all {MESSAGES} queued keys must be reduced \
+                 before any queued event (failed after {reduced})"
+            );
+            if reduced == 1 {
+                assert_eq!(
+                    snapshot_rx.borrow().text,
+                    "x",
+                    "the reduced key must be visible in the published snapshot"
+                );
+            }
+            // Release the actor so it can resume.
+            actor_release.notify_one();
+        }
 
-        let outcome = tokio::time::timeout(std::time::Duration::from_secs(2), reply_rx)
-            .await
-            .expect("key reply should fire promptly")
-            .expect("key reply should resolve Ok");
-        assert_eq!(outcome, super::PromptOutcome::Edited);
+        for reply_rx in replies {
+            let outcome = tokio::time::timeout(std::time::Duration::from_secs(2), reply_rx)
+                .await
+                .expect("key reply should fire promptly")
+                .expect("key reply should resolve Ok");
+            assert_eq!(outcome, super::PromptOutcome::Edited);
+        }
 
         // Drop the mailbox sender so the actor's `rx.recv()` resolves with
-        // `None` once it finishes draining events; otherwise `actor_task`
-        // would block forever on a still-open sender.
+        // `None`; otherwise `actor_task` would block forever on a still-open
+        // sender.
         drop(mailbox_tx);
         actor_task.await.expect("actor task should join cleanly");
     }
