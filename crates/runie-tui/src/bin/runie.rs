@@ -25,6 +25,7 @@ use ratatui::layout::Rect;
 use ratatui::Terminal;
 use runie_core::commands::{classify_builtin_command, BuiltinCommandDisposition};
 use runie_core::events::EventBus;
+use runie_core::provider::codex::CodexWebSocketAdapter;
 use runie_core::provider::stream_fn::{AssistantMessageEventStream, StreamError, StreamFn};
 use runie_core::provider::ProviderActor;
 use runie_core::queues::{FollowUpQueueActor, SteeringQueueActor};
@@ -329,7 +330,9 @@ async fn run_app(
     let steering = SteeringQueueActor::new();
     let follow_up = FollowUpQueueActor::new();
     let tool_executor = ToolExecutorActor::new_live(std::sync::Arc::new(ToolRegistry::new()));
-    let provider = ProviderActor::new(std::sync::Arc::new(PlaceholderStream));
+    let fallback: std::sync::Arc<dyn StreamFn> = std::sync::Arc::new(PlaceholderStream);
+    let websocket = std::sync::Arc::new(CodexWebSocketAdapter::production(Some(fallback.clone())));
+    let provider = ProviderActor::new_with_websocket(fallback, Some(websocket));
     let deps = LoopDeps {
         state,
         steering,

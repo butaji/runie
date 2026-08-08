@@ -184,6 +184,25 @@ impl CodexWebSocketAdapter {
             cache: Arc::new(tokio::sync::Mutex::new(WebSocketSessionCache::default())),
         }
     }
+
+    /// Construct the live Codex adapter. Transport remains provider-owned;
+    /// callers may supply an ordinary stream fallback for pre-stream failures.
+    pub fn production(fallback: Option<Arc<dyn StreamFn>>) -> Self {
+        Self::new(
+            Arc::new(TokioCodexWebSocketConnector),
+            Arc::new(|model, context, _options| {
+                Ok(serde_json::json!({
+                    "model": model.id,
+                    "input": serde_json::to_value(&context.messages)
+                        .map_err(|error| format!("serialize Codex input: {error}"))?,
+                    "instructions": context.system_prompt,
+                }))
+            }),
+            None,
+            HashMap::new(),
+            fallback,
+        )
+    }
 }
 
 #[allow(
@@ -232,6 +251,14 @@ impl CodexWebSocketAdapter {
             .map_err(StreamError::Invalid)?;
         let mut headers = self.headers.clone();
         headers.insert("OpenAI-Beta".into(), CODEX_WEBSOCKET_BETA_HEADER.into());
+        if let Some(value) = options.as_ref() {
+            if let Some(api_key) = &value.api_key {
+                headers.insert("Authorization".into(), format!("Bearer {api_key}"));
+            }
+            if let Some(extra) = &value.headers {
+                headers.extend(extra.clone());
+            }
+        }
         let timeout_ms = options
             .as_ref()
             .and_then(|value| value.websocket_connect_timeout_ms);
@@ -957,5 +984,34 @@ mod tests {
         let _ = stream.by_ref().collect::<Vec<_>>().await;
         assert_eq!(sent.lock().unwrap().len(), 2);
         assert!(closed.load(std::sync::atomic::Ordering::Acquire));
+    }
+
+    #[test]
+    fn production_adapter_builds_codex_input_from_context() {
+        let adapter = CodexWebSocketAdapter::production(None);
+        let context = AgentContext {
+            system_prompt: "be concise".into(),
+            messages: vec![crate::types::AgentMessage::User(
+                crate::types::UserMessage {
+                    content: vec![crate::types::UserContent::Text {
+                        text: "hello".into(),
+                    }],
+                    timestamp: 1,
+                },
+            )],
+            tools: None,
+        };
+        let value = (adapter.request_builder)(
+            &Model {
+                id: "gpt".into(),
+                ..Default::default()
+            },
+            &context,
+            None,
+        )
+        .expect("production request");
+        assert_eq!(value["model"], "gpt");
+        assert_eq!(value["instructions"], "be concise");
+        assert_eq!(value["input"][0]["role"], "user");
     }
 }

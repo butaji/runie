@@ -355,3 +355,10 @@ Connection-limit retry increment (2026-08-09): an initial
 `websocket_connection_limit_reached` envelope closes and reconnects once with
 the same request; a second such failure is not retried. The adapter regression
 covers the two owned attempts and terminal cleanup.
+
+Deployment wiring increment (2026-08-09): `CodexWebSocketAdapter::production`
+now constructs the Tokio connector and source-shaped Responses request builder;
+the live binary injects it into `ProviderActor` with the existing ordinary
+stream as fallback. Request options contribute authorization and provider
+headers at the adapter boundary, while replay continues to use injected fake
+connectors.
