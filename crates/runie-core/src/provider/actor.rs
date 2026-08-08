@@ -401,6 +401,10 @@ async fn pump_stream(
     }
 }
 
+#[allow(
+    clippy::too_many_lines,
+    reason = "the Pi usage attribute table keeps source-aligned fields explicit"
+)]
 fn telemetry_attributes_for_event(
     event: &crate::types::AssistantMessageEvent,
 ) -> HashMap<String, serde_json::Value> {
@@ -423,6 +427,22 @@ fn telemetry_attributes_for_event(
             (
                 "pi.ai.usage.total_tokens".into(),
                 serde_json::json!(usage.total_tokens),
+            ),
+            (
+                "pi.ai.usage.cache_read_tokens".into(),
+                serde_json::json!(usage.cache_read),
+            ),
+            (
+                "pi.ai.usage.cache_write_tokens".into(),
+                serde_json::json!(usage.cache_write),
+            ),
+            (
+                "pi.ai.usage.reasoning_tokens".into(),
+                serde_json::json!(usage.reasoning),
+            ),
+            (
+                "pi.ai.usage.cost".into(),
+                serde_json::json!(usage.cost.total),
             ),
         ]),
         crate::types::AssistantMessageEvent::Error { reason, .. } => HashMap::from([
@@ -673,6 +693,10 @@ mod tests {
         assert_eq!(count, 3);
     }
 
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the telemetry regression asserts every source-aligned usage field"
+    )]
     #[tokio::test]
     async fn provider_stream_projects_telemetry_through_owned_capability() {
         let telemetry = crate::telemetry::TelemetryActor::new();
@@ -702,6 +726,19 @@ mod tests {
             "stop"
         );
         assert_eq!(snapshot.spans[0].attributes["pi.ai.usage.total_tokens"], 0);
+        assert_eq!(
+            snapshot.spans[0].attributes["pi.ai.usage.cache_read_tokens"],
+            0
+        );
+        assert_eq!(
+            snapshot.spans[0].attributes["pi.ai.usage.cache_write_tokens"],
+            0
+        );
+        assert_eq!(
+            snapshot.spans[0].attributes["pi.ai.usage.reasoning_tokens"],
+            0
+        );
+        assert_eq!(snapshot.spans[0].attributes["pi.ai.usage.cost"], 0.0);
         assert_eq!(snapshot.spans[0].status, SpanStatus::Ok);
         assert!(snapshot.spans[0].ended);
     }
