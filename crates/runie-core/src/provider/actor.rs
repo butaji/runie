@@ -531,50 +531,79 @@ fn telemetry_attributes_for_event(
 ) -> HashMap<String, serde_json::Value> {
     match event {
         crate::types::AssistantMessageEvent::Done {
-            stop_reason, usage, ..
-        } => HashMap::from([
-            (
-                "pi.ai.response.stop_reason".into(),
-                serde_json::json!(telemetry_stop_reason(*stop_reason)),
-            ),
-            (
-                "pi.ai.usage.input_tokens".into(),
-                serde_json::json!(usage.input),
-            ),
-            (
-                "pi.ai.usage.output_tokens".into(),
-                serde_json::json!(usage.output),
-            ),
-            (
-                "pi.ai.usage.total_tokens".into(),
-                serde_json::json!(usage.total_tokens),
-            ),
-            (
-                "pi.ai.usage.cache_read_tokens".into(),
-                serde_json::json!(usage.cache_read),
-            ),
-            (
-                "pi.ai.usage.cache_write_tokens".into(),
-                serde_json::json!(usage.cache_write),
-            ),
-            (
-                "pi.ai.usage.reasoning_tokens".into(),
-                serde_json::json!(usage.reasoning),
-            ),
-            (
-                "pi.ai.usage.cost".into(),
-                serde_json::json!(usage.cost.total),
-            ),
-        ]),
-        crate::types::AssistantMessageEvent::Error { reason, .. } => HashMap::from([
-            (
-                "pi.ai.response.stop_reason".into(),
-                serde_json::json!(telemetry_stop_reason(*reason)),
-            ),
-            ("pi.ai.error.type".into(), serde_json::json!("provider")),
-        ]),
+            stop_reason,
+            usage,
+            message,
+        } => {
+            let mut attributes = HashMap::from([
+                (
+                    "pi.ai.response.stop_reason".into(),
+                    serde_json::json!(telemetry_stop_reason(*stop_reason)),
+                ),
+                (
+                    "pi.ai.usage.input_tokens".into(),
+                    serde_json::json!(usage.input),
+                ),
+                (
+                    "pi.ai.usage.output_tokens".into(),
+                    serde_json::json!(usage.output),
+                ),
+                (
+                    "pi.ai.usage.total_tokens".into(),
+                    serde_json::json!(usage.total_tokens),
+                ),
+                (
+                    "pi.ai.usage.cache_read_tokens".into(),
+                    serde_json::json!(usage.cache_read),
+                ),
+                (
+                    "pi.ai.usage.cache_write_tokens".into(),
+                    serde_json::json!(usage.cache_write),
+                ),
+                (
+                    "pi.ai.usage.reasoning_tokens".into(),
+                    serde_json::json!(usage.reasoning),
+                ),
+                (
+                    "pi.ai.usage.cost".into(),
+                    serde_json::json!(usage.cost.total),
+                ),
+            ]);
+            if let Some(message) = message {
+                attributes.extend(telemetry_response_attributes(message));
+            }
+            attributes
+        }
+        crate::types::AssistantMessageEvent::Error { reason, error } => {
+            let mut attributes = HashMap::from([
+                (
+                    "pi.ai.response.stop_reason".into(),
+                    serde_json::json!(telemetry_stop_reason(*reason)),
+                ),
+                ("pi.ai.error.type".into(), serde_json::json!("provider")),
+            ]);
+            attributes.extend(telemetry_response_attributes(error));
+            attributes
+        }
         _ => HashMap::new(),
     }
+}
+
+fn telemetry_response_attributes(
+    message: &crate::types::AssistantMessage,
+) -> HashMap<String, serde_json::Value> {
+    let mut attributes = HashMap::new();
+    if let Some(model) = message
+        .response_model
+        .as_ref()
+        .filter(|model| !model.is_empty())
+    {
+        attributes.insert("pi.ai.response.model".into(), serde_json::json!(model));
+    }
+    if let Some(response_id) = message.response_id.as_ref().filter(|id| !id.is_empty()) {
+        attributes.insert("pi.ai.response.id".into(), serde_json::json!(response_id));
+    }
+    attributes
 }
 
 fn telemetry_stop_reason(reason: crate::types::StopReason) -> &'static str {
@@ -868,6 +897,17 @@ mod tests {
         );
         assert_eq!(snapshot.spans[0].status, SpanStatus::Ok);
         assert!(snapshot.spans[0].ended);
+    }
+
+    #[test]
+    fn telemetry_response_attributes_preserve_provider_identity() {
+        let attributes = telemetry_response_attributes(&AssistantMessage {
+            response_model: Some("routed-model".into()),
+            response_id: Some("response-1".into()),
+            ..AssistantMessage::default()
+        });
+        assert_eq!(attributes["pi.ai.response.model"], "routed-model");
+        assert_eq!(attributes["pi.ai.response.id"], "response-1");
     }
 
     #[tokio::test]

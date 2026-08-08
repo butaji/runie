@@ -177,3 +177,8 @@ Diagnostic classification increment (2026-08-09): provider startup/deferred
 failures now set `pi.ai.error.type=provider`, while actor-owned abort
 settlement sets `pi.ai.error.type=abort`, preserving the source schema's
 low-cardinality diagnostic distinction alongside structured span errors.
+
+Response identity increment (2026-08-09): terminal assistant payloads now
+project available `response_model` and `response_id` values into Pi's
+`pi.ai.response.model` and `pi.ai.response.id` end attributes. Missing or empty
+identity remains omitted rather than inferred from request metadata.
