@@ -42,6 +42,9 @@ provider-specific contract”. The source of truth is the current Pi tree at
    provider-specific polling/decoding and a real provider fixture remain open.
 3. Full Pi telemetry callback/span nesting and provider-specific diagnostics;
    generic lifecycle events are not evidence of span parity.
+   Provider cancellation and supersession now settle the active request span
+   through the owning actor with structured abort details; typed schema and
+   exporter/backend conformance remain open.
 4. Remaining session storage record families. Canonical message lane identity
    is now carried by `SessionEntry.lane`; the compatibility `entry_lanes`
    index remains only for older callers and serialized snapshots.

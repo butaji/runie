@@ -1,8 +1,9 @@
 # p50 — Pi telemetry actor boundary
 
 Status: actor-owned lifecycle, structured attributes/events, callback-scoped
-settlement, structured errors, provider projection, optional exporter, and YAML
-runtime replay implemented; full Pi telemetry conformance remains (2026-08-08)
+settlement, structured errors, provider projection, abort settlement, optional
+exporter, and YAML runtime replay implemented; full Pi telemetry conformance
+remains (2026-08-08)
 
 ## Source-backed Pi contract
 
@@ -110,3 +111,11 @@ fixture so edits do not require recompilation.
 
 Until these conditions exist, p37 and p19 must continue to classify telemetry
 parity as open; no placeholder field should be presented as implementation.
+
+Provider abort settlement increment (2026-08-09): `ProviderActor` now retains
+the active request span through its owning worker. Explicit cancellation and
+supersession settle that span with a structured `AbortError` and end it through
+the telemetry actor before acknowledging the control command. This closes the
+previous dropped-span lifecycle gap without making the renderer or transport
+actor mutate telemetry state directly; a pending-provider regression proves the
+ended error snapshot without sleeps.
