@@ -1524,6 +1524,7 @@ pub struct ToolBlock {
 #[serde(rename_all = "snake_case")]
 pub enum ToolCardRowKind {
     Header,
+    Metadata,
     Content,
     Status,
 }
@@ -1586,6 +1587,7 @@ impl ToolCardRow {
         match self.row_kind {
             ToolCardRowKind::Header if self.is_running => ToolCardPaintIntent::Running,
             ToolCardRowKind::Header => ToolCardPaintIntent::Header,
+            ToolCardRowKind::Metadata => ToolCardPaintIntent::Muted,
             ToolCardRowKind::Content if self.card_kind == ToolCardKind::MemorySearch => {
                 ToolCardPaintIntent::Muted
             }
@@ -1594,6 +1596,11 @@ impl ToolCardRow {
             ToolCardRowKind::Status => ToolCardPaintIntent::Success,
         }
     }
+}
+
+fn is_memory_metadata(text: &str) -> bool {
+    let trimmed = text.trim_start();
+    trimmed.as_bytes().first().is_some_and(u8::is_ascii_digit) && trimmed.contains(". ")
 }
 
 /// Project transcript rows into semantic card rows in transcript order.
@@ -1617,11 +1624,17 @@ pub fn project_tool_card_rows(
             .get(tool_call_id)
             .map(String::as_str)
             .unwrap_or(&line.text);
+        let card_kind = ToolCardKind::from_header(header);
         let row_kind = match line.kind {
             LineKind::Tool | LineKind::ToolRunning if !line.text.trim_end().ends_with('✗') => {
                 ToolCardRowKind::Header
             }
             LineKind::ToolError | LineKind::Tool => ToolCardRowKind::Status,
+            LineKind::ToolOutput | LineKind::ToolResult
+                if card_kind == ToolCardKind::MemorySearch && is_memory_metadata(&line.text) =>
+            {
+                ToolCardRowKind::Metadata
+            }
             LineKind::ToolOutput | LineKind::ToolResult => ToolCardRowKind::Content,
             _ => continue,
         };
@@ -1636,7 +1649,7 @@ pub fn project_tool_card_rows(
         rows.push(ToolCardRow {
             tool_call_id: tool_call_id.to_owned(),
             member_index: row_member_index,
-            card_kind: ToolCardKind::from_header(header),
+            card_kind,
             row_kind,
             text: line.text.clone(),
             mode: tool_mode_for_line(line, tool_modes),
@@ -3066,6 +3079,24 @@ mod tests {
         assert_eq!(rows[1].row_kind, ToolCardRowKind::Content);
         assert!(rows[2].is_error);
         assert_eq!(rows[2].row_kind, ToolCardRowKind::Status);
+    }
+
+    #[test]
+    fn memory_card_rows_separate_metadata_from_snippet_content() {
+        let lines = vec![
+            Line::new(LineKind::Tool, "Memory Search actors").for_tool("memory-1"),
+            Line::new(
+                LineKind::ToolOutput,
+                "  1. notes.md:4-8  (score: 0.72, global)",
+            )
+            .for_tool("memory-1"),
+            Line::new(LineKind::ToolOutput, "    actor state").for_tool("memory-1"),
+        ];
+        let names = HashMap::from([(String::from("memory-1"), String::from("memory_search"))]);
+        let rows = project_tool_card_rows(&lines, &names, &HashMap::new());
+        assert_eq!(rows[1].row_kind, ToolCardRowKind::Metadata);
+        assert_eq!(rows[1].paint_intent(), ToolCardPaintIntent::Muted);
+        assert_eq!(rows[2].row_kind, ToolCardRowKind::Content);
     }
 
     #[test]
