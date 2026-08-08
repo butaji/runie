@@ -54,6 +54,23 @@ impl ReplayProvider {
         Self::from_sse_body(&response.body)
     }
 
+    /// Build a deterministic provider from Codex Responses WebSocket text
+    /// messages. Socket acquisition, continuation caching, fallback, and
+    /// cleanup remain owned by the concrete WebSocket adapter; this entry
+    /// point only reuses the source-aligned Responses event decoder.
+    pub fn from_websocket_messages<I, S>(messages: I) -> Result<Self, StreamError>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
+        let input = messages
+            .into_iter()
+            .map(|message| format!("data: {}", message.as_ref()))
+            .collect::<Vec<_>>()
+            .join("\n");
+        Self::from_sse_body(&input)
+    }
+
     #[allow(clippy::too_many_lines)]
     fn from_sse_body(input: &str) -> Result<Self, StreamError> {
         let mut events = vec![AssistantMessageEvent::Start {
@@ -494,6 +511,39 @@ mod tests {
                 && usage.cache_read == 3
                 && usage.reasoning == 2
                 && usage.total_tokens == 19
+        ));
+    }
+
+    #[tokio::test]
+    async fn websocket_messages_use_the_same_codex_responses_decoder() {
+        let provider = ReplayProvider::from_websocket_messages([
+            r#"{"type":"response.created","response":{"id":"ws-1"}}"#,
+            r#"{"type":"response.output_text.delta","delta":"socket"}"#,
+            r#"{"type":"response.completed","response":{"status":"completed"}}"#,
+        ])
+        .expect("WebSocket Responses messages");
+        let mut events = provider
+            .stream(
+                &Model::default(),
+                &crate::types::AgentContext::default(),
+                None,
+            )
+            .await
+            .expect("replay stream");
+        assert!(matches!(
+            events.next().await,
+            Some(AssistantMessageEvent::Start { .. })
+        ));
+        assert!(matches!(
+            events.next().await,
+            Some(AssistantMessageEvent::TextDelta { delta, .. }) if delta == "socket"
+        ));
+        assert!(matches!(
+            events.next().await,
+            Some(AssistantMessageEvent::Done {
+                stop_reason: StopReason::Stop,
+                ..
+            })
         ));
     }
 
