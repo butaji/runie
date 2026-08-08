@@ -10,4 +10,4 @@ events:
   - scroll_input: { at_ms: 40, direction: up, mode: auto, speed: 50, inverted: false }
 assertions:
   state:
-    scroll_offset: 6
+    scroll_offset: 5

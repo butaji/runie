@@ -96,7 +96,7 @@ assertions:
     messages: 2
     tool_blocks: 0
     selected_entry: 3
-    scroll_offset: 9
+    scroll_offset: 8
   visual:
     cols: 80
     rows: 24

@@ -172,6 +172,29 @@ JSON fragment (object and `null` payloads) and the empty-fragment shape;
 the actor and renderer replay paths still gate partial updates through the
 existing `is_transport_only_update` / `structured_update_text` contract.
 
+**AgentEnd replay closure (2026-08-08):** the YAML replay path of
+`EventRenderer::apply_actor_event` was inserting a phantom
+`LineKind::Separator` row between `AgentStart` and `AgentEnd` whenever
+`TurnStart` had preceded the closure. The live `run` branch at the bus
+boundary never emitted that row, so deterministic replay fixtures
+(`visual-reasoning`, `visual-error`, `visual-tool`, `visual-submitted`)
+were carrying a stray blank cell that the live producer never produced.
+The spurious `messages.push(ScrollbackMsg::Append(Line::new(LineKind::Separator, "")))`
+in the `ActorEnd { .. } && turn_was_started` arm of `apply_actor_event`
+was removed so the replay path now matches the `run` branch exactly:
+session-start emits its own two wrapping Separator rows, `AgentEnd` emits
+the `LineKind::TurnSummary` row and the navigation-only `TurnEnd`
+message, and no extra transcript row is inserted between them. The
+`actor_agent_end_emits_worked_for_only_after_turn_start` test was
+tightened to assert the exact line count (4 with-TurnStart, 3 no-TurnStart)
+and the exact `LineKind::Separator` count (2 in both cases, never 3),
+which would have failed against the previous buggy code. The five
+`visual_snapshots__visual-*.snap` files that exercised the Affirmations
+fixtures were regenerated to drop the phantom blank row from the rendered
+frames. The event-to-snapshot contract is now identical between the live
+bus path and the YAML replay path, so the closure-evidence replay
+fixtures no longer drift from a real captured session.
+
 The first two historical bullets are now closed. Production scroll, selection,
 palette, and prompt transitions have named owner-local messages, and replay
 assertions already support ordered `exact_events`, closed-contract `pi_events`,

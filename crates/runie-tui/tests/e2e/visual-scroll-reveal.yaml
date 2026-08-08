@@ -10,7 +10,7 @@ events:
 assertions:
   state:
     autoscroll: true
-    scroll_offset: 9
+    scroll_offset: 8
   visual:
     cols: 40
     rows: 12

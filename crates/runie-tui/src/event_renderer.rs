@@ -516,7 +516,6 @@ impl EventRenderer {
             }
         }
         if matches!(event, AgentEvent::AgentEnd { .. }) && turn_was_started {
-            messages.push(ScrollbackMsg::Append(Line::new(LineKind::Separator, "")));
             messages.push(ScrollbackMsg::AppendTurnSummary(
                 status_actor.model_snapshot().worked_for_label(),
             ));
@@ -1612,23 +1611,91 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "with/without-TurnStart branches keep the AgentEnd closure contract together"
+    )]
     async fn actor_agent_end_emits_worked_for_only_after_turn_start() {
-        let scrollback = ScrollbackActor::new();
+        // With-TurnStart: AgentStart seeds the session-start rows, TurnStart
+        // flips the state, and AgentEnd must emit the TurnSummary without
+        // appending a phantom Separator between AgentStart and AgentEnd.
+        let with_turn = ScrollbackActor::new();
         let status = StatusActor::new();
-        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status);
+        let mut renderer = EventRenderer::with_actors(with_turn.clone(), status);
         renderer.apply_actor_event(AgentEvent::AgentStart).await;
         renderer.apply_actor_event(AgentEvent::TurnStart).await;
-        assert!(scrollback.model_snapshot().turn_started);
+        assert!(with_turn.model_snapshot().turn_started);
         renderer
             .apply_actor_event(AgentEvent::AgentEnd { messages: vec![] })
             .await;
-        let snapshot = scrollback.snapshot();
-        let summary = snapshot
-            .lines()
+        let lines = with_turn.snapshot().lines().to_vec();
+        let summary = lines
             .iter()
             .find(|line| line.text == "Worked for 0.0s")
             .expect("completion summary");
         assert_eq!(summary.kind, LineKind::TurnSummary);
+        // The session-start block is the legitimate source of Separator rows;
+        // AgentEnd must not insert a phantom blank row between the session
+        // start and the TurnSummary. The session-start block owns exactly two
+        // Separator rows (one above and one below the session_start label),
+        // so the total Separator count for the with-TurnStart path is
+        // exactly 2 — never 3, which would indicate the AgentEnd closure
+        // re-inserted a phantom blank row.
+        let separator_count = lines
+            .iter()
+            .filter(|line| line.kind == LineKind::Separator)
+            .count();
+        assert_eq!(
+            separator_count, 2,
+            "AgentEnd must not re-insert a phantom Separator between AgentStart and AgentEnd: {lines:?}"
+        );
+        // session_start emits 3 rows; AgentEnd contributes the TurnSummary
+        // only (no Separator, no TurnEnd marker row). The TurnEnd reducer
+        // message is a navigation-only transition, not a transcript line.
+        assert_eq!(
+            lines.len(),
+            4,
+            "with-TurnStart branch should emit exactly 4 transcript lines: {lines:?}"
+        );
+        assert_eq!(
+            lines
+                .iter()
+                .filter(|line| line.kind == LineKind::TurnSummary)
+                .count(),
+            1,
+            "with-TurnStart branch should emit exactly one TurnSummary row"
+        );
+        drop(renderer);
+
+        // No-TurnStart: AgentStart seeds the session-start rows and AgentEnd
+        // must not emit a TurnSummary. The session-start rows are the only
+        // transcript output (3 rows, no extra Separator).
+        let no_turn = ScrollbackActor::new();
+        let mut renderer = EventRenderer::with_actors(no_turn.clone(), StatusActor::new());
+        renderer.apply_actor_event(AgentEvent::AgentStart).await;
+        renderer
+            .apply_actor_event(AgentEvent::AgentEnd { messages: vec![] })
+            .await;
+        let no_turn_lines = no_turn.snapshot().lines().to_vec();
+        assert!(
+            no_turn_lines
+                .iter()
+                .all(|line| line.kind != LineKind::TurnSummary),
+            "no-TurnStart branch must not emit a TurnSummary row"
+        );
+        let no_turn_separator_count = no_turn_lines
+            .iter()
+            .filter(|line| line.kind == LineKind::Separator)
+            .count();
+        assert_eq!(
+            no_turn_separator_count, 2,
+            "no-TurnStart branch must not gain a phantom Separator: {no_turn_lines:?}"
+        );
+        assert_eq!(
+            no_turn_lines.len(),
+            3,
+            "no-TurnStart branch should emit exactly 3 transcript lines: {no_turn_lines:?}"
+        );
     }
 
     #[tokio::test]
