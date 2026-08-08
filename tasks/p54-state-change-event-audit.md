@@ -94,3 +94,42 @@ there are no production calls to the retired synchronous renderer projection.
 The synchronous prompt filesystem helper is test-only; production uses the
 async actor method documented in P57. The current async/replay boundary audit
 is recorded in P59.
+
+Input-latency series closure (2026-08-08): the input wake-up slice was
+delivered over 23 commits that together retired the FIFO/50 ms cadence
+gap, biased every keystroke through the owning actor mailbox, and
+coalesced the renderer's per-event `FeedSnapshot` reads so a single
+key press no longer crosses the feed actor more than once per tool
+event. The 23-commit series, most-recent first: `945cde31` coalesce
+`handle_tool_end` to one `FeedSnapshot` read; `67c23dbc` cache
+`thinking_elapsed_ms` in the `FinalizeAssistant` push; `4a82ccac` add
+the 128-key prompt no-drop regression test; `641c4e3f` strengthen the
+prompt mailbox-bias test to eight observation points; `803505cc`
+coalesce the tool-event scrollback mailbox into a single `apply_batch`;
+`9addbe55` bias the input actor and bump the input channel capacity;
+`af638f1c` remove the per-render mailbox round-trip and duplicate
+snapshot clones; `2556aeda` add the UiActor mailbox-priority
+regression test; `f3f1aca6` bias the prompt and UI actor selects for
+key priority; `3e973939` fix input latency by dispatching keys
+immediately without the FIFO; `3516ba96` fix the MessageStart live
+Grok layout off-by-one strip; `73bac8a3` fix BackgroundWork live/replay
+divergence and add the parity test; `949f3f8e` fix the AgentEnd replay
+divergence and tighten coverage; `f5c54371` pin the bus-lag actor
+diagnostic tests; `efe8aa55` pin the loop control mailbox-ack snapshot
+contract; `0cefb7ac` centralize `tool_update_header_text` in
+`runie-tui-model`; `972badd6` centralize `is_transport_only_update` in
+`runie-tui-model`; `1abcfcde` centralize `is_output_tool` in
+`runie-tui-model`; `219ab00f` centralize the activity tool classifier
+in `runie-tui-model`; `2b42c82c` centralize `format_elapsed` and
+`format_error` in `runie-tui-model`; `3f25835d` centralize
+`structured_update_text` in `runie-tui-model`; `45cf0cd4` move the
+welcome modal lines to the widgets module; `89dbab60` retire the
+renderer welcome state and add the compact oracle. The slice closes
+without introducing a second state owner: terminal events remain the
+single producer of `InputEvent` to the mailbox, every owning actor
+still reduces its messages under `biased;` priority, and the
+`FeedSnapshot` reads inside `handle_tool_start`, `handle_tool_update`,
+and `handle_tool_end` are now each a single atomic read against a
+caller-bound `snapshot`. The full `just ci` (fmt-check, clippy, lint,
+test, parity, source inventory, Pi event contract, feed-actor
+boundary) is green.

@@ -703,3 +703,35 @@ signatures. The 219 `runie-tui` lib unit tests, the 5 `runie` binary
 unit tests, the 28 `visual_snapshots` replay tests, and the full
 `just ci` (fmt-check, clippy, lint, test, parity, source inventory,
 Pi event contract, feed-actor boundary) are green.
+
+**`handle_tool_start`/`handle_tool_update` atomic snapshot coalesce
+(2026-08-08):** `EventRenderer::handle_tool_start` and
+`EventRenderer::handle_tool_update` in
+`crates/runie-tui/src/event_renderer.rs` each walked
+`self.scrollback_actor.model_snapshot()` more than once. `handle_tool_start`
+called `active_tool_count(&self.scrollback_actor.model_snapshot())` and
+`self.activity_group_exists_since_latest_user()` (which itself walked
+`self.scrollback_actor.model_snapshot()`) and then
+`self.activity_counts_with_start(...)` (which walked
+`self.scrollback_actor.model_snapshot()` again via its internal
+`activity_counts` call), for three FeedSnapshot reads where a single
+intervening `apply_batch` could disagree about whether the new tool
+started a fresh activity group. `handle_tool_update` called
+`self.scrollback_actor.model_snapshot()` for the running-block check
+and then again for `current_tool_header(&self.scrollback_actor.model_snapshot(), ...)`,
+so the running-block predicate and the header text could disagree about
+the same tool-call_id across two reads. The two `&self` helpers
+`activity_group_exists_since_latest_user` and `activity_counts_with_start`
+are now free functions taking `snapshot: &FeedSnapshot` (placed at module
+scope right after the existing `activity_counts` helper), matching the
+free-function pattern already used by `current_tool_header`,
+`current_tool_args`, `active_tool_count`, and `activity_counts`. Each
+function binds one `let snapshot = self.scrollback_actor.model_snapshot();`
+at the top of its body and threads `&snapshot` through every helper
+call, so the activity-grouping flag, the activity counts, the
+running-block predicate, and the current-tool header all observe the
+same atomic `FeedSnapshot`. The clippy `too_many_lines` allow reasons on
+both `handle_tool_start` and `handle_tool_update` now state the
+atomic-snapshot guarantee. The full `just ci` (fmt-check, clippy,
+lint, test, parity, source inventory, Pi event contract, feed-actor
+boundary) is green.

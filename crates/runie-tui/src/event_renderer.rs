@@ -553,7 +553,7 @@ impl EventRenderer {
     #[allow(
         clippy::cognitive_complexity,
         clippy::too_many_lines,
-        reason = "tool-start reduction keeps activity grouping and tool-row ownership together"
+        reason = "single atomic FeedSnapshot read keeps activity-grouping and tool-row ownership together"
     )]
     fn handle_tool_start(
         &mut self,
@@ -561,10 +561,10 @@ impl EventRenderer {
         tool_name: String,
         args: serde_json::Value,
     ) -> ScrollbackMsg {
-        let starts_new_activity_group = active_tool_count(&self.scrollback_actor.model_snapshot())
-            == 0
-            && !self.activity_group_exists_since_latest_user();
-        let counts = self.activity_counts_with_start(&tool_name, starts_new_activity_group);
+        let snapshot = self.scrollback_actor.model_snapshot();
+        let starts_new_activity_group = active_tool_count(&snapshot) == 0
+            && !activity_group_exists_since_latest_user(&snapshot);
+        let counts = activity_counts_with_start(&snapshot, &tool_name, starts_new_activity_group);
         let (
             activity_dirs,
             activity_files,
@@ -593,7 +593,12 @@ impl EventRenderer {
         }
     }
 
-    #[allow(clippy::too_many_lines, clippy::question_mark)]
+    #[allow(
+        clippy::too_many_lines,
+        clippy::question_mark,
+        reason = "single atomic FeedSnapshot read keeps the running-block check \
+                  and the current-tool header consistent"
+    )]
     fn handle_tool_update(
         &mut self,
         tool_call_id: String,
@@ -605,9 +610,8 @@ impl EventRenderer {
         if runie_tui_model::is_transport_only_update(&partial_result) {
             return None;
         }
-        if self
-            .scrollback_actor
-            .model_snapshot()
+        let snapshot = self.scrollback_actor.model_snapshot();
+        if snapshot
             .tool_blocks
             .iter()
             .any(|block| block.tool_call_id == tool_call_id && block.is_running)
@@ -620,9 +624,7 @@ impl EventRenderer {
                     output: output_lines,
                 });
             }
-            let Some(current_header) =
-                current_tool_header(&self.scrollback_actor.model_snapshot(), &tool_call_id)
-            else {
+            let Some(current_header) = current_tool_header(&snapshot, &tool_call_id) else {
                 return None;
             };
             let updated =
@@ -713,37 +715,6 @@ impl EventRenderer {
             output,
         }
     }
-
-    fn activity_group_exists_since_latest_user(&self) -> bool {
-        let lines = self.scrollback_actor.model_snapshot().lines;
-        let latest_user = lines
-            .iter()
-            .rposition(|line| line.kind == LineKind::User)
-            .unwrap_or(0);
-        lines[latest_user..]
-            .iter()
-            .any(|line| line.kind == LineKind::Activity)
-    }
-
-    fn activity_counts_with_start(
-        &self,
-        tool_name: &str,
-        reset: bool,
-    ) -> (usize, usize, usize, usize, usize) {
-        let (mut dirs, mut files, mut commands, mut subagents, failures) = if reset {
-            (0, 0, 0, 0, 0)
-        } else {
-            activity_counts(&self.scrollback_actor.model_snapshot())
-        };
-        match runie_tui_model::classify_activity_tool(tool_name) {
-            Some(runie_tui_model::ActivityKind::Dir) => dirs += 1,
-            Some(runie_tui_model::ActivityKind::File) => files += 1,
-            Some(runie_tui_model::ActivityKind::Command) => commands += 1,
-            Some(runie_tui_model::ActivityKind::Subagent) => subagents += 1,
-            None => {}
-        }
-        (dirs, files, commands, subagents, failures)
-    }
 }
 
 fn current_tool_header(snapshot: &FeedSnapshot, tool_call_id: &str) -> Option<String> {
@@ -779,6 +750,37 @@ fn activity_counts(snapshot: &FeedSnapshot) -> (usize, usize, usize, usize, usiz
         snapshot.activity_subagents,
         snapshot.activity_failures,
     )
+}
+
+fn activity_group_exists_since_latest_user(snapshot: &FeedSnapshot) -> bool {
+    let lines = &snapshot.lines;
+    let latest_user = lines
+        .iter()
+        .rposition(|line| line.kind == LineKind::User)
+        .unwrap_or(0);
+    lines[latest_user..]
+        .iter()
+        .any(|line| line.kind == LineKind::Activity)
+}
+
+fn activity_counts_with_start(
+    snapshot: &FeedSnapshot,
+    tool_name: &str,
+    reset: bool,
+) -> (usize, usize, usize, usize, usize) {
+    let (mut dirs, mut files, mut commands, mut subagents, failures) = if reset {
+        (0, 0, 0, 0, 0)
+    } else {
+        activity_counts(snapshot)
+    };
+    match runie_tui_model::classify_activity_tool(tool_name) {
+        Some(runie_tui_model::ActivityKind::Dir) => dirs += 1,
+        Some(runie_tui_model::ActivityKind::File) => files += 1,
+        Some(runie_tui_model::ActivityKind::Command) => commands += 1,
+        Some(runie_tui_model::ActivityKind::Subagent) => subagents += 1,
+        None => {}
+    }
+    (dirs, files, commands, subagents, failures)
 }
 
 fn format_clock_timestamp(timestamp: i64) -> String {
