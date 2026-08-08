@@ -94,3 +94,6 @@ capability results instead of silently treating them as successful commands.
 `App::route_builtin_command` now consumes that disposition in both the live
 binary and YAML runner; unsupported commands publish an actor-delivered error
 event and do not fall through to provider prompt submission.
+`visual-slash-unsupported.yaml` asserts the resulting rendered error surface
+through the runtime-discovered YAML suite; it does not claim the
+application-owned command is a core agent error projection.

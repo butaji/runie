@@ -1,0 +1,12 @@
+name: visual-slash-unsupported
+description: Known Pi commands without a Runie capability fail through the shared actor boundary.
+events: []
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    steps:
+      - "/export session.html"
+      - Enter
+    screen_text:
+      - "not supported by Runie"
