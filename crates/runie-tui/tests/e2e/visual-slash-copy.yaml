@@ -1,0 +1,16 @@
+name: visual-slash-copy
+description: Pi's /copy command routes the latest assistant payload through the UI actor.
+initial_prompt: "copy"
+events:
+  - start
+  - text_delta: "copied answer"
+  - done: { stop_reason: stop }
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    post_steps:
+      - "/copy"
+    copy_text: "copied answer"
+    screen_text:
+      - "copied answer"

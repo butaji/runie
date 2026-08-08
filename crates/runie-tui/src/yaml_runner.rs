@@ -1261,6 +1261,9 @@ pub struct VisualAssertions {
     /// viewport behavior on real feed content.
     #[serde(default)]
     pub post_steps: Vec<String>,
+    /// Expected payload emitted by a post-replay clipboard command.
+    #[serde(default)]
+    pub copy_text: Option<String>,
     /// If true, also spawn the real `runie` binary in a pty and assert
     /// the same `screen_text` / `screen_excludes` substrings there.
     /// Requires the standalone PTY harness. Until that harness is wired into
@@ -4991,6 +4994,7 @@ pub async fn render_visual_buffer(
         match step.as_str() {
             "Ctrl+J" => app.scroll_scrollback_by(1).await,
             "Ctrl+K" => app.scroll_scrollback_by(-1).await,
+            step if step.starts_with('/') => {}
             _ => return Err(format!("unsupported post visual step: {step}")),
         }
     }
@@ -5087,6 +5091,24 @@ pub async fn render_visual_buffer(
         match step.as_str() {
             "Ctrl+J" => app.scroll_scrollback_by(1).await,
             "Ctrl+K" => app.scroll_scrollback_by(-1).await,
+            "/copy" => {
+                let mut commands = app.subscribe_ui_commands();
+                let disposition = runie_core::commands::classify_builtin_command("/copy");
+                app.route_builtin_command(disposition).await;
+                let command = commands
+                    .recv()
+                    .await
+                    .map_err(|error| format!("copy command delivery failed: {error}"))?;
+                let runie_tui_model::UiCommand::CopyText(actual) = command else {
+                    return Err("copy command produced the wrong UI command".into());
+                };
+                if vis.copy_text.as_deref() != Some(actual.as_str()) {
+                    return Err(format!(
+                        "copy_text mismatch: expected {:?}, got {:?}",
+                        vis.copy_text, actual
+                    ));
+                }
+            }
             _ => {}
         }
     }

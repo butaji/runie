@@ -135,3 +135,5 @@ Copy increment (2026-08-08): `/copy` now crosses the typed command and UI
 actor boundary with the latest assistant block projected as immutable text.
 The live binary owns the terminal-side OSC 52 clipboard effect; replay and
 model tests cover the payload selection without invoking terminal I/O.
+`visual-slash-copy.yaml` drives the post-replay command through the same
+application boundary and asserts the emitted immutable payload.
