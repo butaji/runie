@@ -78,6 +78,13 @@ cast, raw, settled ANSI, manifest, and resize-report artifacts. The paired
 Grok capture still needs to be rerun with the same schedule before claiming
 cell-level resize parity.
 
+Fresh local matrix probe (2026-08-08): `capture-scenario.sh` replayed
+`visual-resize.yaml` across all four standard initial geometries (`62x32`,
+`80x24`, `100x30`, and `120x36`). Every `.resize.json` report was valid and
+observed both requested transitions (`80x12` at 250 ms and `100x24` at
+500 ms). This strengthens the Runie-side runtime evidence; the paired Grok
+capture and cell comparison remain open.
+
 Paired schedule probe (2026-08-08): both Runie and Grok independently recorded
 the same two observed geometries. Runie reached its settled frame; Grok's
 settled-response probe timed out after the resize, so its cast is marked
