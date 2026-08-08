@@ -1563,25 +1563,56 @@ pub struct ToolCardRow {
 /// Return the logical member ordinal for a tool call in transcript order.
 /// This is the single identity calculation shared by snapshots and renderers.
 pub fn logical_tool_member_index(lines: &[Line], tool_call_id: &str) -> Option<usize> {
+    lines
+        .iter()
+        .position(|line| line.tool_call_id.as_deref() == Some(tool_call_id))
+        .and_then(|line_index| logical_tool_member_index_at(lines, line_index))
+}
+
+/// Return the logical member ordinal for the exact transcript line. Live rows
+/// use the actor-issued row identity, while compatibility-seeded rows retain
+/// the historical call-ID grouping.
+pub fn logical_tool_member_index_at(lines: &[Line], line_index: usize) -> Option<usize> {
+    let target = lines.get(line_index)?;
     let mut indices = HashMap::new();
     let mut next = 0usize;
-    for line in lines {
-        let Some(id) = line.tool_call_id.as_deref() else {
+    for (index, line) in lines.iter().enumerate() {
+        if line.tool_call_id.is_none() {
             continue;
-        };
-        let index = if let Some(index) = indices.get(id) {
+        }
+        let key = tool_member_key(lines, index);
+        let index = if let Some(index) = indices.get(&key) {
             *index
         } else {
             let index = next;
             next += 1;
-            indices.insert(id.to_owned(), index);
+            indices.insert(key, index);
             index
         };
-        if id == tool_call_id {
+        if std::ptr::eq(line, target) {
             return Some(index);
         }
     }
     None
+}
+
+fn tool_member_key(lines: &[Line], line_index: usize) -> (String, Option<u64>) {
+    let line = &lines[line_index];
+    let Some(id) = line.tool_call_id.as_deref() else {
+        return (String::new(), None);
+    };
+    let header = lines[..=line_index]
+        .iter()
+        .enumerate()
+        .rev()
+        .find(|(_, candidate)| {
+            candidate.tool_call_id.as_deref() == Some(id)
+                && matches!(candidate.kind, LineKind::Tool | LineKind::ToolRunning)
+        });
+    (
+        id.to_owned(),
+        header.and_then(|(_, candidate)| candidate.tool_row_id),
+    )
 }
 
 impl ToolCardRow {
@@ -1623,9 +1654,9 @@ pub fn project_tool_card_rows(
     tool_modes: &HashMap<String, ToolDisplayMode>,
 ) -> Vec<ToolCardRow> {
     let mut rows = Vec::new();
-    let mut member_indices: HashMap<String, usize> = HashMap::new();
+    let mut member_indices: HashMap<(String, Option<u64>), usize> = HashMap::new();
     let mut next_member_index = 0usize;
-    for line in lines {
+    for (line_index, line) in lines.iter().enumerate() {
         let Some(tool_call_id) = line.tool_call_id.as_deref() else {
             continue;
         };
@@ -1651,12 +1682,13 @@ pub fn project_tool_card_rows(
             LineKind::ToolOutput | LineKind::ToolResult => ToolCardRowKind::Content,
             _ => continue,
         };
-        let row_member_index = if let Some(index) = member_indices.get(tool_call_id) {
+        let member_key = tool_member_key(lines, line_index);
+        let row_member_index = if let Some(index) = member_indices.get(&member_key) {
             *index
         } else {
             let index = next_member_index;
             next_member_index += 1;
-            member_indices.insert(tool_call_id.to_owned(), index);
+            member_indices.insert(member_key, index);
             index
         };
         rows.push(ToolCardRow {
@@ -3102,6 +3134,31 @@ mod tests {
         assert_eq!(rows[1].row_kind, ToolCardRowKind::Content);
         assert!(rows[2].is_error);
         assert_eq!(rows[2].row_kind, ToolCardRowKind::Status);
+    }
+
+    #[test]
+    fn duplicate_call_ids_keep_live_row_member_ordinals_distinct() {
+        let lines = vec![
+            Line::new(LineKind::Tool, "Read one")
+                .for_tool("duplicate")
+                .for_tool_row(1),
+            Line::new(LineKind::ToolOutput, "one")
+                .for_tool("duplicate")
+                .for_tool_row(1),
+            Line::new(LineKind::Tool, "Read two")
+                .for_tool("duplicate")
+                .for_tool_row(2),
+            Line::new(LineKind::ToolOutput, "two")
+                .for_tool("duplicate")
+                .for_tool_row(2),
+        ];
+        let names = HashMap::from([(String::from("duplicate"), String::from("read"))]);
+        let rows = project_tool_card_rows(&lines, &names, &HashMap::new());
+        assert_eq!(
+            rows.iter().map(|row| row.member_index).collect::<Vec<_>>(),
+            [0, 0, 1, 1]
+        );
+        assert_eq!(super::logical_tool_member_index_at(&lines, 2), Some(1));
     }
 
     #[test]

@@ -12,9 +12,9 @@ use crate::appearance;
 use crate::view::PaintIntent;
 use runie_core::types::ThemeKind;
 pub use runie_tui_model::{
-    logical_tool_member_index, project_tool_card_rows, tool_mode_for_line,
-    tool_mode_override_for_line, FeedNavigation, FeedSnapshot, FeedState, Line, LineKind,
-    ScrollbackMsg, ToolBlock, ToolCardKind, ToolCardPaintIntent, ToolCardRowKind,
+    logical_tool_member_index, logical_tool_member_index_at, project_tool_card_rows,
+    tool_mode_for_line, tool_mode_override_for_line, FeedNavigation, FeedSnapshot, FeedState, Line,
+    LineKind, ScrollbackMsg, ToolBlock, ToolCardKind, ToolCardPaintIntent, ToolCardRowKind,
 };
 
 // Grok reserves a visible gutter between the first assistant row and its
@@ -1201,7 +1201,11 @@ impl Scrollback {
             .nth(occurrence)?;
         let id = line.tool_call_id.as_deref()?;
         let tool_row_id = line.tool_row_id;
-        let member_index = logical_tool_member_index(&self.lines, id)?;
+        let line_index = self
+            .lines
+            .iter()
+            .position(|candidate| std::ptr::eq(candidate, line))?;
+        let member_index = logical_tool_member_index_at(&self.lines, line_index)?;
         let rows = project_tool_card_rows(
             &self.lines,
             &self.navigation.tool_names,

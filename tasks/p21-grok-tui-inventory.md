@@ -686,6 +686,12 @@ neighbor's card role merely because their text and ordinal match. Compatibility
 seed rows retain the optional `None` path; focused model/renderer tests and the
 full local gate cover both boundaries.
 
+Duplicate-call member increment (2026-08-10): member ordinals now inherit the
+current card header's actor row identity across continuation and status lines.
+Distinct live cards with the same provider call ID therefore receive distinct
+ordinals, while legacy rows without an actor identity retain call-ID grouping.
+The YAML replay suite, duplicate-ID model regression, and full local gate pass.
+
 Workflow status formatter audit (2026-08-06): compared against Grok's
 `WorkflowBlockStatus` renderer and added exact tests for `failed`, `cancelled`,
 and `paused` elapsed wording. Cancelled/paused statuses now use `after 1.2s`
