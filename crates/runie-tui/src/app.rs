@@ -720,7 +720,7 @@ impl App {
                         runie_core::session::SessionOperationKind::Finished,
                         serde_json::json!({
                             "id": compaction_id,
-                            "outcome": "error",
+                            "outcome": "failed",
                             "error": {
                                 "code": "compaction",
                                 "message": error.to_string(),
