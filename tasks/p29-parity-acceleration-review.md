@@ -50,15 +50,16 @@ capture needs deterministic elapsed time, token counters, and a stable settled
 frame marker on both sides. Until those are present, a full-cast exact claim
 would conflate layout parity with clock/usage parity.
 
-The next layout review must also capture pi's measured content height,
-viewport offset, and terminal cell-width behavior from `layout-node` and
-`scroll-view`; the current YAML contract records final text but not the
-measure/layout inputs that explain wrapping and scrolling changes.
+The layout review now captures Runie's measured content height, viewport rows,
+and selection anchor through `visual-layout-measurement.yaml`. Terminal cell
+width remains a renderer/capture concern, while content-dependent intrinsic
+height is covered by the declarative allocator regression below.
 
 Implementation progress (2026-08-06): Runie's view DSL now contains a pure
 `ScrollState` projection with follow-end, explicit user scroll handoff, and
 viewport/content clamping. Its focused reducer tests pass; stack measurement
-and YAML exposure of these layout inputs remain open.
+and YAML exposure of the measured layout inputs are now covered. Wider
+geometry/cell-width parity remains a separate capture contract.
 
 The stack resolver is now used by the live chat adapter, and
 `visual-resize.yaml` records/validates all five region rectangles. This closes
