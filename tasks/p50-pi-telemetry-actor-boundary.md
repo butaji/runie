@@ -86,6 +86,13 @@ The provider projection is covered by
 callback nesting, exceptions, exporter backend conformance, and YAML-declared
 span conformance vectors remain open.
 
+Telemetry timing correction (2026-08-08): the authoritative Pi telemetry
+README states that normalized in-memory spans record no timestamps. Runie’s
+deterministic `end_sequence` is therefore the correct replay identity for
+settlement ordering; adding wall-clock start/end fields would be a false
+parity feature. The remaining telemetry work is backend/exporter and complete
+conformance-vector coverage.
+
 Exporter increment (2026-08-08): `TelemetryActor::new_with_exporter` accepts an
 optional actor-owned async exporter. A settled span exports the immutable
 snapshot after the reducer marks it ended; exporter failures do not mutate or

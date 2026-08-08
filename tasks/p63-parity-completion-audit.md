@@ -121,6 +121,12 @@ the source-defined `pi.ai.stream.chunk_count` terminal attribute from the
 owned stream pump, with a regression covering the update-event count and full
 CI/parity validation. Timing metadata and backend conformance remain open.
 
+Telemetry timing audit correction (2026-08-08): Pi’s telemetry README
+explicitly says normalized recorded spans contain no timestamps. The timing
+item is removed from the required data model; Runie’s deterministic
+`end_sequence` matches the source’s settlement-order contract. Telemetry
+remains open only for backend/exporter and exhaustive conformance behavior.
+
 Codex transport audit correction (2026-08-09): production deployment and the
 source-aligned bounded pre-stream retry policy are now implemented and tested.
 The remaining Codex item is provider-specific deferred behavior and any
