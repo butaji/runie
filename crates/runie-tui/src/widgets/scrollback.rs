@@ -1800,34 +1800,7 @@ fn append_user_with_timestamp(
     timestamp: &str,
     width: usize,
 ) {
-    // Grok reserves a timestamp gutter when deciding where long prompts wrap,
-    // then right-aligns the timestamp to the feed's terminal edge.
-    let timestamp_width = timestamp.chars().count();
-    const PROMPT_TIMESTAMP_WRAP_GUTTER: usize = 8;
-    let first_width = width.saturating_sub(timestamp_width + PROMPT_TIMESTAMP_WRAP_GUTTER);
-    let mut chars: Vec<char> = text.chars().collect();
-    let mut split = first_width.min(chars.len());
-    while split > 0 && split < chars.len() && !chars[split].is_whitespace() {
-        split -= 1;
-    }
-    let first: String = chars.drain(..split).collect();
-    const TIMESTAMP_EDGE_OFFSET: usize = 2;
-    let padding = width
-        .saturating_sub(first.chars().count() + timestamp_width)
-        .saturating_sub(TIMESTAMP_EDGE_OFFSET);
-    rows.push((
-        LineKind::User,
-        format!("{first}{blank}{timestamp}", blank = " ".repeat(padding)),
-        false,
-    ));
-    let indent = " ".repeat(LineKind::User.prefix().chars().count());
-    let rest: String = chars.into_iter().collect();
-    runie_tui_model::append_wrapped_words(
-        rows,
-        LineKind::User,
-        format!("{indent}{}", rest.trim_start()),
-        first_width,
-    );
+    runie_tui_model::append_user_with_timestamp(rows, text, timestamp, width)
 }
 
 /// Render the small CommonMark subset that is visible in Grok's normal

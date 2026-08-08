@@ -1237,3 +1237,22 @@ lib unit tests (99 pre-existing + 2 new), the 220 `runie-tui` lib unit
 tests, the 5 `runie` binary unit tests, the 28 `visual_snapshots` replay
 tests, and the full `just ci` (fmt-check, clippy, lint, test, parity,
 source inventory, Pi event contract, feed-actor boundary) are green.
+
+**User prompt timestamp retirement (2026-08-08):** the Grok user-prompt
+timestamp gutter helper now lives in `runie-tui-model::feed` so the
+actor-owned user-prompt projection and the renderer share one wrap
+rule. The renderer-local `fn append_user_with_timestamp` at
+`crates/runie-tui/src/widgets/scrollback.rs:1797` was collapsed to a
+thin `runie_tui_model::append_user_with_timestamp` delegate. The model
+side introduced a new `USER_PREFIX_INDENT` constant (5 columns for the
+Grok `   ❯ ` prefix) so the wrap helper doesn't need to depend on the
+renderer-side `LineKind::User.prefix()` method. The two new focused
+tests `append_user_with_timestamp_right_aligns_timestamp_into_first_row`
+and `append_user_with_timestamp_wraps_remaining_text_with_indent` in
+`crates/runie-tui-model/src/feed.rs` pin the right-aligned timestamp
+in the first row and the indented continuation rows for over-width
+prompts. The 103 `runie-tui-model` lib unit tests (101 pre-existing +
+2 new), the 220 `runie-tui` lib unit tests, the 5 `runie` binary unit
+tests, the 28 `visual_snapshots` replay tests, and the full `just ci`
+(fmt-check, clippy, lint, test, parity, source inventory, Pi event
+contract, feed-actor boundary) are green.

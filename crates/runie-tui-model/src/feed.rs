@@ -660,11 +660,59 @@ pub fn session_start_messages() -> Vec<ScrollbackMsg> {
     ]
 }
 
+/// Render a user prompt row with a right-aligned timestamp gutter. The
+/// Grok transcript reserves `PROMPT_TIMESTAMP_WRAP_GUTTER` columns for
+/// the timestamp before deciding where the prompt wraps, then the
+/// timestamp is right-aligned to the feed's terminal edge. Centralized
+/// here so the actor-owned user-prompt projection and the renderer
+/// share one wrap rule.
+pub fn append_user_with_timestamp(
+    rows: &mut Vec<(LineKind, String, bool)>,
+    text: String,
+    timestamp: &str,
+    width: usize,
+) {
+    // Grok reserves a timestamp gutter when deciding where long prompts wrap,
+    // then right-aligns the timestamp to the feed's terminal edge.
+    let timestamp_width = timestamp.chars().count();
+    const PROMPT_TIMESTAMP_WRAP_GUTTER: usize = 8;
+    let first_width = width.saturating_sub(timestamp_width + PROMPT_TIMESTAMP_WRAP_GUTTER);
+    let mut chars: Vec<char> = text.chars().collect();
+    let mut split = first_width.min(chars.len());
+    while split > 0 && split < chars.len() && !chars[split].is_whitespace() {
+        split -= 1;
+    }
+    let first: String = chars.drain(..split).collect();
+    const TIMESTAMP_EDGE_OFFSET: usize = 2;
+    let padding = width
+        .saturating_sub(first.chars().count() + timestamp_width)
+        .saturating_sub(TIMESTAMP_EDGE_OFFSET);
+    rows.push((
+        LineKind::User,
+        format!("{first}{blank}{timestamp}", blank = " ".repeat(padding)),
+        false,
+    ));
+    let indent = " ".repeat(USER_PREFIX_INDENT);
+    let rest: String = chars.into_iter().collect();
+    append_wrapped_words(
+        rows,
+        LineKind::User,
+        format!("{indent}{}", rest.trim_start()),
+        first_width,
+    );
+}
+
 /// Minimum unix-timestamp value (seconds) treated as a live prompt timestamp.
 /// Values below this are either absent or fixtures; values at or above are
 /// rendered with the short clock format. Centralized here so the renderer
 /// and any replay path share one threshold.
 pub const PROMPT_TIMESTAMP_LIVE_THRESHOLD: i64 = 1_000_000_000;
+
+/// Number of columns the Grok user-prompt prefix occupies (`   ❯ ` —
+/// three spaces, the `❯` glyph, and one trailing space). Centralized
+/// here so the actor-owned user-prompt wrap helper and the renderer
+/// share one indent width.
+pub const USER_PREFIX_INDENT: usize = 5;
 
 /// Render a unix-timestamp (seconds) as Grok's short clock label (e.g.
 /// `3:07 PM`). Falls back to a UTC-derived 12-hour clock when libc cannot
@@ -1774,6 +1822,41 @@ mod tests {
         };
         assert_eq!(last.kind, super::LineKind::Separator);
         assert!(last.text.is_empty());
+    }
+
+    #[test]
+    fn append_user_with_timestamp_right_aligns_timestamp_into_first_row() {
+        // Pin the gutter path: the timestamp appears at the right edge of
+        // the first row, with the prompt text filling the leading
+        // columns and the trailing ` TIMESTAMP_EDGE_OFFSET` slack.
+        let mut rows = Vec::new();
+        super::append_user_with_timestamp(&mut rows, "hello world".into(), "3:07 PM", 40);
+        let first = &rows[0];
+        assert_eq!(first.0, super::LineKind::User);
+        assert!(first.1.starts_with("hello world"), "{}", first.1);
+        assert!(first.1.ends_with("3:07 PM"), "{}", first.1);
+        assert!(!first.2);
+    }
+
+    #[test]
+    fn append_user_with_timestamp_wraps_remaining_text_with_indent() {
+        // Pin the wrap path: a long prompt that exceeds the gutter width
+        // emits a continuation row indent matching the `LineKind::User`
+        // prefix so the projected widget keeps its indentation.
+        let mut rows = Vec::new();
+        super::append_user_with_timestamp(
+            &mut rows,
+            "the quick brown fox jumps over the lazy dog".into(),
+            "3:07 PM",
+            10,
+        );
+        assert!(rows.len() >= 2);
+        // Pin the smoke path: the first row holds the timestamp and the
+        // remaining rows wrap the rest of the prompt text.
+        assert!(rows[0].1.contains("3:07 PM"));
+        for row in &rows[1..] {
+            assert_eq!(row.0, super::LineKind::User);
+        }
     }
 
     #[test]
