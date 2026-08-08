@@ -1113,6 +1113,22 @@ pub fn active_tool_count(snapshot: &FeedSnapshot) -> usize {
 /// separator slots. Centralized here so the actor-owned render
 /// projection and the renderer agree on the dense group layout.
 pub fn dense_tool_group_members(tool_ids: &[Option<&str>]) -> Vec<Option<(usize, usize)>> {
+    dense_tool_group_members_by_key(tool_ids)
+}
+
+/// Compute dense-group positions using the full actor-owned member identity.
+/// This keeps duplicate provider call IDs distinct when their live row IDs
+/// differ, while preserving the same pure projection shape as the legacy
+/// call-ID helper.
+pub fn dense_tool_group_members_with_identity(
+    members: &[Option<(String, Option<u64>)>],
+) -> Vec<Option<(usize, usize)>> {
+    dense_tool_group_members_by_key(members)
+}
+
+fn dense_tool_group_members_by_key<T: PartialEq>(
+    tool_ids: &[Option<T>],
+) -> Vec<Option<(usize, usize)>> {
     let mut result = vec![None; tool_ids.len()];
     let mut start = 0;
     while start < tool_ids.len() {
@@ -2905,6 +2921,19 @@ mod tests {
         // index into a missing slice.
         let positions = super::dense_tool_group_members(&[]);
         assert!(positions.is_empty());
+    }
+
+    #[test]
+    fn dense_tool_group_members_with_identity_separates_duplicate_call_ids() {
+        let members = vec![
+            Some((String::from("duplicate"), Some(1))),
+            Some((String::from("duplicate"), Some(2))),
+            Some((String::from("other"), Some(3))),
+        ];
+        assert_eq!(
+            super::dense_tool_group_members_with_identity(&members),
+            vec![Some((0, 3)), Some((1, 3)), Some((2, 3))]
+        );
     }
 
     #[test]

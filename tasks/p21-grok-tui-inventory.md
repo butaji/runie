@@ -698,6 +698,12 @@ call ID. Feed snapshots and compatibility snapshots therefore retain the same
 duplicate-card identity used by semantic rows and paint lookup; focused model,
 replay, and full CI validation pass.
 
+Dense identity projection increment (2026-08-10): the renderer-independent feed
+model now exposes an identity-aware dense-group position helper. Duplicate
+provider call IDs with distinct actor row identities receive separate member
+positions, while the existing call-ID helper remains compatibility-preserving.
+The duplicate identity regression and complete `just ci` gate pass.
+
 Workflow status formatter audit (2026-08-06): compared against Grok's
 `WorkflowBlockStatus` renderer and added exact tests for `failed`, `cancelled`,
 and `paused` elapsed wording. Cancelled/paused statuses now use `after 1.2s`
