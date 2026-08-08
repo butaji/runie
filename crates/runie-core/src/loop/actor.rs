@@ -326,13 +326,14 @@ impl LoopActor {
     pub async fn steer(&self, msg: AgentMessage) {
         let payload = serde_json::to_value(&msg).unwrap_or(serde_json::Value::Null);
         if let Some(entry_id) = self.inner.deps.steering.push(msg).await {
+            let target = provisioned_queue_target(&entry_id, payload);
             publish_queue_record(
                 &self.inner.deps.bus,
                 crate::types::OperationRecordKind::QueueEnqueued,
                 serde_json::json!({
                     "id": entry_id,
                     "queue": "steer",
-                    "target": payload,
+                    "target": target,
                 }),
             );
         }
@@ -341,13 +342,14 @@ impl LoopActor {
     pub async fn follow_up(&self, msg: AgentMessage) {
         let payload = serde_json::to_value(&msg).unwrap_or(serde_json::Value::Null);
         if let Some(entry_id) = self.inner.deps.follow_up.push(msg).await {
+            let target = provisioned_queue_target(&entry_id, payload);
             publish_queue_record(
                 &self.inner.deps.bus,
                 crate::types::OperationRecordKind::QueueEnqueued,
                 serde_json::json!({
                     "id": entry_id,
                     "queue": "followUp",
-                    "target": payload,
+                    "target": target,
                 }),
             );
         }
@@ -520,6 +522,13 @@ impl LoopActor {
     }
 }
 
+fn provisioned_queue_target(entry_id: &str, mut target: serde_json::Value) -> serde_json::Value {
+    if let serde_json::Value::Object(fields) = &mut target {
+        fields.insert("id".into(), serde_json::Value::String(entry_id.into()));
+    }
+    target
+}
+
 #[cfg(test)]
 fn spawn_subscriber_bridge(bus: &EventBus, subscribers: &SubscriberRegistry) -> Arc<TaskOwner> {
     let mut events = bus.subscribe();
@@ -559,6 +568,17 @@ mod tests {
             crate::types::OperationRecordKind::QueueCancelled.wire_name(),
             "queue_cancelled"
         );
+    }
+
+    #[test]
+    fn queue_targets_carry_actor_provisioned_identity() {
+        let target = provisioned_queue_target(
+            "steer-1",
+            serde_json::json!({"role": "user", "content": "steer this turn"}),
+        );
+        assert_eq!(target["id"], "steer-1");
+        assert_eq!(target["role"], "user");
+        assert_eq!(target["content"], "steer this turn");
     }
 
     #[test]
