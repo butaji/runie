@@ -85,3 +85,9 @@ Required next evidence:
 - add typed command events/results for newly mappable capabilities;
 - drive remaining command sequences from editable YAML and assert snapshots;
 - capture whole-screen palette/action output at the four standard geometries.
+
+Capability classification increment (2026-08-09): `classify_builtin_command`
+now distinguishes mappable commands, known Pi commands whose owning capability
+is still unsupported, and ordinary prompt text. This preserves the existing
+execution route while making unimplemented registry entries explicit typed
+capability results instead of silently treating them as successful commands.
