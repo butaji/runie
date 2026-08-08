@@ -138,3 +138,4 @@ Attribute passivity increment (2026-08-09): telemetry start, event, and
 attribute-update payloads now enforce Pi's primitive/homogeneous-array
 attribute contract. Invalid starts produce no recorded span; invalid mutable
 updates are ignored atomically, matching Pi's passive in-memory recorder.
+`invalid-attributes.yaml` exercises the same behavior through runtime replay.

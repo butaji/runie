@@ -1,0 +1,35 @@
+actions:
+  - type: start
+    name: ignored-start
+    attributes:
+      nested: { value: true }
+  - type: start
+    name: valid-span
+    attributes:
+      count: 1
+      labels: [one, two]
+  - type: event
+    id: 1
+    name: ignored-event
+    attributes:
+      mixed: [text, 1]
+  - type: set_attributes
+    id: 1
+    attributes:
+      ignored: { nested: true }
+  - type: end
+    id: 1
+expected:
+  next_id: 2
+  spans:
+    - id: 1
+      parent_id: null
+      name: valid-span
+      attributes:
+        count: 1
+        labels: [one, two]
+      events: []
+      status: ok
+      error: null
+      ended: true
+      end_sequence: 0
