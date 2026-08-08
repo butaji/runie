@@ -355,9 +355,6 @@ async fn pump_stream(
         }
         // Errors from the broadcast are non-fatal (no current receivers).
         let _ = tx.send(event);
-        if let Some(span) = &telemetry_span {
-            span.event("assistant.event", Default::default()).await;
-        }
     }
     if let Some(span) = telemetry_span {
         span.status(SpanStatus::Ok).await;
@@ -642,7 +639,7 @@ mod tests {
         while rx.recv().await.is_ok() {}
         let snapshot = telemetry.snapshot();
         assert_eq!(snapshot.spans.len(), 1);
-        assert_eq!(snapshot.spans[0].events.len(), 3);
+        assert!(snapshot.spans[0].events.is_empty());
         assert_eq!(snapshot.spans[0].name, "pi.ai.request");
         assert_eq!(snapshot.spans[0].attributes["pi.ai.operation"], "stream");
         assert_eq!(

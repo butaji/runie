@@ -12,9 +12,6 @@ actions:
       pi.ai.model: test-model
       pi.ai.api: test-api
       pi.ai.streaming: true
-  - type: event
-    id: 2
-    name: assistant.event
   - type: status
     id: 2
     status: ok
@@ -46,9 +43,7 @@ expected:
         pi.ai.model: test-model
         pi.ai.api: test-api
         pi.ai.streaming: true
-      events:
-        - name: assistant.event
-          attributes: {}
+      events: []
       status: ok
       ended: true
       end_sequence: 0
