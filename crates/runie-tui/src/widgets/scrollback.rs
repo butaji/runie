@@ -3756,6 +3756,27 @@ mod tests {
     }
 
     #[test]
+    fn hidden_dense_reveal_uses_the_selected_group_anchor() {
+        let mut scrollback = Scrollback::new();
+        for prefix in ["first", "second"] {
+            for index in 0..=GROK_GROUP_MAX_VISIBLE {
+                scrollback.append(
+                    Line::new(LineKind::Tool, format!("{prefix}-{index}"))
+                        .for_tool(format!("{prefix}-{index}")),
+                );
+            }
+            if prefix == "first" {
+                scrollback.append(Line::new(LineKind::Assistant, "break"));
+            }
+        }
+
+        assert_eq!(
+            scrollback.dense_group_anchor_for("second-10"),
+            Some("second-0".to_owned())
+        );
+    }
+
+    #[test]
     fn grok_group_budget_is_named_and_source_defaulted() {
         assert_eq!(GROK_GROUP_MAX_VISIBLE, 10);
     }
