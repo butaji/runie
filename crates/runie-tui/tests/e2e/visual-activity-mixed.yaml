@@ -3,6 +3,7 @@ description: |
   Mixed directory and command tools fold into one Grok-style activity header
   while retaining one structured tool row for each member.
 initial_prompt: "inspect the repository"
+capture_while_waiting: true
 tools:
   - name: list_dir
     kind: list_dir

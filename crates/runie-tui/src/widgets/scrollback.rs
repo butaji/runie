@@ -1879,10 +1879,9 @@ impl Scrollback {
             } else if !matches!(
                 line.kind,
                 LineKind::Activity | LineKind::ToolOutput | LineKind::ToolResult
-            ) {
-                if in_group {
-                    break;
-                }
+            ) && in_group
+            {
+                break;
             }
         }
         group

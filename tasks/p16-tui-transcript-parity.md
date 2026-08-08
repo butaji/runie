@@ -847,3 +847,9 @@ than matching only member-count metadata. Adjacent groups with equal sizes
 cannot select or reveal one another; focused regressions cover both the
 selection-box and same-size-group cases. Generalized wrapped-row reflow and
 cast-wide frame reconciliation remain open.
+
+Visual event-boundary correction (2026-08-08): the mixed activity fixture now
+declares `capture_while_waiting`, so its settled frame is rendered only after
+the owned tool-completion boundary has been observed. This preserves the
+activity summary in the replay projection and makes the complete YAML visual
+suite deterministic without sleeps.
