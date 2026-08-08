@@ -9,10 +9,9 @@ runtime feed transitions reduce through `FeedState::reduce`, and the
 Ratatui widget is rehydrated from immutable snapshots for pure rendering.
 Viewport, selection, folds, tool identity, workflow state, theme, timestamps,
 and animation facts are model-owned. YAML replay and visual captures exercise
-the same event reducer. The remaining compatibility helpers are compiled only
-for synchronous unit-test adapters and are not a second production state
-source; their mechanical deletion is deliberately separate from the actor/
-render architecture acceptance.
+the same event reducer. The remaining compatibility surface is snapshot
+rehydration and synchronous widget accessors; no widget-side reducer shim
+remains.
 
 ## Why this is still open
 

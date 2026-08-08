@@ -147,17 +147,6 @@ impl Scrollback {
     /// Delegate renderer-neutral navigation transitions to the canonical
     /// model reducer. Legacy widget callers still receive the same snapshot,
     /// but cannot create a second implementation of actor-owned navigation.
-    #[cfg(test)]
-    fn reduce_model(&mut self, message: ScrollbackMsg) {
-        let mut model = FeedState {
-            lines: self.lines.clone(),
-            navigation: self.navigation.clone(),
-        };
-        model.reduce(message);
-        self.lines = model.lines;
-        self.navigation = model.navigation;
-    }
-
     /// Apply one explicit transcript transition. Actor implementations and
     /// compatibility callers share this reducer boundary.
     /// Compatibility entry point that reduces every transcript transition
