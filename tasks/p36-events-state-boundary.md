@@ -999,3 +999,40 @@ the 220 `runie-tui` lib unit tests, and the full `just ci`
 (fmt-check, clippy, lint, test, parity, source inventory, Pi event
 contract, feed-actor boundary) plus `just e2e-one visual-web-search.yaml`
 are green.
+
+## `completed_tool_header` retirement (2026-08-08)
+
+The renderer-local `completed_tool_header` and
+`completed_tool_header_with_args` functions at
+`crates/runie-tui/src/event_renderer.rs:950-1097` were retired and the
+sole renderer call site at `crates/runie-tui/src/event_renderer.rs:675`
+now routes through the canonical
+`runie_tui_model::completed_tool_header_with_args` so the Grok
+cardinality DSL lives in one place. The model-side arm at
+`crates/runie-tui-model/src/feed.rs:386-393` was extended with the
+`search_tools | search-tools | search_tool` aliases that the renderer
+previously held locally, closing the gap that let tool searches render
+as `→ ✓` instead of `(N result{s})`. Twelve focused unit tests were
+appended to `crates/runie-tui-model/src/feed.rs` (the `tests` module,
+after the existing `web_search_site_count_*` block):
+`completed_tool_header_with_args_pins_search_tools_aliases_and_cardinality`
+covers the new `search_tools`, `search-tools`, and `search_tool`
+aliases against one-result, multi-result, and blank-line-skipping
+payloads; `completed_tool_header_with_args_routes_read_file_image_content`
+pins the `(image)` suffix when the read result's `content` array
+contains a `{"type":"image"}` item;
+`completed_tool_header_with_args_renders_read_file_offset_range_with_total`
+pins the `(41-42 of 100)` offset-range suffix against the same
+`totalLines`/`[N more lines...]` payload the old renderer test used;
+and one test per remaining tool family pins the projection
+(`list_dir`/`list_files` cardinality, `read` line count, `search`
+match count, `edit` edit count, `workflow` `Workflow completed: …`,
+`use` `Used …`, `subagent` `Subagent completed: …`, `web_search`
+site count, `memory_search` results). The renderer test
+`completed_file_tools_use_grok_card_cardinality` at
+`crates/runie-tui/src/event_renderer.rs:2160-2207` was deleted since
+the new model-side coverage subsumes every assertion it held. The
+86 `runie-tui-model` lib unit tests (74 pre-existing + 12 new), the
+`runie-tui` lib unit tests, and the full `just ci` (fmt-check,
+clippy, lint, test, parity, source inventory, Pi event contract,
+feed-actor boundary) are green.

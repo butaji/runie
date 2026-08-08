@@ -672,7 +672,12 @@ impl EventRenderer {
         let tool_buffer = if is_error {
             tool_buffer
         } else {
-            completed_tool_header_with_args(&tool_buffer, &tool_name, &tool_args, &result)
+            runie_tui_model::completed_tool_header_with_args(
+                &tool_buffer,
+                &tool_name,
+                &tool_args,
+                &result,
+            )
         };
         let activity = if active_tool_count(&snapshot) <= 1
             && activity_dirs + activity_files + activity_commands + activity_subagents > 0
@@ -937,163 +942,6 @@ fn make_relative_path(path: &str) -> String {
     } else {
         relative.to_owned()
     }
-}
-
-/// Grok keeps the tool card header semantic after completion: it adds the
-/// result cardinality instead of an arrow/status suffix. This is also the
-/// stable text used by collapsed and expanded block modes.
-#[allow(
-    clippy::too_many_lines,
-    clippy::cognitive_complexity,
-    reason = "the pure completion-header DSL keeps Grok's cardinality variants together"
-)]
-pub(crate) fn completed_tool_header(
-    pending_header: &str,
-    tool_name: &str,
-    result: &serde_json::Value,
-) -> String {
-    let output = runie_tui_model::tool_result_text(result);
-    match tool_name {
-        "list_dir" | "list_files" | "ls" => {
-            let entries = output
-                .lines()
-                .filter(|line| !line.trim().is_empty())
-                .count();
-            format!(
-                "{pending_header} ({entries} entr{})",
-                if entries == 1 { "y" } else { "ies" }
-            )
-        }
-        "read" | "read_file" => {
-            let lines = output.lines().count();
-            format!("{pending_header} ({lines} lines)")
-        }
-        "search" | "grep" | "find" | "glob" => {
-            let matches = output
-                .lines()
-                .filter(|line| !line.trim().is_empty())
-                .count();
-            format!(
-                "{pending_header} ({matches} match{})",
-                if matches == 1 { "" } else { "es" }
-            )
-        }
-        "web_search" | "web-search" => {
-            let sites = runie_tui_model::web_search_site_count(&output);
-            format!(
-                "{pending_header} ({sites} site{})",
-                if sites == 1 { "" } else { "s" }
-            )
-        }
-        "search_tools" | "search-tools" | "search_tool" => {
-            let results = output
-                .lines()
-                .filter(|line| !line.trim().is_empty())
-                .count();
-            format!(
-                "{pending_header} ({results} result{})",
-                if results == 1 { "" } else { "s" }
-            )
-        }
-        "memory_search" | "memory-search" => {
-            let matches = runie_tui_model::parse_memory_results(&output).len();
-            format!(
-                "{pending_header} ({matches} result{})",
-                if matches == 1 { "" } else { "s" }
-            )
-        }
-        "todo" | "todo_write" | "todo-write" => {
-            let items = output
-                .lines()
-                .filter(|line| !line.trim().is_empty())
-                .count();
-            if items == 0 {
-                pending_header.to_owned()
-            } else {
-                format!(
-                    "{pending_header} ({items} item{})",
-                    if items == 1 { "" } else { "s" }
-                )
-            }
-        }
-        "workflow" | "run_workflow" | "run-workflow" => pending_header
-            .strip_prefix("Workflow ")
-            .map(|name| format!("Workflow completed: {name}"))
-            .unwrap_or_else(|| pending_header.to_owned()),
-        "use" | "use_tool" | "use-tool" => pending_header
-            .strip_prefix("Use ")
-            .map(|name| format!("Used {name}"))
-            .unwrap_or_else(|| pending_header.to_owned()),
-        "subagent" | "agent" | "task" => pending_header
-            .strip_prefix("Subagent started: ")
-            .map(|description| format!("Subagent completed: {description}"))
-            .unwrap_or_else(|| pending_header.to_owned()),
-        "edit" | "write" | "write_file" | "search_replace" => {
-            let edits = output
-                .lines()
-                .filter(|line| !line.trim().is_empty())
-                .count();
-            if edits > 0 {
-                format!(
-                    "{pending_header} ({edits} edit{})",
-                    if edits == 1 { "" } else { "s" }
-                )
-            } else {
-                pending_header.to_owned()
-            }
-        }
-        _ => format!("{pending_header} → ✓"),
-    }
-}
-
-/// Add Grok's source-backed Read range suffix while retaining the generic
-/// completion-header API for callers that do not have tool arguments.
-pub(crate) fn completed_tool_header_with_args(
-    pending_header: &str,
-    tool_name: &str,
-    args: &serde_json::Value,
-    result: &serde_json::Value,
-) -> String {
-    if matches!(tool_name, "read" | "read_file") {
-        if result
-            .get("content")
-            .and_then(serde_json::Value::as_array)
-            .is_some_and(|content| {
-                content.iter().any(|item| {
-                    item.get("type") == Some(&serde_json::Value::String("image".into()))
-                })
-            })
-        {
-            return format!("{pending_header} (image)");
-        }
-        let Some(offset) = args.get("offset").and_then(serde_json::Value::as_u64) else {
-            return completed_tool_header(pending_header, tool_name, result);
-        };
-        let output = runie_tui_model::tool_result_text(result);
-        let content_lines = output
-            .lines()
-            .take_while(|line| !line.starts_with('['))
-            .count() as u64;
-        let end = offset.saturating_add(content_lines.max(1));
-        let total = result
-            .get("details")
-            .and_then(|details| details.get("truncation"))
-            .and_then(|truncation| truncation.get("totalLines"))
-            .and_then(serde_json::Value::as_u64)
-            .or_else(|| {
-                output.lines().find_map(|line| {
-                    line.split(" of ")
-                        .nth(1)
-                        .and_then(|part| part.split(|c: char| !c.is_ascii_digit()).next())
-                        .and_then(|value| value.parse().ok())
-                })
-            });
-        return match total {
-            Some(total) => format!("{pending_header} ({}-{} of {total})", offset + 1, end),
-            None => format!("{pending_header} ({}-{end})", offset + 1),
-        };
-    }
-    completed_tool_header(pending_header, tool_name, result)
 }
 
 fn structured_memory_lines(output: &str) -> Vec<String> {
@@ -2155,55 +2003,6 @@ mod tests {
         );
         assert_eq!(make_relative_path(cwd.to_string_lossy().as_ref()), ".");
         assert_eq!(make_relative_path("/tmp/other/file"), "/tmp/other/file");
-    }
-
-    #[test]
-    #[allow(clippy::too_many_lines)]
-    fn completed_file_tools_use_grok_card_cardinality() {
-        assert_eq!(
-            completed_tool_header(
-                "List .",
-                "list_dir",
-                &serde_json::json!("Cargo.toml\nsrc\ncrates")
-            ),
-            "List . (3 entries)"
-        );
-        assert_eq!(
-            completed_tool_header("Read README.md", "read", &serde_json::json!("a\nb")),
-            "Read README.md (2 lines)"
-        );
-        assert_eq!(
-            completed_tool_header("Search \"TODO\"", "search", &serde_json::json!("a\nb")),
-            "Search \"TODO\" (2 matches)"
-        );
-        assert_eq!(
-            completed_tool_header("Edit src/main.rs", "edit", &serde_json::json!("hunk")),
-            "Edit src/main.rs (1 edit)"
-        );
-        assert_eq!(
-            completed_tool_header(
-                "Memory Search actors",
-                "memory_search",
-                &serde_json::json!("### Result 1 (score: 0.72, source: global)\n**File:** /memory/MEMORY.md (lines 0-1)\n```\none\n```\n### Result 2 (score: 0.42, source: session)\n**File:** /memory/session.md (lines 2-3)\n```\ntwo\n```") ,
-            ),
-            "Memory Search actors (2 results)"
-        );
-        assert_eq!(
-            completed_tool_header("Workflow release", "workflow", &serde_json::json!("done")),
-            "Workflow completed: release"
-        );
-        assert_eq!(
-            completed_tool_header_with_args(
-                "Read src/lib.rs",
-                "read_file",
-                &serde_json::json!({"offset": 40, "limit": 20}),
-                &serde_json::json!({
-                    "content": [{"text": "line 41\nline 42\n[18 more lines in file. Use offset=61 to continue.]"}],
-                    "details": {"truncation": {"totalLines": 100}}
-                })
-            ),
-            "Read src/lib.rs (41-42 of 100)"
-        );
     }
 
     #[tokio::test]

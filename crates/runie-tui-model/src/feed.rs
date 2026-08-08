@@ -382,6 +382,13 @@ pub fn completed_tool_header_with_args(
                 if n == 1 { "" } else { "s" }
             )
         }
+        "search_tools" | "search-tools" | "search_tool" => {
+            let n = count(true);
+            format!(
+                "{pending_header} ({n} result{})",
+                if n == 1 { "" } else { "s" }
+            )
+        }
         "memory_search" | "memory-search" => {
             let n = crate::memory::parse_memory_results(&output).len();
             format!(
@@ -1720,6 +1727,200 @@ mod tests {
     fn web_search_site_count_falls_back_to_non_empty_lines_when_url_free() {
         assert_eq!(super::web_search_site_count("one\ntwo\n\nthree\n"), 3);
         assert_eq!(super::web_search_site_count("plain prose only"), 1);
+    }
+
+    #[test]
+    fn completed_tool_header_with_args_pins_search_tools_aliases_and_cardinality() {
+        let empty_args = serde_json::json!({});
+        assert_eq!(
+            super::completed_tool_header_with_args(
+                "Search tools",
+                "search_tools",
+                &empty_args,
+                &serde_json::json!("tool_alpha"),
+            ),
+            "Search tools (1 result)"
+        );
+        assert_eq!(
+            super::completed_tool_header_with_args(
+                "Search tools",
+                "search-tools",
+                &empty_args,
+                &serde_json::json!("tool_alpha\ntool_beta\ntool_gamma"),
+            ),
+            "Search tools (3 results)"
+        );
+        assert_eq!(
+            super::completed_tool_header_with_args(
+                "Search tools",
+                "search_tool",
+                &empty_args,
+                &serde_json::json!("tool_alpha\n\ntool_beta"),
+            ),
+            "Search tools (2 results)"
+        );
+    }
+
+    #[test]
+    fn completed_tool_header_with_args_routes_read_file_image_content() {
+        assert_eq!(
+            super::completed_tool_header_with_args(
+                "Read src/diagram.png",
+                "read_file",
+                &serde_json::json!({"path": "src/diagram.png"}),
+                &serde_json::json!({
+                    "content": [
+                        {"type": "image", "data": "ZmFrZQ=="}
+                    ]
+                })
+            ),
+            "Read src/diagram.png (image)"
+        );
+    }
+
+    #[test]
+    fn completed_tool_header_with_args_renders_read_file_offset_range_with_total() {
+        assert_eq!(
+            super::completed_tool_header_with_args(
+                "Read src/lib.rs",
+                "read_file",
+                &serde_json::json!({"offset": 40, "limit": 20}),
+                &serde_json::json!({
+                    "content": [{"text": "line 41\nline 42\n[18 more lines in file. Use offset=61 to continue.]"}],
+                    "details": {"truncation": {"totalLines": 100}}
+                })
+            ),
+            "Read src/lib.rs (41-42 of 100)"
+        );
+    }
+
+    #[test]
+    fn completed_tool_header_with_args_projects_list_dir_cardinality() {
+        let args = serde_json::json!({});
+        assert_eq!(
+            super::completed_tool_header_with_args(
+                "List .",
+                "list_dir",
+                &args,
+                &serde_json::json!("Cargo.toml"),
+            ),
+            "List . (1 entry)"
+        );
+        assert_eq!(
+            super::completed_tool_header_with_args(
+                "List .",
+                "list_files",
+                &args,
+                &serde_json::json!("Cargo.toml\nsrc\ncrates"),
+            ),
+            "List . (3 entries)"
+        );
+    }
+
+    #[test]
+    fn completed_tool_header_with_args_projects_read_line_count() {
+        assert_eq!(
+            super::completed_tool_header_with_args(
+                "Read README.md",
+                "read",
+                &serde_json::json!({}),
+                &serde_json::json!("a\nb"),
+            ),
+            "Read README.md (2 lines)"
+        );
+    }
+
+    #[test]
+    fn completed_tool_header_with_args_projects_search_match_cardinality() {
+        assert_eq!(
+            super::completed_tool_header_with_args(
+                "Search \"TODO\"",
+                "search",
+                &serde_json::json!({}),
+                &serde_json::json!("a\nb"),
+            ),
+            "Search \"TODO\" (2 matches)"
+        );
+    }
+
+    #[test]
+    fn completed_tool_header_with_args_projects_edit_count() {
+        assert_eq!(
+            super::completed_tool_header_with_args(
+                "Edit src/main.rs",
+                "edit",
+                &serde_json::json!({}),
+                &serde_json::json!("hunk"),
+            ),
+            "Edit src/main.rs (1 edit)"
+        );
+    }
+
+    #[test]
+    fn completed_tool_header_with_args_routes_workflow_to_completed_label() {
+        assert_eq!(
+            super::completed_tool_header_with_args(
+                "Workflow release",
+                "workflow",
+                &serde_json::json!({}),
+                &serde_json::json!("done"),
+            ),
+            "Workflow completed: release"
+        );
+    }
+
+    #[test]
+    fn completed_tool_header_with_args_routes_use_to_used_label() {
+        assert_eq!(
+            super::completed_tool_header_with_args(
+                "Use git_status",
+                "use",
+                &serde_json::json!({}),
+                &serde_json::json!("{}"),
+            ),
+            "Used git_status"
+        );
+    }
+
+    #[test]
+    fn completed_tool_header_with_args_routes_subagent_to_completed_label() {
+        assert_eq!(
+            super::completed_tool_header_with_args(
+                "Subagent started: research",
+                "subagent",
+                &serde_json::json!({}),
+                &serde_json::json!("done"),
+            ),
+            "Subagent completed: research"
+        );
+    }
+
+    #[test]
+    fn completed_tool_header_with_args_projects_web_search_site_count() {
+        assert_eq!(
+            super::completed_tool_header_with_args(
+                "Web Search rust",
+                "web_search",
+                &serde_json::json!({}),
+                &serde_json::json!("see https://docs.rs/a and https://crates.io/b"),
+            ),
+            "Web Search rust (2 sites)"
+        );
+    }
+
+    #[test]
+    fn completed_tool_header_with_args_projects_memory_search_results() {
+        assert_eq!(
+            super::completed_tool_header_with_args(
+                "Memory Search actors",
+                "memory_search",
+                &serde_json::json!({}),
+                &serde_json::json!(
+                    "### Result 1 (score: 0.72, source: global)\n**File:** /memory/MEMORY.md (lines 0-1)\n```\none\n```\n### Result 2 (score: 0.42, source: session)\n**File:** /memory/session.md (lines 2-3)\n```\ntwo\n```"
+                ),
+            ),
+            "Memory Search actors (2 results)"
+        );
     }
 }
 
