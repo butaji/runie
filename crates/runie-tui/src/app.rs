@@ -438,7 +438,39 @@ async fn handle_prompt_message(prompt: &mut PromptWidget, message: PromptMsg) {
                 AgentEvent::ModelChanged { model } if !model.name.is_empty() => {
                     prompt.set_model_caption(format!("{} (high)", model.name));
                 }
-                _ => {}
+                AgentEvent::AgentStart
+                | AgentEvent::AgentEnd { .. }
+                | AgentEvent::Error { .. }
+                | AgentEvent::ThinkingLevelChanged { .. }
+                | AgentEvent::Reset
+                | AgentEvent::TurnStart
+                | AgentEvent::Waiting { .. }
+                | AgentEvent::ModelChanged { .. }
+                | AgentEvent::ActiveToolsChanged { .. }
+                | AgentEvent::SessionLabelChanged { .. }
+                | AgentEvent::SessionNameChanged { .. }
+                | AgentEvent::SessionLaneChanged { .. }
+                | AgentEvent::SessionEntryAppended { .. }
+                | AgentEvent::BranchSummaryCreated { .. }
+                | AgentEvent::CustomSessionEntryCreated { .. }
+                | AgentEvent::CompactionCreated { .. }
+                | AgentEvent::OperationRecordCreated { .. }
+                | AgentEvent::TypedOperationRecordCreated { .. }
+                | AgentEvent::ToolDisplayModeChanged { .. }
+                | AgentEvent::TurnEnd { .. }
+                | AgentEvent::MessageStart { .. }
+                | AgentEvent::MessageUpdate { .. }
+                | AgentEvent::MessageEnd { .. }
+                | AgentEvent::ToolExecutionStart { .. }
+                | AgentEvent::ToolExecutionUpdate { .. }
+                | AgentEvent::ToolExecutionEnd { .. }
+                | AgentEvent::BackgroundWorkStarted { .. }
+                | AgentEvent::BackgroundWorkProgress { .. }
+                | AgentEvent::BackgroundWorkFinished { .. }
+                | AgentEvent::BackgroundWorkCancelled { .. }
+                | AgentEvent::WorkflowStarted { .. }
+                | AgentEvent::WorkflowProgress { .. }
+                | AgentEvent::WorkflowFinished { .. } => {}
             }
             let _ = reply.send(());
         }

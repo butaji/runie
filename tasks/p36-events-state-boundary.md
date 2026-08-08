@@ -296,6 +296,10 @@ event boundary now explicitly lists ignored lifecycle/session/tool/workflow
 events and receiver errors; only reset, theme, and non-empty model changes can
 mutate the prompt projection.
 
+Prompt mailbox increment (2026-08-08): `PromptMsg::ApplyEvent` now uses the
+same explicit event classification as the subscribed actor path, preventing a
+second wildcard reducer from silently swallowing newly added core events.
+
 `status_messages_for_event` now names every intentionally ignored outer
 `AgentEvent` variant and every intentionally ignored assistant sub-event.
 This removes the wildcard fallback at the status boundary: adding a Pi event
