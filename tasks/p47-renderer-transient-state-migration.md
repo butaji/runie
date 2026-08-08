@@ -407,6 +407,11 @@ Grok's wider 25 ms fast and 50 ms medium acceleration bands; generic and
 remuxed profiles retain the 8 ms and 20 ms bands. All thresholds remain
 injected timestamp inputs to the pure normalizer.
 
+Terminal batching increment (2026-08-08): sub-6 ms reports are now treated as
+terminal batching artifacts and cannot enter the fast acceleration band. The
+pure normalizer and visual flush replay both cover this boundary without
+wall-clock sleeps.
+
 ## Grok scroll flush contract audit (2026-08-07)
 
 The authoritative implementation and tests in

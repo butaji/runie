@@ -19,6 +19,6 @@ assertions:
   state:
     status: ready
     scroll_flushes:
-      - { kind: flush, at_ms: 16, lines: 6, backlog: 5, dropped: 0 }
-      - { kind: flush, at_ms: 32, lines: 5, backlog: 0, dropped: 0 }
+      - { kind: flush, at_ms: 16, lines: 5, backlog: 0, dropped: 0 }
+      - { kind: flush, at_ms: 32, lines: 0, backlog: 0, dropped: 0 }
       - { kind: finalize, at_ms: null, lines: 0, backlog: 0, dropped: 0 }

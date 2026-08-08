@@ -159,6 +159,9 @@ const FIXED_POINT: i32 = 10;
 const BASE_MULTIPLIER: i32 = 10;
 const MEDIUM_MULTIPLIER: i32 = 16;
 const FAST_MULTIPLIER: i32 = 25;
+// Multiple reports below this interval can represent one physical wheel notch
+// in terminal batching, rather than a faster gesture.
+const ACCEL_MIN_INTERVAL_MS: u64 = 6;
 
 impl Default for ScrollNormalizer {
     fn default() -> Self {
@@ -331,7 +334,7 @@ impl ScrollNormalizer {
                 self.stream_trackpad = false;
             }
             self = self.classify_stream(interval);
-            let multiplier = if self.stream_trackpad {
+            let multiplier = if self.stream_trackpad || interval < ACCEL_MIN_INTERVAL_MS {
                 BASE_MULTIPLIER
             } else if interval < self.accel_fast_interval_ms {
                 FAST_MULTIPLIER
@@ -397,10 +400,18 @@ mod tests {
         let (_, medium) = normalizer.push_at(10, ScrollDirection::Down);
         let normalizer = ScrollNormalizer::default();
         let (normalizer, _) = normalizer.push_at(0, ScrollDirection::Down);
-        let (_, fast) = normalizer.push_at(5, ScrollDirection::Down);
+        let (_, fast) = normalizer.push_at(7, ScrollDirection::Down);
         assert_eq!(base, 1);
         assert_eq!(medium, 1);
         assert_eq!(fast, 2);
+    }
+
+    #[test]
+    fn sub_six_millisecond_terminal_batches_do_not_accelerate() {
+        let normalizer = ScrollNormalizer::default();
+        let (normalizer, _) = normalizer.push_at(0, ScrollDirection::Down);
+        let (_, delta) = normalizer.push_at(5, ScrollDirection::Down);
+        assert_eq!(delta, 1);
     }
 
     #[test]
@@ -529,10 +540,10 @@ mod tests {
     }
 
     #[test]
-    fn auto_mode_keeps_a_fast_tick_in_wheel_acceleration_band() {
+    fn auto_mode_ignores_a_sub_six_millisecond_batching_interval() {
         let normalizer = ScrollNormalizer::default();
         let (normalizer, _) = normalizer.push_at(0, ScrollDirection::Down);
         let (_, delta) = normalizer.push_at(5, ScrollDirection::Down);
-        assert_eq!(delta, 2);
+        assert_eq!(delta, 1);
     }
 }
