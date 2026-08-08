@@ -173,9 +173,12 @@ impl ReplayProvider {
 
 fn response_error_message(value: &serde_json::Value) -> String {
     let response = value.get("response").unwrap_or(value);
-    let error = response
-        .get("error")
-        .or_else(|| response.get("code").map(|_| response));
+    let error = response.get("error").or_else(|| {
+        response
+            .get("code")
+            .or_else(|| response.get("message"))
+            .map(|_| response)
+    });
     let code = error.and_then(|v| v.get("code")).and_then(|v| v.as_str());
     let message = error
         .and_then(|v| v.get("message"))
@@ -911,6 +914,14 @@ mod tests {
             "rate_limit: try later"
         );
         assert_eq!(super::http_error_message(500, "not JSON"), "HTTP 500");
+    }
+
+    #[test]
+    fn root_provider_message_is_not_serialized_as_json() {
+        assert_eq!(
+            super::response_error_message(&serde_json::json!({"message": "try again"})),
+            "try again"
+        );
     }
 
     #[tokio::test]
