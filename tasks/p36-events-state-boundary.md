@@ -1352,3 +1352,24 @@ out-of-home passthrough, and the missing-home fallback. The 112
 `visual_snapshots` replay tests, and the full `just ci` (fmt-check,
 clippy, lint, test, parity, source inventory, Pi event contract,
 feed-actor boundary) are green.
+
+**`structured_update_messages` retirement (2026-08-08):** the
+`ToolExecutionUpdate` event projection now lives in
+`runie-tui-model::feed` so the actor-owned tool update projection and
+the renderer share one canonical shape. The renderer-local
+`fn structured_update_messages` at
+`crates/runie-tui/src/scrollback_actor.rs:297` was collapsed to a thin
+`runie_tui_model::structured_update_messages` delegate. The helper
+takes the active-tool set and the event as injected arguments so the
+model-side projection stays pure and deterministic. The two new
+focused tests
+`structured_update_messages_emits_tool_update_for_active_tool` and
+`structured_update_messages_skips_inactive_or_empty_events` in
+`crates/runie-tui-model/src/feed.rs` pin the active-tool smoke path,
+the inactive-tool negative path, the empty-`partial_result` skip,
+and the non-`ToolExecutionUpdate` event passthrough. The 114
+`runie-tui-model` lib unit tests (112 pre-existing + 2 new), the 220
+`runie-tui` lib unit tests, the 5 `runie` binary unit tests, the 28
+`visual_snapshots` replay tests, and the full `just ci` (fmt-check,
+clippy, lint, test, parity, source inventory, Pi event contract,
+feed-actor boundary) are green.

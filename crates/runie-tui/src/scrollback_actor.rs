@@ -298,34 +298,7 @@ fn structured_update_messages(
     active_tools: &HashSet<String>,
     event: &AgentEvent,
 ) -> Vec<ScrollbackMsg> {
-    let AgentEvent::ToolExecutionUpdate {
-        tool_call_id,
-        partial_result,
-        ..
-    } = event
-    else {
-        return Vec::new();
-    };
-    if !active_tools.contains(tool_call_id) {
-        return Vec::new();
-    }
-    let Some(output) = runie_tui_model::structured_update_text(partial_result) else {
-        return Vec::new();
-    };
-    let output = output
-        .lines()
-        .filter(|line| !line.is_empty())
-        .map(str::to_owned)
-        .collect::<Vec<_>>();
-    if output.is_empty() {
-        Vec::new()
-    } else {
-        vec![ScrollbackMsg::ToolUpdate {
-            tool_call_id: tool_call_id.clone(),
-            header: None,
-            output,
-        }]
-    }
+    runie_tui_model::structured_update_messages(active_tools, event)
 }
 
 fn tool_update_messages(

@@ -785,6 +785,44 @@ pub fn repository_label(path: &std::path::Path, home: Option<&std::path::Path>) 
     path.display().to_string()
 }
 
+/// Project a `ToolExecutionUpdate` event into the structured-output
+/// `ScrollbackMsg::ToolUpdate` rows. The helper is pure: it only reads
+/// the active-tool set and the event, returning zero or one tool-update
+/// message for the actor-owned scrollback to reduce.
+pub fn structured_update_messages(
+    active_tools: &std::collections::HashSet<String>,
+    event: &runie_core::types::AgentEvent,
+) -> Vec<ScrollbackMsg> {
+    let runie_core::types::AgentEvent::ToolExecutionUpdate {
+        tool_call_id,
+        partial_result,
+        ..
+    } = event
+    else {
+        return Vec::new();
+    };
+    if !active_tools.contains(tool_call_id) {
+        return Vec::new();
+    }
+    let Some(output) = structured_update_text(partial_result) else {
+        return Vec::new();
+    };
+    let output = output
+        .lines()
+        .filter(|line| !line.is_empty())
+        .map(str::to_owned)
+        .collect::<Vec<_>>();
+    if output.is_empty() {
+        Vec::new()
+    } else {
+        vec![ScrollbackMsg::ToolUpdate {
+            tool_call_id: tool_call_id.clone(),
+            header: None,
+            output,
+        }]
+    }
+}
+
 /// Render a unix-timestamp (seconds) as Grok's short clock label (e.g.
 /// `3:07 PM`). Falls back to a UTC-derived 12-hour clock when libc cannot
 /// resolve the local timezone, so the label is always well-formed.
@@ -2062,6 +2100,64 @@ mod tests {
         // path is rendered as-is so the renderer never has to guess.
         let path = std::path::Path::new("/var/runie");
         assert_eq!(super::repository_label(path, None), "/var/runie");
+    }
+
+    #[test]
+    fn structured_update_messages_emits_tool_update_for_active_tool() {
+        // Pin the smoke path: a `ToolExecutionUpdate` for an active
+        // tool emits one `ScrollbackMsg::ToolUpdate` with the projected
+        // output lines. The projection is actor-owned and free of any
+        // renderer dependency.
+        use runie_core::types::AgentEvent;
+        let mut active_tools = std::collections::HashSet::new();
+        active_tools.insert("bash-1".to_owned());
+        let event = AgentEvent::ToolExecutionUpdate {
+            tool_call_id: "bash-1".into(),
+            tool_name: "bash".into(),
+            args: serde_json::json!({}),
+            partial_result: serde_json::json!({"output": "line one\nline two"}),
+        };
+        let messages = super::structured_update_messages(&active_tools, &event);
+        assert_eq!(messages.len(), 1);
+        match &messages[0] {
+            super::ScrollbackMsg::ToolUpdate {
+                tool_call_id,
+                header,
+                output,
+            } => {
+                assert_eq!(tool_call_id, "bash-1");
+                assert!(header.is_none());
+                assert_eq!(output, &["line one", "line two"]);
+            }
+            other => panic!("expected ToolUpdate, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn structured_update_messages_skips_inactive_or_empty_events() {
+        // Pin the negative paths: an inactive tool, an empty partial
+        // result, and a non-`ToolExecutionUpdate` event all return
+        // empty message vectors so the caller stays a pure projection.
+        use runie_core::types::AgentEvent;
+        let active_tools = std::collections::HashSet::new();
+        let event = AgentEvent::ToolExecutionUpdate {
+            tool_call_id: "absent".into(),
+            tool_name: "bash".into(),
+            args: serde_json::json!({}),
+            partial_result: serde_json::json!({"output": "ignored"}),
+        };
+        assert!(super::structured_update_messages(&active_tools, &event).is_empty());
+        let mut active_tools = std::collections::HashSet::new();
+        active_tools.insert("bash-1".to_owned());
+        let event = AgentEvent::ToolExecutionUpdate {
+            tool_call_id: "bash-1".into(),
+            tool_name: "bash".into(),
+            args: serde_json::json!({}),
+            partial_result: serde_json::json!({}),
+        };
+        assert!(super::structured_update_messages(&active_tools, &event).is_empty());
+        let event = AgentEvent::AgentStart;
+        assert!(super::structured_update_messages(&active_tools, &event).is_empty());
     }
 
     #[test]
