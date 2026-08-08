@@ -13,13 +13,12 @@ the same event reducer. The remaining compatibility surface is snapshot
 rehydration and synchronous widget accessors; no widget-side reducer shim
 remains.
 
-## Why this is still open
+## Remaining compatibility boundary
 
-`ScrollbackActor` publishes an immutable `runie-tui-model::FeedSnapshot`, but
-its actor worker still reduces commands through `runie-tui::widgets::Scrollback`.
-That widget contains both model state and Ratatui rendering, so the current
-watch-channel boundary is safe for readers but not yet a complete declarative
-model/render separation.
+`ScrollbackActor` reduces messages directly through `FeedState` and publishes
+immutable `FeedSnapshot` values. The Ratatui widget is now only a snapshot
+rehydration/rendering adapter; its synchronous accessors remain for isolated
+widget tests and compatibility callers, but it is not an actor state owner.
 
 ## Extraction slices
 
