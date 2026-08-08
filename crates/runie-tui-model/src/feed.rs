@@ -732,6 +732,33 @@ pub fn make_relative_path(workspace: &str, path: &str) -> String {
     }
 }
 
+/// Largest terminal height Grok treats as automatic compact mode (rows
+/// `<= GROK_AUTO_COMPACT_MAX_ROWS`). Centralized here so the
+/// model/view boundary agrees on the canonical threshold.
+pub const GROK_AUTO_COMPACT_MAX_ROWS: u16 = 20;
+
+/// Largest terminal height at which Grok still shows the small-screen
+/// tip. The band `(GROK_AUTO_COMPACT_MAX_ROWS, GROK_SMALL_SCREEN_TIP_MAX_ROWS]`
+/// is the pre-compact ambient window. Centralized here so the
+/// visibility predicate and the renderer share one source-backed
+/// threshold.
+pub const GROK_SMALL_SCREEN_TIP_MAX_ROWS: u16 = 30;
+
+/// Grok derives compact mode from full terminal height; an unmeasured
+/// height must not force compact mode. Centralized here so the
+/// actor-owned layout projection and the renderer share one
+/// compact-mode decision.
+pub const fn grok_effective_compact(user_compact: bool, terminal_rows: u16) -> bool {
+    user_compact || (terminal_rows > 0 && terminal_rows <= GROK_AUTO_COMPACT_MAX_ROWS)
+}
+
+/// Grok keeps the compact-mode tip in the small-screen band immediately
+/// above auto-compact. The predicate is pure so event/replay renderers
+/// can make the same decision as the live terminal renderer.
+pub const fn grok_small_screen_tip_visible(terminal_rows: u16) -> bool {
+    terminal_rows > GROK_AUTO_COMPACT_MAX_ROWS && terminal_rows <= GROK_SMALL_SCREEN_TIP_MAX_ROWS
+}
+
 /// Render a unix-timestamp (seconds) as Grok's short clock label (e.g.
 /// `3:07 PM`). Falls back to a UTC-derived 12-hour clock when libc cannot
 /// resolve the local timezone, so the label is always well-formed.
@@ -1897,6 +1924,51 @@ mod tests {
             super::make_relative_path("/work", "/tmp/other/file"),
             "/tmp/other/file"
         );
+    }
+
+    #[test]
+    fn grok_effective_compact_pins_user_and_terminal_signal() {
+        // Pin the user signal: an explicit user compact override always
+        // wins, regardless of measured terminal height.
+        assert!(super::grok_effective_compact(true, 0));
+        assert!(super::grok_effective_compact(true, 80));
+        // Pin the terminal signal: an unmeasured height (zero rows)
+        // does not force compact mode so the renderer can wait for a
+        // real measurement.
+        assert!(!super::grok_effective_compact(false, 0));
+        // Pin the auto-compact band: heights at or below
+        // `GROK_AUTO_COMPACT_MAX_ROWS` force compact mode.
+        assert!(super::grok_effective_compact(
+            false,
+            super::GROK_AUTO_COMPACT_MAX_ROWS
+        ));
+        // Pin the full-mode range: heights above the auto-compact band
+        // do not force compact mode.
+        assert!(!super::grok_effective_compact(
+            false,
+            super::GROK_AUTO_COMPACT_MAX_ROWS + 1
+        ));
+    }
+
+    #[test]
+    fn grok_small_screen_tip_visible_targets_the_pre_compact_band() {
+        // Pin the boundary: the tip is hidden at and below the
+        // auto-compact threshold.
+        assert!(!super::grok_small_screen_tip_visible(
+            super::GROK_AUTO_COMPACT_MAX_ROWS
+        ));
+        // Pin the smoke path: heights strictly above the auto-compact
+        // threshold and at or below the tip max are visible.
+        assert!(super::grok_small_screen_tip_visible(
+            super::GROK_AUTO_COMPACT_MAX_ROWS + 1
+        ));
+        assert!(super::grok_small_screen_tip_visible(
+            super::GROK_SMALL_SCREEN_TIP_MAX_ROWS
+        ));
+        // Pin the upper bound: the tip is hidden above the max.
+        assert!(!super::grok_small_screen_tip_visible(
+            super::GROK_SMALL_SCREEN_TIP_MAX_ROWS + 1
+        ));
     }
 
     #[test]

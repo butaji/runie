@@ -1275,3 +1275,24 @@ preservation, and the out-of-workspace passthrough. The 104
 `visual_snapshots` replay tests, and the full `just ci` (fmt-check,
 clippy, lint, test, parity, source inventory, Pi event contract,
 feed-actor boundary) are green.
+
+**Grok compact/tip predicate retirement (2026-08-08):** the
+`grok_effective_compact` and `grok_small_screen_tip_visible` predicates
+plus the `GROK_AUTO_COMPACT_MAX_ROWS` and `GROK_SMALL_SCREEN_TIP_MAX_ROWS`
+constants now live in `runie-tui-model::feed` so the actor-owned layout
+projection and the renderer share one source-backed compact-mode
+decision. The renderer-local `pub const fn` definitions and constants at
+`crates/runie-tui/src/layout.rs:23-38` were replaced with `pub use
+runie_tui_model::{...}` re-exports, so the layout module's existing
+callers keep their public symbols but lose the duplicate threshold
+definitions. The two new focused tests
+`grok_effective_compact_pins_user_and_terminal_signal` and
+`grok_small_screen_tip_visible_targets_the_pre_compact_band` in
+`crates/runie-tui-model/src/feed.rs` pin the unmeasured-height
+zero-row escape, the auto-compact band, the full-mode escape, the
+user-compact override, and the pre-compact ambient window. The 106
+`runie-tui-model` lib unit tests (104 pre-existing + 2 new), the 220
+`runie-tui` lib unit tests, the 5 `runie` binary unit tests, the 28
+`visual_snapshots` replay tests, and the full `just ci` (fmt-check,
+clippy, lint, test, parity, source inventory, Pi event contract,
+feed-actor boundary) are green.
