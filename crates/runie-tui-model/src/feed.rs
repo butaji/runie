@@ -483,6 +483,48 @@ pub fn running_bullet(frame: usize) -> &'static str {
     RUNNING_BULLETS[frame % RUNNING_BULLETS.len()]
 }
 
+/// Detect CommonMark fenced code blocks in assistant text. The recognized
+/// opening fence is three backticks after the renderer prefix (`┃ `) so the
+/// Grok transcript parses a code block opened in the same line that the
+/// renderer already prefixed. Centralized here so the markdown classifier
+/// stays renderer-independent and reproducible across replay paths.
+pub fn is_fence(text: &str) -> bool {
+    text.trim_start()
+        .strip_prefix("┃ ")
+        .unwrap_or(text)
+        .starts_with("```")
+}
+
+/// Detect a Grok-flavored table row. A row starts and ends with `|` and
+/// contains at least two `|` separators so the renderer can split a header
+/// from a body row without ambiguity.
+pub fn is_table_row(text: &str) -> bool {
+    let trimmed = text.trim();
+    trimmed.starts_with('|') && trimmed.ends_with('|') && trimmed.matches('|').count() >= 2
+}
+
+/// Detect the separator row beneath a Grok table header. The cells must be
+/// non-empty and contain only `-`, `:`, or whitespace; this matches the
+/// `<cells>` slice shown after `is_table_row` for a header line.
+pub fn is_table_separator(text: &str) -> bool {
+    text.trim()
+        .trim_matches('|')
+        .split('|')
+        .map(str::trim)
+        .all(|cell| !cell.is_empty() && cell.chars().all(|ch| matches!(ch, '-' | ':' | ' ')))
+}
+
+/// Extract the heading title from a CommonMark ATX heading, returning only
+/// the body text after the leading `#` run and one optional space. Levels
+/// are clamped to `1..=6` to match the CommonMark specification.
+pub fn atx_heading(text: &str) -> Option<&str> {
+    let hashes = text.chars().take_while(|ch| *ch == '#').count();
+    (1..=6)
+        .contains(&hashes)
+        .then(|| text.get(hashes..)?.strip_prefix(' '))
+        .flatten()
+}
+
 /// Minimum unix-timestamp value (seconds) treated as a live prompt timestamp.
 /// Values below this are either absent or fixtures; values at or above are
 /// rendered with the short clock format. Centralized here so the renderer
@@ -1345,6 +1387,66 @@ mod tests {
         // Pin the wrap-around for a large frame index so the actor-owned
         // animation frame never panics on overflow.
         assert_eq!(super::running_bullet(usize::MAX), "⁙ ");
+    }
+
+    #[test]
+    fn is_fence_detects_three_backtick_marker_with_or_without_grok_prefix() {
+        // Pin the smoke path: a plain triple-backtick opening fence is
+        // detected regardless of the renderer prefix.
+        assert!(super::is_fence("```rust"));
+        assert!(super::is_fence("```"));
+        // Pin the Grok-prefix path: the renderer prefix must not hide the
+        // fence marker so the actor-owned markdown classifier agrees.
+        assert!(super::is_fence("┃ ```rust"));
+        // Pin the negative paths: blank lines, single backticks, and prose
+        // must not be misclassified as a code fence.
+        assert!(!super::is_fence(""));
+        assert!(!super::is_fence("`inline`"));
+        assert!(!super::is_fence("hello world"));
+    }
+
+    #[test]
+    fn is_table_row_requires_leading_trailing_pipe_and_two_separators() {
+        // Pin the smoke path: a header row with three pipes is detected.
+        assert!(super::is_table_row("| a | b | c |"));
+        // Pin the body path: a row with surrounding whitespace still counts.
+        assert!(super::is_table_row("  | x | y |  "));
+        // Pin the single-cell row: a row with two pipes (start/end) is also
+        // a table row, matching the existing renderer predicate.
+        assert!(super::is_table_row("| single cell |"));
+        // Pin the negative paths: an opening pipe only, a trailing pipe
+        // only, and prose must not be misclassified as a table row.
+        assert!(!super::is_table_row("| only opening"));
+        assert!(!super::is_table_row("only trailing |"));
+        assert!(!super::is_table_row("no pipes here"));
+    }
+
+    #[test]
+    fn is_table_separator_accepts_only_dash_colon_and_whitespace_cells() {
+        // Pin the smoke path: a Markdown table separator is detected.
+        assert!(super::is_table_separator("| --- | :---: | ---: |"));
+        assert!(super::is_table_separator("|---|---|"));
+        // Pin the negative paths: cells with prose or non-alignment glyphs
+        // must not be misclassified as a separator.
+        assert!(!super::is_table_separator("| a | b | c |"));
+        assert!(!super::is_table_separator("| — | — |")); // em-dash not allowed
+        assert!(!super::is_table_separator(""));
+    }
+
+    #[test]
+    fn atx_heading_returns_title_only_within_commonmark_levels() {
+        // Pin the smoke path: a level-1 heading returns the title body.
+        assert_eq!(super::atx_heading("# Title"), Some("Title"));
+        // Pin the level range: levels 1..=6 are accepted, 0 and 7+ are not.
+        assert_eq!(super::atx_heading("###### Title"), Some("Title"));
+        assert_eq!(super::atx_heading("####### Title"), None);
+        assert_eq!(super::atx_heading("Title"), None);
+        // Pin the missing-space edge case: a hash run without a space is not
+        // a heading under the CommonMark spec.
+        assert_eq!(super::atx_heading("#Title"), None);
+        // Pin the empty-title edge case: a heading mark with no body still
+        // returns an empty title rather than `None`.
+        assert_eq!(super::atx_heading("# "), Some(""));
     }
 
     #[test]

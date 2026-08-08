@@ -1872,10 +1872,7 @@ fn append_wrapped_words(
 /// this at the widget boundary means replay events remain the single source
 /// of truth and no test needs a terminal process.
 fn is_fence(text: &str) -> bool {
-    text.trim_start()
-        .strip_prefix("┃ ")
-        .unwrap_or(text)
-        .starts_with("```")
+    runie_tui_model::is_fence(text)
 }
 
 fn styled_code_line(text: &str, theme: ThemeKind) -> RatLine<'static> {
@@ -2210,8 +2207,7 @@ fn markdown_spans(text: &str, base: Style) -> Vec<Span<'static>> {
 }
 
 fn is_table_row(text: &str) -> bool {
-    let trimmed = text.trim();
-    trimmed.starts_with('|') && trimmed.ends_with('|') && trimmed.matches('|').count() >= 2
+    runie_tui_model::is_table_row(text)
 }
 
 fn table_spans(text: &str, base: Style) -> Vec<Span<'static>> {
@@ -2247,11 +2243,7 @@ fn table_spans(text: &str, base: Style) -> Vec<Span<'static>> {
 }
 
 fn is_table_separator(text: &str) -> bool {
-    text.trim()
-        .trim_matches('|')
-        .split('|')
-        .map(str::trim)
-        .all(|cell| !cell.is_empty() && cell.chars().all(|ch| matches!(ch, '-' | ':' | ' ')))
+    runie_tui_model::is_table_separator(text)
 }
 
 fn table_bottom_border(text: &str) -> String {
@@ -2265,11 +2257,7 @@ fn table_bottom_border(text: &str) -> String {
 }
 
 fn atx_heading(text: &str) -> Option<&str> {
-    let hashes = text.chars().take_while(|ch| *ch == '#').count();
-    (1..=6)
-        .contains(&hashes)
-        .then(|| text.get(hashes..)?.strip_prefix(' '))
-        .flatten()
+    runie_tui_model::atx_heading(text)
 }
 
 fn blockquote_spans(text: &str, base: Style) -> Vec<Span<'static>> {

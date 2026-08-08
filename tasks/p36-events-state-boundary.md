@@ -1102,3 +1102,25 @@ wrap-around for `frame == 4` and `frame == usize::MAX`. The 88
 `visual_snapshots` replay tests, and the full `just ci` (fmt-check,
 clippy, lint, test, parity, source inventory, Pi event contract,
 feed-actor boundary) are green.
+
+**Markdown predicate retirement (2026-08-08):** the CommonMark/Grok
+markdown classifier predicates now live in `runie-tui-model::feed`
+alongside the other text projections. The renderer-local `is_fence`,
+`is_table_row`, `is_table_separator`, and `atx_heading` functions at
+`crates/runie-tui/src/widgets/scrollback.rs:1874, 2212, 2249, 2267` were
+collapsed to thin `runie_tui_model::*` delegates, so the actor-owned
+markdown classifier and the renderer share one vocabulary. The four
+new focused tests in `crates/runie-tui-model/src/feed.rs` pin the
+classifier behavior: `is_fence_detects_three_backtick_marker_with_or_without_grok_prefix`
+locks the `┃ ` prefix accommodation and the negative-path prose/single-
+backtick cases, `is_table_row_requires_leading_trailing_pipe_and_two_separators`
+pins the leading/trailing `|` requirement and the single-cell accepted
+shape, `is_table_separator_accepts_only_dash_colon_and_whitespace_cells`
+covers the alignment glyphs and the markdown body negative path, and
+`atx_heading_returns_title_only_within_commonmark_levels` exercises the
+`1..=6` level range, the missing-space edge case, and the empty-title
+projection. The 92 `runie-tui-model` lib unit tests (88 pre-existing +
+4 new), the 220 `runie-tui` lib unit tests, the 5 `runie` binary unit
+tests, the 28 `visual_snapshots` replay tests, and the full `just ci`
+(fmt-check, clippy, lint, test, parity, source inventory, Pi event
+contract, feed-actor boundary) are green.
