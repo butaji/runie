@@ -871,3 +871,11 @@ Dense wrapped reflow evidence (2026-08-09): a two-member dense group with both
 headers wrapping at width 18 now has a regression proving one selected surface
 retains all physical rows across the group. This strengthens the renderer
 contract without moving group ownership out of the feed actor.
+
+Specialized metadata span increment (2026-08-09): the pure renderer now
+preserves card-specific spans for memory result number/score/source/path rows,
+Web Fetch URL and response metadata, and Use/Used/Todo action headers. Workflow
+cards likewise separate elapsed/status text and agent-count metadata while
+retaining semantic phase marker colors. These changes add visible card-family
+identity without moving state ownership into the widget; typed block reflow and
+cast-wide reconciliation remain open.
