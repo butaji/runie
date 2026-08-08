@@ -505,3 +505,24 @@ that batches keys through a single awaited reducer would surface as
 a stale snapshot. The full `just ci` (fmt-check, clippy, lint, test,
 parity, source inventory, Pi event contract, feed-actor boundary) is
 green.
+
+**Prompt/Ui mailbox bias (2026-08-08):** `run_prompt_actor` and the
+`UiActor` worker both used a `tokio::select!` between a `mpsc` mailbox
+and a `broadcast::Receiver` without `biased;`. When the agent was busy
+publishing `MessageUpdate`/`ToolExecution*`/`BackgroundWork*` events
+the broadcast receiver was almost always `Ready`, so `tokio` picked the
+event branch pseudo-randomly even when a freshly pressed key was
+already queued on the mailbox, adding tens of milliseconds of
+per-keystroke latency. Both `select!`s now lead with `biased;` so the
+mailbox branch is checked first whenever a key/UI message is ready.
+The new `prompt_actor_services_key_mailbox_before_draining_queued_events`
+test drives `run_prompt_actor` directly with 16,384 queued
+`AgentStart` events plus a pre-positioned key in the mailbox; the test
+parks the actor on a `(Notify, Notify)` pair right after the key
+reducer runs and asserts `event_counter == 0`, which fails by 2+ events
+when `biased;` is removed and passes deterministically with the fix.
+The actor's `event_counter` and the pause hooks are `cfg(test)`-gated
+so the production code path keeps the original four-argument
+`run_prompt_actor` signature and pays no allocation cost per event.
+The full `just ci` (fmt-check, clippy, lint, test, parity, source
+inventory, Pi event contract, feed-actor boundary) is green.

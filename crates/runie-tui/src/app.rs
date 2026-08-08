@@ -84,6 +84,11 @@ impl UiActor {
             let mut state = initial;
             loop {
                 tokio::select! {
+                    // Bias toward the mailbox: every interactive UI state
+                    // transition waits on a `UiMsg`, so the reducer must
+                    // service it before draining a flood of broadcast
+                    // events that have already arrived on `events`.
+                    biased;
                     message = rx.recv() => {
                         let Some((message, applied)) = message else { break };
                         let command = palette_command_for(&state, &message);
@@ -145,20 +150,40 @@ pub struct PromptActor {
     tx: mpsc::Sender<PromptMsg>,
     snapshot: watch::Receiver<PromptSnapshot>,
     _owner: std::sync::Arc<runie_core::task_owner::TaskOwner>,
+    /// Atomic counter incremented for every event drained from the bus
+    /// subscriber. Tests rely on this to assert that key mailbox messages
+    /// are serviced before a flood of queued broadcast events.
+    #[allow(dead_code, reason = "read by tests via the actor's worker")]
+    event_counter: std::sync::Arc<std::sync::atomic::AtomicUsize>,
 }
 
 impl PromptActor {
     pub fn new(bus: &EventBus) -> Self {
         let (snapshot_tx, snapshot) = watch::channel(PromptWidget::new().model_snapshot());
         let events = bus.subscribe();
+        let event_counter = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let counter_for_worker = event_counter.clone();
+        // The pause hook is `None` for production-owned actors so the
+        // post-key branch in `run_prompt_actor` compiles out; only the
+        // direct regression test wires up a real `(Notify, Notify)` pair
+        // to park the actor at the observation point.
         let (tx, owner) =
             runie_core::spawn_actor_worker!(32, |rx: mpsc::Receiver<PromptMsg>| async move {
-                run_prompt_actor(rx, events, snapshot_tx).await;
+                run_prompt_actor(
+                    rx,
+                    events,
+                    snapshot_tx,
+                    counter_for_worker,
+                    #[cfg(test)]
+                    None,
+                )
+                .await;
             });
         Self {
             tx,
             snapshot,
             _owner: owner,
+            event_counter,
         }
     }
 
@@ -218,20 +243,50 @@ impl PromptActor {
     }
 }
 
+#[allow(
+    clippy::too_many_lines,
+    clippy::cognitive_complexity,
+    reason = "prompt actor keeps each event-to-state transition explicit and adds a test-only pause hook"
+)]
 async fn run_prompt_actor(
     mut rx: mpsc::Receiver<PromptMsg>,
     mut events: tokio::sync::broadcast::Receiver<AgentEvent>,
     snapshot_tx: watch::Sender<PromptSnapshot>,
+    event_counter: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+    #[cfg(test)] pause_hooks: Option<(
+        std::sync::Arc<tokio::sync::Notify>,
+        std::sync::Arc<tokio::sync::Notify>,
+    )>,
 ) {
+    use std::sync::atomic::Ordering;
     let mut prompt = PromptWidget::new();
     loop {
         tokio::select! {
+            // Bias toward the mailbox: keys are the user-visible latency
+            // path, and a flood of `MessageUpdate`/`ToolExecution*`/
+            // `BackgroundWork*` events on the broadcast receiver must not
+            // delay a freshly pressed key that is already in `rx`.
+            biased;
             message = rx.recv() => {
                 let Some(message) = message else { break };
+                let is_key = matches!(message, PromptMsg::Key(..));
                 handle_prompt_message(&mut prompt, message).await;
                 let _ = snapshot_tx.send(prompt.model_snapshot());
+                if is_key {
+                    // Test-only pause hook: the regression test signals
+                    // `pause_hooks.0` from this branch and waits on
+                    // `pause_hooks.1` to read the post-key observation
+                    // point deterministically. Production callers always
+                    // pass `None`, so the pause is skipped entirely.
+                    #[cfg(test)]
+                    if let Some((key_done, actor_release)) = pause_hooks.as_ref() {
+                        key_done.notify_one();
+                        actor_release.notified().await;
+                    }
+                }
             }
             event = events.recv() => {
+                event_counter.fetch_add(1, Ordering::SeqCst);
                 match event {
                     Ok(AgentEvent::Reset) => {
                         let snapshot = prompt.model_snapshot();
@@ -1084,5 +1139,105 @@ mod tests {
             }
         }
         panic!("PromptActor reset discarded the actor-owned model caption");
+    }
+
+    /// Regression test for the `biased;` select! in `run_prompt_actor`:
+    /// when a key is already queued in the mailbox and a flood of broadcast
+    /// events is also ready, the actor must acknowledge the key before
+    /// draining the event queue. We drive `run_prompt_actor` directly so
+    /// we can observe the broadcast receiver's buffered depth from outside
+    /// the actor task, and we use a `Notify` pause to read the buffered
+    /// count deterministically rather than racing the wake-up against the
+    /// actor's event drain loop.
+    #[tokio::test(flavor = "current_thread")]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "deterministic test wires up bus + mailbox + actor + pause hooks in one place"
+    )]
+    async fn prompt_actor_services_key_mailbox_before_draining_queued_events() {
+        use std::sync::atomic::Ordering;
+        use std::sync::Arc;
+        use tokio::sync::{broadcast, mpsc, oneshot, watch, Notify};
+
+        // Capacity large enough that the actor cannot drain all messages
+        // between the key reply and the test's `len()` read.
+        let (event_tx, event_rx) = broadcast::channel::<AgentEvent>(65_536);
+        const N: usize = 16_384;
+        for _ in 0..N {
+            // `AgentStart` falls into the actor's `_ => {}` arm, so each
+            // event costs roughly a `match` arm and a context switch worth
+            // of work; no snapshot churn to mask the ordering.
+            event_tx.send(AgentEvent::AgentStart).expect("send");
+        }
+        assert_eq!(
+            event_rx.len(),
+            N,
+            "broadcast receiver should hold all queued events before the actor starts"
+        );
+
+        let (mailbox_tx, mailbox_rx) = mpsc::channel::<super::PromptMsg>(4);
+        let (snapshot_tx, _snapshot_rx) =
+            watch::channel(super::PromptWidget::new().model_snapshot());
+
+        let event_counter = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let counter_for_worker = event_counter.clone();
+        // `key_done` is signaled right after the actor handles a key
+        // message; `actor_release` is signaled by the test once it has
+        // captured the event count, so the actor is paused while we
+        // observe `event_counter` and `event_rx.len()` deterministically.
+        let key_done = Arc::new(Notify::new());
+        let actor_release = Arc::new(Notify::new());
+        let key_done_for_worker = key_done.clone();
+        let actor_release_for_worker = actor_release.clone();
+
+        // OWNER: test — the spawned actor task is joined at the end of the
+        // test body, so no other production code can observe it.
+        let actor_task = tokio::spawn(async move {
+            super::run_prompt_actor(
+                mailbox_rx,
+                event_rx,
+                snapshot_tx,
+                counter_for_worker,
+                Some((key_done_for_worker, actor_release_for_worker)),
+            )
+            .await;
+        });
+
+        let (reply_tx, reply_rx) = oneshot::channel();
+        mailbox_tx
+            .try_send(super::PromptMsg::Key(
+                KeyEvent {
+                    code: KeyCode::Char('x'),
+                    modifiers: KeyModifiers::NONE,
+                    kind: KeyEventKind::Press,
+                    state: KeyEventState::NONE,
+                },
+                reply_tx,
+            ))
+            .expect("key enqueue should not fail");
+
+        // Wait for the actor to acknowledge it has reduced the key, then
+        // read the event counter while the actor is parked on the release
+        // barrier.
+        key_done.notified().await;
+        let count_at_key = event_counter.load(Ordering::SeqCst);
+        assert_eq!(
+            count_at_key, 0,
+            "with biased select!, the key must be processed before any queued event"
+        );
+        // Release the actor so it can resume draining.
+        actor_release.notify_one();
+
+        let outcome = tokio::time::timeout(std::time::Duration::from_secs(2), reply_rx)
+            .await
+            .expect("key reply should fire promptly")
+            .expect("key reply should resolve Ok");
+        assert_eq!(outcome, super::PromptOutcome::Edited);
+
+        // Drop the mailbox sender so the actor's `rx.recv()` resolves with
+        // `None` once it finishes draining events; otherwise `actor_task`
+        // would block forever on a still-open sender.
+        drop(mailbox_tx);
+        actor_task.await.expect("actor task should join cleanly");
     }
 }
