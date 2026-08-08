@@ -98,6 +98,40 @@ pub fn format_worked_for_seconds(elapsed_ticks: u64) -> String {
     )
 }
 
+/// Phase for the foreground turn-status indicator. Maps directly to
+/// the `TurnStatusPhase` widget variant so the actor-owned projection
+/// and the renderer share one phase vocabulary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TurnStatusPhase {
+    Starting,
+    Waiting,
+    Thinking,
+    Responding,
+}
+
+/// Render the foreground turn-status text. Centralized here so the
+/// actor-owned projection and the renderer share one label shape,
+/// including the right-aligned chrome suffix and the braille frame
+/// selector.
+pub fn turn_status_text(
+    phase: TurnStatusPhase,
+    frame: usize,
+    waiting_label: &str,
+    chrome: &str,
+) -> String {
+    if phase == TurnStatusPhase::Thinking {
+        return "┃  ◆ Thinking…".to_owned();
+    }
+    let label = match phase {
+        TurnStatusPhase::Starting => "Starting session… 0.0s",
+        TurnStatusPhase::Waiting => waiting_label,
+        TurnStatusPhase::Thinking => "Thinking…",
+        TurnStatusPhase::Responding => "Responding…",
+    };
+    let index = (frame / 3) % BRAILLE_SPINNER_FRAMES.len();
+    format!("  {} {label}{chrome}", BRAILLE_SPINNER_FRAMES[index])
+}
+
 impl StatusSnapshot {
     /// Reduce one status intent into the actor-owned immutable projection.
     /// `elapsed_seed` is supplied by the runtime only for deterministic parity
@@ -257,6 +291,35 @@ mod tests {
         assert_eq!(super::format_worked_for_seconds(0), "Worked for 0.0s");
         // Pin the larger-tick case: 20 ticks is one full second.
         assert_eq!(super::format_worked_for_seconds(20), "Worked for 1.0s");
+    }
+
+    #[test]
+    fn turn_status_text_pins_thinking_override() {
+        // Pin the smoke path: the `Thinking` phase always renders as
+        // the `┃  ◆ Thinking…` marker, regardless of frame or chrome.
+        assert_eq!(
+            super::turn_status_text(super::TurnStatusPhase::Thinking, 0, "ignored", "ignored",),
+            "┃  ◆ Thinking…"
+        );
+    }
+
+    #[test]
+    fn turn_status_text_renders_starting_with_chrome() {
+        // Pin the starting projection: the `Starting` phase uses the
+        // `Starting session… 0.0s` label and the right-aligned chrome.
+        let text =
+            super::turn_status_text(super::TurnStatusPhase::Starting, 0, "ignored", " | header");
+        assert!(text.starts_with("  "), "{text}");
+        assert!(text.contains("Starting session… 0.0s"), "{text}");
+        assert!(text.ends_with(" | header"), "{text}");
+    }
+
+    #[test]
+    fn turn_status_text_uses_waiting_label() {
+        // Pin the waiting projection: the `Waiting` phase uses the
+        // caller-supplied waiting label as the inline text.
+        let text = super::turn_status_text(super::TurnStatusPhase::Waiting, 0, "ready", "");
+        assert!(text.contains("ready"), "{text}");
     }
 
     #[test]

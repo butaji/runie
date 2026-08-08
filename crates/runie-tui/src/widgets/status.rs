@@ -76,13 +76,7 @@ pub struct TurnStatus {
     waiting_label: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TurnStatusPhase {
-    Starting,
-    Waiting,
-    Thinking,
-    Responding,
-}
+pub use runie_tui_model::TurnStatusPhase;
 
 impl TurnStatus {
     /// Runie advances its actor-owned animation clock at 20 Hz. Grok holds
@@ -122,22 +116,7 @@ impl TurnStatus {
     }
 
     pub fn text(&self) -> String {
-        if self.phase == TurnStatusPhase::Thinking {
-            return "┃  ◆ Thinking…".to_owned();
-        }
-        let label = match self.phase {
-            TurnStatusPhase::Starting => "Starting session… 0.0s",
-            // The recorded full-mode waiting row includes the right-aligned
-            // elapsed/usage/stop chrome on the same terminal row.
-            TurnStatusPhase::Waiting => self.waiting_label.as_str(),
-            TurnStatusPhase::Thinking => "Thinking…",
-            TurnStatusPhase::Responding => "Responding…",
-        };
-        format!(
-            "  {} {label}{}",
-            Self::FRAMES[(self.frame / Self::SPINNER_DIVISOR) % Self::FRAMES.len()],
-            self.chrome
-        )
+        runie_tui_model::turn_status_text(self.phase, self.frame, &self.waiting_label, &self.chrome)
     }
 
     pub fn render(self, area: Rect, buf: &mut Buffer) {

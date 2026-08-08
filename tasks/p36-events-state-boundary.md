@@ -1504,3 +1504,24 @@ unit tests, the 5 `runie` binary unit tests, the 28 `visual_snapshots`
 replay tests, and the full `just ci` (fmt-check, clippy, lint, test,
 parity, source inventory, Pi event contract, feed-actor boundary) are
 green.
+
+**Turn status text retirement (2026-08-08):** the foreground
+turn-status text formatter and the `TurnStatusPhase` enum now live
+in `runie-tui-model::status` so the actor-owned status projection
+and the renderer share one vocabulary. The renderer-local
+`TurnStatus::text` and `pub enum TurnStatusPhase` at
+`crates/runie-tui/src/widgets/status.rs:80, 124` were replaced with
+a `pub use runie_tui_model::TurnStatusPhase` re-export and a thin
+`runie_tui_model::turn_status_text(...)` delegate. The function
+takes the phase, frame, waiting label, and chrome as injected
+arguments so the model-side projection stays pure and deterministic.
+The three new focused tests `turn_status_text_pins_thinking_override`,
+`turn_status_text_renders_starting_with_chrome`, and
+`turn_status_text_uses_waiting_label` in
+`crates/runie-tui-model/src/status.rs` pin the thinking override,
+the starting-chrome projection, and the waiting-label passthrough.
+The 136 `runie-tui-model` lib unit tests (133 pre-existing + 3 new),
+the 220 `runie-tui` lib unit tests, the 5 `runie` binary unit tests,
+the 28 `visual_snapshots` replay tests, and the full `just ci`
+(fmt-check, clippy, lint, test, parity, source inventory, Pi event
+contract, feed-actor boundary) are green.
