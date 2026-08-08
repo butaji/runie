@@ -66,6 +66,9 @@ pub enum SessionConfigRecord {
         record_type: String,
         data: serde_json::Value,
     },
+    /// Typed operation facts used inside the actor. This is lowered to the
+    /// generic Pi `(record_type, data)` shape only at persistence/event edges.
+    TypedOperation(SessionLaneRecord),
 }
 
 /// Pure declarative mapping from application events to session-journal facts.
@@ -192,7 +195,8 @@ impl SessionEntryRecord {
                 SessionConfigRecord::BranchSummaryCreated { .. } => "branch_summary",
                 SessionConfigRecord::CustomSessionEntryCreated { .. } => "custom",
                 SessionConfigRecord::CompactionCreated { .. } => "compaction",
-                SessionConfigRecord::OperationRecordCreated { .. } => "record",
+                SessionConfigRecord::OperationRecordCreated { .. }
+                | SessionConfigRecord::TypedOperation(_) => "record",
             },
         }
     }
@@ -1146,7 +1150,7 @@ pub enum SessionLaneRecordKind {
 /// Typed internal representation of a Pi operation-lane fact. The payload is
 /// deliberately retained losslessly because Pi may add fields without a
 /// Runie release; only the family is closed over here.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SessionLaneRecord {
     OperationStarted(serde_json::Value),
     AbortRequested(serde_json::Value),
@@ -1187,6 +1191,34 @@ impl SessionLaneRecord {
             Self::QueueCancelled(_) => SessionLaneRecordKind::QueueCancelled,
             Self::WriteDeferred(_) => SessionLaneRecordKind::WriteDeferred,
             Self::Usage(_) => SessionLaneRecordKind::Usage,
+        }
+    }
+
+    pub fn wire_name(&self) -> &'static str {
+        match self.kind() {
+            SessionLaneRecordKind::OperationStarted => "operation_started",
+            SessionLaneRecordKind::AbortRequested => "abort_requested",
+            SessionLaneRecordKind::OperationFinished => "operation_finished",
+            SessionLaneRecordKind::StepAttempt => "step_attempt",
+            SessionLaneRecordKind::ToolStarted => "tool_started",
+            SessionLaneRecordKind::QueueEnqueued => "queue_enqueued",
+            SessionLaneRecordKind::QueueCancelled => "queue_cancelled",
+            SessionLaneRecordKind::WriteDeferred => "write_deferred",
+            SessionLaneRecordKind::Usage => "usage",
+        }
+    }
+
+    pub fn data(&self) -> &serde_json::Value {
+        match self {
+            Self::OperationStarted(data)
+            | Self::AbortRequested(data)
+            | Self::OperationFinished(data)
+            | Self::StepAttempt(data)
+            | Self::ToolStarted(data)
+            | Self::QueueEnqueued(data)
+            | Self::QueueCancelled(data)
+            | Self::WriteDeferred(data)
+            | Self::Usage(data) => data,
         }
     }
 
@@ -1232,6 +1264,18 @@ impl SessionLaneRecord {
             .get("runId")
             .and_then(serde_json::Value::as_str)
             .filter(|value| !value.is_empty())
+    }
+}
+
+fn operation_record_parts(record: &SessionConfigRecord) -> Option<(&str, &serde_json::Value)> {
+    match record {
+        SessionConfigRecord::OperationRecordCreated { record_type, data } => {
+            Some((record_type.as_str(), data))
+        }
+        SessionConfigRecord::TypedOperation(operation) => {
+            Some((operation.wire_name(), operation.data()))
+        }
+        _ => None,
     }
 }
 
@@ -1909,8 +1953,7 @@ impl SessionSnapshot {
             sequence += 1;
             let mut copy = entry.clone();
             copy.seq = sequence;
-            if let SessionConfigRecord::OperationRecordCreated { record_type, data } = &copy.record
-            {
+            if let Some((record_type, data)) = operation_record_parts(&copy.record) {
                 reduce_operation_record(&mut fork, record_type, data);
             }
             fork.config_records.push(copy);
@@ -2460,6 +2503,10 @@ impl SessionSnapshot {
                 SessionConfigRecord::OperationRecordCreated { record_type, data } => (
                     record_type.as_str(),
                     data.clone(),
+                ),
+                SessionConfigRecord::TypedOperation(operation) => (
+                    operation.wire_name(),
+                    operation.data().clone(),
                 ),
             };
             if matches!(
@@ -3030,9 +3077,7 @@ impl SessionActor {
                                 continue;
                             }
                         }
-                        if let SessionConfigRecord::OperationRecordCreated { record_type, data } =
-                            &record
-                        {
+                        if let Some((record_type, data)) = operation_record_parts(&record) {
                             if let Err(error) =
                                 validate_session_lane_record(&state, record_type, data)
                             {
@@ -3356,11 +3401,10 @@ impl SessionActor {
         kind: SessionOperationKind,
         data: serde_json::Value,
     ) -> Result<(), String> {
-        self.record_config(SessionConfigRecord::OperationRecordCreated {
-            record_type: kind.wire_name().to_owned(),
-            data,
-        })
-        .await
+        let record = SessionLaneRecord::decode(kind.wire_name(), &data)
+            .map_err(|error| format!("invalid session operation: {error}"))?;
+        self.record_config(SessionConfigRecord::TypedOperation(record))
+            .await
     }
 
     /// Admit a Pi navigation operation only when its target and optional
@@ -3952,6 +3996,10 @@ mod tests {
         });
         actor.flush().await;
         assert_eq!(actor.snapshot().active_operations["op-1"], "started");
+        assert_eq!(
+            actor.snapshot().lane_records[0].data,
+            serde_json::json!({"id": "op-1"})
+        );
         let before_rejected = actor.snapshot().lane_records.len();
         let rejected = actor
             .record_operation(

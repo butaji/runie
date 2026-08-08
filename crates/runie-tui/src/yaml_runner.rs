@@ -2974,6 +2974,9 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
                     record_type,
                     ..
                 } => record_type.clone(),
+                runie_core::session::SessionConfigRecord::TypedOperation(operation) => {
+                    operation.wire_name().to_owned()
+                }
             })
             .collect::<Vec<_>>();
         if actual_records.as_slice() != expected_records.as_slice() {
