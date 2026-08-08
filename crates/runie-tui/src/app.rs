@@ -679,17 +679,20 @@ impl App {
         const GROK_COMPACTION_KEEP_RECENT_TOKENS: u64 = 20_000;
         let snapshot = self.session_actor.snapshot();
         let token_estimates = compaction_token_estimates(&snapshot);
-        let Some(preparation) = self
+        let Some((compaction_id, preparation, entries)) = self
             .session_actor
-            .prepare_compaction(token_estimates, GROK_COMPACTION_KEEP_RECENT_TOKENS)
+            .prepare_and_begin_compaction(
+                token_estimates,
+                GROK_COMPACTION_KEEP_RECENT_TOKENS,
+                "main".into(),
+            )
             .await?
         else {
             return Ok(());
         };
-        let compaction_id = self.session_actor.begin_compaction("main".into()).await?;
         let request = runie_core::session::CompactionSummaryRequest::from_preparation(
             &preparation,
-            &snapshot.entries,
+            &entries,
             previous_summary,
         )?
         .with_custom_instructions(custom_instructions);
@@ -713,7 +716,13 @@ impl App {
                 return Err(error.to_string());
             }
         };
-        let retained_tail = compaction_retained_tail(&snapshot, &preparation);
+        let retained_tail = compaction_retained_tail(
+            &runie_core::session::SessionSnapshot {
+                entries,
+                ..snapshot
+            },
+            &preparation,
+        );
         self.bus.publish(AgentEvent::CompactionCreated {
             summary: summary.summary,
             retained_tail,

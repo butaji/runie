@@ -431,6 +431,15 @@ longer reads the session snapshot to count IDs before issuing a separate
 mutation, eliminating a stale-identity race while preserving the explicit
 prepare → summarize → publish → finish pipeline.
 
+### Atomic preparation/start boundary (2026-08-09)
+
+`SessionActor::prepare_and_begin_compaction` now computes the cut point,
+allocates the operation identity, and admits `operation_started` in one
+mailbox reduction. It returns the exact source entries used for the
+preparation to the provider-summary caller. A concurrent journal mutation can
+therefore not silently pair a preparation with a different source snapshot;
+the existing publication command remains responsible for final revalidation.
+
 ### Typed identity boundary (2026-08-08)
 
 `SessionLaneRecord` now owns the Pi identity-shape table through typed

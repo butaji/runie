@@ -2609,6 +2609,8 @@ impl SessionSnapshot {
     }
 }
 
+type PreparedCompaction = (String, CompactionPreparation, Vec<SessionEntry>);
+
 enum Command {
     Append(
         String,
@@ -2656,6 +2658,12 @@ enum Command {
         token_estimates: Vec<u64>,
         keep_recent_tokens: u64,
         reply: oneshot::Sender<Result<Option<CompactionPreparation>, String>>,
+    },
+    PrepareAndBeginCompaction {
+        token_estimates: Vec<u64>,
+        keep_recent_tokens: u64,
+        lane: String,
+        reply: oneshot::Sender<Result<Option<PreparedCompaction>, String>>,
     },
     PublishCompaction {
         preparation: CompactionPreparation,
@@ -3331,6 +3339,58 @@ impl SessionActor {
                             keep_recent_tokens,
                         ));
                     }
+                    Command::PrepareAndBeginCompaction {
+                        token_estimates,
+                        keep_recent_tokens,
+                        lane,
+                        reply,
+                    } => {
+                        let preparation = match prepare_compaction_entries(
+                            &state.entries,
+                            &token_estimates,
+                            keep_recent_tokens,
+                        ) {
+                            Ok(preparation) => preparation,
+                            Err(error) => {
+                                let _ = reply.send(Err(error));
+                                continue;
+                            }
+                        };
+                        let Some(preparation) = preparation else {
+                            let _ = reply.send(Ok(None));
+                            continue;
+                        };
+                        let next = state
+                            .lane_records
+                            .iter()
+                            .filter_map(|record| record.id.strip_prefix("compaction-"))
+                            .filter_map(|value| value.parse::<u64>().ok())
+                            .max()
+                            .unwrap_or_default()
+                            .saturating_add(1);
+                        let operation_id = format!("compaction-{next}");
+                        let record = SessionConfigRecord::TypedOperation(
+                            SessionLaneRecord::OperationStarted(serde_json::json!({
+                                "id": operation_id,
+                                "lane": lane,
+                                "intent": {"kind": "compaction"},
+                            })),
+                        );
+                        let Some((record_type, data)) = operation_record_parts(&record) else {
+                            let _ = reply
+                                .send(Err("compaction operation could not be encoded".to_owned()));
+                            continue;
+                        };
+                        if let Err(error) = validate_session_lane_record(&state, record_type, data)
+                        {
+                            let _ = reply.send(Err(error));
+                            continue;
+                        }
+                        reduce_operation_record(&mut state, record_type, data);
+                        let entries = state.entries.clone();
+                        let _ = snapshot_tx.send(state.clone());
+                        let _ = reply.send(Ok(Some((operation_id, preparation, entries))));
+                    }
                     Command::PublishCompaction {
                         preparation,
                         summary,
@@ -3722,6 +3782,31 @@ impl SessionActor {
         {
             return Err("session actor compaction request was not acknowledged".into());
         }
+        reply_rx
+            .await
+            .map_err(|_| "session actor compaction response was dropped".to_owned())?
+    }
+
+    /// Prepare a compaction and admit its operation start against one actor
+    /// snapshot. The returned entries are the exact source journal used by
+    /// the preparation, so provider summarization cannot use a different
+    /// message set.
+    pub async fn prepare_and_begin_compaction(
+        &self,
+        token_estimates: Vec<u64>,
+        keep_recent_tokens: u64,
+        lane: String,
+    ) -> Result<Option<PreparedCompaction>, String> {
+        let (reply_tx, reply_rx) = oneshot::channel();
+        self.tx
+            .send(Command::PrepareAndBeginCompaction {
+                token_estimates,
+                keep_recent_tokens,
+                lane,
+                reply: reply_tx,
+            })
+            .await
+            .map_err(|_| "session actor compaction request was not acknowledged".to_owned())?;
         reply_rx
             .await
             .map_err(|_| "session actor compaction response was dropped".to_owned())?
