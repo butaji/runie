@@ -543,6 +543,18 @@ impl Scrollback {
         self.navigation.selected_tool_id.as_deref()
     }
 
+    fn is_selected_tool_line(&self, line: &Line) -> bool {
+        let Some(selected_id) = self.navigation.selected_tool_id.as_deref() else {
+            return false;
+        };
+        if line.tool_call_id.as_deref() != Some(selected_id) {
+            return false;
+        }
+        self.navigation
+            .selected_tool_row_id
+            .is_none_or(|row_id| line.tool_row_id == Some(row_id))
+    }
+
     pub fn selected_entry(&self) -> Option<usize> {
         self.navigation.selected_entry
     }
@@ -1433,14 +1445,11 @@ impl Scrollback {
                     .as_deref()
                     .and_then(|id| dense_groups.get(id))
                     .is_some_and(|(_, size)| *size > 1)
-                && self.navigation.selected_tool_id.as_deref() != line.tool_call_id.as_deref()
+                && !self.is_selected_tool_line(line)
             {
                 continue;
             }
-            let selected = line
-                .tool_call_id
-                .as_ref()
-                .is_some_and(|id| self.navigation.selected_tool_id.as_ref() == Some(id));
+            let selected = self.is_selected_tool_line(line);
             let source = if line.kind == LineKind::Reasoning && !self.navigation.reasoning_expanded
             {
                 "Thought".to_owned()

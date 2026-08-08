@@ -736,6 +736,12 @@ call ID and line index. This preserves duplicate-card selection identity across
 actor rehydration and renderer adapters; focused selection/replay tests and the
 full CI gate pass.
 
+Selected-row renderer increment (2026-08-10): selected-line styling and dense
+output suppression now prefer the selected actor row ID, falling back to call-ID
+matching only for compatibility rows. Duplicate live cards no longer style or
+retain output as selected merely because their provider IDs match; focused
+renderer tests and the full CI gate pass.
+
 Workflow status formatter audit (2026-08-06): compared against Grok's
 `WorkflowBlockStatus` renderer and added exact tests for `failed`, `cancelled`,
 and `paused` elapsed wording. Cancelled/paused statuses now use `after 1.2s`
