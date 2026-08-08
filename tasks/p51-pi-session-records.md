@@ -170,3 +170,17 @@ observe admission failure. No new wire record was invented.
 
 - P60 adds Pi label facts as actor-delivered events with JSONL round-trip
   support; see `tasks/p60-pi-session-labels.md`.
+
+## Branch context projection (2026-08-09)
+
+`SessionSnapshot::branch_context_messages` and its lane-scoped variant now
+materialize provider context from the selected parent-linked leaf path rather
+than from every message in the session file. The pure projection applies the
+latest compaction record on that path, emits its summary and retained tail,
+keeps only later branch messages, and excludes deferred assistant results.
+`branch_context_materializes_selected_path_and_compaction_boundary` covers a
+diverged tree and the compaction boundary without mutating the actor snapshot.
+
+This closes context materialization for the selected branch. Full interactive
+tree-navigation admission and provider-summary generation remain owned by the
+existing navigation/provider actor seams.

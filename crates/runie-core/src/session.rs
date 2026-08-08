@@ -593,6 +593,14 @@ pub struct CompactionContextProjection {
     pub message_indices: Vec<usize>,
 }
 
+fn is_provider_context_message(message: &AgentMessage) -> bool {
+    !matches!(
+        message,
+        AgentMessage::Assistant(assistant)
+            if assistant.stop_reason == Some(StopReason::Deferred)
+    )
+}
+
 impl CompactionContextProjection {
     /// Materialize Pi's internal context-message sequence. The summary keeps
     /// its distinct role until `convert_to_llm` applies provider wire rules.
@@ -1685,6 +1693,86 @@ impl SessionSnapshot {
             .filter(|entry| ids.contains(&entry.id))
             .cloned()
             .collect()
+    }
+
+    /// Materialize provider context for the selected parent-linked branch.
+    ///
+    /// Pi builds context from the selected leaf path, not from every message
+    /// in the session file.  A compaction on that path replaces its earlier
+    /// prefix with the summary and retained tail; deferred assistant results
+    /// are journal facts but are not sent to the provider.
+    pub fn branch_context_messages(&self) -> Vec<AgentMessage> {
+        self.branch_context_messages_for_leaf(self.leaf_id.clone())
+    }
+
+    /// Materialize provider context for a named lane's selected leaf.
+    pub fn branch_context_messages_for_lane(&self, lane: &str) -> Vec<AgentMessage> {
+        self.branch_context_messages_for_leaf(self.lanes().get(lane).cloned().flatten())
+    }
+
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the pure branch projection keeps Pi's path and compaction rules together"
+    )]
+    fn branch_context_messages_for_leaf(&self, leaf_id: Option<String>) -> Vec<AgentMessage> {
+        let branch = self
+            .branch_entry_ids_from_leaf(leaf_id)
+            .into_iter()
+            .collect::<std::collections::BTreeSet<_>>();
+        let mut messages = self
+            .entries
+            .iter()
+            .filter(|entry| branch.contains(&entry.id))
+            .filter(|entry| is_provider_context_message(&entry.message))
+            .map(|entry| (entry.seq, entry.message.clone()))
+            .collect::<Vec<_>>();
+        messages.sort_by_key(|(seq, _)| *seq);
+
+        let compaction = self
+            .config_records
+            .iter()
+            .filter(|entry| branch.contains(&entry.id))
+            .filter_map(|entry| match &entry.record {
+                SessionConfigRecord::CompactionCreated {
+                    summary,
+                    retained_tail,
+                    tokens_before,
+                    ..
+                } => Some((
+                    entry.seq,
+                    entry.timestamp,
+                    summary.clone(),
+                    retained_tail.clone(),
+                    *tokens_before,
+                )),
+                _ => None,
+            })
+            .max_by_key(|(seq, ..)| *seq);
+
+        let Some((compaction_seq, timestamp, summary, retained_tail, tokens_before)) = compaction
+        else {
+            return messages.into_iter().map(|(_, message)| message).collect();
+        };
+
+        let mut projected = vec![AgentMessage::CompactionSummary(
+            crate::types::CompactionSummaryMessage {
+                summary,
+                tokens_before,
+                timestamp,
+            },
+        )];
+        projected.extend(
+            retained_tail
+                .into_iter()
+                .filter(is_provider_context_message),
+        );
+        projected.extend(
+            messages
+                .into_iter()
+                .filter(|(seq, _)| *seq > compaction_seq)
+                .map(|(_, message)| message),
+        );
+        projected
     }
 
     fn branch_entry_ids_from_leaf(&self, leaf_id: Option<String>) -> Vec<String> {
@@ -4682,6 +4770,73 @@ mod tests {
         assert_eq!(projection.tokens_before, 80);
         assert_eq!(projection.retained_tail.len(), 1);
         assert!(projection.message_indices.is_empty());
+    }
+
+    #[test]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the regression spells out a divergent parent-linked tree"
+    )]
+    fn branch_context_materializes_selected_path_and_compaction_boundary() {
+        let snapshot = SessionSnapshot {
+            leaf_id: Some("branch-tail".into()),
+            entries: vec![
+                SessionEntry {
+                    id: "root".into(),
+                    lane: "main".into(),
+                    seq: 1,
+                    parent_id: None,
+                    timestamp: 0,
+                    message: user("root"),
+                    terminate: false,
+                },
+                SessionEntry {
+                    id: "other-branch".into(),
+                    lane: "main".into(),
+                    seq: 2,
+                    parent_id: Some("root".into()),
+                    timestamp: 0,
+                    message: user("not selected"),
+                    terminate: false,
+                },
+                SessionEntry {
+                    id: "branch-tail".into(),
+                    lane: "main".into(),
+                    seq: 5,
+                    parent_id: Some("summary".into()),
+                    timestamp: 0,
+                    message: user("selected tail"),
+                    terminate: false,
+                },
+            ],
+            config_records: vec![SessionConfigEntry {
+                id: "summary".into(),
+                seq: 4,
+                parent_id: Some("root".into()),
+                timestamp: 9,
+                record: SessionConfigRecord::CompactionCreated {
+                    summary: "earlier context".into(),
+                    retained_tail: vec![user("retained")],
+                    tokens_before: 42,
+                    details: None,
+                    usage: None,
+                },
+            }],
+            ..Default::default()
+        };
+
+        assert_eq!(
+            snapshot.branch_context_messages(),
+            vec![
+                AgentMessage::CompactionSummary(crate::types::CompactionSummaryMessage {
+                    summary: "earlier context".into(),
+                    tokens_before: 42,
+                    timestamp: 9,
+                }),
+                user("retained"),
+                user("selected tail"),
+            ]
+        );
     }
 
     #[tokio::test]
