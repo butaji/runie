@@ -603,7 +603,7 @@ mod tests {
     }
 
     struct FakeConnector {
-        socket: std::sync::Mutex<Option<FakeSocket>>,
+        socket: std::sync::Mutex<std::collections::VecDeque<FakeSocket>>,
         url: std::sync::Mutex<Option<String>>,
         headers: std::sync::Mutex<Option<HashMap<String, String>>>,
     }
@@ -618,7 +618,7 @@ mod tests {
         ) -> Result<Box<dyn CodexWebSocket>, StreamError> {
             *self.url.lock().unwrap() = Some(url);
             *self.headers.lock().unwrap() = Some(headers);
-            Ok(Box::new(self.socket.lock().unwrap().take().unwrap()))
+            Ok(Box::new(self.socket.lock().unwrap().pop_front().unwrap()))
         }
     }
 
@@ -633,17 +633,35 @@ mod tests {
         let sent = Arc::new(std::sync::Mutex::new(Vec::new()));
         let closed = Arc::new(std::sync::atomic::AtomicBool::new(false));
         let connector = Arc::new(FakeConnector {
-            socket: std::sync::Mutex::new(Some(FakeSocket {
-                messages: [
-                    r#"{"type":"response.created","response":{"id":"r1"}}"#.into(),
-                    r#"{"type":"response.output_text.delta","delta":"hello"}"#.into(),
-                    r#"{"type":"response.completed","response":{"status":"completed"}}"#.into(),
+            socket: std::sync::Mutex::new(
+                [
+                    FakeSocket {
+                        messages: [
+                            r#"{"type":"response.created","response":{"id":"r1"}}"#.into(),
+                            r#"{"type":"response.output_text.delta","delta":"hello"}"#.into(),
+                            r#"{"type":"response.completed","response":{"status":"completed"}}"#
+                                .into(),
+                        ]
+                        .into_iter()
+                        .collect(),
+                        sent: sent.clone(),
+                        closed: closed.clone(),
+                    },
+                    FakeSocket {
+                        messages: [
+                            r#"{"type":"response.created","response":{"id":"r2"}}"#.into(),
+                            r#"{"type":"response.completed","response":{"status":"completed"}}"#
+                                .into(),
+                        ]
+                        .into_iter()
+                        .collect(),
+                        sent: sent.clone(),
+                        closed: closed.clone(),
+                    },
                 ]
                 .into_iter()
                 .collect(),
-                sent: sent.clone(),
-                closed: closed.clone(),
-            })),
+            ),
             url: std::sync::Mutex::new(None),
             headers: std::sync::Mutex::new(None),
         });
@@ -654,8 +672,14 @@ mod tests {
             HashMap::new(),
             None,
         );
+        let options = Some(SimpleStreamOptions {
+            session_id: Some("session-1".into()),
+            api_key: Some("account-a".into()),
+            transport: Some(crate::types::ProviderTransport::WebsocketCached),
+            ..Default::default()
+        });
         let mut stream = adapter
-            .stream_websocket(&Model::default(), &AgentContext::default(), None)
+            .stream_websocket(&Model::default(), &AgentContext::default(), options.clone())
             .await
             .expect("Codex adapter stream");
         let events = stream.by_ref().collect::<Vec<_>>().await;
@@ -675,6 +699,17 @@ mod tests {
         assert_eq!(
             serde_json::from_str::<serde_json::Value>(&sent.lock().unwrap()[0]).unwrap()["type"],
             "response.create"
+        );
+        let mut cached_stream = adapter
+            .stream_websocket(&Model::default(), &AgentContext::default(), options)
+            .await
+            .expect("cached Codex adapter stream");
+        let _ = cached_stream.by_ref().collect::<Vec<_>>().await;
+        assert_eq!(sent.lock().unwrap().len(), 2);
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&sent.lock().unwrap()[1]).unwrap()
+                ["previous_response_id"],
+            "r1"
         );
         assert!(closed.load(std::sync::atomic::Ordering::Acquire));
     }
