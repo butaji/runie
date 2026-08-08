@@ -172,3 +172,8 @@ First-chunk timing increment (2026-08-09): the same owned pump records
 and publishes it with terminal telemetry attributes. Streams with no update
 chunk omit the optional field; the provider regression verifies the numeric
 attribute without using sleeps or a timing threshold.
+
+Diagnostic classification increment (2026-08-09): provider startup/deferred
+failures now set `pi.ai.error.type=provider`, while actor-owned abort
+settlement sets `pi.ai.error.type=abort`, preserving the source schema's
+low-cardinality diagnostic distinction alongside structured span errors.

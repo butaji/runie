@@ -276,6 +276,11 @@ async fn run_provider_worker(
                     }
                     Err(error) => {
                         if let Some(span) = telemetry_span {
+                            span.set_attributes(HashMap::from([(
+                                "pi.ai.error.type".into(),
+                                serde_json::json!("provider"),
+                            )]))
+                            .await;
                             span.status_with_error(
                                 SpanStatus::Error,
                                 Some(SpanError {
@@ -370,6 +375,11 @@ async fn run_provider_worker(
 
 async fn settle_aborted_telemetry_span(span: &mut Option<TelemetrySpan>) {
     if let Some(span) = span.take() {
+        span.set_attributes(HashMap::from([(
+            "pi.ai.error.type".into(),
+            serde_json::json!("abort"),
+        )]))
+        .await;
         span.status_with_error(
             SpanStatus::Error,
             Some(SpanError {
@@ -418,6 +428,11 @@ async fn finish_request_span_ok(span: Option<TelemetrySpan>) {
 
 async fn finish_request_span_error(span: Option<TelemetrySpan>, message: &str) {
     if let Some(span) = span {
+        span.set_attributes(HashMap::from([(
+            "pi.ai.error.type".into(),
+            serde_json::json!("provider"),
+        )]))
+        .await;
         span.status_with_error(
             SpanStatus::Error,
             Some(SpanError {
@@ -879,6 +894,7 @@ mod tests {
         while rx.recv().await.is_ok() {}
         let snapshot = telemetry.snapshot();
         assert_eq!(snapshot.spans[0].status, SpanStatus::Error);
+        assert_eq!(snapshot.spans[0].attributes["pi.ai.error.type"], "provider");
         assert_eq!(
             snapshot.spans[0]
                 .error
