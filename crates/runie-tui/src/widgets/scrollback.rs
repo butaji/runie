@@ -1095,9 +1095,9 @@ impl Scrollback {
             }
             if self.navigation.live_grok_layout
                 && matches!(*kind, LineKind::ToolOutput | LineKind::ToolResult)
-                && text.starts_with("    ")
+                && (text.starts_with("    ") || text.starts_with("Result "))
             {
-                // Grok's memory/search snippets are panel rows, not merely
+                // Grok's memory/search rows are panel rows, not merely
                 // panel-colored text. Make the trailing cells explicit so a
                 // narrow or wide terminal cannot inherit the surrounding
                 // feed background from Paragraph's implicit fill.
@@ -2112,8 +2112,25 @@ fn styled_line_for(kind: LineKind, text: &str, theme: ThemeKind) -> RatLine<'sta
             if let Some(path) = path {
                 return RatLine::from(vec![
                     Span::styled("Result ", appearance::muted_style_for(theme)),
+                    Span::styled(number.to_owned(), appearance::muted_style_for(theme)),
                     Span::styled(
-                        format!("{number} · {score} · {source} · "),
+                        " · ",
+                        appearance::muted_style_for(theme).add_modifier(Modifier::DIM),
+                    ),
+                    Span::styled(
+                        score.to_owned(),
+                        appearance::muted_style_for(theme).add_modifier(Modifier::DIM),
+                    ),
+                    Span::styled(
+                        " · ",
+                        appearance::muted_style_for(theme).add_modifier(Modifier::DIM),
+                    ),
+                    Span::styled(
+                        source.to_owned(),
+                        appearance::muted_style_for(theme).add_modifier(Modifier::DIM),
+                    ),
+                    Span::styled(
+                        " · ",
                         appearance::muted_style_for(theme).add_modifier(Modifier::DIM),
                     ),
                     Span::styled(
@@ -2873,14 +2890,16 @@ mod tests {
             "Result 1 · 0.72 · global · memory.md:1-2",
             ThemeKind::GrokNight,
         );
-        assert_eq!(rendered.spans.len(), 3);
-        assert!(rendered.spans[1].style.add_modifier.contains(Modifier::DIM));
-        assert!(rendered.spans[2]
+        assert_eq!(rendered.spans.len(), 8);
+        assert!(!rendered.spans[1].style.add_modifier.contains(Modifier::DIM));
+        assert!(rendered.spans[3].style.add_modifier.contains(Modifier::DIM));
+        assert!(rendered.spans[5].style.add_modifier.contains(Modifier::DIM));
+        assert!(rendered.spans[7]
             .style
             .add_modifier
             .contains(Modifier::BOLD));
         assert_eq!(
-            rendered.spans[2].style.fg,
+            rendered.spans[7].style.fg,
             appearance::base_style_for(ThemeKind::GrokNight).fg
         );
     }
