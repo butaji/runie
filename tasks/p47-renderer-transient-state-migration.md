@@ -412,6 +412,11 @@ terminal batching artifacts and cannot enter the fast acceleration band. The
 pure normalizer and visual flush replay both cover this boundary without
 wall-clock sleeps.
 
+Zero-delivery cadence increment (2026-08-08): a flush that emits no lines no
+longer advances the cadence anchor. This preserves the source contract that a
+no-op flush must not postpone the next eligible redraw, with focused model
+coverage.
+
 ## Grok scroll flush contract audit (2026-08-07)
 
 The authoritative implementation and tests in

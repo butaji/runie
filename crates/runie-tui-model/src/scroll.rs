@@ -88,7 +88,9 @@ impl ScrollFlushState {
             self.backlog
         };
         self.backlog -= lines;
-        self.last_flush_ms = Some(at_ms);
+        if lines != 0 {
+            self.last_flush_ms = Some(at_ms);
+        }
         (
             self,
             ScrollFlush {
@@ -537,6 +539,15 @@ mod tests {
         assert_eq!(state.last_flush_ms(), Some(16));
         assert!(!state.flush_due(20));
         assert!(state.flush_due(32));
+    }
+
+    #[test]
+    fn zero_delivery_flush_is_a_cadence_noop() {
+        let state = super::ScrollFlushState::new(ScrollNormalizer::default(), 20);
+        let (state, flush) = state.flush_at(16);
+        assert_eq!(flush.lines, 0);
+        assert_eq!(state.last_flush_ms(), None);
+        assert!(state.flush_due(16));
     }
 
     #[test]
