@@ -115,6 +115,9 @@ pub fn tool_header(tool_name: &str, args: &serde_json::Value, workspace: &str) -
         "memory_search" | "memory-search" => {
             format!("Memory Search {}", string(&["query", "q"], ""))
         }
+        "search_tools" | "search-tools" | "search_tool" => {
+            format!("Search Tools {}", string(&["query", "pattern"], ""))
+        }
         "todo" | "todo_write" | "todo-write" => {
             format!("Todo {}", string(&["title", "task"], "Update todos"))
         }

@@ -1036,3 +1036,42 @@ the new model-side coverage subsumes every assertion it held. The
 `runie-tui` lib unit tests, and the full `just ci` (fmt-check,
 clippy, lint, test, parity, source inventory, Pi event contract,
 feed-actor boundary) are green.
+
+## `tool_header` retirement (2026-08-08)
+
+The renderer-local `tool_header` and `make_relative_path` helpers at
+`crates/runie-tui/src/event_renderer.rs:797-944` were retired and the
+sole renderer call site at `crates/runie-tui/src/event_renderer.rs:598`
+now routes through the canonical
+`runie_tui_model::tool_header(tool_name, args, workspace)`. The model
+function at `crates/runie-tui-model/src/feed.rs:56-126` already accepts
+the workspace anchor; the renderer now threads its workspace through
+the call rather than rebuilding a `std::env::current_dir()` projection
+inside the renderer boundary. The model-side `tool_header` was extended
+with the `search_tools | search-tools | search_tool` aliases that the
+renderer previously held locally (added at
+`crates/runie-tui-model/src/feed.rs:121-123`), closing the gap that let
+tool searches render as the generic `<name> {…}` fallback. The
+`EventRenderer` struct grew a `workspace: String` field threaded
+through `with_actors_inner`/`with_actors`/`with_live_actors`; the
+production call site at `crates/runie-tui/src/app.rs:840-848` resolves
+the workspace via `std::env::current_dir()`, and the YAML replay path
+at `crates/runie-tui/src/yaml_runner.rs:1982-1991` and
+`crates/runie-tui/src/yaml_runner.rs:4991-5001` plus the E2E test at
+`crates/runie-tui/tests/e2e_test.rs:186-194` thread the same
+workspace through `with_actors` so replay fixtures remain
+host-independent. The 22 test construction sites and the two test
+bodies (`structured_tools_use_grok_headers_and_preserve_output_rows`
+and `absolute_tool_paths_are_workspace_relative`) were updated to
+pass `TEST_WORKSPACE = "/work"` (or a per-test workspace anchor for the
+absolute-path regression); three new tests were appended at
+`crates/runie-tui/src/event_renderer.rs` to lock the new behaviour:
+`absolute_tool_paths_are_workspace_relative` (existing test now drives
+both `read`, `list_dir`, `edit`, and the `make_relative_path` boundary
+through the workspace anchor), `renderer_tool_header_projects_absolute_paths_through_workspace_anchor`
+(verifies the renderer no longer reads `std::env::current_dir` and
+pins the `List .` workspace-only listing collapse), and
+`renderer_tool_header_strips_leading_separator_after_workspace` (covers
+the `<workspace>relative` and `<workspace>/relative` edge cases).
+The full `just ci` (fmt-check, clippy, lint, test, parity, source
+inventory, Pi event contract, feed-actor boundary) is green.

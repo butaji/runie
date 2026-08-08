@@ -837,9 +837,13 @@ impl App {
         tokio::task::JoinHandle<()>,
         tokio::sync::watch::Sender<bool>,
     ) {
+        let workspace = std::env::current_dir()
+            .map(|path| path.to_string_lossy().into_owned())
+            .unwrap_or_default();
         let renderer = EventRenderer::with_live_actors(
             self.scrollback_actor.clone(),
             self.status_actor.clone(),
+            workspace,
         );
         let rx = self.bus.subscribe();
         let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);

@@ -223,16 +223,26 @@ pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
 pub struct EventRenderer {
     scrollback_actor: ScrollbackActor,
     status_actor: StatusActor,
+    /// Absolute workspace path used to strip provider-supplied absolute paths
+    /// down to workspace-relative form during tool-header projection. Owned
+    /// by the renderer so replays and live buses agree on the same anchor
+    /// regardless of `std::env::current_dir` drift between hosts.
+    workspace: String,
     /// The live Grok surface places the thinking row directly after the user
     /// entry; deterministic replay keeps the historical four-row contract.
     live_grok_layout: bool,
 }
 
 impl EventRenderer {
-    fn with_actors_inner(scrollback_actor: ScrollbackActor, status_actor: StatusActor) -> Self {
+    fn with_actors_inner(
+        scrollback_actor: ScrollbackActor,
+        status_actor: StatusActor,
+        workspace: String,
+    ) -> Self {
         Self {
             scrollback_actor,
             status_actor,
+            workspace,
             live_grok_layout: false,
         }
     }
@@ -240,13 +250,21 @@ impl EventRenderer {
     /// Build the production renderer with its SSOT actors attached at
     /// construction time. The compatibility constructors remain for the
     /// synchronous YAML harness and focused reducer tests.
-    pub fn with_actors(scrollback_actor: ScrollbackActor, status_actor: StatusActor) -> Self {
-        Self::with_actors_inner(scrollback_actor, status_actor)
+    pub fn with_actors(
+        scrollback_actor: ScrollbackActor,
+        status_actor: StatusActor,
+        workspace: impl Into<String>,
+    ) -> Self {
+        Self::with_actors_inner(scrollback_actor, status_actor, workspace.into())
     }
 
     /// Production interactive projection with Grok's live assistant spacing.
-    pub fn with_live_actors(scrollback_actor: ScrollbackActor, status_actor: StatusActor) -> Self {
-        let mut renderer = Self::with_actors(scrollback_actor, status_actor);
+    pub fn with_live_actors(
+        scrollback_actor: ScrollbackActor,
+        status_actor: StatusActor,
+        workspace: impl Into<String>,
+    ) -> Self {
+        let mut renderer = Self::with_actors(scrollback_actor, status_actor, workspace);
         renderer.live_grok_layout = true;
         renderer
     }
@@ -577,7 +595,7 @@ impl EventRenderer {
             activity_subagents,
             activity_failures,
         ) = counts;
-        let tool_buffer = tool_header(&tool_name, &args);
+        let tool_buffer = runie_tui_model::tool_header(&tool_name, &args, &self.workspace);
         let activity =
             if activity_dirs + activity_files + activity_commands + activity_subagents > 0 {
                 Some(activity_text(
@@ -799,148 +817,25 @@ fn activity_counts_with_start(
     clippy::too_many_lines,
     reason = "the pure tool-header DSL keeps Grok's specialized card vocabulary together"
 )]
-pub(crate) fn tool_header(tool_name: &str, args: &serde_json::Value) -> String {
-    match tool_name {
-        "list_dir" | "list_files" | "ls" => {
-            let path = args
-                .get("path")
-                .and_then(serde_json::Value::as_str)
-                .unwrap_or(".");
-            format!("List {}", make_relative_path(path))
-        }
-        "read" | "read_file" => {
-            let path = args
-                .get("path")
-                .and_then(serde_json::Value::as_str)
-                .unwrap_or("");
-            format!("Read {}", make_relative_path(path))
-        }
-        "edit" | "write" | "write_file" | "search_replace" | "apply_patch" | "strreplace" => {
-            let path = args
-                .get("path")
-                .or_else(|| args.get("file_path"))
-                .and_then(serde_json::Value::as_str)
-                .unwrap_or("");
-            format!("Edit {}", make_relative_path(path))
-        }
-        "search" | "grep" | "find" | "glob" => {
-            let pattern = args
-                .get("pattern")
-                .or_else(|| args.get("query"))
-                .and_then(serde_json::Value::as_str)
-                .unwrap_or("");
-            let path = args
-                .get("path")
-                .or_else(|| args.get("cwd"))
-                .and_then(serde_json::Value::as_str);
-            match path {
-                Some(path) if !path.is_empty() => {
-                    format!("Search {pattern:?} in {}", make_relative_path(path))
-                }
-                _ => format!("Search {pattern:?}"),
-            }
-        }
-        "web_search" | "web-search" => {
-            let query = args
-                .get("query")
-                .or_else(|| args.get("q"))
-                .and_then(serde_json::Value::as_str)
-                .unwrap_or("");
-            format!("Web Search {query}")
-        }
-        "web_fetch" | "web-fetch" | "fetch" => {
-            let url = args
-                .get("url")
-                .and_then(serde_json::Value::as_str)
-                .unwrap_or("");
-            format!("Fetch {url}")
-        }
-        "search_tools" | "search-tools" | "search_tool" => {
-            let query = args
-                .get("query")
-                .or_else(|| args.get("pattern"))
-                .and_then(serde_json::Value::as_str)
-                .unwrap_or("");
-            format!("Search Tools {query}")
-        }
-        "memory_search" | "memory-search" => {
-            let query = args
-                .get("query")
-                .or_else(|| args.get("q"))
-                .and_then(serde_json::Value::as_str)
-                .unwrap_or("");
-            format!("Memory Search {query}")
-        }
-        "todo" | "todo_write" | "todo-write" => {
-            let title = args
-                .get("title")
-                .or_else(|| args.get("task"))
-                .and_then(serde_json::Value::as_str)
-                .unwrap_or("Update todos");
-            format!("Todo {title}")
-        }
-        "workflow" | "run_workflow" | "run-workflow" => {
-            let name = args
-                .get("name")
-                .or_else(|| args.get("workflow"))
-                .and_then(serde_json::Value::as_str)
-                .unwrap_or("");
-            format!("Workflow {name}")
-        }
-        "use" | "use_tool" | "use-tool" => {
-            let name = args
-                .get("tool")
-                .or_else(|| args.get("name"))
-                .and_then(serde_json::Value::as_str)
-                .unwrap_or("");
-            format!("Use {name}")
-        }
-        "subagent" | "agent" | "task" => {
-            let description = args
-                .get("description")
-                .or_else(|| args.get("task"))
-                .or_else(|| args.get("prompt"))
-                .and_then(serde_json::Value::as_str)
-                .unwrap_or("");
-            format!("Subagent started: {description:?}")
-        }
-        "bash"
-        | "shell"
-        | "exec"
-        | "run"
-        | "execute"
-        | "run_terminal_command"
-        | "run_terminal_cmd" => {
-            let command = args
-                .get("command")
-                .or_else(|| args.get("cmd"))
-                .and_then(serde_json::Value::as_str)
-                .unwrap_or("");
-            format!("Run {command}")
-        }
-        _ => format!(
-            "{tool_name} {}",
-            serde_json::to_string(args).unwrap_or_default()
-        ),
-    }
+#[cfg(test)]
+pub(crate) fn tool_header(workspace: &str, tool_name: &str, args: &serde_json::Value) -> String {
+    runie_tui_model::tool_header(tool_name, args, workspace)
 }
 
 /// Grok displays tool paths relative to the active workspace whenever the
-/// provider sends an absolute path. Keep this pure at the renderer boundary
-/// so replay fixtures remain independent of the host's username.
-fn make_relative_path(path: &str) -> String {
-    let Ok(cwd) = std::env::current_dir() else {
-        return path.to_owned();
-    };
-    let cwd = cwd.to_string_lossy();
-    let Some(relative) = path.strip_prefix(cwd.as_ref()) else {
-        return path.to_owned();
-    };
-    let relative = relative.strip_prefix('/').unwrap_or(relative);
-    if relative.is_empty() {
+/// provider sends an absolute path. The renderer defers to
+/// `runie_tui_model::tool_header` so replay fixtures remain independent of
+/// the host's username; the workspace anchor is owned by the renderer.
+#[cfg(test)]
+fn make_relative_path(workspace: &str, path: &str) -> String {
+    let path_string = path.strip_prefix(workspace).map_or_else(
+        || path.to_owned(),
+        |relative| relative.strip_prefix('/').unwrap_or(relative).to_owned(),
+    );
+    if path_string.is_empty() || path_string == "." {
         ".".to_owned()
     } else {
-        relative.to_owned()
+        path_string
     }
 }
 
@@ -968,6 +863,12 @@ mod tests {
     use super::*;
 
     use runie_core::types::{AgentMessage, StopReason, ThemeKind, Usage, UserContent, UserMessage};
+
+    /// Anchor workspace used by reducer/projection tests that do not exercise
+    /// absolute-path stripping. The renderer now defers to
+    /// `runie_tui_model::tool_header`, which strips this prefix from
+    /// tool-supplied absolute paths.
+    const TEST_WORKSPACE: &str = "/work";
 
     #[test]
     fn status_event_mapping_is_pure_and_ordered() {
@@ -1078,7 +979,8 @@ mod tests {
         let live_scrollback = ScrollbackActor::new();
         let live_status = StatusActor::new();
         let mut live_feed = live_scrollback.subscribe();
-        let live_renderer = EventRenderer::with_live_actors(live_scrollback.clone(), live_status);
+        let live_renderer =
+            EventRenderer::with_live_actors(live_scrollback.clone(), live_status, TEST_WORKSPACE);
         let (live_shutdown_tx, live_shutdown_rx) = tokio::sync::watch::channel(false);
         // OWNER: test — joins the renderer after the shutdown event.
         let live_task = tokio::spawn(live_renderer.run(live_bus.subscribe(), live_shutdown_rx));
@@ -1096,7 +998,7 @@ mod tests {
         let replay_scrollback = ScrollbackActor::new();
         let replay_status = StatusActor::new();
         let mut replay_renderer =
-            EventRenderer::with_actors(replay_scrollback.clone(), replay_status);
+            EventRenderer::with_actors(replay_scrollback.clone(), replay_status, TEST_WORKSPACE);
         replay_renderer.apply_actor_event(assistant_start()).await;
         assert_eq!(replay_scrollback.model_snapshot().lines.len(), 4);
     }
@@ -1104,7 +1006,8 @@ mod tests {
     async fn actor_renderer_reduces_events_without_legacy_projections() {
         let scrollback = ScrollbackActor::new();
         let status = StatusActor::new();
-        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status.clone());
+        let mut renderer =
+            EventRenderer::with_actors(scrollback.clone(), status.clone(), TEST_WORKSPACE);
 
         renderer.apply_actor_event(AgentEvent::AgentStart).await;
         assert_eq!(status.snapshot().current(), &Status::Thinking);
@@ -1134,7 +1037,7 @@ mod tests {
         let bus = runie_core::events::EventBus::new();
         let status = StatusActor::new();
         let scrollback = ScrollbackActor::new();
-        let renderer = EventRenderer::with_actors(scrollback, status.clone());
+        let renderer = EventRenderer::with_actors(scrollback, status.clone(), TEST_WORKSPACE);
         let mut status_updates = status.subscribe();
         let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
         // OWNER: test — joins the renderer after the shutdown event.
@@ -1161,7 +1064,7 @@ mod tests {
         let status = StatusActor::new();
         let scrollback = ScrollbackActor::new();
         let mut feed = scrollback.subscribe();
-        let renderer = EventRenderer::with_live_actors(scrollback.clone(), status);
+        let renderer = EventRenderer::with_live_actors(scrollback.clone(), status, TEST_WORKSPACE);
         let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
         // OWNER: test — joins the renderer after the shutdown event.
         let task = tokio::spawn(renderer.run(bus.subscribe(), shutdown_rx));
@@ -1239,8 +1142,11 @@ mod tests {
         let started_bus = runie_core::events::EventBus::new();
         let started_scrollback = ScrollbackActor::new();
         let mut started_feed = started_scrollback.subscribe();
-        let started_renderer =
-            EventRenderer::with_live_actors(started_scrollback.clone(), StatusActor::new());
+        let started_renderer = EventRenderer::with_live_actors(
+            started_scrollback.clone(),
+            StatusActor::new(),
+            TEST_WORKSPACE,
+        );
         let (started_shutdown, started_shutdown_rx) = tokio::sync::watch::channel(false);
         // OWNER: test — joins the renderer after the shutdown event.
         let started_task =
@@ -1279,8 +1185,11 @@ mod tests {
         let progress_bus = runie_core::events::EventBus::new();
         let progress_scrollback = ScrollbackActor::new();
         let mut progress_feed = progress_scrollback.subscribe();
-        let progress_renderer =
-            EventRenderer::with_live_actors(progress_scrollback.clone(), StatusActor::new());
+        let progress_renderer = EventRenderer::with_live_actors(
+            progress_scrollback.clone(),
+            StatusActor::new(),
+            TEST_WORKSPACE,
+        );
         let (progress_shutdown, progress_shutdown_rx) = tokio::sync::watch::channel(false);
         // OWNER: test — joins the renderer after the shutdown event.
         let progress_task =
@@ -1326,8 +1235,11 @@ mod tests {
         let finished_bus = runie_core::events::EventBus::new();
         let finished_scrollback = ScrollbackActor::new();
         let mut finished_feed = finished_scrollback.subscribe();
-        let finished_renderer =
-            EventRenderer::with_live_actors(finished_scrollback.clone(), StatusActor::new());
+        let finished_renderer = EventRenderer::with_live_actors(
+            finished_scrollback.clone(),
+            StatusActor::new(),
+            TEST_WORKSPACE,
+        );
         let (finished_shutdown, finished_shutdown_rx) = tokio::sync::watch::channel(false);
         // OWNER: test — joins the renderer after the shutdown event.
         let finished_task =
@@ -1378,8 +1290,11 @@ mod tests {
         let failed_bus = runie_core::events::EventBus::new();
         let failed_scrollback = ScrollbackActor::new();
         let mut failed_feed = failed_scrollback.subscribe();
-        let failed_renderer =
-            EventRenderer::with_live_actors(failed_scrollback.clone(), StatusActor::new());
+        let failed_renderer = EventRenderer::with_live_actors(
+            failed_scrollback.clone(),
+            StatusActor::new(),
+            TEST_WORKSPACE,
+        );
         let (failed_shutdown, failed_shutdown_rx) = tokio::sync::watch::channel(false);
         // OWNER: test — joins the renderer after the shutdown event.
         let failed_task =
@@ -1426,8 +1341,11 @@ mod tests {
         let cancelled_bus = runie_core::events::EventBus::new();
         let cancelled_scrollback = ScrollbackActor::new();
         let mut cancelled_feed = cancelled_scrollback.subscribe();
-        let cancelled_renderer =
-            EventRenderer::with_live_actors(cancelled_scrollback.clone(), StatusActor::new());
+        let cancelled_renderer = EventRenderer::with_live_actors(
+            cancelled_scrollback.clone(),
+            StatusActor::new(),
+            TEST_WORKSPACE,
+        );
         let (cancelled_shutdown, cancelled_shutdown_rx) = tokio::sync::watch::channel(false);
         // OWNER: test — joins the renderer after the shutdown event.
         let cancelled_task =
@@ -1518,8 +1436,11 @@ mod tests {
         // the per-`work_id` transcript rows.
         let live_bus = runie_core::events::EventBus::new();
         let live_scrollback = ScrollbackActor::new();
-        let live_renderer =
-            EventRenderer::with_live_actors(live_scrollback.clone(), StatusActor::new());
+        let live_renderer = EventRenderer::with_live_actors(
+            live_scrollback.clone(),
+            StatusActor::new(),
+            TEST_WORKSPACE,
+        );
         let (live_shutdown, live_shutdown_rx) = tokio::sync::watch::channel(false);
         // OWNER: test — joins the renderer after the shutdown event.
         let live_task = tokio::spawn(live_renderer.run(live_bus.subscribe(), live_shutdown_rx));
@@ -1541,8 +1462,11 @@ mod tests {
 
         // Replay path — apply the same events through `apply_actor_event`.
         let replay_scrollback = ScrollbackActor::new();
-        let mut replay_renderer =
-            EventRenderer::with_actors(replay_scrollback.clone(), StatusActor::new());
+        let mut replay_renderer = EventRenderer::with_actors(
+            replay_scrollback.clone(),
+            StatusActor::new(),
+            TEST_WORKSPACE,
+        );
         for event in events {
             replay_renderer.apply_actor_event(event).await;
         }
@@ -1583,7 +1507,8 @@ mod tests {
         // the actor-backed session-start path.
         let scrollback = ScrollbackActor::new();
         let status = StatusActor::new();
-        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status.clone());
+        let mut renderer =
+            EventRenderer::with_actors(scrollback.clone(), status.clone(), TEST_WORKSPACE);
         renderer.apply_actor_event(AgentEvent::AgentStart).await;
         assert!(scrollback
             .snapshot()
@@ -1600,7 +1525,8 @@ mod tests {
         // re-emits the welcome lines.
         let scrollback = ScrollbackActor::new();
         let status = StatusActor::new();
-        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status.clone());
+        let mut renderer =
+            EventRenderer::with_actors(scrollback.clone(), status.clone(), TEST_WORKSPACE);
         for line in crate::widgets::welcome_modal_lines() {
             scrollback.apply(ScrollbackMsg::Append(line)).await;
         }
@@ -1620,7 +1546,7 @@ mod tests {
     async fn actor_message_update_appends_text_to_assistant_line() {
         let scrollback = ScrollbackActor::new();
         let status = StatusActor::new();
-        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status);
+        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status, TEST_WORKSPACE);
         renderer.apply_actor_event(AgentEvent::AgentStart).await;
         renderer
             .apply_actor_event(AgentEvent::MessageStart {
@@ -1659,7 +1585,7 @@ mod tests {
     async fn actor_text_delta_enters_streaming_status() {
         let scrollback = ScrollbackActor::new();
         let status = StatusActor::new();
-        let mut renderer = EventRenderer::with_actors(scrollback, status.clone());
+        let mut renderer = EventRenderer::with_actors(scrollback, status.clone(), TEST_WORKSPACE);
         renderer.apply_actor_event(AgentEvent::AgentStart).await;
         renderer
             .apply_actor_event(AgentEvent::MessageStart {
@@ -1695,7 +1621,8 @@ mod tests {
     async fn actor_agent_end_sets_ready() {
         let scrollback = ScrollbackActor::new();
         let status = StatusActor::new();
-        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status.clone());
+        let mut renderer =
+            EventRenderer::with_actors(scrollback.clone(), status.clone(), TEST_WORKSPACE);
         renderer.apply_actor_event(AgentEvent::AgentStart).await;
         renderer
             .apply_actor_event(AgentEvent::AgentEnd { messages: vec![] })
@@ -1718,7 +1645,7 @@ mod tests {
         // appending a phantom Separator between AgentStart and AgentEnd.
         let with_turn = ScrollbackActor::new();
         let status = StatusActor::new();
-        let mut renderer = EventRenderer::with_actors(with_turn.clone(), status);
+        let mut renderer = EventRenderer::with_actors(with_turn.clone(), status, TEST_WORKSPACE);
         renderer.apply_actor_event(AgentEvent::AgentStart).await;
         renderer.apply_actor_event(AgentEvent::TurnStart).await;
         assert!(with_turn.model_snapshot().turn_started);
@@ -1768,7 +1695,8 @@ mod tests {
         // must not emit a TurnSummary. The session-start rows are the only
         // transcript output (3 rows, no extra Separator).
         let no_turn = ScrollbackActor::new();
-        let mut renderer = EventRenderer::with_actors(no_turn.clone(), StatusActor::new());
+        let mut renderer =
+            EventRenderer::with_actors(no_turn.clone(), StatusActor::new(), TEST_WORKSPACE);
         renderer.apply_actor_event(AgentEvent::AgentStart).await;
         renderer
             .apply_actor_event(AgentEvent::AgentEnd { messages: vec![] })
@@ -1799,7 +1727,8 @@ mod tests {
     async fn actor_terminal_assistant_error_message_sets_error_status() {
         let scrollback = ScrollbackActor::new();
         let status = StatusActor::new();
-        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status.clone());
+        let mut renderer =
+            EventRenderer::with_actors(scrollback.clone(), status.clone(), TEST_WORKSPACE);
         renderer.apply_actor_event(AgentEvent::AgentStart).await;
         renderer
             .apply_actor_event(AgentEvent::MessageStart {
@@ -1829,7 +1758,7 @@ mod tests {
     async fn actor_tool_execution_lifecycle() {
         let scrollback = ScrollbackActor::new();
         let status = StatusActor::new();
-        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status);
+        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status, TEST_WORKSPACE);
         renderer.apply_actor_event(AgentEvent::AgentStart).await;
         renderer
             .apply_actor_event(AgentEvent::ToolExecutionStart {
@@ -1870,7 +1799,7 @@ mod tests {
     async fn actor_parallel_tool_updates_stay_on_their_own_rows() {
         let scrollback = ScrollbackActor::new();
         let status = StatusActor::new();
-        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status);
+        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status, TEST_WORKSPACE);
         renderer
             .apply_actor_event(AgentEvent::ToolExecutionStart {
                 tool_call_id: "a".into(),
@@ -1912,46 +1841,85 @@ mod tests {
     #[tokio::test]
     #[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
     async fn structured_tools_use_grok_headers_and_preserve_output_rows() {
+        let workspace = "/work";
         assert_eq!(
-            tool_header("list_dir", &serde_json::json!({"path":"."})),
+            tool_header(workspace, "list_dir", &serde_json::json!({"path":"."})),
             "List ."
         );
         assert_eq!(
-            tool_header("read", &serde_json::json!({"path":"README.md"})),
+            tool_header(workspace, "read", &serde_json::json!({"path":"README.md"})),
             "Read README.md"
         );
         assert_eq!(
-            tool_header("edit", &serde_json::json!({"path":"src/main.rs"})),
+            tool_header(
+                workspace,
+                "edit",
+                &serde_json::json!({"path":"src/main.rs"})
+            ),
             "Edit src/main.rs"
         );
         assert_eq!(
             tool_header(
+                workspace,
                 "search",
                 &serde_json::json!({"pattern":"TODO","path":"src"})
             ),
             "Search \"TODO\" in src"
         );
         assert_eq!(
-            tool_header("web_search", &serde_json::json!({"query":"rust tui"})),
+            tool_header(
+                workspace,
+                "web_search",
+                &serde_json::json!({"query":"rust tui"})
+            ),
             "Web Search rust tui"
         );
         assert_eq!(
             tool_header(
+                workspace,
                 "web_fetch",
                 &serde_json::json!({"url":"https://example.com"})
             ),
             "Fetch https://example.com"
         );
         assert_eq!(
-            tool_header("memory_search", &serde_json::json!({"query":"actors"})),
+            tool_header(
+                workspace,
+                "memory_search",
+                &serde_json::json!({"query":"actors"})
+            ),
             "Memory Search actors"
         );
         assert_eq!(
-            tool_header("workflow", &serde_json::json!({"name":"release"})),
+            tool_header(
+                workspace,
+                "search_tools",
+                &serde_json::json!({"query":"bash"})
+            ),
+            "Search Tools bash"
+        );
+        assert_eq!(
+            tool_header(
+                workspace,
+                "search-tools",
+                &serde_json::json!({"pattern":"bash"})
+            ),
+            "Search Tools bash"
+        );
+        assert_eq!(
+            tool_header(workspace, "search_tool", &serde_json::json!({"query":""})),
+            "Search Tools "
+        );
+        assert_eq!(
+            tool_header(
+                workspace,
+                "workflow",
+                &serde_json::json!({"name":"release"})
+            ),
             "Workflow release"
         );
         assert_eq!(
-            tool_header("use", &serde_json::json!({"tool":"browser"})),
+            tool_header(workspace, "use", &serde_json::json!({"tool":"browser"})),
             "Use browser"
         );
         assert_eq!(
@@ -1980,7 +1948,8 @@ mod tests {
             ),
             2
         );
-        let mut renderer = EventRenderer::with_actors(ScrollbackActor::new(), StatusActor::new());
+        let mut renderer =
+            EventRenderer::with_actors(ScrollbackActor::new(), StatusActor::new(), workspace);
         let end = renderer.handle_tool_end(
             "fetch-1".into(),
             "web_fetch".into(),
@@ -1995,21 +1964,82 @@ mod tests {
 
     #[test]
     fn absolute_tool_paths_are_workspace_relative() {
-        let cwd = std::env::current_dir().expect("workspace cwd");
-        let absolute = cwd.join("src/main.rs").to_string_lossy().into_owned();
+        let workspace = "/work";
+        let absolute = format!("{workspace}/src/main.rs");
         assert_eq!(
-            tool_header("read", &serde_json::json!({"path": absolute})),
+            tool_header(workspace, "read", &serde_json::json!({"path": absolute})),
             "Read src/main.rs"
         );
-        assert_eq!(make_relative_path(cwd.to_string_lossy().as_ref()), ".");
-        assert_eq!(make_relative_path("/tmp/other/file"), "/tmp/other/file");
+        assert_eq!(
+            tool_header(
+                workspace,
+                "list_dir",
+                &serde_json::json!({"path": absolute})
+            ),
+            "List src/main.rs"
+        );
+        assert_eq!(
+            tool_header(
+                workspace,
+                "edit",
+                &serde_json::json!({"path": format!("{workspace}/Cargo.toml")})
+            ),
+            "Edit Cargo.toml"
+        );
+        assert_eq!(make_relative_path(workspace, workspace), ".");
+        assert_eq!(
+            make_relative_path(workspace, "/tmp/other/file"),
+            "/tmp/other/file"
+        );
+    }
+
+    #[test]
+    fn renderer_tool_header_projects_absolute_paths_through_workspace_anchor() {
+        // The renderer no longer calls `std::env::current_dir` directly; it
+        // threads the workspace through the model projection so replays and
+        // hosts agree on the same anchor regardless of where the binary was
+        // invoked from.
+        let workspace = "/Users/admin/Code/GitHub/runie-tests/runie";
+        let absolute = format!("{workspace}/crates/runie-tui/src/event_renderer.rs");
+        assert_eq!(
+            runie_tui_model::tool_header("read", &serde_json::json!({"path": absolute}), workspace,),
+            "Read crates/runie-tui/src/event_renderer.rs"
+        );
+        // A path that already lives outside the workspace is rendered as the
+        // original absolute path so cross-host fixtures stay identifiable.
+        assert_eq!(
+            runie_tui_model::tool_header(
+                "list_dir",
+                &serde_json::json!({"path": "/tmp/other"}),
+                workspace,
+            ),
+            "List /tmp/other"
+        );
+    }
+
+    #[test]
+    fn renderer_tool_header_strips_leading_separator_after_workspace() {
+        // Paths supplied as `<workspace>/relative` (with the canonical
+        // separator) collapse to the relative form. The renderer's
+        // workspace-relative projection is centralized in
+        // `runie_tui_model::tool_header` so this assertion pins the model
+        // contract rather than a renderer-local helper.
+        let workspace = "/work";
+        assert_eq!(
+            runie_tui_model::tool_header(
+                "read",
+                &serde_json::json!({"path": format!("{workspace}/README.md")}),
+                workspace,
+            ),
+            "Read README.md"
+        );
     }
 
     #[tokio::test]
     async fn actor_structured_tool_updates_append_indented_output_rows() {
         let scrollback = ScrollbackActor::new();
         let status = StatusActor::new();
-        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status);
+        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status, TEST_WORKSPACE);
         renderer
             .apply_actor_event(AgentEvent::ToolExecutionStart {
                 tool_call_id: "structured".into(),
@@ -2065,7 +2095,7 @@ mod tests {
     async fn actor_activity_groups_do_not_merge_non_consecutive_tool_batches() {
         let scrollback = ScrollbackActor::new();
         let status = StatusActor::new();
-        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status);
+        let mut renderer = EventRenderer::with_actors(scrollback.clone(), status, TEST_WORKSPACE);
         for (id, name) in [("first", "list_dir"), ("second", "read")] {
             if id == "second" {
                 renderer

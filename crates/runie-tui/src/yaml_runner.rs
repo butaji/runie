@@ -1981,7 +1981,11 @@ async fn replay_scenario_events(
 ) -> (Scrollback, crate::widgets::StatusSnapshot) {
     let scrollback_actor = crate::ScrollbackActor::new();
     let status_actor = crate::StatusActor::new();
-    let mut renderer = EventRenderer::with_actors(scrollback_actor.clone(), status_actor.clone());
+    let workspace = std::env::current_dir()
+        .map(|path| path.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let mut renderer =
+        EventRenderer::with_actors(scrollback_actor.clone(), status_actor.clone(), workspace);
     // The welcome modal is now actor-driven. When a scenario omits an
     // initial prompt we pre-inject the welcome modal lines so the
     // actor-owned scrollback reflects the same idle chrome a fresh
@@ -4984,8 +4988,13 @@ pub async fn render_visual_buffer(
             app.apply_scrollback(ScrollbackMsg::Append(line)).await;
         }
     }
-    let mut renderer =
-        EventRenderer::with_actors(app.scrollback_actor.clone(), app.status_actor.clone());
+    let mut renderer = EventRenderer::with_actors(
+        app.scrollback_actor.clone(),
+        app.status_actor.clone(),
+        std::env::current_dir()
+            .map(|path| path.to_string_lossy().into_owned())
+            .unwrap_or_default(),
+    );
     app.apply_scrollback(ScrollbackMsg::SetReasoningExpanded(vis.reasoning_expanded))
         .await;
     app.apply_scrollback(ScrollbackMsg::SetActivityExpanded(activity_expanded))
