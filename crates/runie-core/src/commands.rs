@@ -85,6 +85,7 @@ pub enum MappableBuiltinCommand {
     Name { name: String },
     Compact { instructions: Option<String> },
     Fork { target_id: String },
+    Tree { target_id: String },
 }
 
 /// Classification at the slash-command boundary. Unsupported Pi commands are
@@ -99,6 +100,10 @@ pub enum BuiltinCommandDisposition {
 /// Parse an exact Pi built-in command that Runie can currently route through
 /// an existing actor/application boundary. Non-mappable commands return
 /// `None` and remain ordinary prompt text until their capability is built.
+#[allow(
+    clippy::too_many_lines,
+    reason = "the Pi command parser keeps the complete typed vocabulary in one pure boundary"
+)]
 pub fn parse_mappable_builtin_command(input: &str) -> Option<MappableBuiltinCommand> {
     match input.trim() {
         "/new" => Some(MappableBuiltinCommand::NewSession),
@@ -131,6 +136,12 @@ pub fn parse_mappable_builtin_command(input: &str) -> Option<MappableBuiltinComm
         value if value.starts_with("/fork ") => {
             let target_id = value[6..].trim();
             (!target_id.is_empty()).then(|| MappableBuiltinCommand::Fork {
+                target_id: target_id.to_owned(),
+            })
+        }
+        value if value.starts_with("/tree ") => {
+            let target_id = value[6..].trim();
+            (!target_id.is_empty()).then(|| MappableBuiltinCommand::Tree {
                 target_id: target_id.to_owned(),
             })
         }

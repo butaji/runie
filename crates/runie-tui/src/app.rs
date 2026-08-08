@@ -566,6 +566,15 @@ impl App {
                     }
                 }
             }
+            MappableBuiltinCommand::Tree { target_id } => {
+                match self.session_actor.select_tree(target_id).await {
+                    Ok(()) => true,
+                    Err(error) => {
+                        self.bus.publish(AgentEvent::Error { message: error });
+                        true
+                    }
+                }
+            }
             MappableBuiltinCommand::Quit => false,
         }
     }

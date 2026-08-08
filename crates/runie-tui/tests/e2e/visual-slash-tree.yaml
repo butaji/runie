@@ -1,0 +1,16 @@
+name: visual-slash-tree
+description: Pi's /tree command selects an existing session leaf without deleting the journal.
+initial_prompt: hi
+events:
+  - start
+  - done: { stop_reason: stop }
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    steps:
+      - "/tree entry-1"
+      - Enter
+    session_entries: 2
+    session_branch_entry_ids:
+      - entry-1

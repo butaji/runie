@@ -2556,6 +2556,10 @@ enum Command {
         target_id: String,
         reply: oneshot::Sender<Result<(), String>>,
     },
+    SelectTree {
+        target_id: String,
+        reply: oneshot::Sender<Result<(), String>>,
+    },
     Import(SessionSnapshot, oneshot::Sender<()>),
     Reset(oneshot::Sender<()>),
     Flush(oneshot::Sender<()>),
@@ -3110,6 +3114,16 @@ impl SessionActor {
                         let _ = snapshot_tx.send(state.clone());
                         let _ = reply.send(Ok(()));
                     }
+                    Command::SelectTree { target_id, reply } => {
+                        if !state.entries.iter().any(|entry| entry.id == target_id) {
+                            let _ =
+                                reply.send(Err(format!("tree target does not exist: {target_id}")));
+                            continue;
+                        }
+                        state.leaf_id = Some(target_id);
+                        let _ = snapshot_tx.send(state.clone());
+                        let _ = reply.send(Ok(()));
+                    }
                     Command::Import(imported, reply) => {
                         next_id = imported
                             .entries
@@ -3365,6 +3379,22 @@ impl SessionActor {
             .map_err(|_| "session actor response was dropped".to_owned())?
     }
 
+    /// Select an existing journal node without deleting alternate branches.
+    /// Tree navigation is an actor-owned leaf change, distinct from forking.
+    pub async fn select_tree(&self, target_id: String) -> Result<(), String> {
+        let (reply_tx, reply_rx) = oneshot::channel();
+        self.tx
+            .send(Command::SelectTree {
+                target_id,
+                reply: reply_tx,
+            })
+            .await
+            .map_err(|_| "session actor is closed".to_owned())?;
+        reply_rx
+            .await
+            .map_err(|_| "session actor response was dropped".to_owned())?
+    }
+
     /// Apply session-owned configuration facts from a replay event sequence.
     /// The reducer remains the actor boundary; callers do not mutate the
     /// snapshot or manufacture message entries.
@@ -3519,6 +3549,23 @@ mod tests {
         assert_eq!(snapshot.entries.len(), 1);
         assert!(actor.fork_at_message("missing".into()).await.is_err());
         assert_eq!(actor.snapshot().entries.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn tree_command_moves_leaf_without_discarding_alternate_entries() {
+        let actor = SessionActor::new();
+        actor.append(user("one")).await;
+        actor.append(user("two")).await;
+        actor
+            .select_tree("entry-1".into())
+            .await
+            .expect("tree select");
+        let snapshot = actor.snapshot();
+        assert_eq!(snapshot.entries.len(), 2);
+        assert_eq!(snapshot.leaf_id.as_deref(), Some("entry-1"));
+        assert_eq!(snapshot.branch_entry_ids(), vec!["entry-1"]);
+        assert!(actor.select_tree("missing".into()).await.is_err());
+        assert_eq!(actor.snapshot().leaf_id.as_deref(), Some("entry-1"));
     }
 
     #[tokio::test]

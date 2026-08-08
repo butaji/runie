@@ -104,3 +104,8 @@ the target against the selected branch, and replaces the actor-owned snapshot
 only after successful fork construction. `visual-slash-fork.yaml` exercises the
 route and asserts the resulting branch IDs; invalid targets leave the snapshot
 unchanged in the actor regression.
+
+Tree navigation increment (2026-08-09): `/tree <entry-id>` now uses a separate
+typed command and `SessionActor` mailbox reduction. It validates an existing
+journal node, moves only the selected leaf, preserves alternate entries, and
+is covered by `visual-slash-tree.yaml` plus an invalid-target actor test.
