@@ -1,5 +1,10 @@
 # p19 — Verification: parity harness (pi event-sequence replay + grok cast snapshot diffs)
 
+**Cast frame diagnostics (2026-08-08):** `cast_compare --frames` now reports
+the number of differing frames and per-frame cell-difference counts, in
+addition to the first mismatch. This keeps cast-wide reconciliation
+actionable without weakening the exact comparator.
+
 **Current evidence correction (2026-08-06):** The provider-decode family is
 closed: all 24 decode-error sidecars are counted, classified as
 `provider_decode`, and the canonical malformed trace asserts the stable

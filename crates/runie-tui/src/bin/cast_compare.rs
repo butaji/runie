@@ -40,6 +40,19 @@ fn ordered_common_frame_count(left: &[Vec<Cell>], right: &[Vec<Cell>]) -> usize 
     common
 }
 
+fn frame_cell_difference_counts(left: &[Vec<Cell>], right: &[Vec<Cell>]) -> Vec<usize> {
+    left.iter()
+        .zip(right)
+        .map(|(left, right)| {
+            left.iter()
+                .zip(right)
+                .filter(|(left, right)| left != right)
+                .count()
+                + left.len().abs_diff(right.len())
+        })
+        .collect()
+}
+
 fn strip_private_modes(output: &str) -> String {
     let bytes = output.as_bytes();
     let mut result = String::with_capacity(output.len());
@@ -476,15 +489,23 @@ fn main() -> Result<()> {
         let exact = left_geometry == right_geometry
             && left_frames.len() == right_frames.len()
             && first_difference.is_none();
+        let frame_cell_differences = frame_cell_difference_counts(&left_frames, &right_frames);
+        let different_frames = frame_cell_differences
+            .iter()
+            .filter(|count| **count > 0)
+            .count()
+            + left_frames.len().abs_diff(right_frames.len());
         let ordered_common_frames = ordered_common_frame_count(&left_frames, &right_frames);
         println!(
-            "{{\"left_frames\":{},\"right_frames\":{},\"compared_frames\":{},\"ordered_common_frames\":{},\"left_unmatched_frames\":{},\"right_unmatched_frames\":{},\"first_difference\":{},\"first_cell_difference\":{},\"exact\":{}}}",
+            "{{\"left_frames\":{},\"right_frames\":{},\"compared_frames\":{},\"ordered_common_frames\":{},\"left_unmatched_frames\":{},\"right_unmatched_frames\":{},\"different_frames\":{},\"frame_cell_differences\":{},\"first_difference\":{},\"first_cell_difference\":{},\"exact\":{}}}",
             left_frames.len(),
             right_frames.len(),
             compared,
             ordered_common_frames,
             left_frames.len().saturating_sub(ordered_common_frames),
             right_frames.len().saturating_sub(ordered_common_frames),
+            different_frames,
+            serde_json::to_string(&frame_cell_differences)?,
             first_difference.map_or_else(
                 || "null".into(),
                 |frame| (frame + 1).to_string(),
@@ -633,8 +654,8 @@ fn main() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::{
-        dimensions, ordered_common_frame_count, replay_frames, validate_capture_metadata_shape,
-        validate_resize_report, Cell,
+        dimensions, frame_cell_difference_counts, ordered_common_frame_count, replay_frames,
+        validate_capture_metadata_shape, validate_resize_report, Cell,
     };
     use std::path::{Path, PathBuf};
 
@@ -670,6 +691,15 @@ mod tests {
         let left = vec![frame("a"), frame("b"), frame("c")];
         let right = vec![frame("a"), frame("a"), frame("b"), frame("c")];
         assert_eq!(ordered_common_frame_count(&left, &right), 3);
+    }
+
+    #[test]
+    fn frame_difference_summary_counts_every_changed_frame_and_cell() {
+        let left = vec![frame("a"), frame("b"), frame("c")];
+        let mut changed = frame("b");
+        changed[0].bold = true;
+        let right = vec![frame("a"), changed, frame("d")];
+        assert_eq!(frame_cell_difference_counts(&left, &right), vec![0, 1, 1]);
     }
 
     #[test]
