@@ -394,15 +394,24 @@ impl EventRenderer {
                                     )));
                                 }
                             }
+                            // Coalesce the specialized tool message into the
+                            // single actor mailbox hop for this event so the
+                            // scrollback actor publishes one snapshot per bus
+                            // delivery rather than racing two reductions.
+                            // Message order is preserved by `scrollback_messages_for_event`:
+                            // tool start emits `Set*` rows before
+                            // `ToolStartRunning`, and tool end emits
+                            // `ActivityToolEnd` / `RemoveToolArgs` before
+                            // `ToolEnd`.
+                            if let Some(tool_start) = actor_tool_start {
+                                feed_messages.push(tool_start);
+                            } else if let Some(tool_update) = actor_tool_update {
+                                feed_messages.push(tool_update);
+                            } else if let Some(tool_end) = actor_tool_end {
+                                feed_messages.push(tool_end);
+                            }
                             if !feed_messages.is_empty() {
                                 scrollback_actor.apply_batch(feed_messages).await;
-                            }
-                            if let Some(tool_start) = actor_tool_start {
-                                scrollback_actor.apply(tool_start).await;
-                            } else if let Some(tool_update) = actor_tool_update {
-                                scrollback_actor.apply(tool_update).await;
-                            } else if let Some(tool_end) = actor_tool_end {
-                                scrollback_actor.apply(tool_end).await;
                             }
                         }
                         Err(broadcast::error::RecvError::Lagged(n)) => {
@@ -513,11 +522,17 @@ impl EventRenderer {
         } else if matches!(event, AgentEvent::AgentEnd { .. }) {
             messages.push(ScrollbackMsg::TurnEnd);
         }
+        // Coalesce the specialized tool message into the single actor
+        // mailbox hop for this event so the replay path mirrors the live
+        // `run` path and the scrollback actor publishes one snapshot per
+        // event. Message order matches the live path: tool start appends
+        // `ToolStartRunning` after the `Set*` rows, tool end appends
+        // `ToolEnd` after `ActivityToolEnd` / `RemoveToolArgs`.
+        if let Some(message) = tool_message {
+            messages.push(message);
+        }
         if !messages.is_empty() {
             scrollback_actor.apply_batch(messages).await;
-        }
-        if let Some(message) = tool_message {
-            scrollback_actor.apply(message).await;
         }
     }
 
@@ -1468,6 +1483,10 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "end-to-end regression keeps tool start/update/end delivery in one assertion block"
+    )]
     async fn live_renderer_delivers_tool_updates_to_the_feed_actor() {
         let bus = runie_core::events::EventBus::new();
         let status = StatusActor::new();
@@ -1503,6 +1522,22 @@ mod tests {
             .iter()
             .any(|block| block.tool_call_id == "tool-1"
                 && block.output.iter().any(|row| row == "hello")));
+
+        bus.publish(AgentEvent::ToolExecutionEnd {
+            tool_call_id: "tool-1".into(),
+            tool_name: "read".into(),
+            result: serde_json::json!({"output":"hello"}),
+            is_error: false,
+        });
+        feed.changed().await.expect("tool end delivery");
+        assert!(
+            scrollback
+                .model_snapshot()
+                .tool_blocks
+                .iter()
+                .any(|block| block.tool_call_id == "tool-1" && !block.is_running),
+            "ToolExecutionEnd must mark the block as completed in a single actor hop"
+        );
 
         shutdown_tx.send(true).expect("renderer shutdown");
         task.await.expect("renderer task");

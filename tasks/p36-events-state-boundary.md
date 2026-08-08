@@ -584,3 +584,27 @@ producer of `InputEvent` to the mailbox. The four `runie` binary unit
 tests, the 28 `visual_snapshots` replay tests, and the full `just ci`
 (fmt-check, clippy, lint, test, parity, source inventory, Pi event
 contract, feed-actor boundary) are green.
+
+**Tool-event mailbox hop coalescing (2026-08-08):** the live `run` path
+and the replay `apply_actor_event` path in
+`crates/runie-tui/src/event_renderer.rs` previously crossed the
+`ScrollbackActor` mailbox twice per `ToolExecutionStart` / `Update` / `End`
+event: once for the `Set*` / activity rows from
+`scrollback_messages_for_event`, then again for the specialized
+`ToolStartRunning` / `ToolUpdate` / `ToolEnd` row produced by
+`handle_tool_*`. Each hop published its own `FeedSnapshot` and forced the
+renderer to wait for a second reduction before the bus loop could move
+on. Both paths now append the specialized tool message to `feed_messages`
+before the single `apply_batch` so every tool lifecycle event produces one
+mailbox round-trip and one snapshot publication. Message order is
+preserved by `scrollback_messages_for_event`: tool start already emits
+`SetToolName`, `SetToolArgs`, `ActivityToolStart`, `SetToolMode` before
+the appended `ToolStartRunning`; tool end already emits `ActivityToolEnd`
+and `RemoveToolArgs` before the appended `ToolEnd`; tool update has no
+rows in `scrollback_messages_for_event` so the appended `ToolUpdate` is
+the only message in the batch. The focused regression
+`live_renderer_delivers_tool_updates_to_the_feed_actor` now also
+publishes `ToolExecutionEnd` and asserts the block is no longer running.
+The 219 `runie-tui` unit tests, the 28 `visual_snapshots` replay tests,
+and the full `just ci` (fmt-check, clippy, lint, test, parity, source
+inventory, Pi event contract, feed-actor boundary) are green.
