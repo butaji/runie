@@ -1,0 +1,42 @@
+actions:
+  - type: start
+    name: pi.ai.request
+    attributes:
+      pi.ai.operation: stream
+      pi.ai.provider: replay
+      pi.ai.model: model
+      pi.ai.api: responses
+      pi.ai.streaming: true
+  - type: set_attributes
+    id: 1
+    attributes:
+      pi.ai.response.stop_reason: deferred
+      pi.ai.response.model: model
+      pi.ai.usage.input_tokens: 12
+      pi.ai.usage.output_tokens: 7
+      pi.ai.usage.total_tokens: 19
+  - type: end
+    id: 1
+expected:
+  next_id: 2
+  spans:
+    - id: 1
+      parent_id: null
+      name: pi.ai.request
+      attributes:
+        pi.ai.operation: stream
+        pi.ai.provider: replay
+        pi.ai.model: model
+        pi.ai.api: responses
+        pi.ai.streaming: true
+        pi.ai.response.stop_reason: deferred
+        pi.ai.response.model: model
+        pi.ai.usage.input_tokens: 12
+        pi.ai.usage.output_tokens: 7
+        pi.ai.usage.total_tokens: 19
+      events: []
+      status: ok
+      explicit_status: false
+      error: null
+      ended: true
+      end_sequence: 0

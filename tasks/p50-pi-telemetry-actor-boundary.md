@@ -157,3 +157,5 @@ validates Pi's `pi.ai.request` end attributes, including the closed normalized
 stop-reason vocabulary and numeric usage/transport fields, before projecting
 terminal event metadata. Unknown or invalid end fields are rejected by the
 typed validator; generic extension spans remain schema-agnostic.
+`pi-ai-request-end.yaml` adds runtime-editable replay coverage for the
+provider-shaped start and terminal attribute projection.
