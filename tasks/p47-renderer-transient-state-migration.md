@@ -422,6 +422,11 @@ more than two reports and evaluates their average interval before promoting an
 ept-one terminal stream to trackpad pricing. This prevents a two-report wheel
 notch from being re-priced as a trackpad gesture.
 
+Acceleration interpolation increment (2026-08-08): the fast-to-medium interval
+band now linearly interpolates Grok's fixed-point multipliers instead of
+jumping at the band boundary. Injected timestamp tests pin the endpoints and
+an interior value.
+
 ## Grok scroll flush contract audit (2026-08-07)
 
 The authoritative implementation and tests in

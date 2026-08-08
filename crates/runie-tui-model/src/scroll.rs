@@ -172,6 +172,21 @@ impl Default for ScrollNormalizer {
 }
 
 impl ScrollNormalizer {
+    const fn acceleration_multiplier(&self, interval: u64) -> i32 {
+        if interval < ACCEL_MIN_INTERVAL_MS {
+            BASE_MULTIPLIER
+        } else if interval <= self.accel_fast_interval_ms {
+            FAST_MULTIPLIER
+        } else if interval <= self.accel_medium_interval_ms {
+            let span = self.accel_medium_interval_ms - self.accel_fast_interval_ms;
+            let elapsed = interval - self.accel_fast_interval_ms;
+            FAST_MULTIPLIER
+                - ((elapsed as i32 * (FAST_MULTIPLIER - MEDIUM_MULTIPLIER)) / span as i32)
+        } else {
+            BASE_MULTIPLIER
+        }
+    }
+
     pub const fn new(events_per_tick: i32, lines_per_tick: i32) -> Self {
         let lines_per_tick = if lines_per_tick > 0 {
             lines_per_tick
@@ -339,14 +354,10 @@ impl ScrollNormalizer {
                 self.stream_trackpad = false;
             }
             self = self.classify_stream(interval);
-            let multiplier = if self.stream_trackpad || interval < ACCEL_MIN_INTERVAL_MS {
+            let multiplier = if self.stream_trackpad {
                 BASE_MULTIPLIER
-            } else if interval < self.accel_fast_interval_ms {
-                FAST_MULTIPLIER
-            } else if interval < self.accel_medium_interval_ms {
-                MEDIUM_MULTIPLIER
             } else {
-                BASE_MULTIPLIER
+                self.acceleration_multiplier(interval)
             };
             self.last_event_ms = Some(at_ms);
             return self.push_with_multiplier(direction, multiplier);
@@ -361,7 +372,10 @@ impl ScrollNormalizer {
 
 #[cfg(test)]
 mod tests {
-    use super::{ScrollDirection, ScrollMode, ScrollNormalizer};
+    use super::{
+        ScrollDirection, ScrollMode, ScrollNormalizer, BASE_MULTIPLIER, FAST_MULTIPLIER,
+        MEDIUM_MULTIPLIER,
+    };
 
     #[test]
     fn grok_default_emits_three_lines_across_three_raw_events() {
@@ -407,8 +421,17 @@ mod tests {
         let (normalizer, _) = normalizer.push_at(0, ScrollDirection::Down);
         let (_, fast) = normalizer.push_at(7, ScrollDirection::Down);
         assert_eq!(base, 1);
-        assert_eq!(medium, 1);
+        assert_eq!(medium, 2);
         assert_eq!(fast, 2);
+    }
+
+    #[test]
+    fn acceleration_interpolates_between_grok_speed_bands() {
+        let normalizer = ScrollNormalizer::default();
+        assert_eq!(normalizer.acceleration_multiplier(8), FAST_MULTIPLIER);
+        assert_eq!(normalizer.acceleration_multiplier(14), 21);
+        assert_eq!(normalizer.acceleration_multiplier(20), MEDIUM_MULTIPLIER);
+        assert_eq!(normalizer.acceleration_multiplier(21), BASE_MULTIPLIER);
     }
 
     #[test]
@@ -457,7 +480,7 @@ mod tests {
         let (normalizer, first) = normalizer.push_at(0, ScrollDirection::Down);
         let (normalizer, second) = normalizer.push_at(10, ScrollDirection::Down);
         let (normalizer, third) = normalizer.push_at(20, ScrollDirection::Down);
-        assert_eq!((first, second), (1, 1));
+        assert_eq!((first, second), (1, 2));
         assert_eq!(third, 1);
         assert!(normalizer.stream_trackpad);
     }
