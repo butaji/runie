@@ -307,3 +307,10 @@ for other pre-stream transport failures, and propagation after stream start.
 Deterministic unit coverage pins these decisions. Socket acquisition, cached
 connection ownership, and actual fallback execution remain in the concrete
 adapter boundary.
+
+Session cache increment (2026-08-09): `provider::codex` now defines typed
+session/account cache state for continuation response IDs and per-session SSE
+fallback markers. `clear_session` removes every account continuation and its
+fallback marker, while `clear` provides the global cleanup boundary. The cache
+does not own socket handles yet; the concrete adapter must close those handles
+before invoking cleanup.

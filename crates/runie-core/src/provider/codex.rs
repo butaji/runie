@@ -1,5 +1,7 @@
 //! Pure wire helpers for Pi's OpenAI Codex Responses provider.
 
+use std::collections::{HashMap, HashSet};
+
 const DEFAULT_CODEX_BASE_URL: &str = "https://chatgpt.com/backend-api";
 pub const CODEX_WEBSOCKET_BETA_HEADER: &str = "responses_websockets=2026-02-06";
 
@@ -8,6 +10,56 @@ pub const CODEX_WEBSOCKET_BETA_HEADER: &str = "responses_websockets=2026-02-06";
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct WebSocketContinuation {
     pub last_response_id: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct WebSocketSessionKey {
+    pub session_id: String,
+    pub account_id: String,
+}
+
+/// Provider-owned continuation/fallback state. A concrete socket adapter
+/// owns this value and is responsible for closing any socket represented by a
+/// removed continuation before dropping it.
+#[derive(Debug, Default)]
+pub struct WebSocketSessionCache {
+    continuations: HashMap<WebSocketSessionKey, WebSocketContinuation>,
+    sse_fallback_sessions: HashSet<String>,
+}
+
+impl WebSocketSessionCache {
+    pub fn continuation(&self, key: &WebSocketSessionKey) -> Option<&WebSocketContinuation> {
+        self.continuations.get(key)
+    }
+
+    pub fn store_continuation(
+        &mut self,
+        key: WebSocketSessionKey,
+        continuation: WebSocketContinuation,
+    ) {
+        self.continuations.insert(key, continuation);
+    }
+
+    pub fn mark_sse_fallback(&mut self, session_id: impl Into<String>) {
+        self.sse_fallback_sessions.insert(session_id.into());
+    }
+
+    pub fn is_sse_fallback_active(&self, session_id: &str) -> bool {
+        self.sse_fallback_sessions.contains(session_id)
+    }
+
+    /// Remove all account connections and fallback state for one session.
+    pub fn clear_session(&mut self, session_id: &str) {
+        self.continuations
+            .retain(|key, _| key.session_id != session_id);
+        self.sse_fallback_sessions.remove(session_id);
+    }
+
+    /// Clear all provider-owned session state during global cleanup.
+    pub fn clear(&mut self) {
+        self.continuations.clear();
+        self.sse_fallback_sessions.clear();
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -161,5 +213,56 @@ mod tests {
             classify_websocket_failure(true, Some("transport_error"), true, true),
             WebSocketFailureDecision::Propagate
         );
+    }
+
+    #[test]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the cache regression keeps account isolation and cleanup assertions together"
+    )]
+    fn session_cache_scopes_continuations_by_account_and_cleans_fallback_state() {
+        let mut cache = WebSocketSessionCache::default();
+        let first = WebSocketSessionKey {
+            session_id: "session-1".into(),
+            account_id: "account-a".into(),
+        };
+        let second = WebSocketSessionKey {
+            session_id: "session-1".into(),
+            account_id: "account-b".into(),
+        };
+        cache.store_continuation(
+            first.clone(),
+            WebSocketContinuation {
+                last_response_id: Some("resp-a".into()),
+            },
+        );
+        cache.store_continuation(
+            second.clone(),
+            WebSocketContinuation {
+                last_response_id: Some("resp-b".into()),
+            },
+        );
+        cache.mark_sse_fallback("session-1");
+        assert_eq!(
+            cache
+                .continuation(&first)
+                .unwrap()
+                .last_response_id
+                .as_deref(),
+            Some("resp-a")
+        );
+        assert_eq!(
+            cache
+                .continuation(&second)
+                .unwrap()
+                .last_response_id
+                .as_deref(),
+            Some("resp-b")
+        );
+        assert!(cache.is_sse_fallback_active("session-1"));
+        cache.clear_session("session-1");
+        assert!(cache.continuation(&first).is_none());
+        assert!(cache.continuation(&second).is_none());
+        assert!(!cache.is_sse_fallback_active("session-1"));
     }
 }
