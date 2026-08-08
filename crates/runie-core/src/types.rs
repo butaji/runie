@@ -876,6 +876,36 @@ pub struct AgentToolResult {
     pub terminate: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OperationRecordKind {
+    OperationStarted,
+    AbortRequested,
+    OperationFinished,
+    StepAttempt,
+    ToolStarted,
+    QueueEnqueued,
+    QueueCancelled,
+    WriteDeferred,
+    Usage,
+}
+
+impl OperationRecordKind {
+    pub const fn wire_name(self) -> &'static str {
+        match self {
+            Self::OperationStarted => "operation_started",
+            Self::AbortRequested => "abort_requested",
+            Self::OperationFinished => "operation_finished",
+            Self::StepAttempt => "step_attempt",
+            Self::ToolStarted => "tool_started",
+            Self::QueueEnqueued => "queue_enqueued",
+            Self::QueueCancelled => "queue_cancelled",
+            Self::WriteDeferred => "write_deferred",
+            Self::Usage => "usage",
+        }
+    }
+}
+
 /// Event emitted by the agent for UI updates and for downstream subscribers.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "kind")]
@@ -1027,6 +1057,12 @@ pub enum AgentEvent {
     /// policy remain owned by the loop/harness; the session actor stores data.
     OperationRecordCreated {
         record_type: String,
+        data: serde_json::Value,
+    },
+    /// Typed operation-lane fact for live producers. Generic records remain
+    /// accepted at the replay and persistence compatibility edges.
+    TypedOperationRecordCreated {
+        kind: OperationRecordKind,
         data: serde_json::Value,
     },
     ToolDisplayModeChanged {

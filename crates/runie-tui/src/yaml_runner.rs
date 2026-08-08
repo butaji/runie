@@ -3946,10 +3946,13 @@ fn message_text(message: &runie_core::types::AgentMessage) -> String {
     reason = "event assertions remain one declarative YAML oracle"
 )]
 fn assert_event_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> Result<(), String> {
-    let lifecycle_events = outcome
-        .events
-        .iter()
-        .filter(|event| !matches!(event, AgentEvent::OperationRecordCreated { .. }));
+    let lifecycle_events = outcome.events.iter().filter(|event| {
+        !matches!(
+            event,
+            AgentEvent::OperationRecordCreated { .. }
+                | AgentEvent::TypedOperationRecordCreated { .. }
+        )
+    });
     let kinds = lifecycle_events.clone().map(event_kind).collect::<Vec<_>>();
     for expected in &scenario.assertions.events {
         if !kinds.contains(&expected.as_str()) {
@@ -4034,6 +4037,7 @@ fn event_kind(event: &runie_core::types::AgentEvent) -> &'static str {
         WorkflowStarted { .. } => "workflow_started",
         WorkflowProgress { .. } => "workflow_progress",
         WorkflowFinished { .. } => "workflow_finished",
+        TypedOperationRecordCreated { .. } => "typed_operation_record_created",
     }
 }
 

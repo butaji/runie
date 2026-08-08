@@ -79,6 +79,12 @@ mailbox delivery. Unknown or legacy record names retain the generic
 `(record_type, data)` compatibility edge, while JSONL export remains Pi-shaped.
 The operation lifecycle regression asserts the typed producer result.
 
+Typed AgentEvent migration (2026-08-09): live loop and queue producers now
+publish `TypedOperationRecordCreated` with a closed nine-family
+`OperationRecordKind`. The old generic `OperationRecordCreated` variant remains
+the replay/legacy compatibility edge, and event-sequence assertions explicitly
+exclude both persistence-only forms.
+
 ## Non-negotiable checks
 
 - No cross-actor direct mutation.

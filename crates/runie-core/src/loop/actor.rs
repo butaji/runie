@@ -74,18 +74,12 @@ fn reduce_control(snapshot: &mut LoopControlSnapshot, event: LoopControlEvent) {
     }
 }
 
-crate::wire_kind! {
-    enum QueueRecordKind {
-        Enqueued => "queue_enqueued",
-        Cancelled => "queue_cancelled",
-    }
-}
-
-fn publish_queue_record(bus: &EventBus, kind: QueueRecordKind, data: serde_json::Value) {
-    bus.publish(AgentEvent::OperationRecordCreated {
-        record_type: kind.wire_name().to_owned(),
-        data,
-    });
+fn publish_queue_record(
+    bus: &EventBus,
+    kind: crate::types::OperationRecordKind,
+    data: serde_json::Value,
+) {
+    bus.publish(AgentEvent::TypedOperationRecordCreated { kind, data });
 }
 
 enum LoopControlCommand {
@@ -334,7 +328,7 @@ impl LoopActor {
         if let Some(entry_id) = self.inner.deps.steering.push(msg).await {
             publish_queue_record(
                 &self.inner.deps.bus,
-                QueueRecordKind::Enqueued,
+                crate::types::OperationRecordKind::QueueEnqueued,
                 serde_json::json!({
                     "id": entry_id,
                     "queue": "steer",
@@ -349,7 +343,7 @@ impl LoopActor {
         if let Some(entry_id) = self.inner.deps.follow_up.push(msg).await {
             publish_queue_record(
                 &self.inner.deps.bus,
-                QueueRecordKind::Enqueued,
+                crate::types::OperationRecordKind::QueueEnqueued,
                 serde_json::json!({
                     "id": entry_id,
                     "queue": "followUp",
@@ -364,7 +358,7 @@ impl LoopActor {
         for entry_id in self.inner.deps.steering.clear().await {
             publish_queue_record(
                 &self.inner.deps.bus,
-                QueueRecordKind::Cancelled,
+                crate::types::OperationRecordKind::QueueCancelled,
                 serde_json::json!({"id": entry_id, "entryId": entry_id}),
             );
         }
@@ -375,7 +369,7 @@ impl LoopActor {
         for entry_id in self.inner.deps.follow_up.clear().await {
             publish_queue_record(
                 &self.inner.deps.bus,
-                QueueRecordKind::Cancelled,
+                crate::types::OperationRecordKind::QueueCancelled,
                 serde_json::json!({"id": entry_id, "entryId": entry_id}),
             );
         }
@@ -557,8 +551,14 @@ mod tests {
 
     #[test]
     fn queue_record_kind_has_only_pi_wire_names() {
-        assert_eq!(QueueRecordKind::Enqueued.wire_name(), "queue_enqueued");
-        assert_eq!(QueueRecordKind::Cancelled.wire_name(), "queue_cancelled");
+        assert_eq!(
+            crate::types::OperationRecordKind::QueueEnqueued.wire_name(),
+            "queue_enqueued"
+        );
+        assert_eq!(
+            crate::types::OperationRecordKind::QueueCancelled.wire_name(),
+            "queue_cancelled"
+        );
     }
 
     #[test]

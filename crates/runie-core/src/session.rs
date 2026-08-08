@@ -135,6 +135,11 @@ macro_rules! session_config_record {
                     }),
                 }
             }
+            AgentEvent::TypedOperationRecordCreated { kind, data } => {
+                SessionLaneRecord::decode(kind.wire_name(), data)
+                    .ok()
+                    .map(SessionConfigRecord::TypedOperation)
+            }
             _ => None,
         }
     }};

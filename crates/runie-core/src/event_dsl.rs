@@ -49,6 +49,9 @@ macro_rules! agent_event_kind {
             }
             $crate::types::AgentEvent::CompactionCreated { .. } => "CompactionCreated",
             $crate::types::AgentEvent::OperationRecordCreated { .. } => "OperationRecordCreated",
+            $crate::types::AgentEvent::TypedOperationRecordCreated { .. } => {
+                "TypedOperationRecordCreated"
+            }
             $crate::types::AgentEvent::ToolDisplayModeChanged { .. } => "ToolDisplayModeChanged",
             $crate::types::AgentEvent::TurnEnd { .. } => "TurnEnd",
             $crate::types::AgentEvent::MessageStart { .. } => "MessageStart",
@@ -74,10 +77,41 @@ macro_rules! agent_event_kind {
 #[macro_export]
 macro_rules! session_lane_event {
     ($kind:ident, $data:expr) => {
-        $crate::types::AgentEvent::OperationRecordCreated {
-            record_type: $crate::session_lane_record_name!($kind).to_owned(),
+        $crate::types::AgentEvent::TypedOperationRecordCreated {
+            kind: $crate::operation_record_kind!($kind),
             data: $data,
         }
+    };
+}
+
+#[macro_export]
+macro_rules! operation_record_kind {
+    (operation_started) => {
+        $crate::types::OperationRecordKind::OperationStarted
+    };
+    (abort_requested) => {
+        $crate::types::OperationRecordKind::AbortRequested
+    };
+    (operation_finished) => {
+        $crate::types::OperationRecordKind::OperationFinished
+    };
+    (step_attempt) => {
+        $crate::types::OperationRecordKind::StepAttempt
+    };
+    (tool_started) => {
+        $crate::types::OperationRecordKind::ToolStarted
+    };
+    (queue_enqueued) => {
+        $crate::types::OperationRecordKind::QueueEnqueued
+    };
+    (queue_cancelled) => {
+        $crate::types::OperationRecordKind::QueueCancelled
+    };
+    (write_deferred) => {
+        $crate::types::OperationRecordKind::WriteDeferred
+    };
+    (usage) => {
+        $crate::types::OperationRecordKind::Usage
     };
 }
 
@@ -332,13 +366,13 @@ mod tests {
         assert_eq!(events.len(), 9);
         assert!(matches!(
             &events[0],
-            crate::types::AgentEvent::OperationRecordCreated { record_type, .. }
-                if record_type == "operation_started"
+            crate::types::AgentEvent::TypedOperationRecordCreated { kind, .. }
+                if *kind == crate::types::OperationRecordKind::OperationStarted
         ));
         assert!(matches!(
             &events[8],
-            crate::types::AgentEvent::OperationRecordCreated { record_type, .. }
-                if record_type == "usage"
+            crate::types::AgentEvent::TypedOperationRecordCreated { kind, .. }
+                if *kind == crate::types::OperationRecordKind::Usage
         ));
     }
 

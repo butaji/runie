@@ -385,7 +385,13 @@ async fn every_trace_uses_its_yaml_expectations_and_runs_through_core() {
             let core_events = test.events.lock();
             let core_names: Vec<_> = core_events
                 .iter()
-                .filter(|event| !matches!(event, AgentEvent::OperationRecordCreated { .. }))
+                .filter(|event| {
+                    !matches!(
+                        event,
+                        AgentEvent::OperationRecordCreated { .. }
+                            | AgentEvent::TypedOperationRecordCreated { .. }
+                    )
+                })
                 .map(|event| runie_core::agent_event_kind!(event))
                 .collect();
             let exact_events = expand_exact_events(&expectation.core.exact_events, &trace_path);
@@ -440,7 +446,13 @@ async fn every_trace_uses_its_yaml_expectations_and_runs_through_core() {
             let core_events = test.events.lock();
             let core_names: Vec<_> = core_events
                 .iter()
-                .filter(|event| !matches!(event, AgentEvent::OperationRecordCreated { .. }))
+                .filter(|event| {
+                    !matches!(
+                        event,
+                        AgentEvent::OperationRecordCreated { .. }
+                            | AgentEvent::TypedOperationRecordCreated { .. }
+                    )
+                })
                 .map(|event| runie_core::agent_event_kind!(event))
                 .collect();
             let exact_events = expand_exact_events(&expectation.core.exact_events, &trace_path);
@@ -613,7 +625,13 @@ async fn every_trace_uses_its_yaml_expectations_and_runs_through_core() {
         let core_events = test.events.lock();
         let core_names: Vec<_> = core_events
             .iter()
-            .filter(|event| !matches!(event, AgentEvent::OperationRecordCreated { .. }))
+            .filter(|event| {
+                !matches!(
+                    event,
+                    AgentEvent::OperationRecordCreated { .. }
+                        | AgentEvent::TypedOperationRecordCreated { .. }
+                )
+            })
             .map(|event| runie_core::agent_event_kind!(event))
             .collect();
         for expected in &expectation.core.required_events {

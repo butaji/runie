@@ -210,6 +210,7 @@ pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
         | AgentEvent::CustomSessionEntryCreated { .. }
         | AgentEvent::CompactionCreated { .. }
         | AgentEvent::OperationRecordCreated { .. }
+        | AgentEvent::TypedOperationRecordCreated { .. }
         | AgentEvent::TurnStart
         | AgentEvent::Waiting { .. }
         | AgentEvent::TurnEnd { .. }

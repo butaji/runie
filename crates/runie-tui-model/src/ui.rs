@@ -63,6 +63,7 @@ pub fn ui_messages_for_event(event: &AgentEvent) -> Vec<UiMsg> {
         | AgentEvent::CustomSessionEntryCreated { .. }
         | AgentEvent::CompactionCreated { .. }
         | AgentEvent::OperationRecordCreated { .. }
+        | AgentEvent::TypedOperationRecordCreated { .. }
         | AgentEvent::ToolDisplayModeChanged { .. }
         | AgentEvent::TurnEnd { .. }
         | AgentEvent::MessageStart { .. }

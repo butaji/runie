@@ -221,6 +221,9 @@ impl AgentStateActor {
             AgentEvent::OperationRecordCreated { .. } => {
                 // Operation-lane journal facts belong to SessionActor.
             }
+            AgentEvent::TypedOperationRecordCreated { .. } => {
+                // Operation-lane journal facts belong to SessionActor.
+            }
             AgentEvent::MessageStart { message } if is_assistant(&message) => {
                 state.is_streaming = true;
                 state.streaming_message = Some(message);

@@ -273,7 +273,13 @@ pub fn echo_tool() -> Arc<dyn runie_core::types::AgentTool> {
 pub fn event_kinds(events: &[AgentEvent]) -> Vec<&'static str> {
     events
         .iter()
-        .filter(|event| !matches!(event, AgentEvent::OperationRecordCreated { .. }))
+        .filter(|event| {
+            !matches!(
+                event,
+                AgentEvent::OperationRecordCreated { .. }
+                    | AgentEvent::TypedOperationRecordCreated { .. }
+            )
+        })
         .map(|event| runie_core::agent_event_kind!(event))
         .collect()
 }

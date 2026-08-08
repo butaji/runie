@@ -75,22 +75,13 @@ pub struct RunLoopOutcome {
     pub new_messages: Vec<AgentMessage>,
 }
 
-crate::wire_kind! {
-    enum OperationRecordKind {
-        Started => "operation_started",
-        Finished => "operation_finished",
-    }
-}
-
 fn publish_operation_record(
     deps: &RunLoopDeps,
-    kind: OperationRecordKind,
+    kind: crate::types::OperationRecordKind,
     data: serde_json::Value,
 ) {
-    deps.bus.publish(AgentEvent::OperationRecordCreated {
-        record_type: kind.wire_name().to_owned(),
-        data,
-    });
+    deps.bus
+        .publish(AgentEvent::TypedOperationRecordCreated { kind, data });
 }
 
 /// Run a full agent loop for the supplied prompts. Mirrors
@@ -109,7 +100,7 @@ pub async fn run_loop(
     publish_pi_and_apply(&deps, PiAgentEvent::AgentStart).await;
     publish_operation_record(
         &deps,
-        OperationRecordKind::Started,
+        crate::types::OperationRecordKind::OperationStarted,
         serde_json::json!({"id": deps.run_id, "intent": {"kind": "run"}}),
     );
     publish_pi_and_apply(&deps, PiAgentEvent::TurnStart).await;
@@ -208,7 +199,7 @@ async fn end_run(all_new: Vec<AgentMessage>, deps: &RunLoopDeps) -> RunLoopOutco
     };
     publish_operation_record(
         deps,
-        OperationRecordKind::Finished,
+        crate::types::OperationRecordKind::OperationFinished,
         serde_json::json!({"runId": deps.run_id, "outcome": outcome}),
     );
     publish_pi_and_apply(
@@ -1034,11 +1025,11 @@ mod event_reconstruction_tests {
     #[test]
     fn operation_record_kind_has_pi_wire_names() {
         assert_eq!(
-            OperationRecordKind::Started.wire_name(),
+            crate::types::OperationRecordKind::OperationStarted.wire_name(),
             "operation_started"
         );
         assert_eq!(
-            OperationRecordKind::Finished.wire_name(),
+            crate::types::OperationRecordKind::OperationFinished.wire_name(),
             "operation_finished"
         );
     }
