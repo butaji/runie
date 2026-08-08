@@ -98,6 +98,14 @@ invalid and was not used for a cell comparison. This isolates the remaining
 issue to obtaining a settled Grok frame under the resize schedule, not to the
 resize event or observation path.
 
+Grok dependency retry (2026-08-08): `CARGO_NET_GIT_FETCH_WITH_CLI=true cargo
+fetch` successfully retrieved the external git revisions and the PTY test
+workspace compiled. The targeted `pty_e2e_scroll_selection`
+`resize_preserves_scroll_position` test then produced no test-start or cast
+artifact output and was stopped after hanging in the PTY execution phase.
+Dependency access is therefore resolved, but Grok PTY settlement remains an
+environment blocker; no paired resize claim is made.
+
 Runie four-geometry runtime matrix (2026-08-09):
 `capture-scenario.sh crates/runie-tui/tests/e2e/visual-resize.yaml` completed
 for initial terminals `62×32`, `80×24`, `100×30`, and `120×36` with
