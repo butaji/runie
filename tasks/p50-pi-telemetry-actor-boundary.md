@@ -159,3 +159,10 @@ terminal event metadata. Unknown or invalid end fields are rejected by the
 typed validator; generic extension spans remain schema-agnostic.
 `pi-ai-request-end.yaml` adds runtime-editable replay coverage for the
 provider-shaped start and terminal attribute projection.
+
+Stream chunk-count increment (2026-08-09): the owned provider pump now counts
+non-terminal assistant update events and publishes Pi's
+`pi.ai.stream.chunk_count` at terminal span settlement for both successful and
+provider-error streams. The provider telemetry regression asserts the
+actor-owned count; start, done, and error envelope events are excluded from
+the update count.

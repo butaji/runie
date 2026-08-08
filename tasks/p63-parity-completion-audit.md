@@ -116,6 +116,11 @@ reasoning tokens into Runie's existing `Usage` payload on the acknowledged
 assistant `Done` event. The full workspace gate and replay matrix pass; cost
 calculation and live provider transport remain adapter-specific open work.
 
+Telemetry chunk-count evidence (2026-08-09): provider request spans now emit
+the source-defined `pi.ai.stream.chunk_count` terminal attribute from the
+owned stream pump, with a regression covering the update-event count and full
+CI/parity validation. Timing metadata and backend conformance remain open.
+
 Codex transport audit correction (2026-08-09): production deployment and the
 source-aligned bounded pre-stream retry policy are now implemented and tested.
 The remaining Codex item is provider-specific deferred behavior and any
