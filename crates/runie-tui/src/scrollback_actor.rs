@@ -242,56 +242,7 @@ impl OwnedEventProjection {
     reason = "the exhaustive event-to-feed table keeps application no-ops explicit"
 )]
 fn bus_messages_for_event(event: AgentEvent) -> Vec<ScrollbackMsg> {
-    if !runie_tui_model::is_actor_feed_event(&event) {
-        return Vec::new();
-    }
-    match event {
-        AgentEvent::Reset => vec![ScrollbackMsg::Clear],
-        AgentEvent::ThemeChanged { theme } => vec![ScrollbackMsg::SetTheme(theme)],
-        AgentEvent::ModelChanged { .. } => Vec::new(),
-        AgentEvent::ToolDisplayModeChanged { tool_call_id, mode } => {
-            vec![ScrollbackMsg::SetToolMode(tool_call_id, mode)]
-        }
-        AgentEvent::ToolExecutionStart {
-            tool_call_id,
-            tool_name,
-            ..
-        } => vec![
-            ScrollbackMsg::SetToolName(tool_call_id.clone(), tool_name.clone()),
-            ScrollbackMsg::SetToolMode(
-                tool_call_id,
-                runie_tui_model::default_tool_display_mode(&tool_name),
-            ),
-        ],
-        event @ (AgentEvent::BackgroundWorkStarted { .. }
-        | AgentEvent::BackgroundWorkProgress { .. }
-        | AgentEvent::BackgroundWorkFinished { .. }
-        | AgentEvent::BackgroundWorkCancelled { .. }) => background_messages_for_event(event),
-        AgentEvent::AgentStart
-        | AgentEvent::AgentEnd { .. }
-        | AgentEvent::Error { .. }
-        | AgentEvent::ThinkingLevelChanged { .. }
-        | AgentEvent::ActiveToolsChanged { .. }
-        | AgentEvent::BranchSummaryCreated { .. }
-        | AgentEvent::CustomSessionEntryCreated { .. }
-        | AgentEvent::SessionLabelChanged { .. }
-        | AgentEvent::SessionNameChanged { .. }
-        | AgentEvent::SessionLaneChanged { .. }
-        | AgentEvent::SessionEntryAppended { .. }
-        | AgentEvent::CompactionCreated { .. }
-        | AgentEvent::OperationRecordCreated { .. }
-        | AgentEvent::TurnStart
-        | AgentEvent::Waiting { .. }
-        | AgentEvent::TurnEnd { .. }
-        | AgentEvent::MessageStart { .. }
-        | AgentEvent::MessageUpdate { .. }
-        | AgentEvent::MessageEnd { .. }
-        | AgentEvent::ToolExecutionUpdate { .. }
-        | AgentEvent::ToolExecutionEnd { .. }
-        | AgentEvent::WorkflowStarted { .. }
-        | AgentEvent::WorkflowProgress { .. }
-        | AgentEvent::WorkflowFinished { .. } => Vec::new(),
-    }
+    runie_tui_model::bus_messages_for_event(&event)
 }
 
 fn structured_update_messages(
@@ -412,14 +363,6 @@ fn ordinary_tool_end_messages(
         messages.push(ScrollbackMsg::MarkToolError(tool_call_id.clone()));
     }
     messages
-}
-
-#[allow(
-    clippy::too_many_lines,
-    reason = "background lifecycle formatting keeps Grok card variants explicit"
-)]
-fn background_messages_for_event(event: AgentEvent) -> Vec<ScrollbackMsg> {
-    runie_tui_model::background_messages_for_event(&event)
 }
 
 impl Default for ScrollbackActor {

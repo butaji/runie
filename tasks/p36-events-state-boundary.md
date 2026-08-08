@@ -1484,3 +1484,23 @@ the 220 `runie-tui` lib unit tests, the 5 `runie` binary unit tests,
 the 28 `visual_snapshots` replay tests, and the full `just ci`
 (fmt-check, clippy, lint, test, parity, source inventory, Pi event
 contract, feed-actor boundary) are green.
+
+**`bus_messages_for_event` retirement (2026-08-08):** the
+`is_actor_feed_event`-gated bus projection now lives in
+`runie-tui-model::feed` so the actor-owned bus dispatch and the
+renderer share one canonical shape. The renderer-local `fn
+bus_messages_for_event` at `crates/runie-tui/src/scrollback_actor.rs:244`
+was collapsed to a thin `runie_tui_model::bus_messages_for_event(&event)`
+delegate, and the now-dead local `background_messages_for_event`
+wrapper was removed (the bus projection delegates to the model-side
+background helper). The three new focused tests
+`bus_messages_for_event_emits_clear_for_reset`,
+`bus_messages_for_event_emits_set_theme_for_theme_changed`, and
+`bus_messages_for_event_returns_empty_for_non_actor_feed` in
+`crates/runie-tui-model/src/feed.rs` pin the reset clear, the theme
+projection, and the non-actor-feed skip. The 133 `runie-tui-model`
+lib unit tests (130 pre-existing + 3 new), the 220 `runie-tui` lib
+unit tests, the 5 `runie` binary unit tests, the 28 `visual_snapshots`
+replay tests, and the full `just ci` (fmt-check, clippy, lint, test,
+parity, source inventory, Pi event contract, feed-actor boundary) are
+green.

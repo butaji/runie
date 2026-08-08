@@ -2,6 +2,7 @@
 
 use std::collections::{HashMap, HashSet};
 
+use crate::events::is_actor_feed_event;
 use runie_core::types::{ThemeKind, ToolDisplayMode};
 
 /// Semantic category for grouped activity-tool counters.
@@ -932,6 +933,47 @@ pub fn background_messages_for_event(event: &runie_core::types::AgentEvent) -> V
             status: status.clone(),
             elapsed_ms: *elapsed_ms,
         }],
+        _ => Vec::new(),
+    }
+}
+
+/// Project a subscribed `AgentEvent` into the actor-owned scrollback
+/// messages that the bus deliverer hands to the actor. The helper
+/// drops events that don't belong to the actor feed boundary and
+/// delegates `BackgroundWork*` events to the background lifecycle
+/// projection. Centralized here so the actor-owned bus projection and
+/// the renderer share one canonical shape.
+#[allow(
+    clippy::too_many_lines,
+    reason = "bus dispatch reuses the explicit per-event projection set"
+)]
+pub fn bus_messages_for_event(event: &runie_core::types::AgentEvent) -> Vec<ScrollbackMsg> {
+    if !is_actor_feed_event(event) {
+        return Vec::new();
+    }
+    match event {
+        runie_core::types::AgentEvent::Reset => vec![ScrollbackMsg::Clear],
+        runie_core::types::AgentEvent::ThemeChanged { theme } => {
+            vec![ScrollbackMsg::SetTheme(*theme)]
+        }
+        runie_core::types::AgentEvent::ModelChanged { .. } => Vec::new(),
+        runie_core::types::AgentEvent::ToolDisplayModeChanged { tool_call_id, mode } => {
+            vec![ScrollbackMsg::SetToolMode(tool_call_id.clone(), *mode)]
+        }
+        runie_core::types::AgentEvent::ToolExecutionStart {
+            tool_call_id,
+            tool_name,
+            ..
+        } => vec![
+            ScrollbackMsg::SetToolName(tool_call_id.clone(), tool_name.clone()),
+            ScrollbackMsg::SetToolMode(tool_call_id.clone(), default_tool_display_mode(tool_name)),
+        ],
+        runie_core::types::AgentEvent::BackgroundWorkStarted { .. }
+        | runie_core::types::AgentEvent::BackgroundWorkProgress { .. }
+        | runie_core::types::AgentEvent::BackgroundWorkFinished { .. }
+        | runie_core::types::AgentEvent::BackgroundWorkCancelled { .. } => {
+            background_messages_for_event(event)
+        }
         _ => Vec::new(),
     }
 }
@@ -2597,6 +2639,40 @@ mod tests {
         use runie_core::types::AgentEvent;
         let event = AgentEvent::AgentStart;
         assert!(super::background_messages_for_event(&event).is_empty());
+    }
+
+    #[test]
+    fn bus_messages_for_event_emits_clear_for_reset() {
+        // Pin the smoke path: a `Reset` event emits a single
+        // `ScrollbackMsg::Clear` so the actor-owned bus projection
+        // and the renderer agree on the reset semantics.
+        use runie_core::types::AgentEvent;
+        let messages = super::bus_messages_for_event(&AgentEvent::Reset);
+        assert_eq!(messages, vec![super::ScrollbackMsg::Clear]);
+    }
+
+    #[test]
+    fn bus_messages_for_event_emits_set_theme_for_theme_changed() {
+        // Pin the theme projection: a `ThemeChanged` event emits a
+        // `ScrollbackMsg::SetTheme` carrying the new theme.
+        use runie_core::types::{AgentEvent, ThemeKind};
+        let messages = super::bus_messages_for_event(&AgentEvent::ThemeChanged {
+            theme: ThemeKind::GrokDay,
+        });
+        assert_eq!(
+            messages,
+            vec![super::ScrollbackMsg::SetTheme(ThemeKind::GrokDay)]
+        );
+    }
+
+    #[test]
+    fn bus_messages_for_event_returns_empty_for_non_actor_feed() {
+        // Pin the negative path: a non-actor-feed event returns an
+        // empty vector so the renderer can rely on the bus projection
+        // for delivery-or-skip semantics.
+        use runie_core::types::AgentEvent;
+        let event = AgentEvent::TurnStart;
+        assert!(super::bus_messages_for_event(&event).is_empty());
     }
 
     #[test]
