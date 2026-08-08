@@ -742,7 +742,7 @@ impl App {
                 runie_core::session::SessionOperationKind::Finished,
                 serde_json::json!({
                     "id": compaction_id,
-                    "outcome": "success",
+                    "outcome": "completed",
                 }),
             )
             .await?;
