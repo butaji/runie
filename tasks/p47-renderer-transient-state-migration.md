@@ -1,6 +1,7 @@
 # p47 — Migrate renderer transient state into actor reducers
 
-Status: in progress — live tool/assistant/turn ownership migrated; compatibility cleanup remains (2026-08-07)
+Status: in progress — live and replay renderer ownership migrated; platform
+clipboard effect remains the only explicitly external adapter (2026-08-09)
 
 ## Interactive input delivery correction (2026-08-08)
 
@@ -497,23 +498,18 @@ coordinates are translated against the actor-delivered scrollback origin, and
 only selection intents cross into the main mailbox. This keeps async input
 plumbing thin and replayable.
 
-## Compatibility mirror call-site audit (2026-08-08)
+## Compatibility mirror call-site audit (2026-08-08, superseded)
 
-The remaining `EventRenderer` mirror is reachable only from the replay adapter
-helpers, not from `App::spawn_renderer` or the live `with_live_actors` path.
-The exact residual branches are the fallback arms in `assistant_stream_open`,
-`thinking_elapsed_ms`, `handle_tool_start`, `handle_tool_update`,
-`handle_tool_end`, message lifecycle handling, status/error handling, and
-snapshot rehydration. All current YAML and unit callers construct
-`EventRenderer::with_actors`, so the actor-backed path is the authoritative
-replay path as well; the fallback branches are retained solely because the
-helper signatures still encode the historical adapter shape.
+The historical `EventRenderer` mirror described by this section has been
+removed. The current renderer stores actor handles and immutable layout
+configuration only; both live delivery and replay use actor-backed
+projections. `Scrollback::from_model_snapshot` remains for callers that need
+the compatibility widget shape, but it only rehydrates an immutable snapshot
+and owns no event state.
 
-The next migration must remove one helper family at a time, first deleting its
-fallback branch and then its obsolete `Projection` access, with a YAML event
-sequence and actor snapshot assertion for each family. Removing the entire
-mirror in one edit would either discard replay coverage or create a second
-mutable feed model, both of which violate the SSOT boundary.
+The source-boundary validator and actor/replay tests are the regression
+evidence for this closure; deleting the snapshot adapter itself would be an
+API migration rather than a renderer-state migration.
 
 **Tool-start helper migration (2026-08-08):** The tool-start reducer now has
 no compatibility writes. It derives Grok activity/header data from the
@@ -604,7 +600,8 @@ keeps the idle chrome formatter next to the widget that renders it.
 **Clipboard payload projection (2026-08-08):** `selected_cell_text` now
 projects a committed `CellSelection` into deterministic, newline-preserving
 text in `runie-tui-model`. The projection is pure and tested independently of
-any platform clipboard; clipboard adapter wiring remains open.
+any platform clipboard; the binary now wires the committed selection through
+its existing OSC52 effect boundary, while the model projection remains pure.
 
 The replay oracle now also accepts `copy_selection_text`, so YAML can assert
 the projected payload rather than only the presence of a copy request.

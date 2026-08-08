@@ -1,6 +1,7 @@
 # p48 — Event-delivery audit and closure criteria
 
-Status: audited; compatibility retirement remains (2026-08-07)
+Status: audited; EventRenderer compatibility mirror retired; widget snapshot
+adapter remains intentionally (2026-08-09)
 
 ## Invariant
 
@@ -19,9 +20,10 @@ and styling from snapshots, but may not write another actor's state.
   tool and assistant presentation state is read from its `FeedSnapshot`.
 - YAML replay drives the same event path as functional tests and can assert
   both event order and resulting actor state without recompilation.
-- `EventRenderer` still contains compatibility reducer buffers for replay
-  callers. They are not live state owners and must be removed only after all
-  compatibility callers consume actor snapshots.
+- `EventRenderer` no longer contains reducer buffers or a mutable projection
+  mirror. Live delivery and YAML replay both consume actor-backed snapshots;
+  the remaining `Scrollback::from_model_snapshot` adapter is a read-only
+  rehydration surface for legacy widget APIs, not an event/state owner.
 
 ## Explicitly allowed mutation
 
@@ -40,13 +42,14 @@ Direct mutation from application orchestration or rendering is not allowed.
    fixture.
 6. Run `just ci`, including the actor-boundary and source-inventory checks.
 
-## Next closure slice
+## Historical closure slice
 
-Retire the compatibility `EventRenderer` state mirror tracked by
-`p47-renderer-transient-state-migration.md`. Before deleting each field, move
-its replay projection to the owning actor, add an event-order assertion, and
-prove that live and replay renders consume equivalent snapshots. Do not solve
-this by introducing a second shared mutable model.
+The compatibility `EventRenderer` state mirror tracked by
+`p47-renderer-transient-state-migration.md` has been retired. Replay uses
+`apply_actor_event`, which sends the same acknowledged actor messages as live
+delivery and reads the actor snapshot once per event. The remaining widget
+adapter is intentionally retained until callers no longer require its public
+shape; deleting it would be an API removal, not an event-boundary migration.
 
 ## Direct-write audit (2026-08-07)
 
@@ -67,10 +70,10 @@ remaining assignments are reducer-local writes or compatibility-only adapters:
 - Direct widget assignments are reducer internals or snapshot hydration, not
   application-level state changes.
 
-This remains open by design: removing the compatibility mirror requires
-migrating each replay caller to an actor-backed snapshot without changing its
-deterministic YAML contract. Acceptance remains the full YAML suite plus a
-source audit proving that `with_live_actors` cannot access `Projection::Legacy`.
+The source audit remains useful as a regression guard: it proves that
+`with_live_actors` cannot access a legacy renderer projection. The remaining
+compatibility-only widget methods are covered by snapshot rehydration tests
+and are not reachable from the production renderer path.
 
 ## Deferred snapshot oracle (2026-08-07)
 
