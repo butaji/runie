@@ -53,7 +53,10 @@ impl ReplayProvider {
             .post_with_options(String::new(), model, options)
             .await?;
         if response.status >= 400 {
-            return Err(StreamError::Api(format!("HTTP {}", response.status)));
+            return Err(StreamError::Api(http_error_message(
+                response.status,
+                &response.body,
+            )));
         }
         Self::from_sse_body(&response.body)
     }
@@ -187,6 +190,15 @@ fn response_error_message(value: &serde_json::Value) -> String {
         (_, _, Some(reason)) => format!("incomplete: {reason}"),
         _ => value.to_string(),
     }
+}
+
+fn http_error_message(status: u16, body: &str) -> String {
+    serde_json::from_str::<serde_json::Value>(body)
+        .ok()
+        .filter(|value| value.is_object())
+        .map(|value| response_error_message(&value))
+        .filter(|message| message != body)
+        .unwrap_or_else(|| format!("HTTP {status}"))
 }
 
 fn response_stop_reason(value: &serde_json::Value) -> StopReason {
@@ -887,6 +899,18 @@ mod tests {
             result,
             Err(StreamError::Api(message)) if message == "overloaded: try again"
         ));
+    }
+
+    #[test]
+    fn http_error_message_prefers_structured_provider_body() {
+        assert_eq!(
+            super::http_error_message(
+                429,
+                r#"{"error":{"code":"rate_limit","message":"try later"}}"#,
+            ),
+            "rate_limit: try later"
+        );
+        assert_eq!(super::http_error_message(500, "not JSON"), "HTTP 500");
     }
 
     #[tokio::test]
