@@ -30,6 +30,7 @@ events:
         timestamp: 2
         intent:
           kind: workflow
+  - session_flush: true
   - operation_record:
       record_type: operation_finished
       data:
