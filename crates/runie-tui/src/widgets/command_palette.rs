@@ -32,14 +32,6 @@ impl CommandPaletteWidget {
     fn filtered(&self) -> Vec<&'static str> {
         PaletteAction::filtered_labels(&self.query)
     }
-
-    pub fn selected_entry(query: &str, selected: usize) -> Option<&'static str> {
-        PaletteAction::selected_label(query, selected)
-    }
-
-    pub fn entry_count(query: &str) -> usize {
-        PaletteAction::entry_count(query)
-    }
 }
 
 impl Widget for CommandPaletteWidget {
