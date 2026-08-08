@@ -795,6 +795,15 @@ mod tests {
         }
     }
 
+    struct FailingExporter;
+
+    #[async_trait::async_trait]
+    impl TelemetryExporter for FailingExporter {
+        async fn export(&self, _snapshot: TelemetrySnapshot) -> Result<(), String> {
+            Err("export backend unavailable".to_owned())
+        }
+    }
+
     #[tokio::test]
     async fn nested_spans_and_terminal_state_are_actor_owned() {
         let actor = TelemetryActor::new();
@@ -1118,5 +1127,21 @@ mod tests {
         assert_eq!(exported.spans.len(), 1);
         assert!(exported.spans[0].ended);
         assert_eq!(exported.spans[0].name, "exported");
+    }
+
+    #[tokio::test]
+    async fn exporter_failure_does_not_rewind_settled_actor_state() {
+        let actor = TelemetryActor::new_with_exporter(Some(Arc::new(FailingExporter)));
+        let span = actor
+            .start_span(None, "export-failure", HashMap::new())
+            .await
+            .unwrap();
+        span.end().await;
+
+        let snapshot = actor.snapshot();
+        assert_eq!(snapshot.spans.len(), 1);
+        assert!(snapshot.spans[0].ended);
+        assert_eq!(snapshot.spans[0].status, SpanStatus::Ok);
+        assert_eq!(snapshot.spans[0].name, "export-failure");
     }
 }

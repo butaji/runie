@@ -116,6 +116,10 @@ rewind telemetry state. The no-exporter constructor remains the default, and a
 regression receives the settled snapshot through an async channel without
 sleep-based synchronization.
 
+Exporter failure conformance (2026-08-08): a failing exporter regression now
+proves that the settled span remains present, ended, and status-preserving in
+the actor snapshot when the backend rejects export.
+
 Telemetry source reconciliation (2026-08-07): the checked-out Pi telemetry
 interface exposes `addEvent(name, attributes)` and
 `setStatus({ status, error })`; it does not expose a separate
