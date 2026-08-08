@@ -1525,3 +1525,17 @@ the 220 `runie-tui` lib unit tests, the 5 `runie` binary unit tests,
 the 28 `visual_snapshots` replay tests, and the full `just ci`
 (fmt-check, clippy, lint, test, parity, source inventory, Pi event
 contract, feed-actor boundary) are green.
+
+**`line_is_blank` retirement (2026-08-08):** the Grok blank-line
+predicate now lives in `runie-tui-model::feed` as both a `Line`
+method and a free function so the actor-owned transcript projection
+and the renderer share the blank-line definition. The new
+`line_is_blank_pins_empty_text_predicate` test in
+`crates/runie-tui-model/src/feed.rs` pins the empty-text positive
+case, the non-empty negative case, and the agreement between the
+method and the free function. The 137 `runie-tui-model` lib unit
+tests (136 pre-existing + 1 new), the 220 `runie-tui` lib unit
+tests, the 5 `runie` binary unit tests, the 28 `visual_snapshots`
+replay tests, and the full `just ci` (fmt-check, clippy, lint, test,
+parity, source inventory, Pi event contract, feed-actor boundary) are
+green.

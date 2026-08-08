@@ -3396,6 +3396,20 @@ mod tests {
             "Memory Search actors (2 results)"
         );
     }
+
+    #[test]
+    fn line_is_blank_pins_empty_text_predicate() {
+        // Pin the smoke path: a line with empty text is blank, and the
+        // free function and the method agree on the same definition.
+        let blank = super::Line::new(super::LineKind::Separator, "");
+        assert!(blank.is_blank());
+        assert!(super::line_is_blank(&blank));
+        // Pin the negative path: a line with non-empty text is not
+        // blank, and the predicate returns false for both call sites.
+        let non_blank = super::Line::new(super::LineKind::User, "hello");
+        assert!(!non_blank.is_blank());
+        assert!(!super::line_is_blank(&non_blank));
+    }
 }
 
 /// Pure formatter for the Grok "Workflow name: objective" transcript row.
@@ -3492,9 +3506,23 @@ impl Line {
         self.tool_row_active
     }
 
+    /// Detect whether a `Line` is blank — i.e. has no rendered text.
+    /// Centralized here so the actor-owned transcript projection and
+    /// the renderer agree on the blank-line definition.
+    pub fn is_blank(&self) -> bool {
+        self.text.is_empty()
+    }
+
     pub fn settle_tool_row(&mut self) {
         self.tool_row_active = false;
     }
+}
+
+/// Free-function predicate for whether a `Line` is blank. Centralized
+/// here so the actor-owned transcript projection and the renderer
+/// share the blank-line vocabulary.
+pub fn line_is_blank(line: &Line) -> bool {
+    line.is_blank()
 }
 
 /// Inputs accepted by the actor-owned transcript reducer.
