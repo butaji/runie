@@ -1,5 +1,10 @@
 # Pi session lane and durable storage parity
 
+**Shared journal target validation (2026-08-08):** lane moves now accept any
+validated node in the shared message/configuration entry namespace, including
+branch-summary records, instead of incorrectly restricting leaves to message
+entries. An actor regression pins the move and resulting lane projection.
+
 Status: implemented (2026-08-08)
 
 ## Completed slice (2026-08-08, validated compaction publication event)

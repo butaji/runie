@@ -3247,7 +3247,12 @@ impl SessionActor {
                             continue;
                         }
                         if let Some(leaf_id) = &leaf_id {
-                            if !state.entries.iter().any(|entry| entry.id == *leaf_id) {
+                            let exists = state.entries.iter().any(|entry| entry.id == *leaf_id)
+                                || state
+                                    .config_records
+                                    .iter()
+                                    .any(|entry| entry.id == *leaf_id);
+                            if !exists {
                                 let _ =
                                     reply.send(Err(format!("lane leaf does not exist: {leaf_id}")));
                                 continue;
@@ -4111,6 +4116,32 @@ mod tests {
             SessionSnapshot::from_jsonl(&canonical_snapshot.to_jsonl("s", 1, "/tmp"))
                 .expect("lane append JSONL");
         assert_eq!(imported.entry_lane("entry-2"), Some("feature"));
+    }
+
+    #[tokio::test]
+    async fn lane_can_move_to_a_configuration_entry_in_the_shared_tree() {
+        let actor = SessionActor::new();
+        actor.append(user("root")).await;
+        actor
+            .record_config(SessionConfigRecord::BranchSummaryCreated {
+                from_id: "entry-1".into(),
+                summary: "branch summary".into(),
+                details: None,
+            })
+            .await
+            .expect("summary entry");
+        actor
+            .record_lane("feature".into(), Some("entry-1".into()), true)
+            .await
+            .expect("lane create");
+        actor
+            .record_lane("feature".into(), Some("entry-2".into()), false)
+            .await
+            .expect("move to shared config entry");
+        assert_eq!(
+            actor.snapshot().lanes().get("feature"),
+            Some(&Some("entry-2".into()))
+        );
     }
 
     #[tokio::test]
