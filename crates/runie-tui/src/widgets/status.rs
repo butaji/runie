@@ -273,11 +273,7 @@ impl StatusBar {
     }
 
     pub fn worked_for_label(&self) -> String {
-        format!(
-            "Worked for {}.{}s",
-            self.displayed_elapsed_ticks() / 20,
-            (self.displayed_elapsed_ticks() / 2) % 10
-        )
+        runie_tui_model::format_worked_for_seconds(self.displayed_elapsed_ticks())
     }
 
     fn displayed_elapsed_ticks(&self) -> u64 {

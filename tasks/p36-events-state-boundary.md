@@ -1445,3 +1445,21 @@ shapes. The 126 `runie-tui-model` lib unit tests (122 pre-existing +
 unit tests, the 28 `visual_snapshots` replay tests, and the full
 `just ci` (fmt-check, clippy, lint, test, parity, source inventory, Pi
 event contract, feed-actor boundary) are green.
+
+**`format_worked_for_seconds` retirement (2026-08-08):** the Grok
+worked-for label formatter now lives in `runie-tui-model::status` so
+the actor-owned status projection and the renderer share one label
+shape. The renderer-local `pub fn worked_for_label` at
+`crates/runie-tui/src/widgets/status.rs:275` was collapsed to a thin
+`runie_tui_model::format_worked_for_seconds(self.displayed_elapsed_ticks())`
+delegate, and the `StatusSnapshot::worked_for_label` method now
+delegates to the same free function. The new
+`format_worked_for_seconds_pins_grok_label_form` test in
+`crates/runie-tui-model/src/status.rs` pins the 57-tick
+`Worked for 2.8s` shape, the zero-tick `Worked for 0.0s` projection,
+and the 20-tick `Worked for 1.0s` one-second threshold. The 127
+`runie-tui-model` lib unit tests (126 pre-existing + 1 new), the 220
+`runie-tui` lib unit tests, the 5 `runie` binary unit tests, the 28
+`visual_snapshots` replay tests, and the full `just ci` (fmt-check,
+clippy, lint, test, parity, source inventory, Pi event contract,
+feed-actor boundary) are green.

@@ -82,13 +82,23 @@ impl StatusSnapshot {
     }
 
     pub fn worked_for_label(&self) -> String {
-        format!(
-            "Worked for {}.{}s",
-            self.elapsed_ticks / 20,
-            (self.elapsed_ticks / 2) % 10
-        )
+        format_worked_for_seconds(self.elapsed_ticks)
     }
+}
 
+/// Format an actor's elapsed-ticks count as Grok's `Worked for N.Ns`
+/// label. Centralized here so the actor-owned projection and the
+/// renderer share one worked-for shape, including the renderer's
+/// override-aware variant.
+pub fn format_worked_for_seconds(elapsed_ticks: u64) -> String {
+    format!(
+        "Worked for {}.{}s",
+        elapsed_ticks / 20,
+        (elapsed_ticks / 2) % 10
+    )
+}
+
+impl StatusSnapshot {
     /// Reduce one status intent into the actor-owned immutable projection.
     /// `elapsed_seed` is supplied by the runtime only for deterministic parity
     /// captures; the model remains independent of clocks and terminal I/O.
@@ -236,6 +246,17 @@ mod tests {
         assert_eq!(super::DOT_SPINNER_FRAMES, ["⋅", ":", "⸬", "⁙"]);
         // Pin the dot fallback: a three-frame 1-column quiet cycle.
         assert_eq!(super::DOT_SPINNER_FALLBACK, [".", ":", "·"]);
+    }
+
+    #[test]
+    fn format_worked_for_seconds_pins_grok_label_form() {
+        // Pin the smoke path: 57 elapsed ticks at 20 Hz renders as
+        // "Worked for 2.8s" so the renderer agrees with the model.
+        assert_eq!(super::format_worked_for_seconds(57), "Worked for 2.8s");
+        // Pin the zero-tick case: a fresh turn shows "Worked for 0.0s".
+        assert_eq!(super::format_worked_for_seconds(0), "Worked for 0.0s");
+        // Pin the larger-tick case: 20 ticks is one full second.
+        assert_eq!(super::format_worked_for_seconds(20), "Worked for 1.0s");
     }
 
     #[test]

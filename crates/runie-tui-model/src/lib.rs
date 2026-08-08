@@ -40,8 +40,8 @@ pub use scroll::{
     DEFAULT_SCROLL_FLUSH_CADENCE_MS, MIN_SCROLL_FLUSH_LINES,
 };
 pub use status::{
-    Status, StatusMsg, StatusSnapshot, BRAILLE_SPINNER_FALLBACK, BRAILLE_SPINNER_FRAMES,
-    DOT_SPINNER_FALLBACK, DOT_SPINNER_FRAMES,
+    format_worked_for_seconds, Status, StatusMsg, StatusSnapshot, BRAILLE_SPINNER_FALLBACK,
+    BRAILLE_SPINNER_FRAMES, DOT_SPINNER_FALLBACK, DOT_SPINNER_FRAMES,
 };
 pub use theme::ThemeToken;
 pub use ui::{ui_messages_for_event, PaletteAction, UiCommand, UiMsg, UiState};
