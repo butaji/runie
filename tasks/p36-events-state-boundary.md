@@ -527,6 +527,15 @@ so the production code path keeps the original four-argument
 The full `just ci` (fmt-check, clippy, lint, test, parity, source
 inventory, Pi event contract, feed-actor boundary) is green.
 
+**Render-frame snapshot/await reduction (2026-08-08):** `runie` now caches
+placeholder visibility in the event loop and only sends the prompt actor
+mailbox update when settled/idle state transitions. Each frame captures one
+`TuiSnapshot` before `terminal.draw`, reuses one `PromptWidget` for both cursor
+position and rendering, and reads session state only when the session-info
+overlay is open. Key dispatch remains paired with exactly one immediate
+`render_frame` call; focused binary/library tests and `just ci` cover the
+change.
+
 **UiActor mailbox-bias regression cover (2026-08-08):** the `biased;`
 above was only pinned by a test on the prompt side; the `UiActor` worker
 carried the same bias with no executable proof, so removing it would have

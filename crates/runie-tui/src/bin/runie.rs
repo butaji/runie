@@ -360,6 +360,7 @@ async fn run_app(
         app.set_theme(ThemeKind::TerminalNative).await;
     }
     let mut ui_commands = app.subscribe_ui_commands();
+    let mut placeholder_hidden = false;
     app.prompt
         .set_model_caption("Grok 4.5 (high) · always-approve".into())
         .await;
@@ -764,13 +765,13 @@ async fn run_app(
         terminal: &mut Terminal<CrosstermBackend<Stdout>>,
         input_config_tx: &mpsc::Sender<InputConfig>,
         color_level: runie_tui::terminal_color::ColorLevel,
+        placeholder_hidden: &mut bool,
     ) -> Result<(), String> {
         let model = app.model_snapshot();
-        if matches!(model.status.state, Status::Ready) && !model.feed.is_empty() {
-            // In Grok's settled conversation view the prompt keeps
-            // only its cursor marker; placeholder text is an idle
-            // empty-session affordance.
-            app.prompt.set_placeholder_visible(false).await;
+        let settled = matches!(model.status.state, Status::Ready) && !model.feed.is_empty();
+        if settled != *placeholder_hidden {
+            app.prompt.set_placeholder_visible(!settled).await;
+            *placeholder_hidden = settled;
         }
         if let Err(e) = terminal.draw(|f| {
             use ratatui::layout::Rect;
@@ -787,7 +788,6 @@ async fn run_app(
             let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 let frame_area = f.area();
                 let buf = f.buffer_mut();
-                let model = app.model_snapshot();
                 let document = App::view_document_from_model(&model);
                 let view = &document.root;
                 let status = StatusBar::from_model_snapshot(document.props.status.clone());
@@ -826,6 +826,7 @@ async fn run_app(
                     );
                 }
                 let prompt = PromptWidget::from_model_snapshot(document.props.prompt.clone());
+                let cursor_position = prompt.cursor_position(layout.prompt);
                 Widget::render(prompt, layout.prompt, buf);
                 if view
                     .slots()
@@ -851,18 +852,16 @@ async fn run_app(
                 {
                     render_model_selector(frame_area, buf, &document.props.ui, status.theme());
                 }
-                if app.ui.snapshot().session_info_open {
-                    runie_tui::widgets::SessionInfoWidget::new(&app.session_snapshot())
+                if document.props.ui.session_info_open {
+                    let session = app.session_snapshot();
+                    runie_tui::widgets::SessionInfoWidget::new(&session)
                         .with_theme(status.theme())
                         .render(frame_area, buf);
                 }
                 let header = &document.props.header;
                 render_header(layout.header, buf, &header.meter, header.theme);
                 runie_tui::terminal_color::quantize_buffer(buf, color_level);
-                f.set_cursor_position(
-                    PromptWidget::from_model_snapshot(document.props.prompt.clone())
-                        .cursor_position(layout.prompt),
-                );
+                f.set_cursor_position(cursor_position);
                 let _ = Rect::default();
             }));
             if let Err(e) = res {
@@ -900,6 +899,7 @@ async fn run_app(
                                 terminal,
                                 &input_config_tx,
                                 color_level,
+                                &mut placeholder_hidden,
                             )
                             .await
                             {
@@ -923,7 +923,14 @@ async fn run_app(
                 // burst is visible key-by-key instead of waiting for the
                 // tick to drain a queued batch.
                 if let Err(err) =
-                    render_frame(&app, terminal, &input_config_tx, color_level).await
+                    render_frame(
+                        &app,
+                        terminal,
+                        &input_config_tx,
+                        color_level,
+                        &mut placeholder_hidden,
+                    )
+                    .await
                 {
                     return Ok(AppExit::Error(err));
                 }
