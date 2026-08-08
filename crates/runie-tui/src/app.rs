@@ -721,7 +721,10 @@ impl App {
                         serde_json::json!({
                             "id": compaction_id,
                             "outcome": "error",
-                            "error": {"message": error.to_string()},
+                            "error": {
+                                "code": "compaction",
+                                "message": error.to_string(),
+                            },
                         }),
                     )
                     .await;
