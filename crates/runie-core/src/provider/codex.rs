@@ -291,6 +291,23 @@ impl WebSocketAdapter for CodexWebSocketAdapter {
                         ));
                     }
                     let message_type = value.get("type").and_then(|value| value.as_str());
+                    if message_type == Some("error")
+                        && continuation.is_some()
+                        && value
+                            .pointer("/error/code")
+                            .and_then(|value| value.as_str())
+                            == Some("previous_response_not_found")
+                    {
+                        // One bounded continuation retry: removing the
+                        // stale response ID makes the recursive attempt a
+                        // fresh request, so a repeated provider error cannot
+                        // recurse indefinitely.
+                        socket.close().await;
+                        if let Some(key) = &cache_key {
+                            self.cache.lock().await.continuations.remove(key);
+                        }
+                        return self.stream_websocket(model, context, options.clone()).await;
+                    }
                     // Pi treats an initial provider `error` envelope as a
                     // transport/setup failure. It must remain pre-stream so
                     // the adapter can apply its explicit fallback policy;
@@ -763,6 +780,88 @@ mod tests {
             .await
             .expect("initial provider error falls back");
         assert!(stream.next().await.is_some());
+        assert!(closed.load(std::sync::atomic::Ordering::Acquire));
+    }
+
+    #[tokio::test]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the retry regression keeps both owned sockets and envelope assertions together"
+    )]
+    async fn adapter_retries_stale_cached_continuation_once_as_fresh_request() {
+        use futures::StreamExt;
+
+        let sent = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let closed = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let connector = Arc::new(FakeConnector {
+            socket: std::sync::Mutex::new(
+                [
+                    FakeSocket {
+                        messages: [
+                            r#"{"type":"error","error":{"code":"previous_response_not_found"}}"#
+                                .into(),
+                        ]
+                        .into_iter()
+                        .collect(),
+                        sent: sent.clone(),
+                        closed: closed.clone(),
+                    },
+                    FakeSocket {
+                        messages: [
+                            r#"{"type":"response.created","response":{"id":"fresh"}}"#.into(),
+                            r#"{"type":"response.completed","response":{"status":"completed"}}"#
+                                .into(),
+                        ]
+                        .into_iter()
+                        .collect(),
+                        sent: sent.clone(),
+                        closed: closed.clone(),
+                    },
+                ]
+                .into_iter()
+                .collect(),
+            ),
+            url: std::sync::Mutex::new(None),
+            headers: std::sync::Mutex::new(None),
+        });
+        let adapter = CodexWebSocketAdapter::new(
+            connector,
+            Arc::new(|_, _, _| Ok(serde_json::json!({"model":"test-model"}))),
+            Some("https://example.test/codex".into()),
+            HashMap::new(),
+            None,
+        );
+        let key = WebSocketSessionKey {
+            session_id: "session-1".into(),
+            account_id: "account-a".into(),
+        };
+        adapter.cache.lock().await.store_continuation(
+            key,
+            WebSocketContinuation {
+                last_response_id: Some("stale".into()),
+            },
+        );
+        let options = Some(SimpleStreamOptions {
+            session_id: Some("session-1".into()),
+            api_key: Some("account-a".into()),
+            transport: Some(crate::types::ProviderTransport::WebsocketCached),
+            ..Default::default()
+        });
+        let mut stream = adapter
+            .stream_websocket(&Model::default(), &AgentContext::default(), options)
+            .await
+            .expect("fresh continuation retry");
+        let _ = stream.by_ref().collect::<Vec<_>>().await;
+        let sent = sent.lock().unwrap();
+        assert_eq!(sent.len(), 2);
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&sent[0]).unwrap()["previous_response_id"],
+            "stale"
+        );
+        assert!(serde_json::from_str::<serde_json::Value>(&sent[1])
+            .unwrap()
+            .get("previous_response_id")
+            .is_none());
         assert!(closed.load(std::sync::atomic::Ordering::Acquire));
     }
 }

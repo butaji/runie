@@ -344,3 +344,9 @@ Pre-stream error increment (2026-08-09): an initial provider `error` envelope
 remains outside the started-stream state, so the adapter can close the socket
 and invoke its explicit fallback capability. A focused fake-socket regression
 covers this boundary; post-stream failures continue to propagate.
+
+Continuation retry increment (2026-08-09): a cached
+`previous_response_not_found` error closes the stale socket, removes the
+account-scoped continuation, and performs exactly one fresh connection. A
+two-socket regression proves the second envelope omits the stale response ID;
+repeated errors cannot recurse indefinitely.
