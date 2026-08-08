@@ -1,0 +1,15 @@
+name: visual-slash-fork
+description: Pi's /fork command validates and replaces the session branch through the session actor.
+initial_prompt: hi
+events:
+  - start
+  - done: { stop_reason: stop }
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    steps:
+      - "/fork entry-1"
+      - Enter
+    session_branch_entry_ids:
+      - entry-1

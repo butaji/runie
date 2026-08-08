@@ -507,6 +507,10 @@ impl App {
     /// the binary; every stateful command is reduced here through an event or
     /// mailbox and acknowledged before returning.
     #[allow(clippy::too_many_lines)]
+    #[allow(
+        clippy::cognitive_complexity,
+        reason = "the shared command boundary keeps each actor-owned Pi route explicit"
+    )]
     pub async fn route_mappable_command(&self, command: MappableBuiltinCommand) -> bool {
         match command {
             MappableBuiltinCommand::NewSession => {
@@ -552,6 +556,15 @@ impl App {
             MappableBuiltinCommand::Compact { instructions } => {
                 let _ = self.compact_session(None, instructions).await;
                 true
+            }
+            MappableBuiltinCommand::Fork { target_id } => {
+                match self.session_actor.fork_at_message(target_id).await {
+                    Ok(()) => true,
+                    Err(error) => {
+                        self.bus.publish(AgentEvent::Error { message: error });
+                        true
+                    }
+                }
             }
             MappableBuiltinCommand::Quit => false,
         }

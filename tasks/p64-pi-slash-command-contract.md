@@ -97,3 +97,10 @@ event and do not fall through to provider prompt submission.
 `visual-slash-unsupported.yaml` asserts the resulting rendered error surface
 through the runtime-discovered YAML suite; it does not claim the
 application-owned command is a core agent error projection.
+
+Session fork increment (2026-08-09): `/fork <entry-id>` now parses into a typed
+`MappableBuiltinCommand::Fork`, crosses the `SessionActor` mailbox, validates
+the target against the selected branch, and replaces the actor-owned snapshot
+only after successful fork construction. `visual-slash-fork.yaml` exercises the
+route and asserts the resulting branch IDs; invalid targets leave the snapshot
+unchanged in the actor regression.

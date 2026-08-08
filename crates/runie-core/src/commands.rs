@@ -84,6 +84,7 @@ pub enum MappableBuiltinCommand {
     SessionInfo,
     Name { name: String },
     Compact { instructions: Option<String> },
+    Fork { target_id: String },
 }
 
 /// Classification at the slash-command boundary. Unsupported Pi commands are
@@ -126,6 +127,12 @@ pub fn parse_mappable_builtin_command(input: &str) -> Option<MappableBuiltinComm
                 .map(|_| MappableBuiltinCommand::Model {
                     reference: reference.to_owned(),
                 })
+        }
+        value if value.starts_with("/fork ") => {
+            let target_id = value[6..].trim();
+            (!target_id.is_empty()).then(|| MappableBuiltinCommand::Fork {
+                target_id: target_id.to_owned(),
+            })
         }
         _ => None,
     }

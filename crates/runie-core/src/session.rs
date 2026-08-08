@@ -2552,6 +2552,10 @@ enum Command {
         create: bool,
         reply: oneshot::Sender<Result<(), String>>,
     },
+    Fork {
+        target_id: String,
+        reply: oneshot::Sender<Result<(), String>>,
+    },
     Import(SessionSnapshot, oneshot::Sender<()>),
     Reset(oneshot::Sender<()>),
     Flush(oneshot::Sender<()>),
@@ -3084,6 +3088,28 @@ impl SessionActor {
                         let _ = snapshot_tx.send(state.clone());
                         let _ = reply.send(Ok(()));
                     }
+                    Command::Fork { target_id, reply } => {
+                        let fork = match state.fork_at_message(&target_id) {
+                            Ok(fork) => fork,
+                            Err(error) => {
+                                let _ = reply.send(Err(error));
+                                continue;
+                            }
+                        };
+                        state = fork;
+                        next_id = state
+                            .entries
+                            .iter()
+                            .filter_map(|entry| entry.id.strip_prefix("entry-"))
+                            .filter_map(|value| value.parse::<u64>().ok())
+                            .max()
+                            .unwrap_or(state.sequence)
+                            .saturating_add(1);
+                        rebuild_tool_result_reservations(&state, &mut tool_result_ids);
+                        pending_tool_starts.clear();
+                        let _ = snapshot_tx.send(state.clone());
+                        let _ = reply.send(Ok(()));
+                    }
                     Command::Import(imported, reply) => {
                         next_id = imported
                             .entries
@@ -3322,6 +3348,23 @@ impl SessionActor {
             .map_err(|_| "session actor response was dropped".to_owned())?
     }
 
+    /// Fork the selected message branch through the session owner's mailbox.
+    /// The caller supplies only a target identity; branch validation and state
+    /// replacement remain inside the actor.
+    pub async fn fork_at_message(&self, target_id: String) -> Result<(), String> {
+        let (reply_tx, reply_rx) = oneshot::channel();
+        self.tx
+            .send(Command::Fork {
+                target_id,
+                reply: reply_tx,
+            })
+            .await
+            .map_err(|_| "session actor is closed".to_owned())?;
+        reply_rx
+            .await
+            .map_err(|_| "session actor response was dropped".to_owned())?
+    }
+
     /// Apply session-owned configuration facts from a replay event sequence.
     /// The reducer remains the actor boundary; callers do not mutate the
     /// snapshot or manufacture message entries.
@@ -3460,6 +3503,22 @@ mod tests {
         assert_eq!(snapshot.entries[0].parent_id, None);
         assert_eq!(snapshot.entries[1].parent_id.as_deref(), Some("entry-1"));
         assert_eq!(snapshot.leaf_id.as_deref(), Some("entry-2"));
+    }
+
+    #[tokio::test]
+    async fn fork_command_replaces_actor_snapshot_at_validated_target() {
+        let actor = SessionActor::new();
+        actor.append(user("one")).await;
+        actor.append(user("two")).await;
+        actor
+            .fork_at_message("entry-1".into())
+            .await
+            .expect("fork through actor mailbox");
+        let snapshot = actor.snapshot();
+        assert_eq!(snapshot.branch_entry_ids(), vec!["entry-1"]);
+        assert_eq!(snapshot.entries.len(), 1);
+        assert!(actor.fork_at_message("missing".into()).await.is_err());
+        assert_eq!(actor.snapshot().entries.len(), 1);
     }
 
     #[tokio::test]
