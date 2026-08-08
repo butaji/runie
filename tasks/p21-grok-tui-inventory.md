@@ -724,6 +724,12 @@ when available, rather than the latest matching provider call ID. Duplicate
 live cards therefore retain separate output payloads through the model and
 renderer projections; focused model/replay tests and the full CI gate pass.
 
+Tool-cycle identity increment (2026-08-10): `SelectNextTool` and
+`SelectPreviousTool` now cycle exact header line identities instead of a
+call-ID-collapsed block list. Duplicate live cards can be reached independently
+through the actor reducer; the reducer regression, replay suite, and full CI
+gate pass.
+
 Workflow status formatter audit (2026-08-06): compared against Grok's
 `WorkflowBlockStatus` renderer and added exact tests for `failed`, `cancelled`,
 and `paused` elapsed wording. Cancelled/paused statuses now use `after 1.2s`

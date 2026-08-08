@@ -3226,6 +3226,13 @@ mod tests {
         state.select_entry(1);
         state.select_entry(1);
         assert_eq!(state.navigation.selected_entry, Some(1));
+
+        state.navigation.selected_entry = None;
+        state.navigation.selected_tool_id = None;
+        state.reduce(super::ScrollbackMsg::SelectNextTool);
+        assert_eq!(state.navigation.selected_entry, Some(0));
+        state.reduce(super::ScrollbackMsg::SelectNextTool);
+        assert_eq!(state.navigation.selected_entry, Some(1));
     }
 
     #[test]
@@ -4713,37 +4720,45 @@ impl FeedState {
     }
 
     fn select_tool(&mut self, direction: i8) {
-        let ids: Vec<String> = project_tool_blocks(
-            &self.lines,
-            &self.navigation.tool_names,
-            &self.navigation.tool_modes,
-        )
-        .into_iter()
-        .map(|block| block.tool_call_id)
-        .collect();
-        if ids.is_empty() {
+        let mut seen = HashSet::new();
+        let entries = self
+            .lines
+            .iter()
+            .enumerate()
+            .filter_map(|(index, line)| {
+                (matches!(
+                    line.kind,
+                    LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
+                ) && line.tool_call_id.is_some()
+                    && seen.insert(tool_member_key(&self.lines, index)))
+                .then_some(index)
+            })
+            .collect::<Vec<_>>();
+        if entries.is_empty() {
             self.navigation.selected_tool_id = None;
             return;
         }
-        let current = self
-            .navigation
-            .selected_tool_id
-            .as_ref()
-            .and_then(|id| ids.iter().position(|candidate| candidate == id));
+        let current = self.navigation.selected_tool_id.as_ref().and_then(|id| {
+            self.navigation.selected_entry.and_then(|entry| {
+                entries.iter().position(|candidate| {
+                    *candidate == entry
+                        && self.lines[*candidate].tool_call_id.as_deref() == Some(id)
+                })
+            })
+        });
         let next = match (current, direction) {
             (None, 1) => 0,
-            (None, -1) => ids.len() - 1,
-            (Some(index), 1) => (index + 1) % ids.len(),
-            (Some(0), -1) => ids.len() - 1,
+            (None, -1) => entries.len() - 1,
+            (Some(index), 1) => (index + 1) % entries.len(),
+            (Some(0), -1) => entries.len() - 1,
             (Some(index), -1) => index - 1,
             _ => 0,
         };
-        let selected_id = ids[next].clone();
-        self.navigation.selected_tool_id = Some(selected_id.clone());
-        self.navigation.selected_entry = self
-            .lines
-            .iter()
-            .position(|line| line.tool_call_id.as_deref() == Some(selected_id.as_str()));
+        let selected_entry = entries[next];
+        let selected_id = self.lines[selected_entry].tool_call_id.clone();
+        self.navigation.selected_tool_id = selected_id.clone();
+        self.navigation.selected_entry = Some(selected_entry);
+        let selected_id = selected_id.unwrap_or_default();
         self.reveal_dense_group(&selected_id);
     }
 
