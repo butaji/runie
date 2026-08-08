@@ -89,6 +89,7 @@ pub enum MappableBuiltinCommand {
     Export { path: String },
     Import { path: String },
     Clone { path: String },
+    Resume { path: String },
 }
 
 /// Classification at the slash-command boundary. Unsupported Pi commands are
@@ -105,6 +106,7 @@ pub enum BuiltinCommandDisposition {
 /// `None` and remain ordinary prompt text until their capability is built.
 #[allow(
     clippy::too_many_lines,
+    clippy::cognitive_complexity,
     reason = "the Pi command parser keeps the complete typed vocabulary in one pure boundary"
 )]
 pub fn parse_mappable_builtin_command(input: &str) -> Option<MappableBuiltinCommand> {
@@ -163,6 +165,12 @@ pub fn parse_mappable_builtin_command(input: &str) -> Option<MappableBuiltinComm
         value if value.starts_with("/clone ") => {
             let path = value[7..].trim();
             (path.ends_with(".jsonl") && !path.is_empty()).then(|| MappableBuiltinCommand::Clone {
+                path: path.to_owned(),
+            })
+        }
+        value if value.starts_with("/resume ") => {
+            let path = value[8..].trim();
+            (path.ends_with(".jsonl") && !path.is_empty()).then(|| MappableBuiltinCommand::Resume {
                 path: path.to_owned(),
             })
         }
@@ -267,6 +275,10 @@ mod tests {
     }
 
     #[test]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the classifier regression keeps all supported and unsupported command examples together"
+    )]
     fn classifier_exposes_known_unsupported_capabilities() {
         assert_eq!(
             classify_builtin_command("/export session.jsonl"),
@@ -284,6 +296,12 @@ mod tests {
             classify_builtin_command("/clone copy.jsonl"),
             BuiltinCommandDisposition::Mappable(MappableBuiltinCommand::Clone {
                 path: "copy.jsonl".into()
+            })
+        );
+        assert_eq!(
+            classify_builtin_command("/resume saved.jsonl"),
+            BuiltinCommandDisposition::Mappable(MappableBuiltinCommand::Resume {
+                path: "saved.jsonl".into()
             })
         );
         assert_eq!(

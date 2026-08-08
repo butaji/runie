@@ -125,3 +125,8 @@ Clone increment (2026-08-09): `/clone <path>.jsonl` uses the storage actor's
 validated fork publication at the current selected leaf, preserving the live
 session actor and its alternate branches. Empty sessions and invalid paths
 return actor-delivered errors; no second mutable session state is introduced.
+
+Resume increment (2026-08-09): `/resume <path>.jsonl` reuses the validated
+storage load and session import mailbox to replace the selected journal. It is
+deliberately a separate typed command at the UI boundary, while storage and
+reduction remain one implementation path.
