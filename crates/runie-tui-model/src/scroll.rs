@@ -139,6 +139,7 @@ impl ScrollFlushState {
 pub struct ScrollNormalizer {
     events_per_tick: i32,
     trackpad_events_per_tick: i32,
+    trackpad_detect_max_interval_ms: u64,
     lines_per_tick: i32,
     trackpad_lines_per_tick: i32,
     stream_gap_ms: u64,
@@ -181,6 +182,7 @@ impl ScrollNormalizer {
             } else {
                 1
             },
+            trackpad_detect_max_interval_ms: 30,
             lines_per_tick,
             trackpad_lines_per_tick: lines_per_tick,
             stream_gap_ms: 80,
@@ -219,6 +221,12 @@ impl ScrollNormalizer {
         let mut normalizer = Self::new(events_per_tick, lines_per_tick);
         normalizer.trackpad_lines_per_tick = trackpad_lines_per_tick;
         normalizer.trackpad_events_per_tick = 3;
+        normalizer.trackpad_detect_max_interval_ms =
+            if matches!(brand.as_str(), "vscode" | "cursor" | "windsurf") && !remuxed {
+                60
+            } else {
+                30
+            };
         normalizer
     }
 
@@ -291,7 +299,9 @@ impl ScrollNormalizer {
         self.stream_trackpad = match self.mode {
             ScrollMode::Trackpad => true,
             ScrollMode::Wheel => false,
-            ScrollMode::Auto if self.events_per_tick == 1 => interval <= 30 || self.stream_trackpad,
+            ScrollMode::Auto if self.events_per_tick == 1 => {
+                interval <= self.trackpad_detect_max_interval_ms || self.stream_trackpad
+            }
             ScrollMode::Auto => {
                 self.stream_trackpad
                     || (self.stream_events >= self.events_per_tick && self.stream_elapsed_ms > 12)
@@ -403,6 +413,14 @@ mod tests {
         let (_, second) = normalizer.push_at(20, ScrollDirection::Down);
         assert_eq!(first, 5);
         assert_eq!(second, 5);
+    }
+
+    #[test]
+    fn vscode_profile_uses_grok_trackpad_detection_window() {
+        let vscode = ScrollNormalizer::for_terminal_context("cursor", false);
+        let unknown = ScrollNormalizer::for_terminal_context("xterm", false);
+        assert_eq!(vscode.trackpad_detect_max_interval_ms, 60);
+        assert_eq!(unknown.trackpad_detect_max_interval_ms, 30);
     }
 
     #[test]

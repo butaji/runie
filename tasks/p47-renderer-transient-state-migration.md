@@ -396,6 +396,11 @@ per normalized tick for VS Code, Cursor, and Windsurf outside remuxed sessions.
 Trackpad accumulation uses the normalized three-event denominator; wheel
 behavior and remuxed profiles remain unchanged.
 
+Terminal detection-window increment (2026-08-09): VS Code-family profiles now
+also use Grok's 60 ms ept=1 trackpad-promotion window; generic and remuxed
+profiles retain the 30 ms default. The threshold is actor-input model state,
+not wall-clock policy in the renderer.
+
 ## Grok scroll flush contract audit (2026-08-07)
 
 The authoritative implementation and tests in
