@@ -868,6 +868,53 @@ pub fn activity_counts_with_start(
     (dirs, files, commands, subagents, failures)
 }
 
+/// Look up the running header for a given tool call id. The helper
+/// returns the most recent running tool block's header so the
+/// renderer can project a stable card title.
+pub fn current_tool_header(snapshot: &FeedSnapshot, tool_call_id: &str) -> Option<String> {
+    snapshot
+        .tool_blocks
+        .iter()
+        .rev()
+        .find(|block| block.tool_call_id == tool_call_id && block.is_running)
+        .map(|block| block.header.clone())
+}
+
+/// Look up the actor-owned args for a given tool call id. The helper
+/// returns a `Null` JSON value when the args are absent so the
+/// renderer can keep its optional-argument contract.
+pub fn current_tool_args(snapshot: &FeedSnapshot, tool_call_id: &str) -> serde_json::Value {
+    snapshot
+        .tool_args
+        .get(tool_call_id)
+        .cloned()
+        .unwrap_or(serde_json::Value::Null)
+}
+
+/// Count the running tools in the actor-owned feed snapshot. The
+/// helper is pure so the renderer and the actor agree on the
+/// active-tool count for the activity fold.
+pub fn active_tool_count(snapshot: &FeedSnapshot) -> usize {
+    snapshot
+        .tool_blocks
+        .iter()
+        .filter(|block| block.is_running)
+        .count()
+}
+
+/// Project the activity counter tuple from the actor-owned feed
+/// snapshot. Centralized here so the renderer and the actor share
+/// one `(dirs, files, commands, subagents, failures)` shape.
+pub fn activity_counts(snapshot: &FeedSnapshot) -> (usize, usize, usize, usize, usize) {
+    (
+        snapshot.activity_dirs,
+        snapshot.activity_files,
+        snapshot.activity_commands,
+        snapshot.activity_subagents,
+        snapshot.activity_failures,
+    )
+}
+
 /// Render a unix-timestamp (seconds) as Grok's short clock label (e.g.
 /// `3:07 PM`). Falls back to a UTC-derived 12-hour clock when libc cannot
 /// resolve the local timezone, so the label is always well-formed.
@@ -2249,6 +2296,75 @@ mod tests {
         // when the new tool fits the same classification.
         let (commands, _, _, _, _) = super::activity_counts_with_start(&snapshot, "bash", false);
         assert_eq!(commands, 0);
+    }
+
+    #[test]
+    fn activity_counts_projects_snapshot_counters() {
+        // Pin the smoke path: the snapshot's activity fields are
+        // projected into the canonical tuple shape.
+        let snapshot = super::FeedSnapshot {
+            activity_dirs: 1,
+            activity_files: 2,
+            activity_commands: 3,
+            activity_subagents: 4,
+            activity_failures: 5,
+            ..Default::default()
+        };
+        assert_eq!(super::activity_counts(&snapshot), (1, 2, 3, 4, 5));
+    }
+
+    #[test]
+    fn active_tool_count_filters_running_blocks() {
+        // Pin the smoke path: a snapshot with two running blocks and
+        // one completed block reports two active tools.
+        let snapshot = super::FeedSnapshot {
+            tool_blocks: vec![
+                super::ToolBlock {
+                    tool_call_id: "a".into(),
+                    header: "a".into(),
+                    kind: super::ToolCardKind::Execute,
+                    output: Vec::new(),
+                    mode: runie_core::types::ToolDisplayMode::Truncated,
+                    is_running: true,
+                    is_error: false,
+                    tool_row_id: None,
+                },
+                super::ToolBlock {
+                    tool_call_id: "b".into(),
+                    header: "b".into(),
+                    kind: super::ToolCardKind::Read,
+                    output: Vec::new(),
+                    mode: runie_core::types::ToolDisplayMode::Truncated,
+                    is_running: false,
+                    is_error: false,
+                    tool_row_id: None,
+                },
+                super::ToolBlock {
+                    tool_call_id: "c".into(),
+                    header: "c".into(),
+                    kind: super::ToolCardKind::WebSearch,
+                    output: Vec::new(),
+                    mode: runie_core::types::ToolDisplayMode::Truncated,
+                    is_running: true,
+                    is_error: false,
+                    tool_row_id: None,
+                },
+            ],
+            ..Default::default()
+        };
+        assert_eq!(super::active_tool_count(&snapshot), 2);
+    }
+
+    #[test]
+    fn current_tool_args_returns_null_for_absent_tool() {
+        // Pin the negative path: an absent tool id returns a `Null`
+        // JSON value so the caller's optional-argument contract is
+        // preserved.
+        let snapshot = super::FeedSnapshot::default();
+        assert_eq!(
+            super::current_tool_args(&snapshot, "absent"),
+            serde_json::Value::Null
+        );
     }
 
     #[test]

@@ -748,38 +748,19 @@ impl EventRenderer {
 }
 
 fn current_tool_header(snapshot: &FeedSnapshot, tool_call_id: &str) -> Option<String> {
-    snapshot
-        .tool_blocks
-        .iter()
-        .rev()
-        .find(|block| block.tool_call_id == tool_call_id && block.is_running)
-        .map(|block| block.header.clone())
+    runie_tui_model::current_tool_header(snapshot, tool_call_id)
 }
 
 fn current_tool_args(snapshot: &FeedSnapshot, tool_call_id: &str) -> serde_json::Value {
-    snapshot
-        .tool_args
-        .get(tool_call_id)
-        .cloned()
-        .unwrap_or(serde_json::Value::Null)
+    runie_tui_model::current_tool_args(snapshot, tool_call_id)
 }
 
 fn active_tool_count(snapshot: &FeedSnapshot) -> usize {
-    snapshot
-        .tool_blocks
-        .iter()
-        .filter(|block| block.is_running)
-        .count()
+    runie_tui_model::active_tool_count(snapshot)
 }
 
 fn activity_counts(snapshot: &FeedSnapshot) -> (usize, usize, usize, usize, usize) {
-    (
-        snapshot.activity_dirs,
-        snapshot.activity_files,
-        snapshot.activity_commands,
-        snapshot.activity_subagents,
-        snapshot.activity_failures,
-    )
+    runie_tui_model::activity_counts(snapshot)
 }
 
 fn activity_group_exists_since_latest_user(snapshot: &FeedSnapshot) -> bool {

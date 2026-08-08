@@ -1391,3 +1391,20 @@ the no-reset passthrough. The 117 `runie-tui-model` lib unit tests
 `runie` binary unit tests, the 28 `visual_snapshots` replay tests, and
 the full `just ci` (fmt-check, clippy, lint, test, parity, source
 inventory, Pi event contract, feed-actor boundary) are green.
+
+**Snapshot helper retirement (2026-08-08):** the `current_tool_header`,
+`current_tool_args`, `active_tool_count`, and `activity_counts` proxy
+helpers now live in `runie-tui-model::feed` so the actor-owned feed
+projection and the renderer share one canonical shape. The renderer-local
+helpers at `crates/runie-tui/src/event_renderer.rs:750, 759, 767, 775`
+were collapsed to thin `runie_tui_model::*` delegates. The three new
+focused tests `activity_counts_projects_snapshot_counters`,
+`active_tool_count_filters_running_blocks`, and
+`current_tool_args_returns_null_for_absent_tool` in
+`crates/runie-tui-model/src/feed.rs` pin the snapshot-counter projection,
+the running-block filter, and the absent-args null fallback. The 120
+`runie-tui-model` lib unit tests (117 pre-existing + 3 new), the 220
+`runie-tui` lib unit tests, the 5 `runie` binary unit tests, the 28
+`visual_snapshots` replay tests, and the full `just ci` (fmt-check,
+clippy, lint, test, parity, source inventory, Pi event contract,
+feed-actor boundary) are green.
