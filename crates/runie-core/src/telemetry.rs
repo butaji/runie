@@ -93,6 +93,41 @@ pub fn validate_pi_ai_request_attributes(
     Ok(())
 }
 
+/// Pi telemetry attributes are deliberately narrower than arbitrary JSON:
+/// values are primitives or homogeneous primitive arrays. Invalid payloads
+/// are passive and the containing mutation is ignored atomically.
+pub fn validate_telemetry_attributes(attributes: &HashMap<String, serde_json::Value>) -> bool {
+    attributes.values().all(is_telemetry_attribute)
+}
+
+fn is_telemetry_attribute(value: &serde_json::Value) -> bool {
+    if value.is_string() || value.is_number() || value.is_boolean() {
+        return true;
+    }
+    let Some(values) = value.as_array() else {
+        return false;
+    };
+    values.iter().all(|item| {
+        item.is_string()
+            || item.is_number()
+            || item.is_boolean()
+            || item.is_null() && values.is_empty()
+    }) && (values.is_empty() || {
+        let kind = |item: &serde_json::Value| {
+            if item.is_string() {
+                0
+            } else if item.is_number() {
+                1
+            } else {
+                2
+            }
+        };
+        values
+            .windows(2)
+            .all(|pair| kind(&pair[0]) == kind(&pair[1]))
+    })
+}
+
 #[async_trait::async_trait]
 pub trait TelemetryExporter: Send + Sync + 'static {
     async fn export(&self, snapshot: TelemetrySnapshot) -> Result<(), String>;
@@ -206,6 +241,10 @@ impl TelemetryActor {
                         attributes,
                         reply,
                     } => {
+                        if !validate_telemetry_attributes(&attributes) {
+                            let _ = reply.send(None);
+                            continue;
+                        }
                         if parent_id.is_some_and(|parent_id| {
                             !state
                                 .spans
@@ -237,6 +276,10 @@ impl TelemetryActor {
                         attributes,
                         reply,
                     } => {
+                        if !validate_telemetry_attributes(&attributes) {
+                            let _ = reply.send(());
+                            continue;
+                        }
                         if let Some(span) = state
                             .spans
                             .iter_mut()
@@ -253,6 +296,10 @@ impl TelemetryActor {
                         attributes,
                         reply,
                     } => {
+                        if !validate_telemetry_attributes(&attributes) {
+                            let _ = reply.send(());
+                            continue;
+                        }
                         if let Some(span) = state
                             .spans
                             .iter_mut()
@@ -629,6 +676,23 @@ mod tests {
         assert!(validate_pi_ai_request_attributes(&attributes).is_err());
     }
 
+    #[test]
+    fn telemetry_attributes_accept_primitives_and_reject_mixed_json() {
+        assert!(validate_telemetry_attributes(&HashMap::from([
+            ("text".into(), serde_json::json!("value")),
+            ("numbers".into(), serde_json::json!([1, 2])),
+            ("flags".into(), serde_json::json!([true, false])),
+        ])));
+        assert!(!validate_telemetry_attributes(&HashMap::from([(
+            "object".into(),
+            serde_json::json!({"nested": true}),
+        )])));
+        assert!(!validate_telemetry_attributes(&HashMap::from([(
+            "mixed".into(),
+            serde_json::json!(["text", 1]),
+        )])));
+    }
+
     #[tokio::test]
     async fn ended_spans_ignore_late_mutations() {
         let actor = TelemetryActor::new();
@@ -637,6 +701,32 @@ mod tests {
         span.event("late", HashMap::new()).await;
         assert!(span.child("late-child", HashMap::new()).await.is_none());
         assert!(actor.snapshot().spans[0].events.is_empty());
+    }
+
+    #[tokio::test]
+    async fn invalid_attribute_mutations_are_passive_and_atomic() {
+        let actor = TelemetryActor::new();
+        let span = actor
+            .start_span(
+                None,
+                "run",
+                HashMap::from([(String::from("kept"), serde_json::json!(true))]),
+            )
+            .await
+            .unwrap();
+        span.set_attributes(HashMap::from([
+            (String::from("new"), serde_json::json!(1)),
+            (String::from("invalid"), serde_json::json!({"nested": true})),
+        ]))
+        .await;
+        span.event(
+            "invalid",
+            HashMap::from([(String::from("bad"), serde_json::json!(["x", 1]))]),
+        )
+        .await;
+        let snapshot = actor.snapshot();
+        assert_eq!(snapshot.spans[0].attributes.len(), 1);
+        assert!(snapshot.spans[0].events.is_empty());
     }
 
     #[tokio::test]

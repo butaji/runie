@@ -133,3 +133,8 @@ the callback passed to a child span even when the parent has already settled,
 using a detached no-op span. `TelemetrySpan::with_child` now preserves that
 passive callback behavior while rejecting any late recorded span or mutation;
 the regression pins callback execution and the unchanged span count.
+
+Attribute passivity increment (2026-08-09): telemetry start, event, and
+attribute-update payloads now enforce Pi's primitive/homogeneous-array
+attribute contract. Invalid starts produce no recorded span; invalid mutable
+updates are ignored atomically, matching Pi's passive in-memory recorder.
