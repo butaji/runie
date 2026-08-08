@@ -84,7 +84,10 @@ The renderer must never own spans or infer telemetry from status text.
 The provider projection is covered by
 `provider_stream_projects_telemetry_through_owned_capability`; full Pi
 callback nesting, exceptions, exporter backend conformance, and YAML-declared
-span conformance vectors remain open.
+span conformance vectors remain open. The actor now also enforces the source
+schema's absence of events on `pi.ai.request`: event mutations are ignored for
+that span while extension spans retain the generic event API, with a focused
+regression covering both cases.
 
 Telemetry timing correction (2026-08-08): the authoritative Pi telemetry
 README states that normalized in-memory spans record no timestamps. Runie’s

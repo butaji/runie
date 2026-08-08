@@ -336,11 +336,14 @@ impl TelemetryActor {
                             let _ = reply.send(());
                             continue;
                         }
-                        if let Some(span) = state
-                            .spans
-                            .iter_mut()
-                            .find(|span| span.id == id && !span.ended)
-                        {
+                        if let Some(span) = state.spans.iter_mut().find(|span| {
+                            span.id == id
+                                    && !span.ended
+                                    // Pi's `pi.ai.request` schema declares no
+                                    // span events; extension spans remain
+                                    // generic and event-capable.
+                                    && span.name != "pi.ai.request"
+                        }) {
                             span.events
                                 .push(TelemetryEventSnapshot { name, attributes });
                             let _ = snapshot_tx.send(state.clone());
@@ -981,6 +984,24 @@ mod tests {
         let snapshot = actor.snapshot();
         assert_eq!(snapshot.spans[0].attributes.len(), 1);
         assert!(snapshot.spans[0].events.is_empty());
+    }
+
+    #[tokio::test]
+    async fn pi_request_schema_rejects_span_events_but_extension_spans_accept_them() {
+        let actor = TelemetryActor::new();
+        let request = actor
+            .start_span(None, "pi.ai.request", HashMap::new())
+            .await
+            .unwrap();
+        let extension = actor
+            .start_span(None, "extension", HashMap::new())
+            .await
+            .unwrap();
+        request.event("chunk", HashMap::new()).await;
+        extension.event("chunk", HashMap::new()).await;
+        let snapshot = actor.snapshot();
+        assert!(snapshot.spans[0].events.is_empty());
+        assert_eq!(snapshot.spans[1].events.len(), 1);
     }
 
     #[tokio::test]
