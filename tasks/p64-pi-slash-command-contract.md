@@ -138,6 +138,12 @@ model tests cover the payload selection without invoking terminal I/O.
 `visual-slash-copy.yaml` drives the post-replay command through the same
 application boundary and asserts the emitted immutable payload.
 
+Changelog increment (2026-08-08): `/changelog` now routes through the shared
+typed application/UI actor boundary and renders a pure changelog overlay. The
+empty repository result is explicit (`No changelog entries found.`), matching
+Pi's fallback without performing filesystem I/O during rendering;
+`visual-slash-changelog.yaml` covers the command and state/screen projection.
+
 Geometry-matrix increment (2026-08-08): the typed unsupported-command fixture
 now replays at 62×32, 80×24, 100×30, and 120×36 and asserts the complete
 rendered screen still exposes the actor-delivered capability diagnostic. This

@@ -37,6 +37,7 @@ pub enum UiMsg {
     SetModelSelectorResultCount(usize),
     SetModelSelectorRows(Vec<String>),
     ToggleSessionInfo,
+    ToggleChangelog,
     CopyText(String),
     Reset,
 }
@@ -97,6 +98,7 @@ pub struct UiState {
     pub model_selector_result_count: usize,
     pub model_selector_rows: Vec<String>,
     pub session_info_open: bool,
+    pub changelog_open: bool,
 }
 
 impl UiState {
@@ -166,6 +168,7 @@ impl UiState {
                 }
             }
             UiMsg::ToggleSessionInfo => self.session_info_open = !self.session_info_open,
+            UiMsg::ToggleChangelog => self.changelog_open = !self.changelog_open,
             UiMsg::CopyText(_) => {}
             UiMsg::SetModelSelectorResultCount(count) => {
                 self.model_selector_result_count = count;

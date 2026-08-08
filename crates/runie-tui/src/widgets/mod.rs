@@ -1,5 +1,6 @@
 //! Widgets: scrollback transcript, prompt input, status bar.
 
+pub mod changelog;
 pub mod command_palette;
 pub mod model_selector;
 pub mod prompt;
@@ -9,6 +10,7 @@ pub mod shortcuts;
 pub mod status;
 pub mod welcome;
 
+pub use changelog::ChangelogWidget;
 pub use command_palette::CommandPaletteWidget;
 pub use model_selector::ModelSelectorWidget;
 pub use prompt::{InputMode, PromptOutcome, PromptSnapshot, PromptWidget};

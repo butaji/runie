@@ -895,6 +895,11 @@ async fn run_app(
                         .with_theme(status.theme())
                         .render(frame_area, buf);
                 }
+                if document.props.ui.changelog_open {
+                    runie_tui::widgets::ChangelogWidget::new()
+                        .with_theme(status.theme())
+                        .render(frame_area, buf);
+                }
                 let header = &document.props.header;
                 render_header(layout.header, buf, &header.meter, header.theme);
                 runie_tui::terminal_color::quantize_buffer(buf, color_level);

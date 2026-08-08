@@ -523,6 +523,10 @@ impl App {
     )]
     pub async fn route_mappable_command(&self, command: MappableBuiltinCommand) -> bool {
         match command {
+            MappableBuiltinCommand::Changelog => {
+                self.ui.send(UiMsg::ToggleChangelog).await;
+                true
+            }
             MappableBuiltinCommand::NewSession => {
                 let _ = self.reset_session().await;
                 true

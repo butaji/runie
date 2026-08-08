@@ -76,6 +76,7 @@ pub fn matching_pi_builtin_slash_commands(query: &str) -> Vec<SlashCommand> {
 /// commands from being reported as successful no-ops.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MappableBuiltinCommand {
+    Changelog,
     NewSession,
     Hotkeys,
     Copy,
@@ -112,6 +113,7 @@ pub enum BuiltinCommandDisposition {
 )]
 pub fn parse_mappable_builtin_command(input: &str) -> Option<MappableBuiltinCommand> {
     match input.trim() {
+        "/changelog" => Some(MappableBuiltinCommand::Changelog),
         "/new" => Some(MappableBuiltinCommand::NewSession),
         "/hotkeys" => Some(MappableBuiltinCommand::Hotkeys),
         "/copy" => Some(MappableBuiltinCommand::Copy),
@@ -241,10 +243,15 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::cognitive_complexity)]
     fn mappable_parser_rejects_unimplemented_commands_without_swallowing_text() {
         assert_eq!(
             parse_mappable_builtin_command(" /new "),
             Some(MappableBuiltinCommand::NewSession)
+        );
+        assert_eq!(
+            parse_mappable_builtin_command("/changelog"),
+            Some(MappableBuiltinCommand::Changelog)
         );
         assert_eq!(
             parse_mappable_builtin_command("/compact"),

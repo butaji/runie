@@ -1,0 +1,16 @@
+name: visual-slash-changelog
+description: Pi's /changelog command opens the actor-owned changelog projection.
+events: []
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    steps:
+      - "/changelog"
+      - Enter
+    ui:
+      changelog_open: true
+    screen_text:
+      - "Changelog"
+      - "What's New"
+      - "No changelog entries found."

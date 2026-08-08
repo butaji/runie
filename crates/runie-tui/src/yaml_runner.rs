@@ -1336,6 +1336,7 @@ pub struct UiAssertions {
     pub model_selector_index: Option<usize>,
     pub model_selector_scoped_only: Option<bool>,
     pub session_info_open: Option<bool>,
+    pub changelog_open: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Default, Clone, Copy)]
@@ -4978,6 +4979,14 @@ pub async fn render_visual_buffer(
                 ));
             }
         }
+        if let Some(value) = expected.changelog_open {
+            if palette.changelog_open != value {
+                return Err(format!(
+                    "ui.changelog_open mismatch: expected {value}, got {}",
+                    palette.changelog_open
+                ));
+            }
+        }
     }
     // Grok clears the idle welcome surface as soon as editing begins; the
     // synthetic idle events above must not remain in the typed frame.
@@ -5365,6 +5374,11 @@ fn draw_visual_frame(
             }
             if palette.session_info_open {
                 crate::widgets::SessionInfoWidget::new(&app.session_snapshot())
+                    .with_theme(theme)
+                    .render(f.area(), f.buffer_mut());
+            }
+            if palette.changelog_open {
+                crate::widgets::ChangelogWidget::new()
                     .with_theme(theme)
                     .render(f.area(), f.buffer_mut());
             }
