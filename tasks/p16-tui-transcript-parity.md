@@ -890,4 +890,5 @@ Wrapped-anchor identity increment (2026-08-08): measured selection anchors now
 probe a stable leading fragment of the selected logical row, allowing narrow
 wrapped rows to retain their anchor instead of searching for text that cannot
 fit in one physical fragment. Duplicate logical occurrences remain selected by
-occurrence index, with focused coverage for both duplicate and wrapped rows.
+occurrence index, including distinct rows with a shared leading fragment, with
+focused coverage for duplicate and wrapped rows.

@@ -1420,15 +1420,15 @@ impl Scrollback {
         // text. Preserve the selected logical entry's identity by selecting
         // the same occurrence among projected rows instead of taking the
         // first text match.
+        let anchor_probe: String = text.chars().take(8).collect();
         let occurrence = self.lines[..selected_index]
             .iter()
-            .filter(|line| line.kind == selected.kind && line.text == text)
+            .filter(|line| line.kind == selected.kind && line.text.contains(&anchor_probe))
             .count();
         // A wrapped physical row contains only a fragment of the logical
         // text. Use a leading fragment as the identity probe, while keeping
         // the full text for short rows; occurrence selection still prevents
         // duplicate logical rows from collapsing onto the first match.
-        let anchor_probe: String = text.chars().take(8).collect();
         let compact = crate::layout::grok_effective_compact(false, terminal_rows);
         self.physical_rows(area.width as usize, compact, area.height)
             .iter()
@@ -2565,6 +2565,24 @@ mod tests {
             scrollback.measured_anchor_row(Rect::new(0, 0, 18, 8), 24),
             Some(0)
         );
+    }
+
+    #[test]
+    fn measured_anchor_row_preserves_shared_wrapped_prefix_occurrence() {
+        let mut scrollback = Scrollback::new();
+        scrollback.append(Line::new(
+            LineKind::Assistant,
+            "shared prefix first body that wraps",
+        ));
+        scrollback.append(Line::new(
+            LineKind::Assistant,
+            "shared prefix second body that wraps",
+        ));
+        scrollback.navigation.selected_entry = Some(1);
+
+        assert!(scrollback
+            .measured_anchor_row(Rect::new(0, 0, 18, 8), 24)
+            .is_some_and(|row| row > 0));
     }
 
     #[test]
