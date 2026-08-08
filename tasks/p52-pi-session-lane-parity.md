@@ -417,9 +417,10 @@ real session actor path. No provider or TUI code mutates the session snapshot.
 The remaining exact-parity gaps are deliberately limited to the following:
 
 - the public event and JSONL edges retain generic `(record_type, data)` values
-  for Pi compatibility; the internal `SessionLaneRecord` union and typed
-  producer DSL constrain Rust admission, but the persisted representation is
-  not a Rust-tagged record union;
+  for Pi compatibility; `SessionLaneRecordEnvelope` makes the internal
+  boundary lossless by decoding known families into `SessionLaneRecord` and
+  preserving unknown extensions as explicit opaque records. The persisted
+  representation remains Pi-shaped rather than a Rust-tagged wire union;
 - compaction does not yet implement Pi's complete context-building,
   summarization, and result-publication lifecycle for a concrete provider.
 

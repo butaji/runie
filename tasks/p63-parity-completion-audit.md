@@ -60,8 +60,10 @@ provider-specific contract”. The source of truth is the current Pi tree at
    operation families now have live producer transitions and actor-owned
    JSONL round-trip coverage (see p52); canonical message lane identity is
    carried by `SessionEntry.lane`, with `entry_lanes` retained only for older
-   callers and serialized snapshots. The remaining gaps are the generic
-   `(record_type, data)` compatibility edge and concrete-provider compaction
+   callers and serialized snapshots. `SessionLaneRecordEnvelope` now makes the
+   compatibility edge explicit: known families use the validated internal
+   union and unknown Pi extensions remain opaque with their original type and
+   payload. The remaining session gap is concrete-provider compaction
    summarization/publication, not missing live record producers.
 
 ## Open Grok TUI contracts mapped to Pi features

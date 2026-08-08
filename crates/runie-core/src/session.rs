@@ -328,6 +328,34 @@ pub struct SessionLaneRecordSnapshot {
     pub data: serde_json::Value,
 }
 
+/// Lossless internal boundary for Pi lane records. Known families use the
+/// validated typed union; extension records remain explicitly opaque instead
+/// of leaking a bare `(record_type, data)` pair into actor consumers.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SessionLaneRecordEnvelope {
+    Known(SessionLaneRecord),
+    Opaque {
+        record_type: String,
+        data: serde_json::Value,
+    },
+}
+
+impl SessionLaneRecordEnvelope {
+    pub fn record_type(&self) -> &str {
+        match self {
+            Self::Known(record) => record.wire_name(),
+            Self::Opaque { record_type, .. } => record_type,
+        }
+    }
+
+    pub fn data(&self) -> &serde_json::Value {
+        match self {
+            Self::Known(record) => record.data(),
+            Self::Opaque { data, .. } => data,
+        }
+    }
+}
+
 impl SessionLaneRecordSnapshot {
     /// Decode the lossless wire payload at the actor-owned typed boundary.
     /// Persistence keeps `record_type` and `data` for Pi compatibility, while
@@ -335,6 +363,17 @@ impl SessionLaneRecordSnapshot {
     /// of matching JSON fields independently.
     pub fn typed_record(&self) -> Result<SessionLaneRecord, String> {
         SessionLaneRecord::decode(&self.record_type, &self.data)
+    }
+
+    /// Decode known families while preserving unknown Pi extension records.
+    pub fn lossless_record(&self) -> SessionLaneRecordEnvelope {
+        match self.typed_record() {
+            Ok(record) => SessionLaneRecordEnvelope::Known(record),
+            Err(_) => SessionLaneRecordEnvelope::Opaque {
+                record_type: self.record_type.clone(),
+                data: self.data.clone(),
+            },
+        }
     }
 
     pub fn kind(&self) -> Result<SessionLaneRecordKind, String> {
@@ -4465,6 +4504,24 @@ mod tests {
         assert!(matches!(
             snapshot.typed_record().expect("valid snapshot payload"),
             SessionLaneRecord::OperationStarted(value) if value == payload
+        ));
+    }
+
+    #[test]
+    fn lane_snapshot_preserves_unknown_extensions_as_opaque_records() {
+        let snapshot = SessionLaneRecordSnapshot {
+            record_type: "plugin_extension".into(),
+            id: "extension-1".into(),
+            lane: Some("main".into()),
+            seq: Some(2),
+            timestamp: Some(1),
+            data: serde_json::json!({"custom": true}),
+        };
+
+        assert!(matches!(
+            snapshot.lossless_record(),
+            SessionLaneRecordEnvelope::Opaque { ref record_type, ref data }
+                if record_type == "plugin_extension" && data == &serde_json::json!({"custom": true})
         ));
     }
 
