@@ -1021,6 +1021,17 @@ impl Scrollback {
                 }
             })
         });
+        let selected_tool_ids = self.selected_tool_group_ids();
+        let selected_tool_keys = self
+            .lines
+            .iter()
+            .filter_map(|line| {
+                line.tool_call_id
+                    .as_ref()
+                    .filter(|id| selected_tool_ids.contains(*id))
+                    .map(|_| (line.kind, line.text.clone()))
+            })
+            .collect::<Vec<_>>();
 
         if start >= end {
             // Nothing to render. Avoid passing an empty slice to ratatui's
@@ -1029,6 +1040,7 @@ impl Scrollback {
         }
 
         let mut selected_non_tool_row = None;
+        let mut selected_tool_rows = Vec::new();
         for (row, (kind, text, code_row)) in physical_rows[start..end].iter().enumerate() {
             let line = if *code_row {
                 styled_code_line(text, self.navigation.theme)
@@ -1106,7 +1118,19 @@ impl Scrollback {
                     span.style = span.style.fg(assistant.fg.expect("assistant color"));
                 }
             }
-            let selected_row = text.starts_with("› ")
+            let comparable_text = text
+                .strip_prefix("⌄ ")
+                .or_else(|| text.strip_prefix("◆ "))
+                .or_else(|| text.strip_prefix("› "))
+                .unwrap_or(text);
+            let selected_tool_row =
+                selected_tool_keys
+                    .iter()
+                    .any(|(selected_kind, selected_text)| {
+                        *selected_kind == *kind && selected_text == comparable_text
+                    });
+            let selected_row = selected_tool_row
+                || text.starts_with("› ")
                 || text.starts_with("⌄ ")
                 || selected_non_tool_text.is_some_and(|value| text.contains(value));
             if selected_row {
@@ -1262,6 +1286,56 @@ impl Scrollback {
                 }
                 if selected_non_tool_text.is_some_and(|value| text.contains(value)) {
                     selected_non_tool_row = Some(area.y + row as u16);
+                }
+                if selected_tool_row {
+                    selected_tool_rows.push(area.y + row as u16);
+                }
+            }
+        }
+        if let (Some(&top), Some(&bottom)) = (selected_tool_rows.first(), selected_tool_rows.last())
+        {
+            let border_style = appearance::selected_border_style_for(self.navigation.theme);
+            let left = area.x;
+            let right = area.x + area.width.saturating_sub(1);
+            for y in top..=bottom {
+                if let Some(cell) = buf.cell_mut((left, y)) {
+                    if cell.symbol().trim().is_empty() {
+                        cell.set_symbol("│").set_style(border_style);
+                    }
+                }
+                if right > left {
+                    if let Some(cell) = buf.cell_mut((right, y)) {
+                        cell.set_symbol("│").set_style(border_style);
+                    }
+                }
+            }
+            if top > area.y {
+                for x in left..=right {
+                    if let Some(cell) = buf.cell_mut((x, top - 1)) {
+                        cell.set_symbol(if x == left {
+                            "┌"
+                        } else if x == right {
+                            "┐"
+                        } else {
+                            "─"
+                        })
+                        .set_style(border_style);
+                    }
+                }
+            }
+            let bottom_border = bottom.saturating_add(1);
+            if bottom_border < area.y.saturating_add(area.height) {
+                for x in left..=right {
+                    if let Some(cell) = buf.cell_mut((x, bottom_border)) {
+                        cell.set_symbol(if x == left {
+                            "└"
+                        } else if x == right {
+                            "┘"
+                        } else {
+                            "─"
+                        })
+                        .set_style(border_style);
+                    }
                 }
             }
         }
@@ -1748,6 +1822,25 @@ impl Scrollback {
         }
         flush(&mut members);
         groups
+    }
+
+    fn selected_tool_group_ids(&self) -> HashSet<String> {
+        let Some(selected) = self.navigation.selected_tool_id.as_deref() else {
+            return HashSet::new();
+        };
+        let groups = self.dense_tool_groups();
+        let Some((_, selected_size)) = groups.get(selected).copied() else {
+            return HashSet::from([selected.to_owned()]);
+        };
+        if selected_size <= 1 {
+            return HashSet::from([selected.to_owned()]);
+        }
+        groups
+            .into_iter()
+            .filter_map(|(id, (index, size))| {
+                (index < selected_size && size == selected_size).then_some(id)
+            })
+            .collect()
     }
 }
 
@@ -3486,6 +3579,39 @@ mod tests {
         assert!(rows.iter().any(|row| row.contains("Ran 2 commands")));
         assert!(!rows.iter().any(|row| row == "Run cargo test"));
         assert!(!rows.iter().any(|row| row == "Run cargo check"));
+    }
+
+    #[test]
+    fn selected_dense_tool_group_uses_one_spanning_selection_box() {
+        let mut scrollback = Scrollback::new();
+        scrollback.set_activity_expanded(true);
+        scrollback.apply(ScrollbackMsg::Append(Line::new(
+            LineKind::Assistant,
+            "before",
+        )));
+        for (id, header) in [("first", "Run one"), ("second", "Run two")] {
+            scrollback.apply(ScrollbackMsg::ToolStart {
+                tool_call_id: id.into(),
+                header: header.into(),
+                activity: None,
+            });
+        }
+        scrollback.apply(ScrollbackMsg::SelectNextTool);
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 40, 5));
+        scrollback.render(Rect::new(0, 0, 40, 5), &mut buffer);
+        let border_rows = (0..5)
+            .filter(|row| {
+                (0..40).any(|column| {
+                    buffer
+                        .cell((column, *row))
+                        .is_some_and(|cell| cell.symbol() == "│")
+                })
+            })
+            .count();
+        assert!(border_rows >= 2, "selected group should span both members");
+        assert!((0..40).any(|column| buffer
+            .cell((column, 0))
+            .is_some_and(|cell| cell.symbol() == "┌")));
     }
 
     fn selected_cell_row(buffer: &Buffer) -> u16 {
