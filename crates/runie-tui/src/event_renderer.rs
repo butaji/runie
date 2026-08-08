@@ -357,11 +357,12 @@ impl EventRenderer {
                                 let has_reasoning = feed_snapshot.lines.iter().any(|line| {
                                     line.kind == LineKind::Reasoning && !line.text.is_empty()
                                 });
+                                let thinking_elapsed_ms = self.thinking_elapsed_ms();
                                 feed_messages.push(ScrollbackMsg::FinalizeAssistant {
                                     has_reasoning,
                                     reasoning_expanded: feed_snapshot.reasoning_expanded,
-                                    summary: thinking_summary(self.thinking_elapsed_ms()),
-                                    settled_no_tool_phase: self.thinking_elapsed_ms().is_some()
+                                    summary: thinking_summary(thinking_elapsed_ms),
+                                    settled_no_tool_phase: thinking_elapsed_ms.is_some()
                                         && feed_snapshot.tool_blocks.is_empty(),
                                 });
                             }
@@ -485,11 +486,12 @@ impl EventRenderer {
                 .lines
                 .iter()
                 .any(|line| line.kind == LineKind::Reasoning && !line.text.is_empty());
+            let thinking_elapsed_ms = self.thinking_elapsed_ms();
             messages.push(ScrollbackMsg::FinalizeAssistant {
                 has_reasoning,
                 reasoning_expanded: feed_snapshot.reasoning_expanded,
-                summary: thinking_summary(self.thinking_elapsed_ms()),
-                settled_no_tool_phase: self.thinking_elapsed_ms().is_some()
+                summary: thinking_summary(thinking_elapsed_ms),
+                settled_no_tool_phase: thinking_elapsed_ms.is_some()
                     && feed_snapshot.tool_blocks.is_empty(),
             });
         }

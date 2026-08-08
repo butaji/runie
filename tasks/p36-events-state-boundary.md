@@ -653,3 +653,24 @@ against the concatenated input. The five `runie` binary unit tests,
 the 220 `runie-tui` unit tests, the 28 `visual_snapshots` replay
 tests, and the full `just ci` (fmt-check, clippy, lint, test, parity,
 source inventory, Pi event contract, feed-actor boundary) are green.
+
+**`FinalizeAssistant` snapshot-clone dedup (2026-08-08):** both the live
+`EventRenderer::run` and the replay `apply_actor_event` paths in
+`crates/runie-tui/src/event_renderer.rs` were calling
+`self.thinking_elapsed_ms()` twice in adjacent fields of the
+`ScrollbackMsg::FinalizeAssistant { summary, settled_no_tool_phase }`
+push, and each call walked `self.status_actor.model_snapshot()` and
+cloned the full `StatusSnapshot` just to read one `Option<u64>`. The
+two call sites now bind `let thinking_elapsed_ms = self.thinking_elapsed_ms();`
+immediately before the push and use the cached `Option<u64>` in both
+fields, so each `MessageEnd::Assistant` closure crosses the status
+snapshot once instead of twice. The `FinalizeAssistant` payload shape
+and the `thinking_summary` projection are unchanged, so the
+`event_renderer::tests` module (25 tests, including
+`actor_message_update_appends_text_to_assistant_line`,
+`live_and_replay_assistant_start_preserve_layout_parity_contract`, and
+`actor_agent_end_emits_worked_for_only_after_turn_start`) still pins
+the same event → transcript contract. The 25 `event_renderer::tests`
+unit tests, the 28 `visual_snapshots` replay tests, and the full
+`just ci` (fmt-check, clippy, lint, test, parity, source inventory,
+Pi event contract, feed-actor boundary) are green.
