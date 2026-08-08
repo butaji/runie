@@ -759,9 +759,7 @@ impl Scrollback {
                 // Structured metadata already carries source-backed span
                 // roles (muted key, primary value, muted location/score).
                 // Do not flatten those spans with the row-level muted intent.
-                if !(paint == PaintIntent::Muted
-                    && self.tool_row_is_metadata(*kind, text, occurrence))
-                {
+                if !(paint == PaintIntent::Muted && is_structured_metadata_text(text)) {
                     let semantic_style = appearance::style_for_intent(self.navigation.theme, paint);
                     for span in &mut line.spans {
                         if let Some(foreground) = semantic_style.fg {
@@ -1187,45 +1185,6 @@ impl Scrollback {
                 row.tool_call_id == id && row.text == text && row.member_index == member_index
             })
             .map(|row| row.paint_intent())
-    }
-
-    fn tool_row_is_metadata(&self, kind: LineKind, text: &str, occurrence: usize) -> bool {
-        if !matches!(
-            kind,
-            LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError | LineKind::ToolOutput
-        ) {
-            return false;
-        }
-        let Some(line) = self
-            .lines
-            .iter()
-            .filter(|line| {
-                line.kind == kind
-                    && (line.text == text
-                        || (!text.trim().is_empty() && line.text.contains(text.trim())))
-            })
-            .nth(occurrence)
-        else {
-            return false;
-        };
-        let Some(id) = line.tool_call_id.as_deref() else {
-            return false;
-        };
-        let Some(member_index) = logical_tool_member_index(&self.lines, id) else {
-            return false;
-        };
-        project_tool_card_rows(
-            &self.lines,
-            &self.navigation.tool_names,
-            &self.navigation.tool_modes,
-        )
-        .into_iter()
-        .any(|row| {
-            row.tool_call_id == id
-                && row.text == text
-                && row.member_index == member_index
-                && row.row_kind == ToolCardRowKind::Metadata
-        })
     }
 
     #[allow(
@@ -1691,6 +1650,23 @@ fn styled_code_line(text: &str, theme: ThemeKind) -> RatLine<'static> {
 #[cfg(test)]
 fn styled_line(kind: LineKind, text: &str) -> RatLine<'static> {
     styled_line_for(kind, text, ThemeKind::GrokNight)
+}
+
+#[allow(
+    clippy::too_many_lines,
+    clippy::cognitive_complexity,
+    reason = "semantic feed card styling keeps Grok header variants together"
+)]
+fn is_structured_metadata_text(text: &str) -> bool {
+    let trimmed = text.trim_start();
+    text.contains("(score:")
+        || trimmed.starts_with("Sources:")
+        || trimmed.starts_with("status:")
+        || trimmed.starts_with("content_type:")
+        || trimmed.starts_with("title:")
+        || trimmed.split_once(". ").is_some_and(|(index, rest)| {
+            index.chars().all(|ch| ch.is_ascii_digit()) && rest.contains("(score:")
+        })
 }
 
 #[allow(
