@@ -853,3 +853,10 @@ declares `capture_while_waiting`, so its settled frame is rendered only after
 the owned tool-completion boundary has been observed. This preserves the
 activity summary in the replay projection and makes the complete YAML visual
 suite deterministic without sleeps.
+
+Expanded dense-marker evidence (2026-08-08):
+`visual-activity-dense-expanded.yaml` now exercises twelve contiguous members
+without selection/reveal and asserts the visible `╶╶ 1 more` hidden-prefix row,
+the newest member, and exclusion of the hidden first two members. This closes
+the screen-cell evidence gap for the expanded dense projection; collapsed
+activity and generalized wrapped-card reflow remain separate contracts.

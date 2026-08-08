@@ -1,0 +1,37 @@
+name: visual-activity-dense-expanded
+description: Expanded Grok dense groups expose a hidden-prefix marker before the newest members.
+initial_prompt: "inspect the repository"
+tool_execution: sequential
+tools:
+  - name: bash
+    kind: bash
+events:
+  - start
+  - tool_call: { name: bash, args: { cmd: "one" } }
+  - tool_call: { name: bash, args: { cmd: "two" } }
+  - tool_call: { name: bash, args: { cmd: "three" } }
+  - tool_call: { name: bash, args: { cmd: "four" } }
+  - tool_call: { name: bash, args: { cmd: "five" } }
+  - tool_call: { name: bash, args: { cmd: "six" } }
+  - tool_call: { name: bash, args: { cmd: "seven" } }
+  - tool_call: { name: bash, args: { cmd: "eight" } }
+  - tool_call: { name: bash, args: { cmd: "nine" } }
+  - tool_call: { name: bash, args: { cmd: "ten" } }
+  - tool_call: { name: bash, args: { cmd: "eleven" } }
+  - tool_call: { name: bash, args: { cmd: "twelve" } }
+  - done: { stop_reason: stop }
+assertions:
+  state:
+    tool_execution: sequential
+    tool_blocks: 12
+  visual:
+    cols: 80
+    rows: 50
+    activity_expanded: true
+    screen_text:
+      - "╶╶ 1 more"
+      - "Run three"
+      - "Run twelve"
+    screen_excludes:
+      - "Run one"
+      - "Run two"
