@@ -592,3 +592,8 @@ any platform clipboard; clipboard adapter wiring remains open.
 
 The replay oracle now also accepts `copy_selection_text`, so YAML can assert
 the projected payload rather than only the presence of a copy request.
+
+Terminal-width correction (2026-08-08): the payload projection now slices
+Unicode text by `unicode-width` terminal cells, so wide glyphs cannot be
+silently split by scalar-index coordinates. The model regression covers a
+full two-cell CJK row and retains the pure/no-clipboard boundary.

@@ -1187,8 +1187,8 @@ impl CellSelection {
 }
 
 /// Project a committed terminal-cell selection into clipboard text without
-/// touching a platform clipboard. Rows are clamped to the feed, columns are
-/// Unicode-scalar positions, and line breaks are preserved for downstream
+/// touching a platform clipboard. Rows are clamped to the feed, columns use
+/// terminal-cell widths, and line breaks are preserved for downstream
 /// clipboard adapters.
 pub fn selected_cell_text(lines: &[Line], selection: CellSelection) -> String {
     let (start, end) = selection.normalized();
@@ -1198,18 +1198,28 @@ pub fn selected_cell_text(lines: &[Line], selection: CellSelection) -> String {
     let last_row = usize::from(end.row).min(lines.len().saturating_sub(1));
     (usize::from(start.row)..=last_row)
         .map(|row| {
-            let chars = lines[row].text.chars().collect::<Vec<_>>();
             let from = if row == usize::from(start.row) {
-                usize::from(start.column).min(chars.len())
+                usize::from(start.column)
             } else {
                 0
             };
             let to = if row == last_row {
-                usize::from(end.column).min(chars.len())
+                usize::from(end.column)
             } else {
-                chars.len()
+                usize::MAX
             };
-            chars[from..to].iter().collect::<String>()
+            let mut column = 0usize;
+            lines[row]
+                .text
+                .chars()
+                .filter(|character| {
+                    let width = unicode_width::UnicodeWidthChar::width(*character).unwrap_or(0);
+                    let next_column = column.saturating_add(width);
+                    let selected = width > 0 && next_column > from && column < to;
+                    column = next_column;
+                    selected
+                })
+                .collect::<String>()
         })
         .collect::<Vec<_>>()
         .join("\n")
@@ -1950,6 +1960,16 @@ mod tests {
         };
 
         assert_eq!(super::selected_cell_text(&lines, selection), "lo\n世");
+        assert_eq!(
+            super::selected_cell_text(
+                &lines,
+                super::CellSelection {
+                    anchor: super::CellPosition { row: 1, column: 0 },
+                    head: super::CellPosition { row: 1, column: 4 },
+                },
+            ),
+            "世界"
+        );
         assert_eq!(
             super::selected_cell_text(
                 &lines,
