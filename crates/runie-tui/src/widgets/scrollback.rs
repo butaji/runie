@@ -1828,19 +1828,37 @@ impl Scrollback {
         let Some(selected) = self.navigation.selected_tool_id.as_deref() else {
             return HashSet::new();
         };
-        let groups = self.dense_tool_groups();
-        let Some((_, selected_size)) = groups.get(selected).copied() else {
-            return HashSet::from([selected.to_owned()]);
+        let mut groups = Vec::<Vec<String>>::new();
+        let mut members = Vec::new();
+        let flush = |groups: &mut Vec<Vec<String>>, members: &mut Vec<String>| {
+            if !members.is_empty() {
+                groups.push(std::mem::take(members));
+            }
         };
-        if selected_size <= 1 {
-            return HashSet::from([selected.to_owned()]);
+        for line in &self.lines {
+            let is_member = matches!(
+                line.kind,
+                LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
+            ) && line.tool_call_id.is_some();
+            if is_member {
+                if let Some(id) = &line.tool_call_id {
+                    if !members.iter().any(|member| member == id) {
+                        members.push(id.clone());
+                    }
+                }
+            } else if !matches!(
+                line.kind,
+                LineKind::Activity | LineKind::ToolOutput | LineKind::ToolResult
+            ) {
+                flush(&mut groups, &mut members);
+            }
         }
+        flush(&mut groups, &mut members);
         groups
             .into_iter()
-            .filter_map(|(id, (index, size))| {
-                (index < selected_size && size == selected_size).then_some(id)
-            })
-            .collect()
+            .find(|group| group.iter().any(|id| id == selected))
+            .map(|group| group.into_iter().collect())
+            .unwrap_or_else(|| HashSet::from([selected.to_owned()]))
     }
 }
 
@@ -3681,6 +3699,32 @@ mod tests {
                 Some((0, 2)),
                 Some((1, 2)),
             ]
+        );
+    }
+
+    #[test]
+    fn selected_dense_group_does_not_cross_another_group_of_same_size() {
+        let mut scrollback = Scrollback::new();
+        for id in ["first-a", "first-b"] {
+            scrollback.apply(ScrollbackMsg::ToolStart {
+                tool_call_id: id.into(),
+                header: id.into(),
+                activity: None,
+            });
+        }
+        scrollback.append(Line::new(LineKind::Assistant, "break"));
+        for id in ["second-a", "second-b"] {
+            scrollback.apply(ScrollbackMsg::ToolStart {
+                tool_call_id: id.into(),
+                header: id.into(),
+                activity: None,
+            });
+        }
+        scrollback.apply(ScrollbackMsg::SelectNextTool);
+
+        assert_eq!(
+            scrollback.selected_tool_group_ids(),
+            HashSet::from(["first-a".to_owned(), "first-b".to_owned()])
         );
     }
 
