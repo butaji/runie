@@ -704,6 +704,13 @@ provider call IDs with distinct actor row identities receive separate member
 positions, while the existing call-ID helper remains compatibility-preserving.
 The duplicate identity regression and complete `just ci` gate pass.
 
+Dense renderer handoff increment (2026-08-10): physical scrollback projection
+now consumes identity-aware dense positions by transcript line when deciding
+which members contribute to the collapsed `N more` surface. Legacy call-ID
+anchors and reveal semantics remain compatible, while duplicate live rows no
+longer share hidden-member positions. Focused dense/replay tests and `just ci`
+pass.
+
 Workflow status formatter audit (2026-08-06): compared against Grok's
 `WorkflowBlockStatus` renderer and added exact tests for `failed`, `cancelled`,
 and `paused` elapsed wording. Cancelled/paused statuses now use `after 1.2s`

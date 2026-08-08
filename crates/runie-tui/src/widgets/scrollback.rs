@@ -12,9 +12,10 @@ use crate::appearance;
 use crate::view::PaintIntent;
 use runie_core::types::ThemeKind;
 pub use runie_tui_model::{
-    logical_tool_member_index, logical_tool_member_index_at, project_tool_card_rows,
-    tool_mode_for_line, tool_mode_override_for_line, FeedNavigation, FeedSnapshot, FeedState, Line,
-    LineKind, ScrollbackMsg, ToolBlock, ToolCardKind, ToolCardPaintIntent, ToolCardRowKind,
+    dense_tool_group_members_with_identity, logical_tool_member_index,
+    logical_tool_member_index_at, project_tool_card_rows, tool_mode_for_line,
+    tool_mode_override_for_line, FeedNavigation, FeedSnapshot, FeedState, Line, LineKind,
+    ScrollbackMsg, ToolBlock, ToolCardKind, ToolCardPaintIntent, ToolCardRowKind,
 };
 
 // Grok reserves a visible gutter between the first assistant row and its
@@ -1269,6 +1270,7 @@ impl Scrollback {
             }
         }
         let dense_groups = self.dense_tool_groups();
+        let dense_positions = self.dense_tool_positions();
         let mut emitted_dense_headers = HashSet::new();
         let mut user_vpad_emitted = false;
         let mut skip_full_user_separator = false;
@@ -1334,7 +1336,9 @@ impl Scrollback {
             let tool_mode = tool_mode_override_for_line(line, &self.navigation.tool_modes);
             if self.navigation.activity_expanded {
                 if let Some(tool_id) = line.tool_call_id.as_deref() {
-                    if let Some((member_index, group_size)) = dense_groups.get(tool_id) {
+                    if let Some((member_index, group_size)) =
+                        dense_positions.get(line_index).and_then(Option::as_ref)
+                    {
                         let hidden = group_size.saturating_sub(GROK_GROUP_MAX_VISIBLE);
                         let group_revealed =
                             self.dense_group_anchor_for(tool_id).is_some_and(|anchor| {
@@ -1613,6 +1617,26 @@ impl Scrollback {
         }
         flush(&mut members);
         groups
+    }
+
+    fn dense_tool_positions(&self) -> Vec<Option<(usize, usize)>> {
+        let keys = self
+            .lines
+            .iter()
+            .map(|line| {
+                (matches!(
+                    line.kind,
+                    LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
+                ) && line.tool_call_id.is_some())
+                .then(|| {
+                    (
+                        line.tool_call_id.clone().unwrap_or_default(),
+                        line.tool_row_id,
+                    )
+                })
+            })
+            .collect::<Vec<_>>();
+        dense_tool_group_members_with_identity(&keys)
     }
 
     fn dense_group_anchor_for(&self, selected: &str) -> Option<String> {
