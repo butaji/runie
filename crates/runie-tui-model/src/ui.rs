@@ -192,6 +192,10 @@ impl UiState {
         self
     }
 
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the palette reducer keeps its complete message classification explicit"
+    )]
     fn update_palette(mut self, msg: UiMsg) -> Option<Self> {
         match msg {
             UiMsg::CommandPaletteChar(ch) => self.command_palette_query.push(ch),
@@ -226,11 +230,30 @@ impl UiState {
                 self.command_palette_query.clear();
                 self.command_palette_index = 0;
             }
-            _ => return None,
+            UiMsg::HideWelcome
+            | UiMsg::ToggleShortcuts
+            | UiMsg::ToggleCommandPalette
+            | UiMsg::ToggleModelSelector
+            | UiMsg::ModelSelectorChar(_)
+            | UiMsg::ModelSelectorBackspace
+            | UiMsg::ModelSelectorMove(_)
+            | UiMsg::ModelSelectorEscape
+            | UiMsg::ModelSelectorToggleScope
+            | UiMsg::ActivateModelSelector
+            | UiMsg::SetModelSelectorResultCount(_)
+            | UiMsg::SetModelSelectorRows(_)
+            | UiMsg::ToggleSessionInfo
+            | UiMsg::ToggleChangelog
+            | UiMsg::CopyText(_)
+            | UiMsg::Reset => return None,
         }
         Some(self)
     }
 
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the selector reducer keeps its complete message classification explicit"
+    )]
     fn update_model_selector(mut self, msg: UiMsg) -> Option<Self> {
         match msg {
             UiMsg::ModelSelectorChar(ch) => self.model_selector_query.push(ch),
@@ -264,7 +287,21 @@ impl UiState {
                 self.model_selector_query.clear();
                 self.model_selector_index = 0;
             }
-            _ => return None,
+            UiMsg::HideWelcome
+            | UiMsg::ToggleShortcuts
+            | UiMsg::ToggleCommandPalette
+            | UiMsg::CommandPaletteChar(_)
+            | UiMsg::CommandPaletteBackspace
+            | UiMsg::CommandPaletteMove(_)
+            | UiMsg::CommandPaletteEscape
+            | UiMsg::ActivateCommandPalette
+            | UiMsg::ToggleModelSelector
+            | UiMsg::SetModelSelectorResultCount(_)
+            | UiMsg::SetModelSelectorRows(_)
+            | UiMsg::ToggleSessionInfo
+            | UiMsg::ToggleChangelog
+            | UiMsg::CopyText(_)
+            | UiMsg::Reset => return None,
         }
         Some(self)
     }

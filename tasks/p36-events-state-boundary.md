@@ -286,6 +286,11 @@ actor-feed event tables now enumerate every intentionally ignored
 event therefore requires an explicit feed classification before the workspace
 can compile.
 
+UI reducer exhaustiveness increment (2026-08-08): command-palette and model-
+selector subreducers now enumerate messages owned by other UI surfaces rather
+than using wildcard fallthroughs. New `UiMsg` variants must be classified at
+the owning reducer boundary.
+
 `status_messages_for_event` now names every intentionally ignored outer
 `AgentEvent` variant and every intentionally ignored assistant sub-event.
 This removes the wildcard fallback at the status boundary: adding a Pi event
