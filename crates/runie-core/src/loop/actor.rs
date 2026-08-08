@@ -438,6 +438,42 @@ impl LoopActor {
             .map_err(|error| LoopError::Provider(error.to_string()))
     }
 
+    /// Fetch a provider-owned deferred response through the loop boundary.
+    ///
+    /// Deferred polling is a provider capability, so the loop only forwards
+    /// the immutable model, handle, and request options. The returned event
+    /// stream remains owned by the caller that admitted the operation; no
+    /// loop or renderer state is mutated by this forwarding method.
+    pub async fn fetch_deferred(
+        &self,
+        model: crate::types::Model,
+        handle: crate::types::DeferredHandle,
+        options: Option<crate::types::SimpleStreamOptions>,
+    ) -> Result<tokio::sync::broadcast::Receiver<crate::types::AssistantMessageEvent>, LoopError>
+    {
+        self.inner
+            .deps
+            .provider
+            .fetch_deferred(model, handle, options)
+            .await
+            .map_err(|error| LoopError::Provider(error.to_string()))
+    }
+
+    /// Cancel a provider-owned deferred response through the loop boundary.
+    pub async fn cancel_deferred(
+        &self,
+        model: crate::types::Model,
+        handle: crate::types::DeferredHandle,
+        options: Option<crate::types::SimpleStreamOptions>,
+    ) -> Result<(), LoopError> {
+        self.inner
+            .deps
+            .provider
+            .cancel_deferred(model, handle, options)
+            .await
+            .map_err(|error| LoopError::Provider(error.to_string()))
+    }
+
     /// Discover models through the provider actor; the loop never performs
     /// provider I/O directly or mutates the catalog actor.
     pub async fn list_models(&self) -> Result<Vec<crate::types::Model>, LoopError> {

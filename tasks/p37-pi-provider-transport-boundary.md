@@ -418,3 +418,10 @@ implemented: `ReplayProvider` accepts an ordered poll sequence, enforces the
 provider-scoped handle, rejects cancellation and exhausted polls, and is
 covered by focused async tests. This is replay transport evidence, not a
 claim that a real provider adapter can poll or decode a live deferred response.
+
+Loop capability seam increment (2026-08-10): `LoopActor` now forwards
+`fetch_deferred` and `cancel_deferred` through the owned `ProviderActor`,
+returning provider event streams or typed provider errors without creating a
+second deferred state machine. This makes the Pi agent-level capability
+reachable through the same loop boundary as normal streaming and compaction;
+provider-specific polling and decoding remain adapter-owned.
