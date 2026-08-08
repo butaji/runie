@@ -149,13 +149,7 @@ impl PromptWidget {
     }
 
     pub fn cycle_mode(&mut self) {
-        self.mode = match self.mode {
-            InputMode::Normal => InputMode::Alternate,
-            InputMode::Alternate => InputMode::Plan,
-            InputMode::Plan => InputMode::Normal,
-            InputMode::FileSearch => InputMode::FileSearch,
-            InputMode::FileViewer => InputMode::FileViewer,
-        };
+        self.mode = runie_tui_model::cycle_input_mode(self.mode);
     }
 
     /// Async actor-owned file-search transition. Terminal input remains

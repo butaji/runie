@@ -36,6 +36,22 @@ pub struct PromptSnapshot {
     pub theme: ThemeKind,
 }
 
+/// Pure rotation of the renderer-agnostic prompt input state.
+///
+/// The embedded cycle moves Normal → Alternate → Plan → Normal. The file
+/// modes are pins: they are owned by async actors and the widget must not
+/// silently rotate out of them, so they self-loop and only an explicit
+/// transition (handled by the widget) leaves them.
+pub fn cycle_input_mode(mode: InputMode) -> InputMode {
+    match mode {
+        InputMode::Normal => InputMode::Alternate,
+        InputMode::Alternate => InputMode::Plan,
+        InputMode::Plan => InputMode::Normal,
+        InputMode::FileSearch => InputMode::FileSearch,
+        InputMode::FileViewer => InputMode::FileViewer,
+    }
+}
+
 impl PromptSnapshot {
     pub fn is_empty(&self) -> bool {
         self.text.trim().is_empty()
@@ -58,5 +74,41 @@ impl PromptSnapshot {
         prompt_lines
             .saturating_add(candidate_lines)
             .saturating_add(2) as u16
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{cycle_input_mode, InputMode, PromptSnapshot};
+
+    #[test]
+    fn cycle_input_mode_pins_trio_and_file_self_loops() {
+        // Trio: Normal → Alternate → Plan → Normal rotation.
+        let mut mode = InputMode::Normal;
+        mode = cycle_input_mode(mode);
+        assert_eq!(mode, InputMode::Alternate);
+        mode = cycle_input_mode(mode);
+        assert_eq!(mode, InputMode::Plan);
+        mode = cycle_input_mode(mode);
+        assert_eq!(mode, InputMode::Normal);
+
+        // FileSearch and FileViewer are owned by async actors; the cycle
+        // must pin them so the widget cannot silently rotate out.
+        assert_eq!(
+            cycle_input_mode(InputMode::FileSearch),
+            InputMode::FileSearch
+        );
+        assert_eq!(
+            cycle_input_mode(InputMode::FileViewer),
+            InputMode::FileViewer
+        );
+
+        // Snapshot round-trip: carrying the cycled mode through
+        // PromptSnapshot preserves the agreed value.
+        let snapshot = PromptSnapshot {
+            mode: cycle_input_mode(InputMode::Alternate),
+            ..PromptSnapshot::default()
+        };
+        assert_eq!(snapshot.mode, InputMode::Plan);
     }
 }

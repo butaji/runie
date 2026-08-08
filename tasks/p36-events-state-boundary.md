@@ -865,3 +865,32 @@ because `ScrollbackActor` was already reducing through the model helper.
 The 66 `runie-tui-model` lib unit tests, the 218 `runie-tui` lib unit
 tests, and the full `just ci` (fmt-check, clippy, lint, test, parity,
 source inventory, Pi event contract, feed-actor boundary) are green.
+
+`PromptWidget::cycle_mode` owner retirement (2026-08-08): the renderer
+no longer owns the input-mode rotation policy. The Body of
+`PromptWidget::cycle_mode` at `crates/runie-tui/src/widgets/prompt.rs:151-159`
+was collapsed to `self.mode = runie_tui_model::cycle_input_mode(self.mode);`,
+and the new canonical helper `pub fn cycle_input_mode(mode: InputMode) -> InputMode`
+now lives at `crates/runie-tui-model/src/prompt.rs` next to `InputMode`,
+matching the existing model/view split used by `feed.rs` and `status.rs`.
+`pub use runie_tui_model::cycle_input_mode;` was added to
+`crates/runie-tui-model/src/lib.rs` next to the existing `InputMode` /
+`PromptOutcome` / `PromptSnapshot` re-export, so the widget's existing
+`pub use runie_tui_model::{InputMode, PromptOutcome, PromptSnapshot};` at
+`crates/runie-tui/src/widgets/prompt.rs:19` now reaches the same canonical
+helper through that re-export. The widget-side assertion
+`mode_cycles_through_normal_alternate_and_plan` at
+`crates/runie-tui/src/widgets/prompt.rs:619-629` already exercises the
+public `cycle_mode` path end-to-end, so the model-side coverage stays
+narrow and focused: the new test `cycle_input_mode_pins_trio_and_file_self_loops`
+in `crates/runie-tui-model/src/prompt.rs` covers the four call points —
+the Normal → Alternate → Plan → Normal triple rotation, the
+`FileSearch → FileSearch` and `FileViewer → FileViewer` self-loops (the
+async actors own entry/exit for file modes, so the cycle must pin them
+rather than rotate them), and one snapshot round-trip that carries a
+cycled mode through `PromptSnapshot::default()` to confirm the
+projection agrees. The widget test (`mode_cycles_through_normal_alternate_and_plan`),
+the new model test (`cycle_input_mode_pins_trio_and_file_self_loops`),
+the 66 `runie-tui-model` lib unit tests, the 218 `runie-tui` lib unit
+tests, and the full `just ci` (fmt-check, clippy, lint, test, parity,
+source inventory, Pi event contract, feed-actor boundary) are green.

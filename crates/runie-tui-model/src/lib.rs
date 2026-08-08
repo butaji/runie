@@ -25,7 +25,7 @@ pub use feed::{
     ToolCardRow, ToolCardRowKind, DEFAULT_THINKING_ELAPSED_MS, PROMPT_TIMESTAMP_LIVE_THRESHOLD,
 };
 pub use memory::{memory_display_lines, parse_memory_results, MemoryResult};
-pub use prompt::{InputMode, PromptOutcome, PromptSnapshot};
+pub use prompt::{cycle_input_mode, InputMode, PromptOutcome, PromptSnapshot};
 pub use scroll::{
     ScrollDirection, ScrollFinalize, ScrollFlush, ScrollFlushState, ScrollMode, ScrollNormalizer,
     DEFAULT_SCROLL_FLUSH_CADENCE_MS, MIN_SCROLL_FLUSH_LINES,
