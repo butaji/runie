@@ -3710,6 +3710,44 @@ mod tests {
         );
     }
 
+    #[test]
+    fn selected_wrapped_dense_group_keeps_one_reflowed_selection_surface() {
+        let mut scrollback = Scrollback::new();
+        scrollback.set_activity_expanded(true);
+        scrollback.apply(ScrollbackMsg::Append(Line::new(
+            LineKind::Assistant,
+            "before",
+        )));
+        for (id, header) in [
+            ("wrapped-first", "Run the first very long command header"),
+            ("wrapped-second", "Run the second very long command header"),
+        ] {
+            scrollback.apply(ScrollbackMsg::ToolStart {
+                tool_call_id: id.into(),
+                header: header.into(),
+                activity: None,
+            });
+        }
+        scrollback.apply(ScrollbackMsg::SelectNextTool);
+
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 18, 10));
+        scrollback.render(Rect::new(0, 0, 18, 10), &mut buffer);
+        let selected_background = buffer.cell((5, 0)).expect("wrapped header").style().bg;
+        let selected_rows = (0..10)
+            .filter(|row| {
+                (0..18).any(|column| {
+                    buffer
+                        .cell((column, *row))
+                        .is_some_and(|cell| cell.style().bg == selected_background)
+                })
+            })
+            .count();
+        assert!(
+            selected_rows >= 6,
+            "selected dense group should retain both wrapped members"
+        );
+    }
+
     fn selected_cell_row(buffer: &Buffer) -> u16 {
         (0..3)
             .find(|row| {

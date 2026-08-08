@@ -866,3 +866,8 @@ selection styling across every physical continuation row produced by narrow
 viewport wrapping. The focused `selected_wrapped_tool_member_box_spans_physical_rows`
 regression covers the event-selected tool at width 18; generalized wrapped-card
 reflow and cast-wide frame reconciliation remain open.
+
+Dense wrapped reflow evidence (2026-08-09): a two-member dense group with both
+headers wrapping at width 18 now has a regression proving one selected surface
+retains all physical rows across the group. This strengthens the renderer
+contract without moving group ownership out of the feed actor.
