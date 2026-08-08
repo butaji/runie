@@ -163,9 +163,9 @@ applies `contextWindow - reserveTokens` as the threshold, finds valid cut
 points at message/branch-summary boundaries, preserves a recent-token budget,
 and separates a split-turn prefix from the retained tail. `prepareCompaction`
 then carries `previousSummary`, `tokensBefore`, retained messages, and
-file-operation details into the async summarization boundary. Runie currently
-journals `CompactionCreated` but does not yet implement this preparation
-algorithm.
+file-operation details into the async summarization boundary. The preparation
+algorithm and actor boundary are now implemented; concrete provider prompt
+quality remains adapter-owned.
 
 ## Completed slice (2026-08-07, pure cut-point planner)
 
@@ -186,7 +186,8 @@ event publication remain separate because they require an owned actor.
 the retention budget through its mailbox and returns the pure preparation
 result asynchronously. The actor remains the sole reader of live session
 state; no caller mutates or races a snapshot. Summary generation and the
-event-owned `CompactionCreated` journal mutation remain the next boundary.
+event-owned `CompactionCreated` journal mutation now complete through the
+owned provider and session actors below.
 
 The dedicated `visual-compaction-publication.yaml` replay now isolates this
 sequence and asserts the resulting record, context-role, token, and initial
@@ -206,7 +207,8 @@ provider boundary for Pi-style summary generation. `StreamFn` exposes an
 optional async `summarize_compaction` capability, and `ProviderActor` routes it
 through its owned mailbox with an explicit unsupported-capability default.
 Session preparation and `CompactionCreated` publication remain separate actor
-responsibilities; no generic provider behavior is fabricated.
+responsibilities; the provider actor supplies the typed capability and no
+generic provider behavior is fabricated.
 
 The pure `CompactionSummaryRequest::from_preparation` builder now materializes
 history, split-turn prefix, and retained-tail messages from validated actor
