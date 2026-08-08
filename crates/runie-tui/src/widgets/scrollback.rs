@@ -1689,7 +1689,10 @@ impl Scrollback {
         let Some(selected) = self.navigation.selected_tool_id.as_deref() else {
             return HashSet::new();
         };
-        let Some(anchor) = self.dense_group_anchor_for(selected) else {
+        let anchor = self
+            .dense_group_anchor_for_selected_row()
+            .or_else(|| self.dense_group_anchor_for(selected));
+        let Some(anchor) = anchor else {
             return HashSet::from([selected.to_owned()]);
         };
         let mut group = HashSet::new();
@@ -1717,6 +1720,46 @@ impl Scrollback {
             }
         }
         group
+    }
+
+    fn dense_group_anchor_for_selected_row(&self) -> Option<String> {
+        let selected_entry = self.navigation.selected_entry?;
+        let selected_identity = self.lines.get(selected_entry).and_then(|line| {
+            line.tool_call_id
+                .as_ref()
+                .map(|id| (id.clone(), line.tool_row_id))
+        })?;
+        let mut members = Vec::new();
+        let flush = |members: &mut Vec<(String, Option<u64>)>| {
+            let anchor = members.first().map(|(id, _)| id.clone());
+            let contains = members
+                .iter()
+                .any(|identity| identity == &selected_identity);
+            members.clear();
+            contains.then_some(anchor).flatten()
+        };
+        for line in &self.lines {
+            let is_member = matches!(
+                line.kind,
+                LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
+            ) && line.tool_call_id.is_some();
+            if is_member {
+                if let Some(id) = &line.tool_call_id {
+                    let identity = (id.clone(), line.tool_row_id);
+                    if !members.contains(&identity) {
+                        members.push(identity);
+                    }
+                }
+            } else if !matches!(
+                line.kind,
+                LineKind::Activity | LineKind::ToolOutput | LineKind::ToolResult
+            ) {
+                if let Some(anchor) = flush(&mut members) {
+                    return Some(anchor);
+                }
+            }
+        }
+        flush(&mut members)
     }
 }
 

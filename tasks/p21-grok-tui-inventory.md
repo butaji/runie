@@ -753,6 +753,12 @@ pins the selected-row predicate for duplicate call IDs, proving the actor row
 identity chooses exactly one card while the compatibility fallback remains
 available. The full workspace gate remains green.
 
+Dense-anchor identity increment (2026-08-10): selected dense-group anchor
+resolution now first searches the contiguous group using the selected line's
+actor row identity, then falls back to the historical call-ID anchor for
+compatibility rows. Duplicate live IDs cannot select the first group's anchor
+by accident; focused dense selection tests and `just ci` pass.
+
 Workflow status formatter audit (2026-08-06): compared against Grok's
 `WorkflowBlockStatus` renderer and added exact tests for `failed`, `cancelled`,
 and `paused` elapsed wording. Cancelled/paused statuses now use `after 1.2s`
