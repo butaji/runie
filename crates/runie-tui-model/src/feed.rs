@@ -1631,7 +1631,9 @@ pub fn project_tool_card_rows(
             }
             LineKind::ToolError | LineKind::Tool => ToolCardRowKind::Status,
             LineKind::ToolOutput | LineKind::ToolResult
-                if card_kind == ToolCardKind::MemorySearch && is_memory_metadata(&line.text) =>
+                if (card_kind == ToolCardKind::MemorySearch && is_memory_metadata(&line.text))
+                    || (card_kind == ToolCardKind::WebSearch
+                        && line.text.trim_start().starts_with("Sources:")) =>
             {
                 ToolCardRowKind::Metadata
             }
@@ -3097,6 +3099,18 @@ mod tests {
         assert_eq!(rows[1].row_kind, ToolCardRowKind::Metadata);
         assert_eq!(rows[1].paint_intent(), ToolCardPaintIntent::Muted);
         assert_eq!(rows[2].row_kind, ToolCardRowKind::Content);
+    }
+
+    #[test]
+    fn web_search_sources_are_metadata_rows() {
+        let lines = vec![
+            Line::new(LineKind::Tool, "Web Search rust").for_tool("web-1"),
+            Line::new(LineKind::ToolOutput, "  Sources: docs.rs, rust-lang.org").for_tool("web-1"),
+        ];
+        let names = HashMap::from([(String::from("web-1"), String::from("web_search"))]);
+        let rows = project_tool_card_rows(&lines, &names, &HashMap::new());
+        assert_eq!(rows[1].row_kind, ToolCardRowKind::Metadata);
+        assert_eq!(rows[1].paint_intent(), ToolCardPaintIntent::Muted);
     }
 
     #[test]
