@@ -342,9 +342,9 @@ impl EventRenderer {
                                         message: runie_core::types::AgentMessage::Assistant(_),
                                     }
                                 )
-                                && matches!(feed_messages.first(), Some(ScrollbackMsg::Append(line)) if line.kind == LineKind::Separator)
+                                && matches!(feed_messages.get(1), Some(ScrollbackMsg::Append(line)) if line.kind == LineKind::Separator)
                             {
-                                feed_messages.remove(0);
+                                feed_messages.remove(1);
                             }
                             if matches!(event, AgentEvent::AgentStart) {
                                 feed_messages.extend(session_start_messages());
@@ -1375,6 +1375,47 @@ mod tests {
         );
     }
 
+    #[tokio::test]
+    async fn live_and_replay_assistant_start_preserve_layout_parity_contract() {
+        let assistant_start = || AgentEvent::MessageStart {
+            message: AgentMessage::Assistant(Default::default()),
+        };
+
+        let live_messages = {
+            let mut messages = scrollback_messages_for_event(&assistant_start());
+            messages.remove(1);
+            messages
+        };
+        let replay_messages = scrollback_messages_for_event(&assistant_start());
+        assert_eq!(live_messages.len(), 4);
+        assert_eq!(replay_messages.len(), 5);
+
+        let live_bus = runie_core::events::EventBus::new();
+        let live_scrollback = ScrollbackActor::new();
+        let live_status = StatusActor::new();
+        let mut live_feed = live_scrollback.subscribe();
+        let live_renderer = EventRenderer::with_live_actors(live_scrollback.clone(), live_status);
+        let (live_shutdown_tx, live_shutdown_rx) = tokio::sync::watch::channel(false);
+        // OWNER: test — joins the renderer after the shutdown event.
+        let live_task = tokio::spawn(live_renderer.run(live_bus.subscribe(), live_shutdown_rx));
+
+        live_bus.publish(assistant_start());
+        live_feed
+            .changed()
+            .await
+            .expect("live assistant start delivery");
+        assert_eq!(live_scrollback.model_snapshot().lines.len(), 3);
+
+        live_shutdown_tx.send(true).expect("live renderer shutdown");
+        live_task.await.expect("live renderer task");
+
+        let replay_scrollback = ScrollbackActor::new();
+        let replay_status = StatusActor::new();
+        let mut replay_renderer =
+            EventRenderer::with_actors(replay_scrollback.clone(), replay_status);
+        replay_renderer.apply_actor_event(assistant_start()).await;
+        assert_eq!(replay_scrollback.model_snapshot().lines.len(), 4);
+    }
     #[tokio::test]
     async fn actor_renderer_reduces_events_without_legacy_projections() {
         let scrollback = ScrollbackActor::new();

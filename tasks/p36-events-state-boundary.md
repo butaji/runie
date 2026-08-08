@@ -466,3 +466,10 @@ are observation probes. The only renderer state mirror remains the
 test/replay-only `Projection::Legacy` adapter. This classification does not
 close p36/p47: compatibility retirement and full deterministic cast parity
 remain explicit acceptance work.
+
+Live/replay Grok separator closure (2026-08-08): `EventRenderer::run` now
+removes the separator at `feed_messages.get(1)`, after the intentional
+`AssistantStreamStart` marker, while `apply_actor_event` retains the pure
+five-message projection. The parity test drives `MessageStart::Assistant`
+through `with_live_actors`/live bus and `with_actors`/replay, asserting four
+live rows versus five replay rows; the pure-table oracle remains at five.
