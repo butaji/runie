@@ -138,7 +138,9 @@ impl ScrollFlushState {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ScrollNormalizer {
     events_per_tick: i32,
+    trackpad_events_per_tick: i32,
     lines_per_tick: i32,
+    trackpad_lines_per_tick: i32,
     stream_gap_ms: u64,
     last_event_ms: Option<u64>,
     speed_tenths: i32,
@@ -163,17 +165,24 @@ impl Default for ScrollNormalizer {
 
 impl ScrollNormalizer {
     pub const fn new(events_per_tick: i32, lines_per_tick: i32) -> Self {
+        let lines_per_tick = if lines_per_tick > 0 {
+            lines_per_tick
+        } else {
+            1
+        };
         Self {
             events_per_tick: if events_per_tick > 0 {
                 events_per_tick
             } else {
                 1
             },
-            lines_per_tick: if lines_per_tick > 0 {
-                lines_per_tick
+            trackpad_events_per_tick: if events_per_tick > 0 {
+                events_per_tick
             } else {
                 1
             },
+            lines_per_tick,
+            trackpad_lines_per_tick: lines_per_tick,
             stream_gap_ms: 80,
             last_event_ms: None,
             speed_tenths: 10,
@@ -201,7 +210,16 @@ impl ScrollNormalizer {
             3
         };
         let lines_per_tick = if events_per_tick == 1 { 1 } else { 3 };
-        Self::new(events_per_tick, lines_per_tick)
+        let trackpad_lines_per_tick =
+            if matches!(brand.as_str(), "vscode" | "cursor" | "windsurf") && !remuxed {
+                15
+            } else {
+                3
+            };
+        let mut normalizer = Self::new(events_per_tick, lines_per_tick);
+        normalizer.trackpad_lines_per_tick = trackpad_lines_per_tick;
+        normalizer.trackpad_events_per_tick = 3;
+        normalizer
     }
 
     pub const fn with_speed(mut self, speed: u8) -> Self {
@@ -246,8 +264,18 @@ impl ScrollNormalizer {
         if self.inverted {
             sign = -sign;
         }
-        self.pending_units += sign * self.lines_per_tick * multiplier * self.speed_tenths;
-        let denominator = self.events_per_tick * FIXED_POINT * 10;
+        let lines_per_tick = if self.stream_trackpad {
+            self.trackpad_lines_per_tick
+        } else {
+            self.lines_per_tick
+        };
+        self.pending_units += sign * lines_per_tick * multiplier * self.speed_tenths;
+        let events_per_tick = if self.stream_trackpad {
+            self.trackpad_events_per_tick
+        } else {
+            self.events_per_tick
+        };
+        let denominator = events_per_tick * FIXED_POINT * 10;
         let delta = self.pending_units / denominator;
         self.pending_units %= denominator;
         (self, delta)
@@ -365,6 +393,16 @@ mod tests {
         assert_eq!(remuxed.push(ScrollDirection::Down).1, 1);
         assert_eq!(wezterm.push(ScrollDirection::Down).1, 1);
         assert_eq!(unknown.push(ScrollDirection::Down).1, 1);
+    }
+
+    #[test]
+    fn vscode_profile_prices_trackpad_streams_like_grok() {
+        let normalizer =
+            ScrollNormalizer::for_terminal_context("vscode", false).with_mode(ScrollMode::Trackpad);
+        let (normalizer, first) = normalizer.push_at(0, ScrollDirection::Down);
+        let (_, second) = normalizer.push_at(20, ScrollDirection::Down);
+        assert_eq!(first, 5);
+        assert_eq!(second, 5);
     }
 
     #[test]

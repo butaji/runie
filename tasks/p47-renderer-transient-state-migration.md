@@ -390,6 +390,12 @@ fast wheel acceleration band; forced wheel/trackpad modes remain explicit.
 `visual-scroll-trackpad.yaml` replays the slow stream at runtime. Full Grok
 flush-cadence/backlog caps and terminal-specific heuristic tuning remain open.
 
+VS Code trackpad profile increment (2026-08-09): the terminal-context profile
+now separates trackpad pricing from wheel pricing and applies Grok's 15-lines
+per normalized tick for VS Code, Cursor, and Windsurf outside remuxed sessions.
+Trackpad accumulation uses the normalized three-event denominator; wheel
+behavior and remuxed profiles remain unchanged.
+
 ## Grok scroll flush contract audit (2026-08-07)
 
 The authoritative implementation and tests in
