@@ -463,22 +463,31 @@ impl TelemetryActor {
         Fut: Future<Output = Result<T, E>>,
         E: std::fmt::Display,
     {
-        let span = self.start_span(parent_id, name, attributes).await?;
+        let span = self
+            .start_span(parent_id, name, attributes)
+            .await
+            .unwrap_or_else(|| TelemetrySpan {
+                actor: self.clone(),
+                id: 0,
+                noop: true,
+            });
         let result = callback(span.clone()).await;
-        match &result {
-            Ok(_) => span.status(SpanStatus::Ok).await,
-            Err(error) => {
-                span.status_with_error(
-                    SpanStatus::Error,
-                    Some(SpanError {
-                        name: "Error".to_owned(),
-                        message: error.to_string(),
-                    }),
-                )
-                .await;
+        if !span.noop {
+            match &result {
+                Ok(_) => span.status(SpanStatus::Ok).await,
+                Err(error) => {
+                    span.status_with_error(
+                        SpanStatus::Error,
+                        Some(SpanError {
+                            name: "Error".to_owned(),
+                            message: error.to_string(),
+                        }),
+                    )
+                    .await;
+                }
             }
+            span.end().await;
         }
-        span.end().await;
         Some(result)
     }
 }
@@ -727,6 +736,26 @@ mod tests {
         let snapshot = actor.snapshot();
         assert_eq!(snapshot.spans[0].attributes.len(), 1);
         assert!(snapshot.spans[0].events.is_empty());
+    }
+
+    #[tokio::test]
+    async fn invalid_root_attributes_still_execute_noop_callback() {
+        let actor = TelemetryActor::new();
+        let result = actor
+            .with_span(
+                None,
+                "ignored",
+                HashMap::from([("nested".into(), serde_json::json!({"value": true}))]),
+                |span| async move {
+                    assert_eq!(span.id, 0);
+                    Ok::<_, &'static str>("callback-ran")
+                },
+            )
+            .await
+            .expect("callback result")
+            .expect("callback success");
+        assert_eq!(result, "callback-ran");
+        assert!(actor.snapshot().spans.is_empty());
     }
 
     #[tokio::test]

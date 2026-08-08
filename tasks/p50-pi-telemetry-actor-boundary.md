@@ -139,3 +139,9 @@ attribute-update payloads now enforce Pi's primitive/homogeneous-array
 attribute contract. Invalid starts produce no recorded span; invalid mutable
 updates are ignored atomically, matching Pi's passive in-memory recorder.
 `invalid-attributes.yaml` exercises the same behavior through runtime replay.
+
+Root no-op callback increment (2026-08-09): invalid root span attributes now
+still execute `TelemetryActor::with_span` callbacks with an inert span, while
+leaving the actor snapshot unchanged. This matches Pi's passive
+`startSpan`/`NOOP_TELEMETRY_CONTEXT` behavior and is covered by a focused
+regression.
