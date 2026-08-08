@@ -166,3 +166,9 @@ non-terminal assistant update events and publishes Pi's
 provider-error streams. The provider telemetry regression asserts the
 actor-owned count; start, done, and error envelope events are excluded from
 the update count.
+
+First-chunk timing increment (2026-08-09): the same owned pump records
+`pi.ai.stream.time_to_first_chunk_ms` when the first assistant update arrives
+and publishes it with terminal telemetry attributes. Streams with no update
+chunk omit the optional field; the provider regression verifies the numeric
+attribute without using sleeps or a timing threshold.

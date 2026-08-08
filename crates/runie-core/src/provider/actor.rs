@@ -441,11 +441,16 @@ async fn pump_stream(
     telemetry_span: Option<TelemetrySpan>,
 ) {
     use futures::StreamExt;
+    let started_at = std::time::Instant::now();
     let mut terminal_error = None;
     let mut chunk_count = 0u64;
+    let mut time_to_first_chunk_ms = None;
     while let Some(event) = stream.next().await {
         if is_telemetry_chunk(&event) {
             chunk_count = chunk_count.saturating_add(1);
+            if time_to_first_chunk_ms.is_none() {
+                time_to_first_chunk_ms = Some(started_at.elapsed().as_millis() as u64);
+            }
         }
         if let crate::types::AssistantMessageEvent::Error { error, .. } = &event {
             terminal_error = Some(error.error_text());
@@ -461,6 +466,12 @@ async fn pump_stream(
                     "pi.ai.stream.chunk_count".into(),
                     serde_json::json!(chunk_count),
                 );
+                if let Some(elapsed_ms) = time_to_first_chunk_ms {
+                    attributes.insert(
+                        "pi.ai.stream.time_to_first_chunk_ms".into(),
+                        serde_json::json!(elapsed_ms),
+                    );
+                }
             }
             if !attributes.is_empty() && validate_pi_ai_request_end_attributes(&attributes).is_ok()
             {
@@ -835,6 +846,11 @@ mod tests {
         );
         assert_eq!(snapshot.spans[0].attributes["pi.ai.usage.cost"], 0.0);
         assert_eq!(snapshot.spans[0].attributes["pi.ai.stream.chunk_count"], 1);
+        assert!(
+            snapshot.spans[0].attributes["pi.ai.stream.time_to_first_chunk_ms"]
+                .as_u64()
+                .is_some()
+        );
         assert_eq!(snapshot.spans[0].status, SpanStatus::Ok);
         assert!(snapshot.spans[0].ended);
     }
