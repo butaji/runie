@@ -314,3 +314,13 @@ fallback markers. `clear_session` removes every account continuation and its
 fallback marker, while `clear` provides the global cleanup boundary. The cache
 does not own socket handles yet; the concrete adapter must close those handles
 before invoking cleanup.
+
+Injected socket adapter increment (2026-08-09): `CodexWebSocketAdapter` now
+owns the provider-scoped request lifecycle behind `CodexWebSocketConnector` and
+`CodexWebSocket`. It resolves the Codex URL, adds the Responses WebSocket beta
+header, sends a `response.create` frame, validates/collects object messages
+through the existing Responses decoder, and closes the socket on success,
+send/receive failure, malformed frames, and normal EOF. Connection/send
+failures can use an explicitly injected ordinary `StreamFn` fallback. The
+connector remains injected so production networking and replay remain separate;
+the adapter itself no longer pretends generic HTTP is WebSocket transport.
