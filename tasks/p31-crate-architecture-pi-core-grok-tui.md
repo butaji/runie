@@ -121,6 +121,13 @@ model-owned implementation. A model-layer tool-start regression proves the
 actor intent shape directly; the full workspace and visual replay gates remain
 green.
 
+**Declarative delivery scopes (2026-08-10):** `EventProjectionScope` and
+`event_projection_scope` now classify feed, status, transcript, and session
+ownership in one pure model-layer table. Feed admission delegates to that
+classifier, while multi-owner events such as theme/reset and assistant
+message updates retain their independent actor projections. Tests pin both
+shared ownership and the rule that status-only events cannot enter the feed.
+
 **First scope slice (2026-08-06):** `runie-tui-model::is_actor_feed_event`
 now owns the actor-feed admission policy. The bus projection rejects
 transcript lifecycle events before its narrower mapping runs, and a pure model

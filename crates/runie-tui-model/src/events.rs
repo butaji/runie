@@ -8,6 +8,71 @@ use crate::{
     LineKind, ScrollbackMsg, Status, StatusMsg, PROMPT_TIMESTAMP_LIVE_THRESHOLD,
 };
 
+/// Declarative ownership scopes for one core event.
+///
+/// An event may be delivered to more than one owning actor (for example,
+/// `ThemeChanged` updates both feed and status). The classifier only describes
+/// delivery ownership; each actor still reduces its own mailbox messages.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EventProjectionScope(u8);
+
+impl EventProjectionScope {
+    pub const NONE: Self = Self(0);
+    pub const FEED: Self = Self(1 << 0);
+    pub const STATUS: Self = Self(1 << 1);
+    pub const TRANSCRIPT: Self = Self(1 << 2);
+    pub const SESSION: Self = Self(1 << 3);
+
+    pub const fn union(self, other: Self) -> Self {
+        Self(self.0 | other.0)
+    }
+
+    pub const fn contains(self, scope: Self) -> bool {
+        self.0 & scope.0 == scope.0
+    }
+}
+
+/// Classify every event by the actors whose projections may consume it.
+pub fn event_projection_scope(event: &AgentEvent) -> EventProjectionScope {
+    use EventProjectionScope as Scope;
+    match event {
+        AgentEvent::AgentStart
+        | AgentEvent::Error { .. }
+        | AgentEvent::TurnStart
+        | AgentEvent::Waiting { .. }
+        | AgentEvent::TurnEnd { .. }
+        | AgentEvent::AgentEnd { .. } => Scope::STATUS,
+        AgentEvent::ThemeChanged { .. } | AgentEvent::Reset => Scope::FEED.union(Scope::STATUS),
+        AgentEvent::ModelChanged { .. } => Scope::STATUS,
+        AgentEvent::MessageStart { .. } => Scope::TRANSCRIPT,
+        AgentEvent::MessageUpdate { .. } | AgentEvent::MessageEnd { .. } => {
+            Scope::TRANSCRIPT.union(Scope::STATUS)
+        }
+        AgentEvent::ToolDisplayModeChanged { .. }
+        | AgentEvent::ToolExecutionStart { .. }
+        | AgentEvent::ToolExecutionUpdate { .. }
+        | AgentEvent::ToolExecutionEnd { .. }
+        | AgentEvent::BackgroundWorkStarted { .. }
+        | AgentEvent::BackgroundWorkProgress { .. }
+        | AgentEvent::BackgroundWorkFinished { .. }
+        | AgentEvent::BackgroundWorkCancelled { .. }
+        | AgentEvent::WorkflowStarted { .. }
+        | AgentEvent::WorkflowProgress { .. }
+        | AgentEvent::WorkflowFinished { .. } => Scope::FEED,
+        AgentEvent::ThinkingLevelChanged { .. }
+        | AgentEvent::ActiveToolsChanged { .. }
+        | AgentEvent::SessionLabelChanged { .. }
+        | AgentEvent::SessionNameChanged { .. }
+        | AgentEvent::SessionLaneChanged { .. }
+        | AgentEvent::SessionEntryAppended { .. }
+        | AgentEvent::BranchSummaryCreated { .. }
+        | AgentEvent::CustomSessionEntryCreated { .. }
+        | AgentEvent::CompactionCreated { .. }
+        | AgentEvent::OperationRecordCreated { .. }
+        | AgentEvent::TypedOperationRecordCreated { .. } => Scope::SESSION,
+    }
+}
+
 #[allow(
     clippy::too_many_lines,
     reason = "the event projection table keeps actor-owned mappings declarative"
@@ -215,22 +280,7 @@ pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
 /// policy in the model makes that boundary declarative and prevents a future
 /// mapper from accidentally appending the same user/assistant row twice.
 pub fn is_actor_feed_event(event: &AgentEvent) -> bool {
-    matches!(
-        event,
-        AgentEvent::Reset
-            | AgentEvent::ThemeChanged { .. }
-            | AgentEvent::ToolDisplayModeChanged { .. }
-            | AgentEvent::ToolExecutionStart { .. }
-            | AgentEvent::ToolExecutionUpdate { .. }
-            | AgentEvent::ToolExecutionEnd { .. }
-            | AgentEvent::BackgroundWorkStarted { .. }
-            | AgentEvent::BackgroundWorkProgress { .. }
-            | AgentEvent::BackgroundWorkFinished { .. }
-            | AgentEvent::BackgroundWorkCancelled { .. }
-            | AgentEvent::WorkflowStarted { .. }
-            | AgentEvent::WorkflowProgress { .. }
-            | AgentEvent::WorkflowFinished { .. }
-    )
+    event_projection_scope(event).contains(EventProjectionScope::FEED)
 }
 
 /// Map status-owned event transitions without reading or mutating actor state.
@@ -320,7 +370,10 @@ pub fn status_messages_for_event(event: &AgentEvent) -> Vec<StatusMsg> {
 
 #[cfg(test)]
 mod tests {
-    use super::{is_actor_feed_event, scrollback_messages_for_event, status_messages_for_event};
+    use super::{
+        event_projection_scope, is_actor_feed_event, scrollback_messages_for_event,
+        status_messages_for_event, EventProjectionScope,
+    };
     use runie_core::types::{AgentEvent, AgentMessage, AssistantMessage, AssistantMessageEvent};
 
     #[test]
@@ -333,6 +386,25 @@ mod tests {
         assert!(is_actor_feed_event(&AgentEvent::ThemeChanged {
             theme: runie_core::types::ThemeKind::GrokNight,
         }));
+    }
+
+    #[test]
+    fn event_scopes_share_multi_owner_events_without_broadening_feed_admission() {
+        let theme = event_projection_scope(&AgentEvent::ThemeChanged {
+            theme: runie_core::types::ThemeKind::GrokNight,
+        });
+        assert!(theme.contains(EventProjectionScope::FEED));
+        assert!(theme.contains(EventProjectionScope::STATUS));
+
+        let message = event_projection_scope(&AgentEvent::TurnStart);
+        assert!(message.contains(EventProjectionScope::STATUS));
+        assert!(!message.contains(EventProjectionScope::FEED));
+
+        let session = event_projection_scope(&AgentEvent::SessionNameChanged {
+            name: "demo".into(),
+        });
+        assert!(session.contains(EventProjectionScope::SESSION));
+        assert!(!session.contains(EventProjectionScope::TRANSCRIPT));
     }
 
     #[test]
