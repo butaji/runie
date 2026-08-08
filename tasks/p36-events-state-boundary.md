@@ -291,6 +291,11 @@ selector subreducers now enumerate messages owned by other UI surfaces rather
 than using wildcard fallthroughs. New `UiMsg` variants must be classified at
 the owning reducer boundary.
 
+Prompt actor event increment (2026-08-08): the prompt actor's subscribed core
+event boundary now explicitly lists ignored lifecycle/session/tool/workflow
+events and receiver errors; only reset, theme, and non-empty model changes can
+mutate the prompt projection.
+
 `status_messages_for_event` now names every intentionally ignored outer
 `AgentEvent` variant and every intentionally ignored assistant sub-event.
 This removes the wildcard fallback at the status boundary: adding a Pi event

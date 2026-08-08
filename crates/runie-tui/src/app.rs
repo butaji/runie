@@ -361,7 +361,38 @@ async fn run_prompt_actor(
                         let _ = snapshot_tx.send(prompt.model_snapshot());
                     }
                     Ok(AgentEvent::ModelChanged { .. }) => {}
-                    _ => {}
+                    Ok(AgentEvent::AgentStart)
+                    | Ok(AgentEvent::AgentEnd { .. })
+                    | Ok(AgentEvent::Error { .. })
+                    | Ok(AgentEvent::ThinkingLevelChanged { .. })
+                    | Ok(AgentEvent::TurnStart)
+                    | Ok(AgentEvent::Waiting { .. })
+                    | Ok(AgentEvent::ActiveToolsChanged { .. })
+                    | Ok(AgentEvent::SessionLabelChanged { .. })
+                    | Ok(AgentEvent::SessionNameChanged { .. })
+                    | Ok(AgentEvent::SessionLaneChanged { .. })
+                    | Ok(AgentEvent::SessionEntryAppended { .. })
+                    | Ok(AgentEvent::BranchSummaryCreated { .. })
+                    | Ok(AgentEvent::CustomSessionEntryCreated { .. })
+                    | Ok(AgentEvent::CompactionCreated { .. })
+                    | Ok(AgentEvent::OperationRecordCreated { .. })
+                    | Ok(AgentEvent::TypedOperationRecordCreated { .. })
+                    | Ok(AgentEvent::ToolDisplayModeChanged { .. })
+                    | Ok(AgentEvent::TurnEnd { .. })
+                    | Ok(AgentEvent::MessageStart { .. })
+                    | Ok(AgentEvent::MessageUpdate { .. })
+                    | Ok(AgentEvent::MessageEnd { .. })
+                    | Ok(AgentEvent::ToolExecutionStart { .. })
+                    | Ok(AgentEvent::ToolExecutionUpdate { .. })
+                    | Ok(AgentEvent::ToolExecutionEnd { .. })
+                    | Ok(AgentEvent::BackgroundWorkStarted { .. })
+                    | Ok(AgentEvent::BackgroundWorkProgress { .. })
+                    | Ok(AgentEvent::BackgroundWorkFinished { .. })
+                    | Ok(AgentEvent::BackgroundWorkCancelled { .. })
+                    | Ok(AgentEvent::WorkflowStarted { .. })
+                    | Ok(AgentEvent::WorkflowProgress { .. })
+                    | Ok(AgentEvent::WorkflowFinished { .. })
+                    | Err(_) => {}
                 }
             }
         }
