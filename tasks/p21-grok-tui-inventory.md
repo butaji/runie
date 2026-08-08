@@ -678,6 +678,14 @@ identity, fold/navigation semantics across every member, and cast-wide frame
 reconciliation. Future work must target that model or a verified cast delta;
 reopening the closed ID/truncation paths would regress the actor boundary.
 
+Typed row identity increment (2026-08-10): semantic `ToolCardRow` projections
+now preserve the actor-issued `Line.tool_row_id` alongside the tool-call ID and
+member ordinal. The renderer's paint-intent lookup requires that opaque row
+identity when available, so duplicate provider call IDs cannot borrow a
+neighbor's card role merely because their text and ordinal match. Compatibility
+seed rows retain the optional `None` path; focused model/renderer tests and the
+full local gate cover both boundaries.
+
 Workflow status formatter audit (2026-08-06): compared against Grok's
 `WorkflowBlockStatus` renderer and added exact tests for `failed`, `cancelled`,
 and `paused` elapsed wording. Cancelled/paused statuses now use `after 1.2s`

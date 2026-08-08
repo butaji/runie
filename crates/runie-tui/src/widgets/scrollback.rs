@@ -1200,6 +1200,7 @@ impl Scrollback {
             })
             .nth(occurrence)?;
         let id = line.tool_call_id.as_deref()?;
+        let tool_row_id = line.tool_row_id;
         let member_index = logical_tool_member_index(&self.lines, id)?;
         let rows = project_tool_card_rows(
             &self.lines,
@@ -1208,7 +1209,10 @@ impl Scrollback {
         );
         rows.into_iter()
             .find(|row| {
-                row.tool_call_id == id && row.text == text && row.member_index == member_index
+                row.tool_call_id == id
+                    && row.tool_row_id == tool_row_id
+                    && row.text == text
+                    && row.member_index == member_index
             })
             .map(|row| row.paint_intent())
     }

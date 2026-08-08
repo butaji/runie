@@ -1547,6 +1547,8 @@ pub enum ToolCardPaintIntent {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ToolCardRow {
     pub tool_call_id: String,
+    /// Actor-issued identity of the live tool row, when available.
+    pub tool_row_id: Option<u64>,
     /// Stable ordinal of the logical member within its contiguous card group,
     /// shared by that member's header, content, and status rows.
     pub member_index: usize,
@@ -1659,6 +1661,7 @@ pub fn project_tool_card_rows(
         };
         rows.push(ToolCardRow {
             tool_call_id: tool_call_id.to_owned(),
+            tool_row_id: line.tool_row_id,
             member_index: row_member_index,
             card_kind,
             row_kind,
@@ -3044,6 +3047,7 @@ mod tests {
     fn typed_card_rows_expose_semantic_paint_intents() {
         let header = ToolCardRow {
             tool_call_id: "read-1".into(),
+            tool_row_id: Some(7),
             member_index: 0,
             card_kind: ToolCardKind::Read,
             row_kind: ToolCardRowKind::Header,
@@ -3079,14 +3083,22 @@ mod tests {
     #[test]
     fn card_rows_preserve_specialized_identity_and_semantic_role() {
         let lines = vec![
-            Line::new(LineKind::Tool, "Read README.md").for_tool("call-1"),
-            Line::new(LineKind::ToolOutput, "first line").for_tool("call-1"),
-            Line::new(LineKind::ToolError, "failed").for_tool("call-1"),
+            Line::new(LineKind::Tool, "Read README.md")
+                .for_tool("call-1")
+                .for_tool_row(41),
+            Line::new(LineKind::ToolOutput, "first line")
+                .for_tool("call-1")
+                .for_tool_row(41),
+            Line::new(LineKind::ToolError, "failed")
+                .for_tool("call-1")
+                .for_tool_row(41),
         ];
         let names = HashMap::from([(String::from("call-1"), String::from("read"))]);
         let rows = project_tool_card_rows(&lines, &names, &HashMap::new());
         assert_eq!(rows[0].card_kind, ToolCardKind::Read);
         assert_eq!(rows[0].row_kind, ToolCardRowKind::Header);
+        assert_eq!(rows[0].tool_row_id, Some(41));
+        assert_eq!(rows[1].tool_row_id, Some(41));
         assert_eq!(rows[1].row_kind, ToolCardRowKind::Content);
         assert!(rows[2].is_error);
         assert_eq!(rows[2].row_kind, ToolCardRowKind::Status);
