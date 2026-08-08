@@ -1,6 +1,6 @@
 # p37 — Pi provider transport boundary
 
-Status: in progress (HTTP/replay boundary complete; provider capability seam and YAML route coverage complete; concrete Codex wire adapter remains open)
+Status: in progress (HTTP/replay boundary complete; provider capability seam and YAML route coverage complete; Codex wire adapter lifecycle is implemented, with deployment and full retry parity remaining)
 
 The Pi `ProviderRequestOptions` contract is broader than Runie's current
 `HttpActor` abstraction. This task records the exact boundary so parity work
@@ -339,3 +339,8 @@ the session/account key from the request options, attaches cached
 the terminal response id, and falls back to the injected ordinary provider
 only before the WebSocket stream has started. Post-start transport/protocol
 failures propagate instead of replaying partial output through SSE.
+
+Pre-stream error increment (2026-08-09): an initial provider `error` envelope
+remains outside the started-stream state, so the adapter can close the socket
+and invoke its explicit fallback capability. A focused fake-socket regression
+covers this boundary; post-stream failures continue to propagate.

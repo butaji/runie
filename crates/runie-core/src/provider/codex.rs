@@ -290,9 +290,15 @@ impl WebSocketAdapter for CodexWebSocketAdapter {
                             "Codex WebSocket message must be a JSON object".into(),
                         ));
                     }
-                    started = true;
+                    let message_type = value.get("type").and_then(|value| value.as_str());
+                    // Pi treats an initial provider `error` envelope as a
+                    // transport/setup failure. It must remain pre-stream so
+                    // the adapter can apply its explicit fallback policy;
+                    // marking it started would turn the same wire fact into
+                    // an unrecoverable post-stream error.
+                    started |= message_type != Some("error");
                     let terminal = matches!(
-                        value.get("type").and_then(|value| value.as_str()),
+                        message_type,
                         Some("response.completed")
                             | Some("response.incomplete")
                             | Some("response.failed")
@@ -711,6 +717,52 @@ mod tests {
                 ["previous_response_id"],
             "r1"
         );
+        assert!(closed.load(std::sync::atomic::Ordering::Acquire));
+    }
+
+    #[tokio::test]
+    async fn adapter_falls_back_for_initial_error_before_marking_stream_started() {
+        use futures::StreamExt;
+
+        let sent = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let closed = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let connector = Arc::new(FakeConnector {
+            socket: std::sync::Mutex::new(
+                [FakeSocket {
+                    messages: [
+                        r#"{"type":"error","error":{"code":"rate_limit","message":"busy"}}"#.into(),
+                    ]
+                    .into_iter()
+                    .collect(),
+                    sent: sent.clone(),
+                    closed: closed.clone(),
+                }]
+                .into_iter()
+                .collect(),
+            ),
+            url: std::sync::Mutex::new(None),
+            headers: std::sync::Mutex::new(None),
+        });
+        let fallback = Arc::new(
+            crate::provider::replay::ReplayProvider::from_websocket_messages([
+                r#"{"type":"response.created","response":{"id":"fallback"}}"#,
+                r#"{"type":"response.completed","response":{"status":"completed"}}"#,
+            ])
+            .expect("fallback replay provider"),
+        );
+        let adapter = CodexWebSocketAdapter::new(
+            connector,
+            Arc::new(|_, _, _| Ok(serde_json::json!({"model":"test-model"}))),
+            Some("https://example.test/codex".into()),
+            HashMap::new(),
+            Some(fallback),
+        );
+
+        let mut stream = adapter
+            .stream_websocket(&Model::default(), &AgentContext::default(), None)
+            .await
+            .expect("initial provider error falls back");
+        assert!(stream.next().await.is_some());
         assert!(closed.load(std::sync::atomic::Ordering::Acquire));
     }
 }
