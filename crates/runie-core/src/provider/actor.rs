@@ -11,7 +11,7 @@ use crate::telemetry::{
 };
 use crate::types::{AgentContext, Model, SimpleStreamOptions};
 
-use super::stream_fn::{AssistantMessageEventStream, StreamFn, WebSocketAdapter};
+use super::stream_fn::{AssistantMessageEventStream, StreamError, StreamFn, WebSocketAdapter};
 use crate::task_owner::{mailbox_ack, spawn_actor_worker, TaskOwner};
 
 /// Broadcast capacity for stream events. Sized to absorb a burst of
@@ -275,22 +275,7 @@ async fn run_provider_worker(
                         let _ = reply.send(receiver);
                     }
                     Err(error) => {
-                        if let Some(span) = telemetry_span {
-                            span.set_attributes(HashMap::from([(
-                                "pi.ai.error.type".into(),
-                                serde_json::json!("provider"),
-                            )]))
-                            .await;
-                            span.status_with_error(
-                                SpanStatus::Error,
-                                Some(SpanError {
-                                    name: "ProviderError".into(),
-                                    message: error.to_string(),
-                                }),
-                            )
-                            .await;
-                            span.end().await;
-                        }
+                        finish_request_span_error(telemetry_span, &error).await;
                         let receiver = event_tx.subscribe();
                         let _ = event_tx.send(crate::types::AssistantMessageEvent::Error {
                             reason: crate::types::StopReason::Error,
@@ -333,7 +318,7 @@ async fn run_provider_worker(
                         let _ = reply.send(Ok(receiver));
                     }
                     Err(error) => {
-                        finish_request_span_error(telemetry_span, &error.to_string()).await;
+                        finish_request_span_error(telemetry_span, &error).await;
                         let _ = reply.send(Err(error));
                     }
                 }
@@ -355,9 +340,7 @@ async fn run_provider_worker(
                 let result = stream_fn.cancel_deferred(&model, &handle, *options).await;
                 match &result {
                     Ok(()) => finish_request_span_ok(telemetry_span).await,
-                    Err(error) => {
-                        finish_request_span_error(telemetry_span, &error.to_string()).await
-                    }
+                    Err(error) => finish_request_span_error(telemetry_span, error).await,
                 }
                 let _ = reply.send(result);
             }
@@ -426,18 +409,23 @@ async fn finish_request_span_ok(span: Option<TelemetrySpan>) {
     }
 }
 
-async fn finish_request_span_error(span: Option<TelemetrySpan>, message: &str) {
+async fn finish_request_span_error(span: Option<TelemetrySpan>, error: &StreamError) {
     if let Some(span) = span {
-        span.set_attributes(HashMap::from([(
-            "pi.ai.error.type".into(),
-            serde_json::json!("provider"),
-        )]))
-        .await;
+        let mut attributes =
+            HashMap::from([("pi.ai.error.type".into(), serde_json::json!("provider"))]);
+        if let StreamError::Provider {
+            status: Some(status),
+            ..
+        } = error
+        {
+            attributes.insert("pi.ai.http.status_code".into(), serde_json::json!(status));
+        }
+        span.set_attributes(attributes).await;
         span.status_with_error(
             SpanStatus::Error,
             Some(SpanError {
                 name: "ProviderError".into(),
-                message: message.into(),
+                message: error.to_string(),
             }),
         )
         .await;
@@ -943,6 +931,38 @@ mod tests {
             Some("stream failed")
         );
         assert!(snapshot.spans[0].ended);
+    }
+
+    #[tokio::test]
+    async fn provider_http_status_is_preserved_on_telemetry_error() {
+        let telemetry = crate::telemetry::TelemetryActor::new();
+        let span = telemetry
+            .start_span(
+                None,
+                "pi.ai.request",
+                HashMap::from([
+                    ("pi.ai.operation".into(), serde_json::json!("stream")),
+                    ("pi.ai.provider".into(), serde_json::json!("test-provider")),
+                    ("pi.ai.model".into(), serde_json::json!("test-model")),
+                    ("pi.ai.api".into(), serde_json::json!("test-api")),
+                    ("pi.ai.streaming".into(), serde_json::json!(true)),
+                ]),
+            )
+            .await
+            .expect("request span");
+        finish_request_span_error(
+            Some(span),
+            &StreamError::Provider {
+                message: "rate limited".into(),
+                status: Some(429),
+                headers: HashMap::new(),
+            },
+        )
+        .await;
+        assert_eq!(
+            telemetry.snapshot().spans[0].attributes["pi.ai.http.status_code"],
+            429
+        );
     }
 
     #[tokio::test]

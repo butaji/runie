@@ -215,3 +215,8 @@ Response identity increment (2026-08-09): terminal assistant payloads now
 project available `response_model` and `response_id` values into Pi's
 `pi.ai.response.model` and `pi.ai.response.id` end attributes. Missing or empty
 identity remains omitted rather than inferred from request metadata.
+
+HTTP status projection (2026-08-08): provider errors carrying Pi's HTTP status
+now preserve it as `pi.ai.http.status_code` on the terminal request span. The
+actor regression covers a `429` provider response without weakening generic
+transport error handling.
