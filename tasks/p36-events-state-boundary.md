@@ -1425,3 +1425,23 @@ passthrough. The 122 `runie-tui-model` lib unit tests (120 pre-existing
 unit tests, the 28 `visual_snapshots` replay tests, and the full
 `just ci` (fmt-check, clippy, lint, test, parity, source inventory, Pi
 event contract, feed-actor boundary) are green.
+
+**`LineKind::prefix` retirement (2026-08-08):** the Grok transcript
+prefix helper now lives in `runie-tui-model::feed` so the
+actor-owned transcript projection and the renderer share one
+vocabulary. The renderer-local `fn prefix(self) -> &'static str` at
+`crates/runie-tui/src/widgets/scrollback.rs:80` was collapsed to a
+thin `runie_tui_model::LineKind::prefix(self)` delegate, and the
+source-backed Grok prefix shapes (user gutter, assistant/reasoning
+rail, tool glyphs, separator/system rows, activity rail) are now
+owned by the model. The four new focused tests
+`line_kind_prefix_pins_user_and_assistant_rails`,
+`line_kind_prefix_pins_tool_card_glyphs`,
+`line_kind_prefix_pins_session_and_metadata_rows`, and
+`line_kind_prefix_pins_activity_rail` in
+`crates/runie-tui-model/src/feed.rs` pin the per-group prefix
+shapes. The 126 `runie-tui-model` lib unit tests (122 pre-existing +
+4 new), the 220 `runie-tui` lib unit tests, the 5 `runie` binary
+unit tests, the 28 `visual_snapshots` replay tests, and the full
+`just ci` (fmt-check, clippy, lint, test, parity, source inventory, Pi
+event contract, feed-actor boundary) are green.

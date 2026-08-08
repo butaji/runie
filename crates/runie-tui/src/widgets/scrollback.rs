@@ -78,27 +78,7 @@ impl LinePresentationExt for LineKind {
     }
 
     fn prefix(self) -> &'static str {
-        match self {
-            // Grok reserves a three-column transcript gutter before user
-            // content: the cursor is at column 5 in the 80-column frame.
-            LineKind::User => "   ❯ ",
-            LineKind::Assistant => "┃  ",
-            LineKind::Reasoning => "┃  ",
-            LineKind::ThinkingStatus => "┃  ",
-            LineKind::Tool => "◆ ",
-            LineKind::ToolRunning => "◆ ",
-            LineKind::ToolError => "◆ ",
-            LineKind::ToolResult => "  ↳ ",
-            // Structured Grok tools render terminal output directly below the
-            // tool header, with a two-column indentation and no result arrow.
-            LineKind::ToolOutput => "  ",
-            LineKind::SessionStart => "   ",
-            LineKind::System => "   * ",
-            LineKind::Separator => "",
-            LineKind::TurnSummary => "   ",
-            LineKind::CompletedAssistant => "   ",
-            LineKind::Activity => "❙  ",
-        }
+        runie_tui_model::LineKind::prefix(self)
     }
 }
 

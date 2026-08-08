@@ -1050,6 +1050,35 @@ pub enum LineKind {
     Activity,
 }
 
+impl LineKind {
+    /// Render the prefix glyphs for a transcript line. Centralized
+    /// here so the actor-owned transcript projection and the
+    /// renderer share one vocabulary.
+    pub fn prefix(self) -> &'static str {
+        match self {
+            // Grok reserves a three-column transcript gutter before user
+            // content: the cursor is at column 5 in the 80-column frame.
+            LineKind::User => "   ❯ ",
+            LineKind::Assistant => "┃  ",
+            LineKind::Reasoning => "┃  ",
+            LineKind::ThinkingStatus => "┃  ",
+            LineKind::Tool => "◆ ",
+            LineKind::ToolRunning => "◆ ",
+            LineKind::ToolError => "◆ ",
+            LineKind::ToolResult => "  ↳ ",
+            // Structured Grok tools render terminal output directly below the
+            // tool header, with a two-column indentation and no result arrow.
+            LineKind::ToolOutput => "  ",
+            LineKind::SessionStart => "   ",
+            LineKind::System => "   * ",
+            LineKind::Separator => "",
+            LineKind::TurnSummary => "   ",
+            LineKind::CompletedAssistant => "   ",
+            LineKind::Activity => "❙  ",
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Line {
     pub kind: LineKind,
@@ -2418,6 +2447,50 @@ mod tests {
         // index into a missing slice.
         let positions = super::dense_tool_group_members(&[]);
         assert!(positions.is_empty());
+    }
+
+    #[test]
+    fn line_kind_prefix_pins_user_and_assistant_rails() {
+        // Pin the user/assistant prefix shapes: the user gutter is
+        // three columns wide, the assistant/reasoning rail is two
+        // columns, and the thinking status matches the assistant rail.
+        assert_eq!(super::LineKind::User.prefix(), "   ❯ ");
+        assert_eq!(super::LineKind::Assistant.prefix(), "┃  ");
+        assert_eq!(super::LineKind::Reasoning.prefix(), "┃  ");
+        assert_eq!(super::LineKind::ThinkingStatus.prefix(), "┃  ");
+    }
+
+    #[test]
+    fn line_kind_prefix_pins_tool_card_glyphs() {
+        // Pin the tool-card prefix shapes: the running/completed/error
+        // tool glyphs share the `◆ ` marker, the result arrow is
+        // `  ↳ `, and the structured output is indented by two spaces.
+        assert_eq!(super::LineKind::Tool.prefix(), "◆ ");
+        assert_eq!(super::LineKind::ToolRunning.prefix(), "◆ ");
+        assert_eq!(super::LineKind::ToolError.prefix(), "◆ ");
+        assert_eq!(super::LineKind::ToolResult.prefix(), "  ↳ ");
+        assert_eq!(super::LineKind::ToolOutput.prefix(), "  ");
+    }
+
+    #[test]
+    fn line_kind_prefix_pins_session_and_metadata_rows() {
+        // Pin the session/system/separator prefix shapes: the
+        // session-start/system rows are blank or prefixed, the
+        // separator is empty, and the assistant-completion rows
+        // are blank.
+        assert_eq!(super::LineKind::SessionStart.prefix(), "   ");
+        assert_eq!(super::LineKind::System.prefix(), "   * ");
+        assert_eq!(super::LineKind::Separator.prefix(), "");
+        assert_eq!(super::LineKind::TurnSummary.prefix(), "   ");
+        assert_eq!(super::LineKind::CompletedAssistant.prefix(), "   ");
+    }
+
+    #[test]
+    fn line_kind_prefix_pins_activity_rail() {
+        // Pin the activity rail: the activity row carries the `❙  `
+        // marker so the fold-summary rail stays aligned with the
+        // assistant gutter.
+        assert_eq!(super::LineKind::Activity.prefix(), "❙  ");
     }
 
     #[test]
