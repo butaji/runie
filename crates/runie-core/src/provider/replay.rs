@@ -22,6 +22,7 @@ use super::{
 /// core only receives its normal `AssistantMessageEvent` stream.
 pub struct ReplayProvider {
     events: Vec<AssistantMessageEvent>,
+    deferred_events: Option<Vec<AssistantMessageEvent>>,
     /// Number of `stream()` calls. The first call replays the recorded trace;
     /// later calls (auto-continue after a tool batch) return a terminating
     /// `Done{stop}` so the loop does not re-replay the same trace forever.
@@ -128,8 +129,17 @@ impl ReplayProvider {
         finish_replay_events(&mut events, tool_calls, stop_reason, usage);
         Ok(Self {
             events,
+            deferred_events: None,
             calls: AtomicUsize::new(0),
         })
+    }
+
+    /// Attach a provider-scoped deferred result to a deterministic replay.
+    /// The generic actor still owns command admission and pump cleanup; this
+    /// capability only supplies the adapter's already-decoded event stream.
+    pub fn with_deferred_events(mut self, events: Vec<AssistantMessageEvent>) -> Self {
+        self.deferred_events = Some(events);
+        self
     }
 }
 
@@ -479,6 +489,25 @@ impl StreamFn for ReplayProvider {
         }
         Ok(Box::pin(stream::iter(self.events.clone())))
     }
+
+    async fn fetch_deferred(
+        &self,
+        _model: &Model,
+        handle: &crate::types::DeferredHandle,
+        _options: Option<SimpleStreamOptions>,
+    ) -> Result<AssistantMessageEventStream, StreamError> {
+        let Some(events) = self.deferred_events.as_ref() else {
+            return Err(StreamError::Invalid(
+                "replay provider has no deferred response fixture".into(),
+            ));
+        };
+        if handle.id.is_empty() {
+            return Err(StreamError::Invalid(
+                "deferred response handle id is required".into(),
+            ));
+        }
+        Ok(Box::pin(stream::iter(events.clone())))
+    }
 }
 
 #[cfg(test)]
@@ -522,6 +551,39 @@ mod tests {
                 && usage.cache_read == 3
                 && usage.reasoning == 2
                 && usage.total_tokens == 19
+        ));
+    }
+
+    #[tokio::test]
+    async fn deferred_replay_uses_provider_scoped_event_fixture() {
+        let provider = ReplayProvider::from_sse_body(
+            "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\"}}\n",
+        )
+        .expect("ordinary replay trace")
+        .with_deferred_events(vec![AssistantMessageEvent::Done {
+            stop_reason: StopReason::Stop,
+            usage: Usage::default(),
+            message: None,
+        }]);
+        let mut events = provider
+            .fetch_deferred(
+                &Model::default(),
+                &crate::types::DeferredHandle {
+                    provider: "replay".into(),
+                    model_id: "model".into(),
+                    api: "responses".into(),
+                    id: "deferred-1".into(),
+                    expires_at: None,
+                    poll_after_ms: None,
+                    data: None,
+                },
+                None,
+            )
+            .await
+            .expect("deferred replay capability");
+        assert!(matches!(
+            events.next().await,
+            Some(AssistantMessageEvent::Done { .. })
         ));
     }
 

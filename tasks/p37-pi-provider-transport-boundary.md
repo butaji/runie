@@ -214,6 +214,13 @@ reasons. Adding a second `LoopActor` deferred state machine would create a
 parallel owner; the next valid increment remains a provider-specific adapter
 with its polling, decoding, cancellation, and lifecycle events.
 
+Deterministic deferred replay increment (2026-08-08): `ReplayProvider` now
+accepts a provider-scoped decoded deferred event stream and implements
+`fetch_deferred` through the existing `StreamFn` capability. Handle identity
+is validated before the owned pump is returned; ordinary replay traces remain
+unchanged. This closes deterministic adapter coverage without claiming a
+provider's HTTP polling protocol or expiry semantics.
+
 Provider lifecycle increment (2026-08-07): `ProviderActor` now aborts any
 previous owned pump before acknowledging a new `Start`. This matches the
 one-in-flight Pi turn contract and prevents superseded streams from publishing
