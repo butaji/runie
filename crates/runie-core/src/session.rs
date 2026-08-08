@@ -666,6 +666,12 @@ impl SessionSnapshot {
             .iter()
             .find(|entry| entry.id == entry_id)
             .map(|entry| entry.lane.as_str())
+            .or_else(|| {
+                self.config_records
+                    .iter()
+                    .find(|entry| entry.id == entry_id)
+                    .map(|entry| entry.lane.as_str())
+            })
             .or_else(|| self.entry_lanes.get(entry_id).map(String::as_str))
     }
 
@@ -4167,6 +4173,7 @@ mod tests {
             ..SessionEntryQuery::default()
         });
         assert_eq!(feature.len(), 1);
+        assert_eq!(snapshot.entry_lane("config-1"), Some("feature"));
         assert!(snapshot
             .find_entries(&SessionEntryQuery {
                 lane: Some("main".into()),

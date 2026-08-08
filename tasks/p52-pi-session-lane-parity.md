@@ -13,6 +13,10 @@ Branch query correction (2026-08-08): explicit-start branch reads now apply
 that same lane predicate to configuration nodes, so mixed message/configuration
 branches cannot leak a configuration record from another lane.
 
+Entry-lane lookup correction (2026-08-08): the shared `entry_lane` projection
+now resolves configuration-entry IDs from their preserved lane metadata as
+well as message entries and legacy lane facts.
+
 Status: implemented (2026-08-08)
 
 ## Completed slice (2026-08-08, validated compaction publication event)
