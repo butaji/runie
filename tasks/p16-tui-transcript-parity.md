@@ -840,3 +840,10 @@ renderer resolves it through the existing Opaline accent token; no running
 state color is hardcoded or inferred from header text. The typed-card model
 test covers running and settled header roles, while lifecycle YAML and visual
 suites retain the event/state coverage.
+
+Dense-group anchor correction (2026-08-08): selection and hidden-member
+reveal now resolve the contiguous group anchor from actor-owned lines rather
+than matching only member-count metadata. Adjacent groups with equal sizes
+cannot select or reveal one another; focused regressions cover both the
+selection-box and same-size-group cases. Generalized wrapped-row reflow and
+cast-wide frame reconciliation remain open.
