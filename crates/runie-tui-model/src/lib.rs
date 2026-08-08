@@ -10,6 +10,7 @@ mod memory;
 mod prompt;
 mod scroll;
 mod status;
+mod sticky;
 mod theme;
 mod ui;
 
@@ -45,6 +46,9 @@ pub use status::{
     format_worked_for_seconds, turn_status_text, Status, StatusMsg, StatusSnapshot,
     TurnStatusPhase, BRAILLE_SPINNER_FALLBACK, BRAILLE_SPINNER_FRAMES, DOT_SPINNER_FALLBACK,
     DOT_SPINNER_FRAMES,
+};
+pub use sticky::{
+    compute_sticky_layout, PromptDescriptor, RenderedPrompt, StickyHeaderLayout, MIN_PINNED_HEIGHT,
 };
 pub use theme::ThemeToken;
 pub use ui::{ui_messages_for_event, PaletteAction, UiCommand, UiMsg, UiState};

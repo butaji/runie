@@ -34,3 +34,9 @@ fixtures. This prevents the source-backed inventory from silently drifting.
 
 The validator is now part of `just ci`, so the standard local gate covers the
 component inventory alongside formatting, linting, replay, and visual tests.
+
+Sticky-layout model increment (2026-08-08): `runie-tui-model::sticky` now
+contains pure Grok-shaped prompt descriptor, gradual-collapse, push-off, and
+content-scroll continuity math with focused reducer-independent tests. The
+compatibility renderer has not yet been migrated to consume this primitive;
+that integration and strict cast evidence remain open.
