@@ -1,8 +1,8 @@
 # P64 — Pi built-in slash-command contract
 
-Status: registry implemented; eight commands have actor-owned execution and
-YAML coverage, `/compact` gains a dedicated visual fixture, remaining commands
-stay explicitly unsupported
+Status: registry implemented; fourteen commands have actor-owned execution and
+YAML/runtime coverage, `/compact` gains a dedicated visual fixture, remaining
+commands stay explicitly unsupported
 (2026-08-08)
 
 ## Source contract
@@ -35,8 +35,9 @@ and a YAML event-sequence/state assertion before it is exposed in the TUI.
 Unsupported effects must return an explicit typed capability result rather than
 being treated as successful no-ops.
 
-The first executable subset is now routed through the same boundaries in the
-live binary and YAML runner: `/new` awaits the loop reset, `/hotkeys` sends a
+The executable subset is now routed through the same boundaries in the live
+binary and YAML runner: `/changelog` and `/session` address the UI actor,
+`/copy` publishes a clipboard effect, `/new` awaits the loop reset, `/hotkeys` sends a
 `ToggleShortcuts` mailbox message, `/model provider/model` publishes the
 actor-owned `ModelChanged` event, `/name` publishes `SessionNameChanged` and
 awaits the session actor, and `/quit` is consumed only by the live application
@@ -73,6 +74,13 @@ hidden by a passing summary string.
 `visual-slash-name.yaml` verifies the command route declaratively and checks
 the post-step session actor configuration projection without compiling a
 scenario-specific Rust fixture.
+
+The branch and file-session commands are also actor-routed: `/fork` and
+`/tree` validate their target through `SessionActor`, while `/export`,
+`/import`, `/clone`, and `/resume` cross the `SessionStorageActor` boundary and
+publish an explicit `AgentEvent::Error` on failure. Their parser and routing
+coverage is kept separate from visual command fixtures because filesystem
+paths are scenario inputs rather than terminal layout state.
 
 The remaining registry entries are intentionally explicit unsupported
 capabilities: `/settings`, `/share`, `/trust`, `/login`, `/logout`, and
