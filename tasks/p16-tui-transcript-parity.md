@@ -637,6 +637,10 @@ Web-search metadata increment (2026-08-08): canonical `Sources:` summary rows
 now use the same typed metadata role and muted semantic paint intent as memory
 source/location rows. The web-search YAML oracle asserts the new row kind.
 
+Web-search metadata fill increment (2026-08-08): `Sources:` rows now receive
+the full Grok panel background through trailing physical cells, with a focused
+renderer regression for the source-summary row.
+
 Typed-card row vocabulary slice (2026-08-06): added model-owned
 `ToolCardRowKind`/`ToolCardRow` projections for header, content, and status
 semantics. The existing truncation projection now consumes those rows for

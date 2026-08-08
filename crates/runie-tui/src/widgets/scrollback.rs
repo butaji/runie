@@ -1097,6 +1097,7 @@ impl Scrollback {
                 && matches!(*kind, LineKind::ToolOutput | LineKind::ToolResult)
                 && (text.starts_with("    ")
                     || text.starts_with("Result ")
+                    || text.trim_start().starts_with("Sources:")
                     || (text
                         .trim_start()
                         .as_bytes()
@@ -2762,6 +2763,46 @@ mod tests {
             buffer
                 .cell((79, metadata_row as u16))
                 .expect("full metadata row background")
+                .bg,
+            Color::Rgb(36, 36, 36)
+        );
+    }
+
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn web_search_sources_paint_grok_panel_background_across_the_row() {
+        let mut scrollback = Scrollback::new();
+        scrollback.apply(ScrollbackMsg::SetToolName(
+            "web-1".into(),
+            "web_search".into(),
+        ));
+        scrollback.apply(ScrollbackMsg::ToolStart {
+            tool_call_id: "web-1".into(),
+            header: "Web Search rust".into(),
+            activity: None,
+        });
+        scrollback.apply(ScrollbackMsg::ToolEnd {
+            tool_call_id: "web-1".into(),
+            header: "Web Search rust".into(),
+            activity: None,
+            output: vec![(
+                LineKind::ToolOutput,
+                "  Sources: docs.rs, rust-lang.org".into(),
+            )],
+        });
+        scrollback.set_tool_mode("web-1", runie_core::types::ToolDisplayMode::Expanded);
+        scrollback.set_live_grok_layout(true);
+        let rows = scrollback.physical_rows(80, false, 24);
+        let source_row = rows
+            .iter()
+            .position(|(_, text, _)| text.contains("Sources:"))
+            .expect("web source row");
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 80, 8));
+        scrollback.render_with_terminal_height(Rect::new(0, 0, 80, 8), 24, &mut buffer);
+        assert_eq!(
+            buffer
+                .cell((79, source_row as u16))
+                .expect("full source row background")
                 .bg,
             Color::Rgb(36, 36, 36)
         );
