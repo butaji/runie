@@ -47,6 +47,11 @@ use runie_tui::widgets::{PromptOutcome, PromptWidget, Scrollback, Status, Status
 use tokio::sync::{broadcast, mpsc, watch};
 use tokio::task::JoinHandle;
 
+fn osc52_clipboard_sequence(text: &str) -> String {
+    let encoded = base64::engine::general_purpose::STANDARD.encode(text);
+    format!("\x1b]52;c;{encoded}\x07")
+}
+
 /// Placeholder StreamFn: emits a single "Hello from runie!" then Done.
 struct PlaceholderStream;
 
@@ -752,11 +757,9 @@ async fn run_app(
                             let _ = app.route_builtin_command(disposition).await;
                             if copy_command {
                                 if let Ok(UiCommand::CopyText(text)) = ui_commands.recv().await {
-                                    let encoded =
-                                        base64::engine::general_purpose::STANDARD.encode(text);
                                     let _ = execute!(
                                         io::stdout(),
-                                        Print(format!("\x1b]52;c;{encoded}\x07"))
+                                        Print(osc52_clipboard_sequence(&text))
                                     );
                                 }
                             }
@@ -986,6 +989,14 @@ mod tests {
     use ratatui::buffer::Buffer;
     use ratatui::layout::Rect;
     use ratatui::style::Modifier;
+
+    #[test]
+    fn osc52_clipboard_sequence_base64_encodes_payload() {
+        assert_eq!(
+            super::osc52_clipboard_sequence("latest answer"),
+            "\x1b]52;c;bGF0ZXN0IGFuc3dlcg==\x07"
+        );
+    }
 
     #[test]
     fn header_uses_cached_repository_branch() {
