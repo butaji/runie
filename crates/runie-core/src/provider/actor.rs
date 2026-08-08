@@ -369,7 +369,11 @@ async fn pump_stream(
     telemetry_span: Option<TelemetrySpan>,
 ) {
     use futures::StreamExt;
+    let mut terminal_error = None;
     while let Some(event) = stream.next().await {
+        if let crate::types::AssistantMessageEvent::Error { error, .. } = &event {
+            terminal_error = Some(error.error_text());
+        }
         if let Some(span) = &telemetry_span {
             let attributes = telemetry_attributes_for_event(&event);
             if !attributes.is_empty() && validate_pi_ai_request_end_attributes(&attributes).is_ok()
@@ -381,7 +385,18 @@ async fn pump_stream(
         let _ = tx.send(event);
     }
     if let Some(span) = telemetry_span {
-        span.status(SpanStatus::Ok).await;
+        if let Some(message) = terminal_error {
+            span.status_with_error(
+                SpanStatus::Error,
+                Some(SpanError {
+                    name: "ProviderError".into(),
+                    message,
+                }),
+            )
+            .await;
+        } else {
+            span.status(SpanStatus::Ok).await;
+        }
         span.end().await;
     }
 }
@@ -512,6 +527,22 @@ mod tests {
             _options: Option<SimpleStreamOptions>,
         ) -> Result<AssistantMessageEventStream, StreamError> {
             Err(StreamError::Api("bad request".into()))
+        }
+    }
+
+    struct ErrorEventFn;
+    #[async_trait::async_trait]
+    impl StreamFn for ErrorEventFn {
+        async fn stream(
+            &self,
+            _model: &Model,
+            _context: &crate::types::AgentContext,
+            _options: Option<SimpleStreamOptions>,
+        ) -> Result<AssistantMessageEventStream, StreamError> {
+            Ok(Box::pin(stream::iter(vec![AssistantMessageEvent::Error {
+                reason: StopReason::Error,
+                error: AssistantMessage::with_error(StopReason::Error, "stream failed"),
+            }])))
         }
     }
 
@@ -672,6 +703,40 @@ mod tests {
         );
         assert_eq!(snapshot.spans[0].attributes["pi.ai.usage.total_tokens"], 0);
         assert_eq!(snapshot.spans[0].status, SpanStatus::Ok);
+        assert!(snapshot.spans[0].ended);
+    }
+
+    #[tokio::test]
+    async fn provider_stream_error_ends_telemetry_span_as_error() {
+        let telemetry = crate::telemetry::TelemetryActor::new();
+        let actor = ProviderActor::new(std::sync::Arc::new(ErrorEventFn));
+        let options = SimpleStreamOptions {
+            telemetry: Some(telemetry.clone()),
+            ..Default::default()
+        };
+        let mut rx = actor
+            .start(
+                Model {
+                    provider: "test-provider".into(),
+                    id: "test-model".into(),
+                    api: "test-api".into(),
+                    ..Model::default()
+                },
+                AgentContext::default(),
+                Some(options),
+            )
+            .await
+            .unwrap();
+        while rx.recv().await.is_ok() {}
+        let snapshot = telemetry.snapshot();
+        assert_eq!(snapshot.spans[0].status, SpanStatus::Error);
+        assert_eq!(
+            snapshot.spans[0]
+                .error
+                .as_ref()
+                .map(|error| error.message.as_str()),
+            Some("stream failed")
+        );
         assert!(snapshot.spans[0].ended);
     }
 
