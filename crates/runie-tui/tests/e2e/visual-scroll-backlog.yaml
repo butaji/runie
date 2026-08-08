@@ -1,0 +1,29 @@
+name: visual-scroll-backlog
+description: A dense scroll stream is capped across cadence flushes and finalized without catch-up.
+initial_prompt: "scroll backlog"
+events:
+  - start
+  - text_delta: "one\ntwo\nthree\nfour\nfive\nsix\nseven\neight\nnine\nten\neleven\ntwelve\nthirteen\nfourteen\nfifteen\nsixteen\nseventeen\neighteen\nnineteen\ntwenty"
+  - done: { stop_reason: stop }
+  - scroll_raw_input: { at_ms: 0, direction: down }
+  - scroll_raw_input: { at_ms: 1, direction: down }
+  - scroll_raw_input: { at_ms: 2, direction: down }
+  - scroll_raw_input: { at_ms: 3, direction: down }
+  - scroll_raw_input: { at_ms: 4, direction: down }
+  - scroll_raw_input: { at_ms: 5, direction: down }
+  - scroll_raw_input: { at_ms: 6, direction: down }
+  - scroll_raw_input: { at_ms: 7, direction: down }
+  - scroll_raw_input: { at_ms: 8, direction: down }
+  - scroll_raw_input: { at_ms: 9, direction: down }
+  - scroll_raw_input: { at_ms: 10, direction: down }
+  - scroll_raw_input: { at_ms: 11, direction: down }
+  - scroll_flush: { at_ms: 16, viewport_rows: 12 }
+  - scroll_flush: { at_ms: 32, viewport_rows: 12 }
+  - scroll_finalize
+assertions:
+  state:
+    status: ready
+    scroll_flushes:
+      - { kind: flush, at_ms: 16, lines: 6, backlog: 6, dropped: 0 }
+      - { kind: flush, at_ms: 32, lines: 6, backlog: 0, dropped: 0 }
+      - { kind: finalize, at_ms: null, lines: 0, backlog: 0, dropped: 0 }

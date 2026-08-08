@@ -444,19 +444,14 @@ and `src/input/mouse/tests.rs` make the remaining gap concrete:
   a final uncapped burst; the source distinguishes flushed movement from
   dropped movement.
 
-Runie's current `ScrollNormalizer::push_at` is pure and replayable, but it
-returns a delta immediately and has no viewport, cadence, backlog, flush, or
-finalize state. Consequently the existing scroll YAML fixtures prove event
-ordering and aggregate offsets only; they cannot yet prove Grok's visible
-motion profile under a wheel flood or a starved redraw loop.
-
-The next implementation slice must introduce an actor-input-owned, pure
-`ScrollFlushState` (or equivalent) with explicit `ScrollInput` and
-`ScrollFlush`/`ScrollFinalize` events. YAML should declare timestamps,
-viewport height, and flush boundaries; assertions must cover each emitted
-delta, backlog after each flush, and the finalization record. No wall-clock
-wait or renderer-local mutation is acceptable. This is a source-backed parity
-gap, not an out-of-scope feature.
+Runie's actor-input path now owns a pure `ScrollFlushState` around
+`ScrollNormalizer::push_at`. Explicit `ScrollFlush` and `ScrollFinalize` replay
+events carry cadence timestamps and viewport height; each flush applies the
+source cap while retaining backlog, and finalization reports dropped movement
+without an uncapped catch-up burst. `visual-scroll-flush.yaml` covers the
+zero-backlog cadence boundary, while `visual-scroll-backlog.yaml` covers a
+dense stream across two capped flushes and finalization. No wall-clock wait or
+renderer-local mutation is used.
 
 Flush-state implementation slice (2026-08-07): `runie-tui-model` now exposes
 the pure `ScrollFlushState`, `ScrollFlush`, and `ScrollFinalize` contracts.
