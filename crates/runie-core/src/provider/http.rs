@@ -266,6 +266,31 @@ pub fn provider_retry_delay_ms_with_jitter(
     max_retry_delay_ms: Option<u64>,
     jitter: Option<f64>,
 ) -> Option<Result<u64, StreamError>> {
+    provider_retry_delay_ms_with_jitter_at(
+        error,
+        retry_index,
+        max_retry_delay_ms,
+        jitter,
+        std::time::SystemTime::now(),
+    )
+}
+
+/// Deterministic retry-policy entry point for replay and provider adapters.
+///
+/// HTTP-date `Retry-After` values need a clock, while numeric delays and
+/// exponential backoff do not. Keeping the clock explicit here lets replay
+/// callers assert the same policy without depending on wall-clock time.
+#[allow(
+    clippy::too_many_lines,
+    reason = "the provider retry policy keeps header precedence and cap errors together"
+)]
+pub fn provider_retry_delay_ms_with_jitter_at(
+    error: &StreamError,
+    retry_index: u32,
+    max_retry_delay_ms: Option<u64>,
+    jitter: Option<f64>,
+    now: std::time::SystemTime,
+) -> Option<Result<u64, StreamError>> {
     let StreamError::Provider {
         message,
         status,
@@ -291,7 +316,10 @@ pub fn provider_retry_delay_ms_with_jitter(
     let server_delay = header_value(headers, "retry-after-ms")
         .and_then(|value| value.parse::<f64>().ok())
         .map(|value| value.max(0.0).ceil() as u64)
-        .or_else(|| header_value(headers, "retry-after").and_then(retry_after_delay_ms));
+        .or_else(|| {
+            header_value(headers, "retry-after")
+                .and_then(|value| retry_after_delay_ms_at(value, now))
+        });
     let delay = server_delay.unwrap_or_else(|| {
         let base = (500_u64.saturating_mul(1_u64 << retry_index.min(4))).min(8_000);
         let random = jitter.unwrap_or_else(rand::random::<f64>).clamp(0.0, 1.0);
@@ -306,10 +334,6 @@ pub fn provider_retry_delay_ms_with_jitter(
         }));
     }
     Some(Ok(delay))
-}
-
-fn retry_after_delay_ms(value: &str) -> Option<u64> {
-    retry_after_delay_ms_at(value, std::time::SystemTime::now())
 }
 
 fn retry_after_delay_ms_at(value: &str, now: std::time::SystemTime) -> Option<u64> {
@@ -612,7 +636,28 @@ mod tests {
             retry_after_delay_ms_at(&target, now),
             Some(HTTP_DATE_DELAY_SECONDS * MILLIS_PER_SECOND)
         );
-        assert_eq!(retry_after_delay_ms("0.25"), Some(NUMERIC_DELAY_MS));
+        assert_eq!(retry_after_delay_ms_at("0.25", now), Some(NUMERIC_DELAY_MS));
+    }
+
+    #[test]
+    fn retry_policy_accepts_an_explicit_clock_for_http_dates() {
+        let now = httpdate::parse_http_date("Wed, 21 Oct 2015 07:28:00 GMT").unwrap();
+        let target =
+            httpdate::fmt_http_date(now + std::time::Duration::from_secs(HTTP_DATE_DELAY_SECONDS));
+        let error = StreamError::Provider {
+            message: "rate limited".into(),
+            status: Some(429),
+            headers: [
+                ("Retry-After".into(), target),
+                ("X-Should-Retry".into(), "true".into()),
+            ]
+            .into_iter()
+            .collect(),
+        };
+        assert!(matches!(
+            super::provider_retry_delay_ms_with_jitter_at(&error, 0, None, Some(0.0), now),
+            Some(Ok(value)) if value == HTTP_DATE_DELAY_SECONDS * MILLIS_PER_SECOND
+        ));
     }
 
     #[test]

@@ -94,6 +94,13 @@ classified until that boundary exists.
 The YAML fixture asserts `websocket_connect_timeout_ms: 2500`, preserving this
 Pi option for a future WebSocket adapter without claiming behavioral support.
 
+Deterministic retry clock increment (2026-08-09): the provider retry policy
+now exposes an explicit-clock entry point for HTTP-date `Retry-After` values.
+Live HTTP calls retain the wall-clock wrapper, while replay and concrete
+adapters can pass a fixed `SystemTime` and jitter value to assert the exact
+delay without sleeping or depending on the host clock. Numeric retry delays,
+retry caps, and provider retry headers continue through the same pure policy.
+
 ## YAML capability-route coverage (2026-08-08)
 
 The replay harness now injects its deterministic `ScenarioStream` through both
