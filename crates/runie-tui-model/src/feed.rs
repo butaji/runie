@@ -1789,7 +1789,7 @@ pub fn project_tool_blocks(
     tool_modes: &HashMap<String, ToolDisplayMode>,
 ) -> Vec<ToolBlock> {
     let mut blocks = Vec::new();
-    for line in lines {
+    for (line_index, line) in lines.iter().enumerate() {
         let Some(id) = line.tool_call_id.as_deref() else {
             continue;
         };
@@ -1814,9 +1814,10 @@ pub fn project_tool_blocks(
                     .position(|block: &ToolBlock| block.tool_call_id == id)
             }
         } else {
-            blocks
-                .iter()
-                .rposition(|block: &ToolBlock| block.tool_call_id == id)
+            let row_id = tool_member_key(lines, line_index).1;
+            blocks.iter().rposition(|block: &ToolBlock| {
+                block.tool_call_id == id && (row_id.is_none() || block.tool_row_id == row_id)
+            })
         };
         let Some(index) = existing_index else {
             if is_header {
@@ -3225,6 +3226,28 @@ mod tests {
         state.select_entry(1);
         state.select_entry(1);
         assert_eq!(state.navigation.selected_entry, Some(1));
+    }
+
+    #[test]
+    fn tool_block_output_stays_with_duplicate_live_card_identity() {
+        let lines = vec![
+            Line::new(LineKind::Tool, "first")
+                .for_tool("duplicate")
+                .for_tool_row(1),
+            Line::new(LineKind::ToolOutput, "first output")
+                .for_tool("duplicate")
+                .for_tool_row(1),
+            Line::new(LineKind::Tool, "second")
+                .for_tool("duplicate")
+                .for_tool_row(2),
+            Line::new(LineKind::ToolOutput, "second output")
+                .for_tool("duplicate")
+                .for_tool_row(2),
+        ];
+        let blocks = project_tool_blocks(&lines, &HashMap::new(), &HashMap::new());
+        assert_eq!(blocks.len(), 2);
+        assert_eq!(blocks[0].output, ["first output"]);
+        assert_eq!(blocks[1].output, ["second output"]);
     }
 
     #[test]

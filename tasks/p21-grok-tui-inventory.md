@@ -718,6 +718,12 @@ selected independently while compatibility-seeded rows retain their previous
 grouping. The focused reducer regression, complete replay suite, and `just ci`
 pass.
 
+Typed block output ownership increment (2026-08-10): `project_tool_blocks`
+now attaches continuation output to the preceding card header's actor identity
+when available, rather than the latest matching provider call ID. Duplicate
+live cards therefore retain separate output payloads through the model and
+renderer projections; focused model/replay tests and the full CI gate pass.
+
 Workflow status formatter audit (2026-08-06): compared against Grok's
 `WorkflowBlockStatus` renderer and added exact tests for `failed`, `cancelled`,
 and `paused` elapsed wording. Cancelled/paused statuses now use `after 1.2s`
