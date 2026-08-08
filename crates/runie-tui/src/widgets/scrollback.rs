@@ -331,10 +331,10 @@ impl Scrollback {
         reason = "compatibility snapshot rehydrates the complete renderer-neutral feed projection"
     )]
     pub fn model_snapshot(&self) -> FeedSnapshot {
-        let selected_member_index = self.navigation.selected_entry.and_then(|entry| {
-            let selected_id = self.lines.get(entry)?.tool_call_id.as_ref()?;
-            logical_tool_member_index(&self.lines, selected_id)
-        });
+        let selected_member_index = self
+            .navigation
+            .selected_entry
+            .and_then(|entry| logical_tool_member_index_at(&self.lines, entry));
         FeedSnapshot {
             lines: self.lines.clone(),
             tool_blocks: self.tool_blocks(),

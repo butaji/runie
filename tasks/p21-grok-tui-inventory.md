@@ -692,6 +692,12 @@ Distinct live cards with the same provider call ID therefore receive distinct
 ordinals, while legacy rows without an actor identity retain call-ID grouping.
 The YAML replay suite, duplicate-ID model regression, and full local gate pass.
 
+Selection snapshot increment (2026-08-10): selected-member projections now use
+the exact actor-owned selected line index rather than re-resolving its provider
+call ID. Feed snapshots and compatibility snapshots therefore retain the same
+duplicate-card identity used by semantic rows and paint lookup; focused model,
+replay, and full CI validation pass.
+
 Workflow status formatter audit (2026-08-06): compared against Grok's
 `WorkflowBlockStatus` renderer and added exact tests for `failed`, `cancelled`,
 and `paused` elapsed wording. Cancelled/paused statuses now use `after 1.2s`

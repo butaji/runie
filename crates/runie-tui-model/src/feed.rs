@@ -3162,6 +3162,24 @@ mod tests {
     }
 
     #[test]
+    fn selected_snapshot_uses_exact_live_row_member_identity() {
+        let lines = vec![
+            Line::new(LineKind::Tool, "first")
+                .for_tool("duplicate")
+                .for_tool_row(1),
+            Line::new(LineKind::Tool, "second")
+                .for_tool("duplicate")
+                .for_tool_row(2),
+        ];
+        let mut state = FeedState {
+            lines,
+            ..FeedState::default()
+        };
+        state.navigation.selected_entry = Some(1);
+        assert_eq!(state.snapshot().selected_member_index, Some(1));
+    }
+
+    #[test]
     fn memory_card_rows_separate_metadata_from_snippet_content() {
         let lines = vec![
             Line::new(LineKind::Tool, "Memory Search actors").for_tool("memory-1"),
@@ -4060,8 +4078,7 @@ impl FeedState {
 
     fn selected_member_index(&self) -> Option<usize> {
         let entry = self.navigation.selected_entry?;
-        let selected_id = self.lines.get(entry)?.tool_call_id.as_ref()?;
-        logical_tool_member_index(&self.lines, selected_id)
+        logical_tool_member_index_at(&self.lines, entry)
     }
 
     #[allow(
