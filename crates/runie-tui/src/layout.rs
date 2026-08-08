@@ -206,6 +206,28 @@ mod tests {
     }
 
     #[test]
+    fn intrinsic_prompt_height_reduces_only_the_growable_scrollback_region() {
+        let area = Rect {
+            x: 0,
+            y: 0,
+            width: 80,
+            height: 24,
+        };
+        let single_line = chat_layout_with_prompt_height(area, PROMPT_HEIGHT);
+        let multiline = chat_layout_with_prompt_height(area, PROMPT_HEIGHT + 4);
+
+        assert_eq!(single_line.prompt.height, PROMPT_HEIGHT);
+        assert_eq!(multiline.prompt.height, PROMPT_HEIGHT + 4);
+        assert_eq!(
+            single_line.scrollback.height - multiline.scrollback.height,
+            4
+        );
+        // The status row is pinned below the fixed bottom chrome; the
+        // growable scrollback absorbs the prompt's intrinsic-height delta.
+        assert_eq!(multiline.status.y, single_line.status.y);
+    }
+
+    #[test]
     fn grok_full_mode_uses_source_layout_chrome() {
         assert_eq!(OUTER_HPAD_LEFT, 2);
         assert_eq!(OUTER_HPAD_RIGHT, 2);

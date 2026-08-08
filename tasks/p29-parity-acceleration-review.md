@@ -69,6 +69,14 @@ The `Hey` scenario now carries a four-geometry `layout_matrix`, and the
 runner executes each case through the same live adapter. This removes the
 previous gap where the four-size test existed only in compiled Rust code.
 
+Intrinsic-height regression (2026-08-09): `layout.rs` now directly proves
+that a multiline prompt's measured height is consumed by the declarative
+stack allocator: the prompt grows by the supplied intrinsic delta, the
+scrollback grow region loses exactly that delta, and status moves with the
+prompt. This covers the content-dependent allocation boundary used by the
+live `PromptSnapshot::render_height` path without adding renderer state or
+making the YAML runner infer geometry from fixed constants.
+
 ## Focused audit: grouped activity sizing (2026-08-06)
 
 The source comparison found a concrete Grok policy: `group_max_visible`
