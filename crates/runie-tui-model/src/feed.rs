@@ -1399,6 +1399,7 @@ pub struct FeedSnapshot {
     pub workflow_phases: HashMap<String, Vec<(String, String)>>,
     pub follow_latest_user: bool,
     pub selected_tool_id: Option<String>,
+    pub selected_tool_row_id: Option<u64>,
     pub selected_entry: Option<usize>,
     pub selected_member_index: Option<usize>,
     pub selection_anchor: Option<usize>,
@@ -1423,6 +1424,7 @@ pub struct FeedNavigation {
     pub scroll_offset: usize,
     pub follow_latest_user: bool,
     pub selected_tool_id: Option<String>,
+    pub selected_tool_row_id: Option<u64>,
     pub selected_entry: Option<usize>,
     pub selection_anchor: Option<usize>,
     pub selection_head: Option<usize>,
@@ -1463,6 +1465,7 @@ impl Default for FeedNavigation {
             scroll_offset: 0,
             follow_latest_user: false,
             selected_tool_id: None,
+            selected_tool_row_id: None,
             selected_entry: None,
             selection_anchor: None,
             selection_head: None,
@@ -3233,6 +3236,7 @@ mod tests {
         assert_eq!(state.navigation.selected_entry, Some(0));
         state.reduce(super::ScrollbackMsg::SelectNextTool);
         assert_eq!(state.navigation.selected_entry, Some(1));
+        assert_eq!(state.snapshot().selected_tool_row_id, Some(2));
     }
 
     #[test]
@@ -4137,6 +4141,7 @@ impl FeedState {
             workflow_phases: self.navigation.workflow_phases.clone(),
             follow_latest_user: self.navigation.follow_latest_user,
             selected_tool_id: self.navigation.selected_tool_id.clone(),
+            selected_tool_row_id: self.navigation.selected_tool_row_id,
             selected_entry: self.navigation.selected_entry,
             selection_anchor: self.navigation.selection_anchor,
             selection_head: self.navigation.selection_head,
@@ -4540,6 +4545,7 @@ impl FeedState {
         self.navigation.revealed_dense_groups.clear();
         self.navigation.next_tool_row_id = 0;
         self.navigation.selected_tool_id = None;
+        self.navigation.selected_tool_row_id = None;
         self.navigation.selected_entry = None;
         self.navigation.scroll_offset = 0;
         self.navigation.follow_latest_user = false;
@@ -4716,13 +4722,13 @@ impl FeedState {
         };
         self.navigation.selected_entry = Some(entries[next]);
         self.navigation.selected_tool_id = self.lines[entries[next]].tool_call_id.clone();
+        self.navigation.selected_tool_row_id = self.lines[entries[next]].tool_row_id;
         self.navigation.detach_from_tail();
     }
 
-    fn select_tool(&mut self, direction: i8) {
+    fn tool_selection_entries(&self) -> Vec<usize> {
         let mut seen = HashSet::new();
-        let entries = self
-            .lines
+        self.lines
             .iter()
             .enumerate()
             .filter_map(|(index, line)| {
@@ -4733,9 +4739,14 @@ impl FeedState {
                     && seen.insert(tool_member_key(&self.lines, index)))
                 .then_some(index)
             })
-            .collect::<Vec<_>>();
+            .collect::<Vec<_>>()
+    }
+
+    fn select_tool(&mut self, direction: i8) {
+        let entries = self.tool_selection_entries();
         if entries.is_empty() {
             self.navigation.selected_tool_id = None;
+            self.navigation.selected_tool_row_id = None;
             return;
         }
         let current = self.navigation.selected_tool_id.as_ref().and_then(|id| {
@@ -4758,6 +4769,7 @@ impl FeedState {
         let selected_id = self.lines[selected_entry].tool_call_id.clone();
         self.navigation.selected_tool_id = selected_id.clone();
         self.navigation.selected_entry = Some(selected_entry);
+        self.navigation.selected_tool_row_id = self.lines[selected_entry].tool_row_id;
         let selected_id = selected_id.unwrap_or_default();
         self.reveal_dense_group(&selected_id);
     }

@@ -115,6 +115,7 @@ impl Scrollback {
         scrollback.navigation.theme = snapshot.theme;
         scrollback.navigation.animation_frame = snapshot.animation_frame;
         scrollback.navigation.selected_tool_id = snapshot.selected_tool_id;
+        scrollback.navigation.selected_tool_row_id = snapshot.selected_tool_row_id;
         scrollback.navigation.selected_entry = snapshot.selected_entry;
         scrollback.navigation.selection_anchor = snapshot.selection_anchor;
         scrollback.navigation.selection_head = snapshot.selection_head;
@@ -308,6 +309,7 @@ impl Scrollback {
         self.navigation.center_revealed_entry = false;
         self.navigation.scroll_offset = 0;
         self.navigation.selected_tool_id = None;
+        self.navigation.selected_tool_row_id = None;
         self.navigation.selected_entry = None;
         self.navigation.follow_latest_user = false;
     }
@@ -353,6 +355,7 @@ impl Scrollback {
             prompt_timestamp: self.navigation.prompt_timestamp.clone(),
             follow_latest_user: self.navigation.follow_latest_user,
             selected_tool_id: self.navigation.selected_tool_id.clone(),
+            selected_tool_row_id: self.navigation.selected_tool_row_id,
             selected_entry: self.navigation.selected_entry,
             selected_member_index,
             selection_anchor: self.navigation.selection_anchor,

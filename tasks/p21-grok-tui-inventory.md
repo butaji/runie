@@ -730,6 +730,12 @@ call-ID-collapsed block list. Duplicate live cards can be reached independently
 through the actor reducer; the reducer regression, replay suite, and full CI
 gate pass.
 
+Selected-row snapshot increment (2026-08-10): feed and compatibility snapshots
+now carry the optional actor-issued selected tool row ID alongside the selected
+call ID and line index. This preserves duplicate-card selection identity across
+actor rehydration and renderer adapters; focused selection/replay tests and the
+full CI gate pass.
+
 Workflow status formatter audit (2026-08-06): compared against Grok's
 `WorkflowBlockStatus` renderer and added exact tests for `failed`, `cancelled`,
 and `paused` elapsed wording. Cancelled/paused statuses now use `after 1.2s`

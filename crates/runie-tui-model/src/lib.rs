@@ -269,6 +269,7 @@ mod tests {
             prompt_timestamp: None,
             follow_latest_user: true,
             selected_tool_id: None,
+            selected_tool_row_id: None,
             selected_entry: None,
             selection_anchor: None,
             selection_head: None,
