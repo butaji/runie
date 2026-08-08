@@ -40,6 +40,7 @@ assertions:
       - entry-4
       - entry-5
       - entry-6
+    session_branch_context_roles: [compactionSummary]
     session_config_records:
       - thinking_level_change
       - active_tools_change

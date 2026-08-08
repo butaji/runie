@@ -180,6 +180,8 @@ latest compaction record on that path, emits its summary and retained tail,
 keeps only later branch messages, and excludes deferred assistant results.
 `branch_context_materializes_selected_path_and_compaction_boundary` covers a
 diverged tree and the compaction boundary without mutating the actor snapshot.
+The runtime `visual-status-working.yaml` fixture now asserts the resulting
+branch-context role sequence through `session_branch_context_roles`.
 
 This closes context materialization for the selected branch. Full interactive
 tree-navigation admission and provider-summary generation remain owned by the

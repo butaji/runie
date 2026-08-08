@@ -1054,6 +1054,8 @@ pub struct StateAssertions {
     pub session_stats: Option<serde_json::Value>,
     /// Ordered parent-linked Pi session nodes from the selected leaf.
     pub session_branch_entry_ids: Option<Vec<String>>,
+    /// Provider-context roles materialized from the selected session branch.
+    pub session_branch_context_roles: Option<Vec<String>>,
     pub active_operations: Option<BTreeMap<String, String>>,
     /// Last Pi navigation intent reduced by the session actor.
     pub navigation: Option<NavigationAssertion>,
@@ -3088,6 +3090,25 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         if &actual_ids != expected_ids {
             return Err(format!(
                 "compaction context entries mismatch: expected {expected_ids:?}, got {actual_ids:?}"
+            ));
+        }
+    }
+    if let Some(expected_roles) = &expected.session_branch_context_roles {
+        let actual_roles = outcome
+            .session
+            .branch_context_messages()
+            .into_iter()
+            .map(|message| match message {
+                runie_core::types::AgentMessage::CompactionSummary(_) => "compactionSummary".into(),
+                runie_core::types::AgentMessage::User(_) => "user".into(),
+                runie_core::types::AgentMessage::Assistant(_) => "assistant".into(),
+                runie_core::types::AgentMessage::ToolResult(_) => "toolResult".into(),
+                runie_core::types::AgentMessage::Custom(custom) => custom.0.role().to_owned(),
+            })
+            .collect::<Vec<_>>();
+        if &actual_roles != expected_roles {
+            return Err(format!(
+                "session branch context roles mismatch: expected {expected_roles:?}, got {actual_roles:?}"
             ));
         }
     }
