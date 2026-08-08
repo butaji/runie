@@ -85,6 +85,12 @@ observed both requested transitions (`80x12` at 250 ms and `100x24` at
 500 ms). This strengthens the Runie-side runtime evidence; the paired Grok
 capture and cell comparison remain open.
 
+Paired Grok probe attempt (2026-08-08): the source checkout's ignored PTY
+resize test was invoked, but Cargo stalled while fetching its external
+`async-openai` git dependency before the test binary built. The process was
+stopped without producing a Grok artifact. This is an environment/dependency
+fetch blocker and provides no evidence for or against Grok resize behavior.
+
 Paired schedule probe (2026-08-08): both Runie and Grok independently recorded
 the same two observed geometries. Runie reached its settled frame; Grok's
 settled-response probe timed out after the resize, so its cast is marked
