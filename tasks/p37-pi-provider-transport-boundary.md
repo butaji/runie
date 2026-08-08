@@ -324,3 +324,11 @@ send/receive failure, malformed frames, and normal EOF. Connection/send
 failures can use an explicitly injected ordinary `StreamFn` fallback. The
 connector remains injected so production networking and replay remain separate;
 the adapter itself no longer pretends generic HTTP is WebSocket transport.
+
+Production connector increment (2026-08-09): `TokioCodexWebSocketConnector`
+now provides the live connector implementation with `tokio-tungstenite`. It
+builds the header-bearing handshake request, enforces
+`websocketConnectTimeoutMs`, translates text/ping/close frames, rejects binary
+frames, and owns close/error conversion. The connector is still selected by
+the application through the provider adapter injection boundary, keeping
+network side effects out of replay and generic HTTP code.

@@ -32,8 +32,9 @@ provider-specific contract”. The source of truth is the current Pi tree at
    Runie's provider-scoped `CodexWebSocketAdapter` now owns the injected
    connector/socket lifecycle, URL/header/envelope construction, Responses
    message validation/decoding, explicit fallback capability, and close/error
-   cleanup. A real production connector and full cached live-session execution
-   remain adapter deployment work.
+   cleanup. `TokioCodexWebSocketConnector` now supplies the production socket
+   and timeout/header/frame boundary; full cached live-session continuation and
+   deployment wiring remain adapter integration work.
    Runie's replay adapter now also accepts Pi's OpenAI Responses text-delta and
    completion event names, plus function-call argument deltas keyed by
    `output_index`, and normalizes them to the ordinary assistant event
