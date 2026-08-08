@@ -51,9 +51,13 @@ provider-specific contract”. The source of truth is the current Pi tree at
    Provider cancellation and supersession now settle the active request span
    through the owning actor with structured abort details; typed schema and
    exporter/backend conformance remain open.
-4. Remaining session storage record families. Canonical message lane identity
-   is now carried by `SessionEntry.lane`; the compatibility `entry_lanes`
-   index remains only for older callers and serialized snapshots.
+4. Session storage wire typing and compaction lifecycle. All nine Pi session
+   operation families now have live producer transitions and actor-owned
+   JSONL round-trip coverage (see p52); canonical message lane identity is
+   carried by `SessionEntry.lane`, with `entry_lanes` retained only for older
+   callers and serialized snapshots. The remaining gaps are the generic
+   `(record_type, data)` compatibility edge and concrete-provider compaction
+   summarization/publication, not missing live record producers.
 
 ## Open Grok TUI contracts mapped to Pi features
 
