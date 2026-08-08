@@ -841,3 +841,27 @@ so the call sites needed no parameter rewrites. The 66 `runie-tui-model`
 lib unit tests, the 218 `runie-tui` lib unit tests, and the full `just ci`
 (fmt-check, clippy, lint, test, parity, source inventory, Pi event
 contract, feed-actor boundary) are green.
+
+Renderer-local `tool_result_text` retirement (2026-08-08): the Pi
+tool-result envelope → user-visible-text normalizer now has a single
+owner. The renderer-local `pub(crate) fn tool_result_text` at
+`crates/runie-tui/src/event_renderer.rs:1096-1133` (the trailing comment
+documenting Pi's `content: []` zero-row card semantics and the
+`output`/`error` fallback chain) was removed; the four call sites at
+lines 692 (`handle_tool_end` raw-output projection), 710 (web-search
+sources line), 952 (`completed_tool_header` cardinality formatting), and
+1069 (`completed_tool_header_with_args` read-range line count) now call
+`runie_tui_model::tool_result_text` directly. The four focused assertions
+in `event_renderer::tests::structured_tools_use_grok_headers_and_preserve_output_rows`
+at lines 2265, 2267, 2271, and 2275 (string passthrough, `output`
+fallback, empty `content: []` zero-row card, and `error` fallback after
+empty content) now exercise the model helper, so the renderer no longer
+keeps a duplicate projection of the same protocol envelope. No model
+changes were needed: `runie_tui_model::tool_result_text` already lives at
+`crates/runie-tui-model/src/feed.rs:151-182` and is re-exported via
+`crates/runie-tui-model/src/lib.rs`, so the renderer call sites needed
+no signature rewrites and the actor-side behavior stays identical
+because `ScrollbackActor` was already reducing through the model helper.
+The 66 `runie-tui-model` lib unit tests, the 218 `runie-tui` lib unit
+tests, and the full `just ci` (fmt-check, clippy, lint, test, parity,
+source inventory, Pi event contract, feed-actor boundary) are green.

@@ -689,7 +689,7 @@ impl EventRenderer {
         };
         let mut output = Vec::new();
         {
-            let raw_output = tool_result_text(&result);
+            let raw_output = runie_tui_model::tool_result_text(&result);
             let kind = if is_error {
                 LineKind::ToolError
             } else if runie_tui_model::is_output_tool(&tool_name) {
@@ -707,7 +707,9 @@ impl EventRenderer {
                 output.push((kind, line.to_owned()));
             }
             if !is_error && matches!(tool_name.as_str(), "web_search" | "web-search") {
-                if let Some(sources) = web_search_sources_line(&tool_result_text(&result)) {
+                if let Some(sources) =
+                    web_search_sources_line(&runie_tui_model::tool_result_text(&result))
+                {
                     output.push((LineKind::ToolResult, sources));
                 }
             }
@@ -949,7 +951,7 @@ pub(crate) fn completed_tool_header(
     tool_name: &str,
     result: &serde_json::Value,
 ) -> String {
-    let output = tool_result_text(result);
+    let output = runie_tui_model::tool_result_text(result);
     match tool_name {
         "list_dir" | "list_files" | "ls" => {
             let entries = output
@@ -1066,7 +1068,7 @@ pub(crate) fn completed_tool_header_with_args(
         let Some(offset) = args.get("offset").and_then(serde_json::Value::as_u64) else {
             return completed_tool_header(pending_header, tool_name, result);
         };
-        let output = tool_result_text(result);
+        let output = runie_tui_model::tool_result_text(result);
         let content_lines = output
             .lines()
             .take_while(|line| !line.starts_with('['))
@@ -1091,42 +1093,6 @@ pub(crate) fn completed_tool_header_with_args(
         };
     }
     completed_tool_header(pending_header, tool_name, result)
-}
-
-pub(crate) fn tool_result_text(result: &serde_json::Value) -> String {
-    result
-        .as_str()
-        .map(str::to_owned)
-        .or_else(|| {
-            result
-                .get("content")
-                .and_then(serde_json::Value::as_array)
-                .and_then(|content| content.iter().find_map(|item| item.get("text")))
-                .and_then(serde_json::Value::as_str)
-                .map(str::to_owned)
-        })
-        .or_else(|| {
-            result
-                .get("output")
-                .and_then(serde_json::Value::as_str)
-                .map(str::to_owned)
-        })
-        .or_else(|| {
-            result
-                .get("error")
-                .and_then(serde_json::Value::as_str)
-                .map(str::to_owned)
-        })
-        // Pi normalizes tools that return no content to `content: []`. Do
-        // not leak the serialized protocol envelope into Grok's transcript;
-        // an empty result is an intentional zero-row card.
-        .or_else(|| {
-            result
-                .get("content")
-                .filter(|content| content.as_array().is_some_and(Vec::is_empty))
-                .map(|_| String::new())
-        })
-        .unwrap_or_else(|| serde_json::to_string(result).unwrap_or_default())
 }
 
 fn structured_memory_lines(output: &str) -> Vec<String> {
@@ -2262,17 +2228,24 @@ mod tests {
             tool_header("use", &serde_json::json!({"tool":"browser"})),
             "Use browser"
         );
-        assert_eq!(tool_result_text(&serde_json::json!("one\ntwo")), "one\ntwo");
         assert_eq!(
-            tool_result_text(&serde_json::json!({"output":"one\ntwo"})),
+            runie_tui_model::tool_result_text(&serde_json::json!("one\ntwo")),
             "one\ntwo"
         );
         assert_eq!(
-            tool_result_text(&serde_json::json!({"content": [], "isError": false})),
+            runie_tui_model::tool_result_text(&serde_json::json!({"output":"one\ntwo"})),
+            "one\ntwo"
+        );
+        assert_eq!(
+            runie_tui_model::tool_result_text(
+                &serde_json::json!({"content": [], "isError": false})
+            ),
             ""
         );
         assert_eq!(
-            tool_result_text(&serde_json::json!({"content": [], "error": "denied"})),
+            runie_tui_model::tool_result_text(
+                &serde_json::json!({"content": [], "error": "denied"})
+            ),
             "denied"
         );
         assert_eq!(
