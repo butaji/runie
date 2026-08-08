@@ -2182,6 +2182,17 @@ fn styled_line_for(kind: LineKind, text: &str, theme: ThemeKind) -> RatLine<'sta
                 ]);
             }
         }
+        if let Some((key, value)) = text.split_once(": ") {
+            if matches!(key, "status" | "content_type") && !value.is_empty() {
+                return RatLine::from(vec![
+                    Span::styled(
+                        format!("{key}: "),
+                        appearance::muted_style_for(theme).add_modifier(Modifier::DIM),
+                    ),
+                    Span::styled(value.to_owned(), appearance::base_style_for(theme)),
+                ]);
+            }
+        }
         if let Some(sources) = text.strip_prefix("  Sources: ") {
             let label = "  Sources: ";
             let primary = appearance::base_style_for(theme);
@@ -2940,6 +2951,22 @@ mod tests {
         assert_eq!(
             rendered.spans[3].style.fg,
             appearance::header_path_style_for(ThemeKind::GrokNight).fg
+        );
+    }
+
+    #[test]
+    fn web_fetch_metadata_rows_split_muted_keys_from_primary_values() {
+        let rendered = styled_line_for(
+            LineKind::ToolOutput,
+            "content_type: text/html",
+            ThemeKind::GrokNight,
+        );
+        assert_eq!(rendered.spans[0].content, "content_type: ");
+        assert!(rendered.spans[0].style.add_modifier.contains(Modifier::DIM));
+        assert_eq!(rendered.spans[1].content, "text/html");
+        assert_eq!(
+            rendered.spans[1].style.fg,
+            appearance::base_style_for(ThemeKind::GrokNight).fg
         );
     }
 
