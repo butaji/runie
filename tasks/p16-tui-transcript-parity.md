@@ -378,7 +378,8 @@ full typed block/navigation model and cast-wide reconciliation remain open.
 Selected tool affordance (2026-08-06): selected tool headers now render the
 Grok `›` fold indicator from actor-owned selection state, with a focused cell
 regression covering the pure scrollback renderer. Full selection boxes and
-non-tool entry selection remain open.
+non-tool entry selection are covered by the actor reducer and visual fixtures;
+remaining work is limited to cast-wide reconciliation.
 
 Selected-row palette (2026-08-06): the `›` header now applies Grok's
 theme-projected selection surface (`bg.selection`) to every header span. The
@@ -472,8 +473,9 @@ next TUI parity item; taxonomy alone is not claimed as visual parity.
 Entry navigation foundation (2026-08-06): the scrollback reducer now exposes
 semantic selectable rows (user, assistant/reasoning, and one anchor per tool
 block), with actor-owned `j/k` intents and a selected-entry index projecting
-the selected tool ID when applicable. Full Grok selection-box painting and
-viewport reveal behavior remain open.
+the selected tool ID when applicable. Grok selection-box painting and viewport
+reveal behavior are now covered by measured layout events and focused visual
+regressions; generalized wrapped-card parity remains open.
 
 Source audit (2026-08-06): Grok assigns default fold modes per concrete tool
 block (`Read`/`ListDir`/`Edit`/search/fetch → `Collapsed`, execute/bash →
