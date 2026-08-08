@@ -69,15 +69,19 @@ fn color_key(color: vt100::Color) -> String {
 }
 
 fn dimensions(header: &Value) -> Result<(u16, u16)> {
+    fn dimension(value: Option<u64>, name: &str) -> Result<u16> {
+        let value = value.with_context(|| format!("cast {name}"))?;
+        u16::try_from(value).with_context(|| format!("cast {name} exceeds u16"))
+    }
     if let Some(term) = header.get("term") {
         return Ok((
-            term["cols"].as_u64().context("cast term.cols")? as u16,
-            term["rows"].as_u64().context("cast term.rows")? as u16,
+            dimension(term["cols"].as_u64(), "term.cols")?,
+            dimension(term["rows"].as_u64(), "term.rows")?,
         ));
     }
     Ok((
-        header["width"].as_u64().context("cast width")? as u16,
-        header["height"].as_u64().context("cast height")? as u16,
+        dimension(header["width"].as_u64(), "width")?,
+        dimension(header["height"].as_u64(), "height")?,
     ))
 }
 
@@ -629,7 +633,7 @@ fn main() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::{
-        ordered_common_frame_count, replay_frames, validate_capture_metadata_shape,
+        dimensions, ordered_common_frame_count, replay_frames, validate_capture_metadata_shape,
         validate_resize_report, Cell,
     };
     use std::path::{Path, PathBuf};
@@ -652,6 +656,13 @@ mod tests {
             underline: false,
             inverse: false,
         }]
+    }
+
+    #[test]
+    fn dimensions_reject_values_that_do_not_fit_terminal_geometry() {
+        let error = dimensions(&serde_json::json!({"width": 65_536, "height": 24}))
+            .expect_err("oversized cast geometry must be rejected");
+        assert!(error.to_string().contains("width exceeds u16"));
     }
 
     #[test]
