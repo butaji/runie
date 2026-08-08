@@ -12,7 +12,7 @@ macro_rules! wire_kind {
         }
 
         impl $name {
-            const fn wire_name(self) -> &'static str {
+            pub const fn wire_name(self) -> &'static str {
                 match self {
                     $(Self::$variant => $wire),+
                 }

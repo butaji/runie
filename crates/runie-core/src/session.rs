@@ -16,6 +16,14 @@ use crate::events::EventBus;
 use crate::task_owner::{mailbox_ack, spawn_actor_worker, spawn_owned_worker, TaskOwner};
 use crate::types::{AgentEvent, AgentMessage, StopReason, ThinkingLevel};
 
+crate::wire_kind! {
+    pub enum SessionOperationKind {
+        Started => "operation_started",
+        Finished => "operation_finished",
+        AbortRequested => "abort_requested",
+    }
+}
+
 /// Pi session configuration changes which are journal facts but not
 /// `AgentMessage` values. They are kept separate from the message projection
 /// until the complete JSONL record union is migrated.
@@ -3341,6 +3349,20 @@ impl SessionActor {
             .map_err(|_| "session actor response was dropped".to_owned())?
     }
 
+    /// Record a typed operation family through the session actor while keeping
+    /// Pi's lossless JSON payload at the persistence boundary.
+    pub async fn record_operation(
+        &self,
+        kind: SessionOperationKind,
+        data: serde_json::Value,
+    ) -> Result<(), String> {
+        self.record_config(SessionConfigRecord::OperationRecordCreated {
+            record_type: kind.wire_name().to_owned(),
+            data,
+        })
+        .await
+    }
+
     /// Admit a Pi navigation operation only when its target and optional
     /// summary entry belong to this journal. Replay may retain unresolved
     /// historical intents, but live navigation cannot publish one that would
@@ -3368,9 +3390,9 @@ impl SessionActor {
                 ));
             }
         }
-        self.record_config(SessionConfigRecord::OperationRecordCreated {
-            record_type: "operation_started".into(),
-            data: serde_json::json!({
+        self.record_operation(
+            SessionOperationKind::Started,
+            serde_json::json!({
                 "id": operation_id,
                 "lane": lane,
                 "intent": {
@@ -3380,7 +3402,7 @@ impl SessionActor {
                     "summaryEntryId": summary_entry_id,
                 },
             }),
-        })
+        )
         .await
     }
 
