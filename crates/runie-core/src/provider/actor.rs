@@ -432,6 +432,7 @@ async fn finish_request_span_error(span: Option<TelemetrySpan>, message: &str) {
 
 #[allow(
     clippy::cognitive_complexity,
+    clippy::too_many_lines,
     reason = "the owned stream pump keeps event delivery and telemetry settlement ordered"
 )]
 async fn pump_stream(
@@ -441,12 +442,26 @@ async fn pump_stream(
 ) {
     use futures::StreamExt;
     let mut terminal_error = None;
+    let mut chunk_count = 0u64;
     while let Some(event) = stream.next().await {
+        if is_telemetry_chunk(&event) {
+            chunk_count = chunk_count.saturating_add(1);
+        }
         if let crate::types::AssistantMessageEvent::Error { error, .. } = &event {
             terminal_error = Some(error.error_text());
         }
         if let Some(span) = &telemetry_span {
-            let attributes = telemetry_attributes_for_event(&event);
+            let mut attributes = telemetry_attributes_for_event(&event);
+            if matches!(
+                event,
+                crate::types::AssistantMessageEvent::Done { .. }
+                    | crate::types::AssistantMessageEvent::Error { .. }
+            ) {
+                attributes.insert(
+                    "pi.ai.stream.chunk_count".into(),
+                    serde_json::json!(chunk_count),
+                );
+            }
             if !attributes.is_empty() && validate_pi_ai_request_end_attributes(&attributes).is_ok()
             {
                 span.set_attributes(attributes).await;
@@ -470,6 +485,15 @@ async fn pump_stream(
         }
         span.end().await;
     }
+}
+
+fn is_telemetry_chunk(event: &crate::types::AssistantMessageEvent) -> bool {
+    !matches!(
+        event,
+        crate::types::AssistantMessageEvent::Start { .. }
+            | crate::types::AssistantMessageEvent::Done { .. }
+            | crate::types::AssistantMessageEvent::Error { .. }
+    )
 }
 
 #[allow(
@@ -810,6 +834,7 @@ mod tests {
             0
         );
         assert_eq!(snapshot.spans[0].attributes["pi.ai.usage.cost"], 0.0);
+        assert_eq!(snapshot.spans[0].attributes["pi.ai.stream.chunk_count"], 1);
         assert_eq!(snapshot.spans[0].status, SpanStatus::Ok);
         assert!(snapshot.spans[0].ended);
     }
