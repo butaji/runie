@@ -935,7 +935,7 @@ impl SessionSnapshot {
                         SessionEntryRecord::Message(entry) => {
                             self.entry_lane(&entry.id) == Some(lane)
                         }
-                        SessionEntryRecord::Config(_) => true,
+                        SessionEntryRecord::Config(entry) => entry.lane == lane,
                     })
                     && query.custom_type.as_deref().is_none_or(|custom_type| {
                         matches!(
@@ -4142,6 +4142,34 @@ mod tests {
             actor.snapshot().lanes().get("feature"),
             Some(&Some("entry-2".into()))
         );
+    }
+
+    #[test]
+    fn find_entries_filters_configuration_records_by_their_lane() {
+        let snapshot = SessionSnapshot {
+            config_records: vec![SessionConfigEntry {
+                id: "config-1".into(),
+                lane: "feature".into(),
+                seq: 1,
+                parent_id: None,
+                timestamp: 0,
+                record: SessionConfigRecord::NameChanged {
+                    name: "feature".into(),
+                },
+            }],
+            ..SessionSnapshot::default()
+        };
+        let feature = snapshot.find_entries(&SessionEntryQuery {
+            lane: Some("feature".into()),
+            ..SessionEntryQuery::default()
+        });
+        assert_eq!(feature.len(), 1);
+        assert!(snapshot
+            .find_entries(&SessionEntryQuery {
+                lane: Some("main".into()),
+                ..SessionEntryQuery::default()
+            })
+            .is_empty());
     }
 
     #[tokio::test]

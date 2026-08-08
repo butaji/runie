@@ -5,6 +5,10 @@ validated node in the shared message/configuration entry namespace, including
 branch-summary records, instead of incorrectly restricting leaves to message
 entries. An actor regression pins the move and resulting lane projection.
 
+Lane query correction (2026-08-08): declarative entry queries now apply the
+same lane filter to configuration records, using their preserved `lane` field
+instead of treating all configuration facts as globally matching.
+
 Status: implemented (2026-08-08)
 
 ## Completed slice (2026-08-08, validated compaction publication event)
