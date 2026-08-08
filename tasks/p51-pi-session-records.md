@@ -166,6 +166,12 @@ operation records cannot mutate the snapshot or lane log. The event replay
 path intentionally ignores the returned error at the compatibility boundary,
 matching Pi's event delivery semantics while direct session callers can
 observe admission failure. No new wire record was invented.
+
+Operation intent/lane validation increment (2026-08-09): operation starts now
+require Pi's closed `intent.kind` set (`run`, `compaction`, or `navigation`), a
+non-empty lane, and no other active operation on that lane. Unknown kinds and
+lane-local duplicate starts are rejected before reduction; the raw journal
+projection therefore cannot expose an operation lifecycle Pi would reject.
 ## Latest increment
 
 - P60 adds Pi label facts as actor-delivered events with JSONL round-trip

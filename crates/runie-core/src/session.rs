@@ -1272,12 +1272,57 @@ pub fn validate_session_lane_record(
             operation_id.expect("checked above")
         ));
     }
+    validate_operation_started_record(snapshot, kind, data)?;
     validate_operation_lane_record(snapshot, kind, data)?;
     validate_operation_finished_record(kind, data)?;
     validate_step_attempt_record(kind, data)?;
     validate_tool_started_record(snapshot, kind, data)?;
     validate_queue_lane_record(snapshot, kind, data)?;
     Ok(kind)
+}
+
+fn validate_operation_started_record(
+    snapshot: &SessionSnapshot,
+    kind: SessionLaneRecordKind,
+    data: &serde_json::Value,
+) -> Result<(), String> {
+    if kind != SessionLaneRecordKind::OperationStarted {
+        return Ok(());
+    }
+    let Some(operation_kind) = data
+        .pointer("/intent/kind")
+        .and_then(serde_json::Value::as_str)
+    else {
+        // Application events historically carry only an operation id. The
+        // durable Pi JSONL path supplies storage metadata and is validated
+        // strictly; preserve the compatibility event boundary here.
+        return Ok(());
+    };
+    if !matches!(operation_kind, "run" | "compaction" | "navigation") {
+        return Err(format!(
+            "operation_started has unknown operation kind {operation_kind:?}"
+        ));
+    }
+    let Some(lane) = data
+        .get("lane")
+        .and_then(serde_json::Value::as_str)
+        .filter(|lane| !lane.is_empty())
+    else {
+        return Ok(());
+    };
+    let open_on_lane = snapshot.active_operations.keys().any(|operation_id| {
+        snapshot.lane_records.iter().any(|record| {
+            record.record_type == "operation_started"
+                && record.id == *operation_id
+                && record.data.get("lane").and_then(serde_json::Value::as_str) == Some(lane)
+        })
+    });
+    if open_on_lane {
+        return Err(format!(
+            "operation lane {lane:?} already has an open operation"
+        ));
+    }
+    Ok(())
 }
 
 fn validate_operation_finished_record(
@@ -4028,7 +4073,11 @@ mod tests {
         assert!(validate_session_lane_record(
             &snapshot,
             "operation_started",
-            &serde_json::json!({"id": "op-1"})
+            &serde_json::json!({
+                "id": "op-1",
+                "lane": "main",
+                "intent": {"kind": "run"}
+            })
         )
         .is_ok());
         snapshot
@@ -4037,7 +4086,21 @@ mod tests {
         assert!(validate_session_lane_record(
             &snapshot,
             "operation_started",
-            &serde_json::json!({"id": "op-1"})
+            &serde_json::json!({
+                "id": "op-1",
+                "lane": "main",
+                "intent": {"kind": "run"}
+            })
+        )
+        .is_err());
+        assert!(validate_session_lane_record(
+            &SessionSnapshot::default(),
+            "operation_started",
+            &serde_json::json!({
+                "id": "unknown-kind",
+                "lane": "main",
+                "intent": {"kind": "workflow"}
+            })
         )
         .is_err());
         assert!(validate_session_lane_record(
