@@ -297,3 +297,13 @@ interprets the request. `websocket_transport_uses_only_the_injected_provider_ada
 proves this with a provider stream that deliberately errors on ordinary SSE.
 The Codex adapter's actual socket/envelope/decoder/fallback implementation
 remains provider-specific work behind this seam.
+
+## Codex continuation/fallback policy increment (2026-08-09)
+
+`provider::codex` now exposes pure provider-owned continuation-frame
+construction and source-aligned WebSocket failure decisions: one retry for a
+missing continuation, one pre-stream connection-limit retry, SSE fallback only
+for other pre-stream transport failures, and propagation after stream start.
+Deterministic unit coverage pins these decisions. Socket acquisition, cached
+connection ownership, and actual fallback execution remain in the concrete
+adapter boundary.
