@@ -783,14 +783,7 @@ fn activity_counts(snapshot: &FeedSnapshot) -> (usize, usize, usize, usize, usiz
 }
 
 fn activity_group_exists_since_latest_user(snapshot: &FeedSnapshot) -> bool {
-    let lines = &snapshot.lines;
-    let latest_user = lines
-        .iter()
-        .rposition(|line| line.kind == LineKind::User)
-        .unwrap_or(0);
-    lines[latest_user..]
-        .iter()
-        .any(|line| line.kind == LineKind::Activity)
+    runie_tui_model::activity_group_exists_since_latest_user(snapshot)
 }
 
 fn activity_counts_with_start(
@@ -798,19 +791,7 @@ fn activity_counts_with_start(
     tool_name: &str,
     reset: bool,
 ) -> (usize, usize, usize, usize, usize) {
-    let (mut dirs, mut files, mut commands, mut subagents, failures) = if reset {
-        (0, 0, 0, 0, 0)
-    } else {
-        activity_counts(snapshot)
-    };
-    match runie_tui_model::classify_activity_tool(tool_name) {
-        Some(runie_tui_model::ActivityKind::Dir) => dirs += 1,
-        Some(runie_tui_model::ActivityKind::File) => files += 1,
-        Some(runie_tui_model::ActivityKind::Command) => commands += 1,
-        Some(runie_tui_model::ActivityKind::Subagent) => subagents += 1,
-        None => {}
-    }
-    (dirs, files, commands, subagents, failures)
+    runie_tui_model::activity_counts_with_start(snapshot, tool_name, reset)
 }
 
 #[allow(

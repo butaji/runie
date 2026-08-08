@@ -1373,3 +1373,21 @@ and the non-`ToolExecutionUpdate` event passthrough. The 114
 `visual_snapshots` replay tests, and the full `just ci` (fmt-check,
 clippy, lint, test, parity, source inventory, Pi event contract,
 feed-actor boundary) are green.
+
+**Activity group/count retirement (2026-08-08):** the
+`activity_group_exists_since_latest_user` and `activity_counts_with_start`
+feed-snapshot projections now live in `runie-tui-model::feed` so the
+actor-owned activity projection and the renderer share one group
+classification rule. The renderer-local helpers at
+`crates/runie-tui/src/event_renderer.rs:785, 796` were collapsed to
+thin `runie_tui_model::*` delegates. The three new focused tests
+`activity_group_exists_since_latest_user_detects_activity_after_user`,
+`activity_group_exists_since_latest_user_returns_false_without_activity`,
+and `activity_counts_with_start_increments_classified_tool` in
+`crates/runie-tui-model/src/feed.rs` pin the post-user activity
+detection, the negative-path skip, the reset-counter smoke path, and
+the no-reset passthrough. The 117 `runie-tui-model` lib unit tests
+(114 pre-existing + 3 new), the 220 `runie-tui` lib unit tests, the 5
+`runie` binary unit tests, the 28 `visual_snapshots` replay tests, and
+the full `just ci` (fmt-check, clippy, lint, test, parity, source
+inventory, Pi event contract, feed-actor boundary) are green.

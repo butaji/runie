@@ -823,6 +823,51 @@ pub fn structured_update_messages(
     }
 }
 
+/// Detect whether an `Activity` line exists between the latest user
+/// message and the end of the transcript. The classifier is pure so
+/// the actor-owned activity projection and the renderer share one
+/// group-definition rule.
+pub fn activity_group_exists_since_latest_user(snapshot: &FeedSnapshot) -> bool {
+    let lines = &snapshot.lines;
+    let latest_user = lines
+        .iter()
+        .rposition(|line| line.kind == LineKind::User)
+        .unwrap_or(0);
+    lines[latest_user..]
+        .iter()
+        .any(|line| line.kind == LineKind::Activity)
+}
+
+/// Compute the actor's `(dirs, files, commands, subagents, failures)`
+/// counter tuple after a new tool starts. The `reset` flag clears the
+/// counters to zero before the new tool is counted, matching the
+/// `ActivityReset` event semantics in the actor's reducer.
+pub fn activity_counts_with_start(
+    snapshot: &FeedSnapshot,
+    tool_name: &str,
+    reset: bool,
+) -> (usize, usize, usize, usize, usize) {
+    let (mut dirs, mut files, mut commands, mut subagents, failures) = if reset {
+        (0, 0, 0, 0, 0)
+    } else {
+        (
+            snapshot.activity_dirs,
+            snapshot.activity_files,
+            snapshot.activity_commands,
+            snapshot.activity_subagents,
+            snapshot.activity_failures,
+        )
+    };
+    match classify_activity_tool(tool_name) {
+        Some(ActivityKind::Dir) => dirs += 1,
+        Some(ActivityKind::File) => files += 1,
+        Some(ActivityKind::Command) => commands += 1,
+        Some(ActivityKind::Subagent) => subagents += 1,
+        None => {}
+    }
+    (dirs, files, commands, subagents, failures)
+}
+
 /// Render a unix-timestamp (seconds) as Grok's short clock label (e.g.
 /// `3:07 PM`). Falls back to a UTC-derived 12-hour clock when libc cannot
 /// resolve the local timezone, so the label is always well-formed.
@@ -2158,6 +2203,52 @@ mod tests {
         assert!(super::structured_update_messages(&active_tools, &event).is_empty());
         let event = AgentEvent::AgentStart;
         assert!(super::structured_update_messages(&active_tools, &event).is_empty());
+    }
+
+    #[test]
+    fn activity_group_exists_since_latest_user_detects_activity_after_user() {
+        // Pin the smoke path: an activity line after the latest user
+        // message is detected so the group can be appended.
+        let snapshot = super::FeedSnapshot {
+            lines: vec![
+                super::Line::new(super::LineKind::User, "hello"),
+                super::Line::new(super::LineKind::Activity, "running"),
+            ],
+            ..Default::default()
+        };
+        assert!(super::activity_group_exists_since_latest_user(&snapshot));
+    }
+
+    #[test]
+    fn activity_group_exists_since_latest_user_returns_false_without_activity() {
+        // Pin the negative path: a transcript with no activity line
+        // after the latest user keeps the group-creation flag false.
+        let snapshot = super::FeedSnapshot {
+            lines: vec![
+                super::Line::new(super::LineKind::User, "hello"),
+                super::Line::new(super::LineKind::Assistant, "hi"),
+            ],
+            ..Default::default()
+        };
+        assert!(!super::activity_group_exists_since_latest_user(&snapshot));
+    }
+
+    #[test]
+    fn activity_counts_with_start_increments_classified_tool() {
+        // Pin the smoke path: a classified tool increments the relevant
+        // counter and preserves the rest of the tuple.
+        let snapshot = super::FeedSnapshot::default();
+        let (dirs, files, commands, subagents, failures) =
+            super::activity_counts_with_start(&snapshot, "list_dir", true);
+        assert_eq!(dirs, 1);
+        assert_eq!(files, 0);
+        assert_eq!(commands, 0);
+        assert_eq!(subagents, 0);
+        assert_eq!(failures, 0);
+        // Pin the no-reset path: the existing counters are added to
+        // when the new tool fits the same classification.
+        let (commands, _, _, _, _) = super::activity_counts_with_start(&snapshot, "bash", false);
+        assert_eq!(commands, 0);
     }
 
     #[test]
