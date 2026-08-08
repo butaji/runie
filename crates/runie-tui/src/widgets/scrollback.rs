@@ -1098,6 +1098,8 @@ impl Scrollback {
                 && (text.starts_with("    ")
                     || text.starts_with("Result ")
                     || text.trim_start().starts_with("Sources:")
+                    || text.trim_start().starts_with("status:")
+                    || text.trim_start().starts_with("content_type:")
                     || (text
                         .trim_start()
                         .as_bytes()
@@ -3086,6 +3088,42 @@ mod tests {
         assert_eq!(
             rendered.spans[1].style.fg,
             appearance::base_style_for(ThemeKind::GrokNight).fg
+        );
+    }
+
+    #[test]
+    fn web_fetch_metadata_paints_grok_panel_background_across_the_row() {
+        let mut scrollback = Scrollback::new();
+        scrollback.apply(ScrollbackMsg::SetToolName(
+            "fetch-1".into(),
+            "web_fetch".into(),
+        ));
+        scrollback.apply(ScrollbackMsg::ToolStart {
+            tool_call_id: "fetch-1".into(),
+            header: "Fetch https://example.com".into(),
+            activity: None,
+        });
+        scrollback.apply(ScrollbackMsg::ToolEnd {
+            tool_call_id: "fetch-1".into(),
+            header: "Fetch https://example.com".into(),
+            activity: None,
+            output: vec![(LineKind::ToolOutput, "status: 200".into())],
+        });
+        scrollback.set_tool_mode("fetch-1", runie_core::types::ToolDisplayMode::Expanded);
+        scrollback.set_live_grok_layout(true);
+        let rows = scrollback.physical_rows(80, false, 24);
+        let metadata_row = rows
+            .iter()
+            .position(|(_, text, _)| text.contains("status: 200"))
+            .expect("fetch metadata row");
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 80, 8));
+        scrollback.render_with_terminal_height(Rect::new(0, 0, 80, 8), 24, &mut buffer);
+        assert_eq!(
+            buffer
+                .cell((79, metadata_row as u16))
+                .expect("full fetch metadata background")
+                .bg,
+            Color::Rgb(36, 36, 36)
         );
     }
 

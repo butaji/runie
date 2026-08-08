@@ -645,6 +645,10 @@ Web-fetch metadata increment (2026-08-08): `status:` and `content_type:`
 response fields now project as muted metadata rows while fetched body lines
 remain content rows. The web-fetch YAML fixture asserts the typed sequence.
 
+Web-fetch metadata fill increment (2026-08-08): response metadata rows now
+extend the Grok panel background through trailing physical cells, with a
+focused renderer regression for the `status:` row.
+
 Typed-card row vocabulary slice (2026-08-06): added model-owned
 `ToolCardRowKind`/`ToolCardRow` projections for header, content, and status
 semantics. The existing truncation projection now consumes those rows for
