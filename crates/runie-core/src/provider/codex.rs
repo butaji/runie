@@ -164,6 +164,7 @@ pub struct CodexWebSocketAdapter {
     base_url: Option<String>,
     headers: HashMap<String, String>,
     fallback: Option<Arc<dyn StreamFn>>,
+    cache: Arc<tokio::sync::Mutex<WebSocketSessionCache>>,
 }
 
 impl CodexWebSocketAdapter {
@@ -180,6 +181,7 @@ impl CodexWebSocketAdapter {
             base_url,
             headers,
             fallback,
+            cache: Arc::new(tokio::sync::Mutex::new(WebSocketSessionCache::default())),
         }
     }
 }
@@ -199,7 +201,34 @@ impl WebSocketAdapter for CodexWebSocketAdapter {
         let url = resolve_websocket_url(self.base_url.as_deref()).map_err(StreamError::Invalid)?;
         let body = (self.request_builder)(model, context, options.as_ref())
             .map_err(StreamError::Invalid)?;
-        let frame = response_create_continuation_frame(body, None).map_err(StreamError::Invalid)?;
+        let cache_key = options.as_ref().and_then(|value| {
+            value
+                .session_id
+                .as_ref()
+                .map(|session_id| WebSocketSessionKey {
+                    session_id: session_id.clone(),
+                    account_id: value.api_key.clone().unwrap_or_else(|| "default".into()),
+                })
+        });
+        let continuation = if options
+            .as_ref()
+            .and_then(|value| value.transport)
+            .is_some_and(|transport| {
+                matches!(
+                    transport,
+                    crate::types::ProviderTransport::WebsocketCached
+                        | crate::types::ProviderTransport::Auto
+                )
+            }) {
+            let cache = self.cache.lock().await;
+            cache_key
+                .as_ref()
+                .and_then(|key| cache.continuation(key).cloned())
+        } else {
+            None
+        };
+        let frame = response_create_continuation_frame(body, continuation.as_ref())
+            .map_err(StreamError::Invalid)?;
         let mut headers = self.headers.clone();
         headers.insert("OpenAI-Beta".into(), CODEX_WEBSOCKET_BETA_HEADER.into());
         let timeout_ms = options
@@ -228,6 +257,11 @@ impl WebSocketAdapter for CodexWebSocketAdapter {
             match socket.next_text().await {
                 Err(error) => {
                     socket.close().await;
+                    if !started {
+                        if let Some(fallback) = &self.fallback {
+                            return fallback.stream(model, context, options).await;
+                        }
+                    }
                     return Err(error);
                 }
                 Ok(Some(message)) => {
@@ -235,6 +269,11 @@ impl WebSocketAdapter for CodexWebSocketAdapter {
                         Ok(value) => value,
                         Err(error) => {
                             socket.close().await;
+                            if !started {
+                                if let Some(fallback) = &self.fallback {
+                                    return fallback.stream(model, context, options).await;
+                                }
+                            }
                             return Err(StreamError::Invalid(format!(
                                 "invalid Codex WebSocket JSON: {error}"
                             )));
@@ -242,6 +281,11 @@ impl WebSocketAdapter for CodexWebSocketAdapter {
                     };
                     if !value.is_object() {
                         socket.close().await;
+                        if !started {
+                            if let Some(fallback) = &self.fallback {
+                                return fallback.stream(model, context, options).await;
+                            }
+                        }
                         return Err(StreamError::Invalid(
                             "Codex WebSocket message must be a JSON object".into(),
                         ));
@@ -264,13 +308,36 @@ impl WebSocketAdapter for CodexWebSocketAdapter {
         }
         socket.close().await;
         if !started {
+            if let Some(fallback) = &self.fallback {
+                return fallback.stream(model, context, options).await;
+            }
             return Err(StreamError::Network(
                 "Codex WebSocket closed before streaming".into(),
             ));
         }
+        if let Some(key) = cache_key {
+            if let Some(response_id) = response_id_from_messages(&messages) {
+                self.cache.lock().await.store_continuation(
+                    key,
+                    WebSocketContinuation {
+                        last_response_id: Some(response_id),
+                    },
+                );
+            }
+        }
         let provider = crate::provider::replay::ReplayProvider::from_websocket_messages(messages)?;
         provider.stream(model, context, options).await
     }
+}
+
+fn response_id_from_messages(messages: &[String]) -> Option<String> {
+    messages.iter().rev().find_map(|message| {
+        let value = serde_json::from_str::<serde_json::Value>(message).ok()?;
+        value
+            .pointer("/response/id")
+            .and_then(|value| value.as_str())
+            .map(str::to_owned)
+    })
 }
 
 impl WebSocketSessionCache {

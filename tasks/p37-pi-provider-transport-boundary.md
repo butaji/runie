@@ -332,3 +332,10 @@ builds the header-bearing handshake request, enforces
 frames, and owns close/error conversion. The connector is still selected by
 the application through the provider adapter injection boundary, keeping
 network side effects out of replay and generic HTTP code.
+
+Cache integration increment (2026-08-09): `CodexWebSocketAdapter` now derives
+the session/account key from the request options, attaches cached
+`previous_response_id` values for `websocket-cached`/`auto` requests, stores
+the terminal response id, and falls back to the injected ordinary provider
+only before the WebSocket stream has started. Post-start transport/protocol
+failures propagate instead of replaying partial output through SSE.
