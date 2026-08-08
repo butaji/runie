@@ -313,13 +313,22 @@ async fn run_provider_worker(
                 reply,
             } => {
                 let (event_tx, _) = broadcast::channel(STREAM_CAPACITY);
+                let telemetry_span = start_pi_request_span(
+                    options.as_ref().as_ref(),
+                    &model,
+                    "fetch_deferred",
+                    true,
+                    true,
+                )
+                .await;
                 match stream_fn.fetch_deferred(&model, &handle, *options).await {
                     Ok(stream) => {
                         let receiver = event_tx.subscribe();
-                        pumps.spawn(pump_stream(stream, event_tx, None));
+                        pumps.spawn(pump_stream(stream, event_tx, telemetry_span));
                         let _ = reply.send(Ok(receiver));
                     }
                     Err(error) => {
+                        finish_request_span_error(telemetry_span, &error.to_string()).await;
                         let _ = reply.send(Err(error));
                     }
                 }
@@ -330,7 +339,21 @@ async fn run_provider_worker(
                 options,
                 reply,
             } => {
+                let telemetry_span = start_pi_request_span(
+                    options.as_ref().as_ref(),
+                    &model,
+                    "cancel_deferred",
+                    false,
+                    true,
+                )
+                .await;
                 let result = stream_fn.cancel_deferred(&model, &handle, *options).await;
+                match &result {
+                    Ok(()) => finish_request_span_ok(telemetry_span).await,
+                    Err(error) => {
+                        finish_request_span_error(telemetry_span, &error.to_string()).await
+                    }
+                }
                 let _ = reply.send(result);
             }
             ProviderCommand::SummarizeCompaction { request, reply } => {
@@ -352,6 +375,54 @@ async fn settle_aborted_telemetry_span(span: &mut Option<TelemetrySpan>) {
             Some(SpanError {
                 name: "AbortError".into(),
                 message: "provider stream aborted".into(),
+            }),
+        )
+        .await;
+        span.end().await;
+    }
+}
+
+async fn start_pi_request_span(
+    options: Option<&SimpleStreamOptions>,
+    model: &Model,
+    operation: &str,
+    streaming: bool,
+    deferred: bool,
+) -> Option<TelemetrySpan> {
+    let telemetry = options.and_then(|options| options.telemetry.clone())?;
+    let attributes = HashMap::from([
+        ("pi.ai.operation".into(), serde_json::json!(operation)),
+        (
+            "pi.ai.provider".into(),
+            serde_json::json!(model.provider.clone()),
+        ),
+        ("pi.ai.model".into(), serde_json::json!(model.id.clone())),
+        ("pi.ai.api".into(), serde_json::json!(model.api.clone())),
+        ("pi.ai.streaming".into(), serde_json::json!(streaming)),
+        ("pi.ai.deferred".into(), serde_json::json!(deferred)),
+    ]);
+    if crate::telemetry::validate_pi_ai_request_attributes(&attributes).is_err() {
+        return None;
+    }
+    telemetry
+        .start_span(None, "pi.ai.request", attributes)
+        .await
+}
+
+async fn finish_request_span_ok(span: Option<TelemetrySpan>) {
+    if let Some(span) = span {
+        span.status(SpanStatus::Ok).await;
+        span.end().await;
+    }
+}
+
+async fn finish_request_span_error(span: Option<TelemetrySpan>, message: &str) {
+    if let Some(span) = span {
+        span.status_with_error(
+            SpanStatus::Error,
+            Some(SpanError {
+                name: "ProviderError".into(),
+                message: message.into(),
             }),
         )
         .await;
@@ -873,12 +944,27 @@ mod tests {
         ));
     }
 
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the deferred telemetry regression asserts both provider-scoped operations"
+    )]
     #[tokio::test]
     async fn deferred_fetch_and_cancel_use_the_injected_provider_capability() {
         let cancelled = Arc::new(std::sync::atomic::AtomicBool::new(false));
         let actor = ProviderActor::new(Arc::new(DeferredFn {
             cancelled: cancelled.clone(),
         }));
+        let telemetry = crate::telemetry::TelemetryActor::new();
+        let options = Some(SimpleStreamOptions {
+            telemetry: Some(telemetry.clone()),
+            ..Default::default()
+        });
+        let model = Model {
+            provider: "test".into(),
+            id: "test".into(),
+            api: "test".into(),
+            ..Model::default()
+        };
         let handle = DeferredHandle {
             provider: "test".into(),
             model_id: "test".into(),
@@ -890,7 +976,7 @@ mod tests {
         };
 
         let mut events = actor
-            .fetch_deferred(Model::default(), handle.clone(), None)
+            .fetch_deferred(model.clone(), handle.clone(), options.clone())
             .await
             .expect("deferred fetch capability");
         assert!(matches!(
@@ -902,10 +988,17 @@ mod tests {
         ));
 
         actor
-            .cancel_deferred(Model::default(), handle, None)
+            .cancel_deferred(model, handle, options)
             .await
             .expect("deferred cancellation capability");
         assert!(cancelled.load(std::sync::atomic::Ordering::Acquire));
+        let spans = telemetry.snapshot().spans;
+        assert_eq!(spans.len(), 2);
+        assert_eq!(spans[0].attributes["pi.ai.operation"], "fetch_deferred");
+        assert_eq!(spans[1].attributes["pi.ai.operation"], "cancel_deferred");
+        assert!(spans
+            .iter()
+            .all(|span| span.ended && span.status == SpanStatus::Ok));
     }
 
     #[tokio::test]
