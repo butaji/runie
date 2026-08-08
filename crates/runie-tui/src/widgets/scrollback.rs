@@ -1988,7 +1988,29 @@ fn styled_line_for(kind: LineKind, text: &str, theme: ThemeKind) -> RatLine<'sta
             if let Some(trail_start) = rest.rfind("  [") {
                 let head = &rest[..trail_start];
                 let trail = &rest[trail_start + 3..];
-                spans.push(Span::styled(format!("{head}  ["), body_style));
+                let status_marker = [
+                    " done in ",
+                    " failed in ",
+                    " cancelled after ",
+                    " paused at ",
+                ]
+                .iter()
+                .find_map(|marker| head.find(marker).map(|start| (start, marker.len())));
+                if let Some((status_start, marker_len)) = status_marker {
+                    let status_end = head[status_start + marker_len..]
+                        .find(':')
+                        .map(|offset| status_start + marker_len + offset)
+                        .unwrap_or(head.len());
+                    spans.push(Span::styled(head[..status_start].to_owned(), body_style));
+                    spans.push(Span::styled(
+                        head[status_start..status_end].to_owned(),
+                        body_style.add_modifier(Modifier::DIM),
+                    ));
+                    spans.push(Span::styled(head[status_end..].to_owned(), body_style));
+                    spans.push(Span::styled("  [", body_style));
+                } else {
+                    spans.push(Span::styled(format!("{head}  ["), body_style));
+                }
                 if let Some(trail_end) = trail.find(']') {
                     let trail_body = &trail[..trail_end];
                     for (index, phase) in trail_body.split(" · ").enumerate() {
@@ -4009,6 +4031,10 @@ mod tests {
         );
     }
 
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the workflow styling regression covers running, completed, and cancelled cards"
+    )]
     #[test]
     fn workflow_card_uses_grok_semantic_header_and_cancelled_text_tokens() {
         let running = styled_line_for(
@@ -4030,6 +4056,17 @@ mod tests {
             .style
             .add_modifier
             .contains(Modifier::DIM));
+
+        let completed = styled_line_for(
+            LineKind::Tool,
+            "◆ Workflow release done in 1.2s: ship it  [tests ✓]",
+            ThemeKind::GrokNight,
+        );
+        assert!(completed
+            .spans
+            .iter()
+            .any(|span| span.content == " done in 1.2s"
+                && span.style.add_modifier.contains(Modifier::DIM)));
 
         let cancelled = styled_line_for(
             LineKind::Tool,
