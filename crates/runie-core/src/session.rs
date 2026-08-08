@@ -3341,6 +3341,49 @@ impl SessionActor {
             .map_err(|_| "session actor response was dropped".to_owned())?
     }
 
+    /// Admit a Pi navigation operation only when its target and optional
+    /// summary entry belong to this journal. Replay may retain unresolved
+    /// historical intents, but live navigation cannot publish one that would
+    /// point outside the actor-owned session tree.
+    pub async fn admit_navigation(
+        &self,
+        operation_id: String,
+        lane: String,
+        target_id: String,
+        summarize: bool,
+        summary_entry_id: Option<String>,
+    ) -> Result<(), String> {
+        let snapshot = self.snapshot();
+        let exists = |id: &str| {
+            snapshot.entries.iter().any(|entry| entry.id == id)
+                || snapshot.config_records.iter().any(|entry| entry.id == id)
+        };
+        if !exists(&target_id) {
+            return Err(format!("navigation target does not exist: {target_id}"));
+        }
+        if let Some(summary_id) = &summary_entry_id {
+            if !exists(summary_id) {
+                return Err(format!(
+                    "navigation summary entry does not exist: {summary_id}"
+                ));
+            }
+        }
+        self.record_config(SessionConfigRecord::OperationRecordCreated {
+            record_type: "operation_started".into(),
+            data: serde_json::json!({
+                "id": operation_id,
+                "lane": lane,
+                "intent": {
+                    "kind": "navigation",
+                    "targetId": target_id,
+                    "summarize": summarize,
+                    "summaryEntryId": summary_entry_id,
+                },
+            }),
+        })
+        .await
+    }
+
     pub async fn record_lane(
         &self,
         lane: String,
@@ -3589,6 +3632,33 @@ mod tests {
         assert_eq!(snapshot.branch_entry_ids(), vec!["entry-1"]);
         assert!(actor.select_tree("missing".into()).await.is_err());
         assert_eq!(actor.snapshot().leaf_id.as_deref(), Some("entry-1"));
+    }
+
+    #[tokio::test]
+    async fn navigation_admission_validates_targets_before_journaling() {
+        let actor = SessionActor::new();
+        actor.append(user("target")).await;
+        actor
+            .admit_navigation(
+                "navigation-1".into(),
+                "main".into(),
+                "entry-1".into(),
+                true,
+                None,
+            )
+            .await
+            .expect("valid navigation");
+        assert!(actor
+            .admit_navigation(
+                "navigation-2".into(),
+                "main".into(),
+                "missing".into(),
+                false,
+                None,
+            )
+            .await
+            .is_err());
+        assert_eq!(actor.snapshot().active_operations.len(), 1);
     }
 
     #[tokio::test]

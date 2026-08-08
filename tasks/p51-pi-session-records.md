@@ -157,6 +157,12 @@ assert whether the navigation target and optional summary entry resolve;
 surfaces Pi's target-validation fact without silently admitting an invalid
 navigation operation or mutating state outside the session actor.
 
+Navigation admission increment (2026-08-09): `SessionActor::admit_navigation`
+now validates the target and optional summary entry inside the live actor
+boundary before journaling `operation_started`. Historical replay continues to
+preserve unresolved intents for diagnostics; live callers cannot publish an
+operation pointing outside the owned journal.
+
 Operation admission error boundary (2026-08-08): Pi's in-memory and JSONL
 session adapters reject a second open `operation_started` on the same lane as
 an asynchronous storage error and leave the journal unchanged. Runie's
