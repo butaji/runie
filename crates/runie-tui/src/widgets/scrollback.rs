@@ -1133,9 +1133,9 @@ impl Scrollback {
                     .as_deref()
                     .unwrap_or_default();
                 let body_color = if *kind == LineKind::User {
-                    appearance::base_style_for(self.navigation.theme)
-                        .fg
-                        .expect("body color")
+                    // Grok leaves the user-panel body at terminal-default
+                    // foreground; only the prompt key is explicitly colored.
+                    Color::Reset
                 } else {
                     appearance::assistant_body_style_for(self.navigation.theme)
                         .fg
@@ -1321,18 +1321,27 @@ impl Scrollback {
     /// Return the selected member's physical row in the same projection used
     /// by rendering. This is the anchor identity sent to the feed actor.
     pub fn measured_anchor_row(&self, area: Rect, terminal_rows: u16) -> Option<usize> {
-        let selected = self
-            .navigation
-            .selected_entry
-            .and_then(|index| self.lines.get(index))?;
+        let selected_index = self.navigation.selected_entry?;
+        let selected = self.lines.get(selected_index)?;
         let text = selected.text.as_str();
         if text.is_empty() {
             return None;
         }
+        // Physical rows are a rendered projection and may contain duplicate
+        // text. Preserve the selected logical entry's identity by selecting
+        // the same occurrence among projected rows instead of taking the
+        // first text match.
+        let occurrence = self.lines[..selected_index]
+            .iter()
+            .filter(|line| line.kind == selected.kind && line.text == text)
+            .count();
         let compact = crate::layout::grok_effective_compact(false, terminal_rows);
         self.physical_rows(area.width as usize, compact, area.height)
             .iter()
-            .position(|(_, candidate, _)| candidate.contains(text))
+            .enumerate()
+            .filter(|(_, (kind, candidate, _))| *kind == selected.kind && candidate.contains(text))
+            .nth(occurrence)
+            .map(|(index, _)| index)
     }
 
     #[allow(
@@ -2285,6 +2294,19 @@ mod tests {
                 .expect("clipped assistant row")
                 .symbol(),
             "┃"
+        );
+    }
+
+    #[test]
+    fn measured_anchor_row_preserves_duplicate_line_occurrence() {
+        let mut scrollback = Scrollback::new();
+        scrollback.append(Line::new(LineKind::Assistant, "same"));
+        scrollback.append(Line::new(LineKind::Assistant, "same"));
+        scrollback.navigation.selected_entry = Some(1);
+
+        assert_eq!(
+            scrollback.measured_anchor_row(Rect::new(0, 0, 40, 4), 24),
+            Some(1)
         );
     }
 

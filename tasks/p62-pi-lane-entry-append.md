@@ -1,7 +1,10 @@
 # P62 — Pi lane-aware entry append
 
-Status: actor, persistence, and YAML event bridge implemented; broader lane
-query/fork migration remains.
+Status: implemented (2026-08-08)
+
+The durable `SessionStorageActor` fork mailbox also accepts an optional lane;
+the legacy main-lane API delegates to the same reducer and a feature-lane
+publish/load regression covers the filesystem path.
 
 Pi Core’s `SessionStorage.appendEntry(entry, lane)` is a single state
 mutation: it validates that the lane exists, sets the entry’s `parentId` to
@@ -29,6 +32,10 @@ Do not emulate this by changing the global `leaf_id` or by inferring lane from
 operation records; that would violate both Pi semantics and the SSOT actor
 boundary.
 
+The compatibility `SessionSnapshot::entry_lanes` index remains actor-owned for
+older callers and serialized snapshots, but canonical consumers now read the
+lane carried by each `SessionEntry` directly.
+
 Current increment: `SessionSnapshot::entry_lanes` is an actor-owned lane
 identity projection; `SessionActor::append_to_lane` validates and appends with
 the selected lane leaf, updates only that lane, and preserves identity in
@@ -37,11 +44,13 @@ The typed `SessionEntryAppended` event and YAML `session_append` syntax now
 replay this path without compiled fixture code. The checked-in fixtures cover
 non-main append, lane reset, and state assertions. Remaining work is to make
 all branch/query/fork consumers use lane-aware entries directly rather than
-the compatibility `entry_lanes` side projection.
+the compatibility `entry_lanes` side projection. This migration is now
+complete for branch, query, and fork consumers.
 
 The branch projection increment now exposes `branch_entry_ids_for_lane` and
-forks preserve `entry_lanes` for copied entries. Focused regressions verify a
-feature-lane branch path and the existing main-lane fork contract. YAML state
+forks preserve the canonical `SessionEntry.lane` for copied entries. Focused
+regressions verify a feature-lane branch path even after clearing the
+compatibility index, and the existing main-lane fork contract. YAML state
 assertions now cover lane-specific branch IDs for both main and feature lanes.
 `fork_at_lane_message` now reuses the validated branch reducer for Pi’s
 selected-lane fork scope and preserves copied entry-lane identity.

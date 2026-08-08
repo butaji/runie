@@ -5,7 +5,13 @@ actions:
       model: test-model
   - type: start
     parent_id: 1
-    name: pi.provider.stream
+    name: pi.ai.request
+    attributes:
+      pi.ai.operation: stream
+      pi.ai.provider: test-provider
+      pi.ai.model: test-model
+      pi.ai.api: test-api
+      pi.ai.streaming: true
   - type: event
     id: 2
     name: assistant.event
@@ -33,8 +39,13 @@ expected:
       end_sequence: 1
     - id: 2
       parent_id: 1
-      name: pi.provider.stream
-      attributes: {}
+      name: pi.ai.request
+      attributes:
+        pi.ai.operation: stream
+        pi.ai.provider: test-provider
+        pi.ai.model: test-model
+        pi.ai.api: test-api
+        pi.ai.streaming: true
       events:
         - name: assistant.event
           attributes: {}

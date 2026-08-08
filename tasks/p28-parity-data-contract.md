@@ -28,6 +28,16 @@ the capture command, requested environment, geometry, repository revision,
 Grok path/version, tmux/asciinema versions, and cast/raw artifact paths.
 Scenario-specific provider and clock fields remain YAML responsibilities.
 
+Metadata validation increment (2026-08-08): `cast_compare` now rejects paired
+metadata files that omit required provenance, prompt, tool-version, terminal,
+geometry, or artifact fields. Legacy casts with neither metadata file remain
+diagnostic-compatible; once a capture claims to have metadata, incomplete
+provenance is an explicit evidence failure rather than a parity comparison.
+
+Paired-input validation also requires matching quit keys and resize schedules.
+These values affect lifecycle timing and geometry, so a mismatch is rejected
+as incomparable evidence before any cell-level diff is reported.
+
 Live validation (2026-08-06): a 62×32 `runie --terminal-native` capture
 produced a valid manifest containing revision `6f964b99`, Grok `0.2.118`, tmux
 `3.7b`, asciinema `3.2.1`, requested truecolor environment, geometry, and both

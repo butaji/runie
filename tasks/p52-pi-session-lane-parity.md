@@ -1,6 +1,28 @@
 # Pi session lane and durable storage parity
 
-Status: in_progress
+Status: implemented (2026-08-08)
+
+## Completed slice (2026-08-08, validated compaction publication event)
+
+`CompactionSummary::into_event` now performs the provider-result to
+`CompactionCreated` conversion at one pure boundary. It selects the retained
+tail from actor-owned preparation indices, rejects stale or out-of-bounds
+indices before delivery, and preserves summary details, usage, and
+`tokens_before`. The resulting event is still published through
+`SessionActor`; the builder does not mutate session state. Unit coverage pins
+both the valid event shape and invalid-index rejection.
+
+The follow-on `SessionActor::publish_compaction` command now performs the
+event conversion and journal append inside the owning actor. It revalidates
+the preparation against the actor's current entries, publishes an immutable
+snapshot only after the configuration record is appended, and returns an
+acknowledged error for stale indices. The actor mailbox regression covers the
+provider-summary publication and ordered configuration record.
+
+Stale-plan hardening now fingerprints the source entry IDs in
+`CompactionPreparation`. Publication rejects a plan whose numeric indices
+still fit but whose journal identities have changed; the actor regression
+covers that rejection before publishing a fresh plan.
 
 ## Completed slice (2026-08-08, singular entry reads)
 

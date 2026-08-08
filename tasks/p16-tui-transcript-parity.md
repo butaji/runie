@@ -817,6 +817,12 @@ Autoscroll and unmeasured compatibility paths remain unchanged. The remaining
 parity work is multi-member reflow across arbitrary wrapped rows and a
 cast-wide frame oracle.
 
+Duplicate-text anchor correction (2026-08-08): the renderer measurement
+adapter now preserves the selected logical line's occurrence when resolving a
+physical anchor. Identical tool or transcript text no longer resolves to the
+first matching row, which keeps fold/reflow restoration aligned with the
+actor-owned selection identity. Existing visual and TUI suites remain green.
+
 Renderer identity handoff (2026-08-06): semantic paint-intent lookup now
 resolves the source line's logical member ordinal and requires the matching
 `ToolCardRow.member_index` before applying theme intent. Duplicate text can no

@@ -42,8 +42,9 @@ provider-specific contract”. The source of truth is the current Pi tree at
    provider-specific polling/decoding and a real provider fixture remain open.
 3. Full Pi telemetry callback/span nesting and provider-specific diagnostics;
    generic lifecycle events are not evidence of span parity.
-4. Remaining session storage record families and direct lane identity
-   migration where the compatibility `entry_lanes` projection is still used.
+4. Remaining session storage record families. Canonical message lane identity
+   is now carried by `SessionEntry.lane`; the compatibility `entry_lanes`
+   index remains only for older callers and serialized snapshots.
 
 ## Open Grok TUI contracts mapped to Pi features
 

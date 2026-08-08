@@ -102,17 +102,71 @@ fn validate_capture_metadata(left: &Path, right: &Path) -> Result<()> {
     let right_meta: Value = serde_json::from_str(
         &std::fs::read_to_string(&right_path).with_context(|| right_path.display().to_string())?,
     )?;
+    validate_capture_metadata_shape(&left_meta, &left_path)?;
+    validate_capture_metadata_shape(&right_meta, &right_path)?;
     for (path, label) in [
         ("probe.prompt", "prompt"),
         ("terminal.cols", "terminal columns"),
         ("terminal.rows", "terminal rows"),
         ("terminal.term", "TERM"),
         ("terminal.colorterm", "COLORTERM"),
+        ("probe.quit_key", "quit key"),
+        ("resize_schedule", "resize schedule"),
     ] {
         let left_value = path.split('.').fold(&left_meta, |value, key| &value[key]);
         let right_value = path.split('.').fold(&right_meta, |value, key| &value[key]);
         if left_value != right_value {
             bail!("capture metadata mismatch for {label}: left={left_value} right={right_value}");
+        }
+    }
+    Ok(())
+}
+
+#[allow(
+    clippy::too_many_lines,
+    reason = "the provenance contract keeps every required capture field explicit"
+)]
+fn validate_capture_metadata_shape(meta: &Value, path: &Path) -> Result<()> {
+    let required_strings = [
+        "captured_at",
+        "repo_revision",
+        "command",
+        "grok_path",
+        "grok_version",
+        "capture_tools.tmux",
+        "capture_tools.asciinema",
+        "terminal.term",
+        "terminal.colorterm",
+        "artifacts.cast",
+        "artifacts.raw",
+        "artifacts.settled_ansi",
+        "artifacts.grok_doctor",
+        "artifacts.resize_report",
+        "probe.prompt",
+        "probe.quit_key",
+    ];
+    for dotted in required_strings {
+        let value = dotted
+            .split('.')
+            .try_fold(meta, |value, key| value.get(key))
+            .with_context(|| format!("capture metadata missing {dotted}: {}", path.display()))?;
+        if !value.is_string() || value.as_str().is_some_and(str::is_empty) {
+            bail!(
+                "capture metadata field {dotted} must be a non-empty string: {}",
+                path.display()
+            );
+        }
+    }
+    for dotted in ["terminal.cols", "terminal.rows"] {
+        let value = dotted
+            .split('.')
+            .try_fold(meta, |value, key| value.get(key))
+            .with_context(|| format!("capture metadata missing {dotted}: {}", path.display()))?;
+        if value.as_u64().is_none_or(|size| size == 0) {
+            bail!(
+                "capture metadata field {dotted} must be a positive integer: {}",
+                path.display()
+            );
         }
     }
     Ok(())
@@ -508,7 +562,7 @@ fn main() -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::{ordered_common_frame_count, replay_frames, Cell};
+    use super::{ordered_common_frame_count, replay_frames, validate_capture_metadata_shape, Cell};
     use std::path::{Path, PathBuf};
 
     fn cast(name: &str) -> PathBuf {
@@ -568,5 +622,34 @@ mod tests {
             .expect_err("missing markers must not produce an empty comparison");
         assert!(error.to_string().contains("phase marker"));
         assert!(error.to_string().contains("grok-rich.cast"));
+    }
+
+    #[test]
+    fn capture_metadata_requires_provenance_and_artifacts() {
+        let valid = serde_json::json!({
+            "captured_at": "2026-08-08T00:00:00Z",
+            "repo_revision": "abc123",
+            "command": "target/debug/runie",
+            "grok_path": "/usr/local/bin/grok",
+            "grok_version": "grok 0.2.118",
+            "capture_tools": {"tmux": "tmux 3.7b", "asciinema": "asciinema 3.2.1"},
+            "terminal": {"cols": 80, "rows": 24, "term": "xterm-256color", "colorterm": "truecolor"},
+            "probe": {"prompt": "Hey", "quit_key": "C-q"},
+            "artifacts": {
+                "cast": "/tmp/capture.cast",
+                "raw": "/tmp/capture.raw",
+                "settled_ansi": "/tmp/capture.settled.ansi",
+                "grok_doctor": "/tmp/capture.grok-doctor.json",
+                "resize_report": "/tmp/capture.resize.json"
+            }
+        });
+        validate_capture_metadata_shape(&valid, Path::new("capture.meta.json"))
+            .expect("complete capture metadata");
+
+        let mut incomplete = valid;
+        incomplete["grok_version"] = serde_json::Value::String(String::new());
+        let error = validate_capture_metadata_shape(&incomplete, Path::new("capture.meta.json"))
+            .expect_err("missing provenance must fail");
+        assert!(error.to_string().contains("grok_version"));
     }
 }

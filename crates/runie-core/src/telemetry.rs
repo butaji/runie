@@ -50,6 +50,11 @@ pub struct TelemetrySnapshot {
     pub spans: Vec<SpanSnapshot>,
 }
 
+#[async_trait::async_trait]
+pub trait TelemetryExporter: Send + Sync + 'static {
+    async fn export(&self, snapshot: TelemetrySnapshot) -> Result<(), String>;
+}
+
 /// Runtime-editable telemetry replay commands. These address the actor
 /// mailbox contract and never expose reducer state to callers.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -133,6 +138,14 @@ impl TelemetryActor {
         reason = "the actor reducer keeps the complete span lifecycle in one explicit boundary"
     )]
     pub fn new() -> Self {
+        Self::new_with_exporter(None)
+    }
+
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the telemetry actor keeps its complete reducer and exporter settlement boundary together"
+    )]
+    pub fn new_with_exporter(exporter: Option<Arc<dyn TelemetryExporter>>) -> Self {
         let (snapshot_tx, snapshot) = watch::channel(TelemetrySnapshot::default());
         let (tx, owner) = spawn_actor_worker!(32, move |mut rx: mpsc::Receiver<
             TelemetryCommand,
@@ -234,6 +247,9 @@ impl TelemetryActor {
                             span.end_sequence = Some(next_end_sequence);
                             next_end_sequence = next_end_sequence.wrapping_add(1);
                             let _ = snapshot_tx.send(state.clone());
+                            if let Some(exporter) = exporter.as_ref() {
+                                let _ = exporter.export(state.clone()).await;
+                            }
                         }
                         let _ = reply.send(());
                     }
@@ -477,6 +493,17 @@ impl TelemetrySpan {
 mod tests {
     use super::*;
 
+    struct RecordingExporter(tokio::sync::mpsc::UnboundedSender<TelemetrySnapshot>);
+
+    #[async_trait::async_trait]
+    impl TelemetryExporter for RecordingExporter {
+        async fn export(&self, snapshot: TelemetrySnapshot) -> Result<(), String> {
+            self.0
+                .send(snapshot)
+                .map_err(|_| "export receiver dropped".to_owned())
+        }
+    }
+
     #[tokio::test]
     async fn nested_spans_and_terminal_state_are_actor_owned() {
         let actor = TelemetryActor::new();
@@ -549,5 +576,20 @@ mod tests {
             .unwrap();
         assert_eq!(actor.snapshot().spans[0].status, SpanStatus::Ok);
         span.end().await;
+    }
+
+    #[tokio::test]
+    async fn settled_span_is_exported_after_actor_reduction() {
+        let (export_tx, mut export_rx) = tokio::sync::mpsc::unbounded_channel();
+        let actor = TelemetryActor::new_with_exporter(Some(Arc::new(RecordingExporter(export_tx))));
+        let span = actor
+            .start_span(None, "exported", HashMap::new())
+            .await
+            .unwrap();
+        span.end().await;
+        let exported = export_rx.recv().await.expect("settled export");
+        assert_eq!(exported.spans.len(), 1);
+        assert!(exported.spans[0].ended);
+        assert_eq!(exported.spans[0].name, "exported");
     }
 }

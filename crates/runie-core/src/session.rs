@@ -145,6 +145,8 @@ pub struct SessionLaneFact {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SessionEntry {
     pub id: String,
+    /// Canonical Pi session-lane identity for this message entry.
+    pub lane: String,
     pub seq: u64,
     pub parent_id: Option<String>,
     pub timestamp: i64,
@@ -191,6 +193,9 @@ impl SessionEntryRecord {
 /// Declarative equivalent of Pi's `EntryQuery`.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct SessionEntryQuery {
+    /// Restrict message entries to one actor-owned session lane. Configuration
+    /// records remain in the shared journal namespace.
+    pub lane: Option<String>,
     pub record_type: Option<String>,
     pub custom_type: Option<String>,
     pub after_seq: Option<u64>,
@@ -203,6 +208,10 @@ pub struct SessionEntryQuery {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct SessionBranchEntryQuery {
     pub start: String,
+    /// Restrict message entries to the actor-owned session lane. Configuration
+    /// facts remain part of the selected branch because Pi stores them in the
+    /// shared journal namespace rather than duplicating them per lane.
+    pub lane: Option<String>,
     pub stop_at_type: Option<String>,
     pub stop_at_id: Option<String>,
     pub record_type: Option<String>,
@@ -325,6 +334,25 @@ pub struct CompactionPreparation {
     pub retained_indices: Vec<usize>,
     pub tokens_before: u64,
     pub cut_point: CompactionCutPoint,
+    /// Entry identities used when this preparation was produced. The
+    /// publication actor uses these to reject a stale plan after the journal
+    /// has changed without relying on numeric indices alone.
+    pub source_entry_ids: Vec<String>,
+}
+
+impl CompactionPreparation {
+    fn validate_entries(&self, entries: &[SessionEntry]) -> Result<(), String> {
+        if self.source_entry_ids.len() != entries.len()
+            || self
+                .source_entry_ids
+                .iter()
+                .zip(entries)
+                .any(|(expected, actual)| expected != &actual.id)
+        {
+            return Err("compaction preparation is stale for the current journal".to_owned());
+        }
+        Ok(())
+    }
 }
 
 /// Provider-owned input for Pi-compatible asynchronous compaction summary
@@ -349,6 +377,7 @@ impl CompactionSummaryRequest {
         entries: &[SessionEntry],
         previous_summary: Option<String>,
     ) -> Result<Self, String> {
+        preparation.validate_entries(entries)?;
         fn select(
             entries: &[SessionEntry],
             indices: &[usize],
@@ -387,6 +416,40 @@ pub struct CompactionSummary {
     pub summary: String,
     pub usage: Option<crate::types::Usage>,
     pub details: Option<serde_json::Value>,
+}
+
+impl CompactionSummary {
+    /// Convert a provider result and an actor-owned preparation into the
+    /// journal event consumed by `SessionActor`.
+    ///
+    /// Retained messages are selected from the same immutable entry table
+    /// used to build `CompactionSummaryRequest`; invalid indices are rejected
+    /// before an event can cross the actor boundary.
+    pub fn into_event(
+        self,
+        preparation: &CompactionPreparation,
+        entries: &[SessionEntry],
+    ) -> Result<crate::types::AgentEvent, String> {
+        preparation.validate_entries(entries)?;
+        let retained_tail = preparation
+            .retained_indices
+            .iter()
+            .map(|index| {
+                entries
+                    .get(*index)
+                    .map(|entry| entry.message.clone())
+                    .ok_or_else(|| format!("compaction index {index} is out of bounds"))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(crate::types::AgentEvent::CompactionCreated {
+            summary: self.summary,
+            retained_tail,
+            tokens_before: preparation.tokens_before,
+            details: self.details,
+            usage: self.usage,
+        })
+    }
 }
 
 /// Pi's automatic-compaction threshold settings.
@@ -555,19 +618,18 @@ impl CompactionContextProjection {
 
 impl SessionSnapshot {
     pub fn entry_lane(&self, entry_id: &str) -> Option<&str> {
-        self.entry_lanes.get(entry_id).map(String::as_str)
+        self.entries
+            .iter()
+            .find(|entry| entry.id == entry_id)
+            .map(|entry| entry.lane.as_str())
+            .or_else(|| self.entry_lanes.get(entry_id).map(String::as_str))
     }
 
     /// Reduce ordered Pi lane mutations into the latest leaf per lane.
     pub fn lanes(&self) -> BTreeMap<String, Option<String>> {
         let mut changes = vec![(0_u64, "main".to_owned(), None)];
         for entry in &self.entries {
-            let lane = self
-                .entry_lanes
-                .get(&entry.id)
-                .cloned()
-                .unwrap_or_else(|| "main".into());
-            changes.push((entry.seq, lane, Some(entry.id.clone())));
+            changes.push((entry.seq, entry.lane.clone(), Some(entry.id.clone())));
         }
         changes.extend(
             self.lane_facts
@@ -675,7 +737,13 @@ impl SessionSnapshot {
             })
             .into_iter()
             .filter(|entry| match entry {
-                SessionEntryRecord::Message(entry) => id_set.contains(&entry.id),
+                SessionEntryRecord::Message(entry) => {
+                    id_set.contains(&entry.id)
+                        && query
+                            .lane
+                            .as_deref()
+                            .is_none_or(|lane| self.entry_lane(&entry.id) == Some(lane))
+                }
                 SessionEntryRecord::Config(entry) => id_set.contains(&entry.id),
             })
             .collect::<Vec<_>>();
@@ -741,6 +809,23 @@ impl SessionSnapshot {
         records
     }
 
+    /// Decode the actor-owned operation lane without exposing mutable journal
+    /// state. Admission has already validated these records; a decode error
+    /// therefore indicates corrupted in-memory state and is returned instead
+    /// of silently dropping a family at a consumer boundary.
+    pub fn typed_lane_records(
+        &self,
+    ) -> Result<Vec<(SessionLaneRecordSnapshot, SessionLaneRecord)>, String> {
+        self.lane_records
+            .iter()
+            .cloned()
+            .map(|record| {
+                let typed = SessionLaneRecord::decode(&record.record_type, &record.data)?;
+                Ok((record, typed))
+            })
+            .collect()
+    }
+
     /// Recompute Pi's session statistics from the immutable journal.
     pub fn stats(&self) -> SessionStats {
         let mut stats = SessionStats {
@@ -780,6 +865,10 @@ impl SessionSnapshot {
     }
 
     /// Find ordered message/config entries using Pi's EntryQuery semantics.
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the Pi entry query table stays explicit"
+    )]
     pub fn find_entries(&self, query: &SessionEntryQuery) -> Vec<SessionEntryRecord> {
         let mut entries = self
             .entries
@@ -798,6 +887,12 @@ impl SessionSnapshot {
                     .as_deref()
                     .is_none_or(|record_type| entry.record_type() == record_type)
                     && query.after_seq.is_none_or(|after| entry.seq() > after)
+                    && query.lane.as_deref().is_none_or(|lane| match entry {
+                        SessionEntryRecord::Message(entry) => {
+                            self.entry_lane(&entry.id) == Some(lane)
+                        }
+                        SessionEntryRecord::Config(_) => true,
+                    })
                     && query.custom_type.as_deref().is_none_or(|custom_type| {
                         matches!(
                             entry,
@@ -945,6 +1040,7 @@ pub fn prepare_compaction_entries(
         retained_indices: (cut_point.first_kept_entry_index..entries.len()).collect(),
         tokens_before: token_estimates.iter().sum(),
         cut_point,
+        source_entry_ids: entries.iter().map(|entry| entry.id.clone()).collect(),
     }))
 }
 
@@ -1656,9 +1752,7 @@ impl SessionSnapshot {
             sequence += 1;
             let mut copy = entry.clone();
             copy.seq = sequence;
-            if let Some(lane) = self.entry_lanes.get(&entry.id) {
-                fork.entry_lanes.insert(copy.id.clone(), lane.clone());
-            }
+            fork.entry_lanes.insert(copy.id.clone(), copy.lane.clone());
             fork.entries.push(copy);
         }
         for entry in &self.config_records {
@@ -1797,6 +1891,7 @@ impl SessionSnapshot {
                 let lane = value
                     .get("lane")
                     .and_then(serde_json::Value::as_str)
+                    .filter(|lane| !lane.is_empty())
                     .ok_or_else(|| format!("session lane {} is missing lane", line_index + 2))?
                     .to_owned();
                 let leaf_id = value
@@ -1835,7 +1930,33 @@ impl SessionSnapshot {
                 .ok_or_else(|| format!("session entry {} is missing type", line_index + 2))?;
             if session_lane_record_kind(entry_type).is_some() {
                 let data = value.clone();
+                let seq = data
+                    .get("seq")
+                    .and_then(serde_json::Value::as_u64)
+                    .ok_or_else(|| {
+                        format!("session lane record {} is missing seq", line_index + 2)
+                    })?;
+                // Operation records are emitted in their own durable lane;
+                // older snapshots may contain message entries with the same
+                // sequence range, so require positive, non-regressing lane
+                // order rather than falsely requiring global contiguity.
+                if seq == 0 || (snapshot.sequence == 0 && seq != 1) || seq < snapshot.sequence {
+                    return Err(format!(
+                        "session lane record {} has invalid sequence order",
+                        line_index + 2
+                    ));
+                }
+                data.get("lane")
+                    .and_then(serde_json::Value::as_str)
+                    .filter(|lane| !lane.is_empty())
+                    .ok_or_else(|| {
+                        format!("session lane record {} is missing lane", line_index + 2)
+                    })?;
+                validate_session_lane_record(&snapshot, entry_type, &data).map_err(|error| {
+                    format!("invalid session lane record {}: {error}", line_index + 2)
+                })?;
                 reduce_operation_record(&mut snapshot, entry_type, &data);
+                snapshot.sequence = seq;
                 continue;
             }
             let seq = value
@@ -2057,9 +2178,10 @@ impl SessionSnapshot {
                 .and_then(serde_json::Value::as_str)
                 .unwrap_or("main")
                 .to_owned();
-            snapshot.entry_lanes.insert(id.clone(), entry_lane);
+            snapshot.entry_lanes.insert(id.clone(), entry_lane.clone());
             snapshot.entries.push(SessionEntry {
                 id,
+                lane: entry_lane.clone(),
                 seq,
                 parent_id,
                 timestamp,
@@ -2120,7 +2242,7 @@ impl SessionSnapshot {
             .map(|session_entry| {
                 let mut entry = serde_json::json!({
                     "kind": "entry",
-                    "lane": self.entry_lane(&session_entry.id).unwrap_or("main"),
+                    "lane": session_entry.lane.as_str(),
                     "type": "message",
                     "id": session_entry.id,
                     "parentId": session_entry.parent_id,
@@ -2305,6 +2427,11 @@ enum Command {
         keep_recent_tokens: u64,
         reply: oneshot::Sender<Result<Option<CompactionPreparation>, String>>,
     },
+    PublishCompaction {
+        preparation: CompactionPreparation,
+        summary: CompactionSummary,
+        reply: oneshot::Sender<Result<(), String>>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -2407,6 +2534,7 @@ enum StorageCommand {
     Fork {
         path: String,
         snapshot: Box<SessionSnapshot>,
+        lane: Option<String>,
         target_id: String,
         session_id: String,
         created_at: i64,
@@ -2466,6 +2594,7 @@ impl SessionStorageActor {
                         StorageCommand::Fork {
                             path,
                             snapshot,
+                            lane,
                             target_id,
                             session_id,
                             created_at,
@@ -2473,7 +2602,12 @@ impl SessionStorageActor {
                             reply,
                         } => {
                             let result = async {
-                                let fork = snapshot.fork_at_message(&target_id)?;
+                                let fork = match lane.as_deref() {
+                                    Some(lane) => {
+                                        snapshot.fork_at_lane_message(lane, &target_id)?
+                                    }
+                                    None => snapshot.fork_at_message(&target_id)?,
+                                };
                                 let temporary = format!("{path}.tmp");
                                 tokio::fs::write(
                                     &temporary,
@@ -2544,11 +2678,30 @@ impl SessionStorageActor {
         created_at: i64,
         cwd: &str,
     ) -> Result<(), String> {
+        self.fork_snapshot_in_lane(path, snapshot, None, target_id, session_id, created_at, cwd)
+            .await
+    }
+
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "the storage fork boundary keeps destination, source, lane, and Pi session metadata explicit"
+    )]
+    pub async fn fork_snapshot_in_lane(
+        &self,
+        path: impl Into<String>,
+        snapshot: &SessionSnapshot,
+        lane: Option<&str>,
+        target_id: &str,
+        session_id: &str,
+        created_at: i64,
+        cwd: &str,
+    ) -> Result<(), String> {
         let (reply_tx, reply_rx) = oneshot::channel();
         self.tx
             .send(StorageCommand::Fork {
                 path: path.into(),
                 snapshot: Box::new(snapshot.clone()),
+                lane: lane.map(str::to_owned),
                 target_id: target_id.to_owned(),
                 session_id: session_id.to_owned(),
                 created_at,
@@ -2646,6 +2799,7 @@ impl SessionActor {
                         }
                         let entry = SessionEntry {
                             id: id.clone(),
+                            lane: lane.clone(),
                             seq: state.sequence,
                             parent_id: lane_leaf.clone().or_else(|| state.leaf_id.clone()),
                             timestamp: message.timestamp(),
@@ -2833,6 +2987,49 @@ impl SessionActor {
                             &token_estimates,
                             keep_recent_tokens,
                         ));
+                    }
+                    Command::PublishCompaction {
+                        preparation,
+                        summary,
+                        reply,
+                    } => {
+                        let event = match summary.into_event(&preparation, &state.entries) {
+                            Ok(event) => event,
+                            Err(error) => {
+                                let _ = reply.send(Err(error));
+                                continue;
+                            }
+                        };
+                        let AgentEvent::CompactionCreated {
+                            summary,
+                            retained_tail,
+                            tokens_before,
+                            details,
+                            usage,
+                        } = event
+                        else {
+                            unreachable!("compaction summary builder returned its fixed event");
+                        };
+                        state.sequence += 1;
+                        let id = format!("entry-{next_id}");
+                        next_id += 1;
+                        let entry = SessionConfigEntry {
+                            id: id.clone(),
+                            seq: state.sequence,
+                            parent_id: state.leaf_id.clone(),
+                            timestamp: 0,
+                            record: SessionConfigRecord::CompactionCreated {
+                                summary,
+                                retained_tail,
+                                tokens_before,
+                                details,
+                                usage,
+                            },
+                        };
+                        state.leaf_id = Some(id);
+                        state.config_records.push(entry);
+                        let _ = snapshot_tx.send(state.clone());
+                        let _ = reply.send(Ok(()));
                     }
                 }
             }
@@ -3073,6 +3270,29 @@ impl SessionActor {
             .await
             .map_err(|_| "session actor compaction response was dropped".to_owned())?
     }
+
+    /// Publish a provider-generated compaction through the session owner.
+    /// The actor revalidates preparation indices against its current journal,
+    /// so a stale caller cannot append a summary for a different session
+    /// state.
+    pub async fn publish_compaction(
+        &self,
+        preparation: CompactionPreparation,
+        summary: CompactionSummary,
+    ) -> Result<(), String> {
+        let (reply_tx, reply_rx) = oneshot::channel();
+        self.tx
+            .send(Command::PublishCompaction {
+                preparation,
+                summary,
+                reply: reply_tx,
+            })
+            .await
+            .map_err(|_| "session actor compaction publication was not acknowledged".to_owned())?;
+        reply_rx
+            .await
+            .map_err(|_| "session actor compaction publication response was dropped".to_owned())?
+    }
 }
 
 impl Default for SessionActor {
@@ -3212,6 +3432,10 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the lane append regression covers persistence and all projections"
+    )]
     async fn append_to_lane_updates_only_that_lane_and_persists_identity() {
         let actor = SessionActor::new();
         actor.append(user("main")).await;
@@ -3240,16 +3464,33 @@ mod tests {
             vec!["entry-1", "entry-2"]
         );
         assert_eq!(
+            snapshot
+                .find_entries(&SessionEntryQuery {
+                    lane: Some("feature".into()),
+                    ..SessionEntryQuery::default()
+                })
+                .into_iter()
+                .filter_map(|entry| match entry {
+                    SessionEntryRecord::Message(entry) => Some(entry.id),
+                    SessionEntryRecord::Config(_) => None,
+                })
+                .collect::<Vec<_>>(),
+            vec!["entry-2"]
+        );
+        assert_eq!(
             snapshot.lanes().get("feature"),
             Some(&Some("entry-2".into()))
         );
-        let lane_fork = snapshot
+        let mut canonical_snapshot = snapshot.clone();
+        canonical_snapshot.entry_lanes.clear();
+        let lane_fork = canonical_snapshot
             .fork_at_lane_message("feature", "entry-2")
             .expect("feature lane fork");
         assert_eq!(lane_fork.entries.len(), 2);
         assert_eq!(lane_fork.entry_lane("entry-2"), Some("feature"));
-        let (_, _, imported) = SessionSnapshot::from_jsonl(&snapshot.to_jsonl("s", 1, "/tmp"))
-            .expect("lane append JSONL");
+        let (_, _, imported) =
+            SessionSnapshot::from_jsonl(&canonical_snapshot.to_jsonl("s", 1, "/tmp"))
+                .expect("lane append JSONL");
         assert_eq!(imported.entry_lane("entry-2"), Some("feature"));
     }
 
@@ -3407,6 +3648,19 @@ mod tests {
                 .collect::<Vec<_>>(),
             vec!["operation_started", "abort_requested", "operation_finished"]
         );
+        assert_eq!(
+            imported
+                .typed_lane_records()
+                .expect("admitted records decode")
+                .into_iter()
+                .map(|(_, record)| record.kind())
+                .collect::<Vec<_>>(),
+            vec![
+                SessionLaneRecordKind::OperationStarted,
+                SessionLaneRecordKind::AbortRequested,
+                SessionLaneRecordKind::OperationFinished,
+            ]
+        );
     }
 
     #[test]
@@ -3554,6 +3808,7 @@ mod tests {
                 parent_id: None,
                 timestamp: 7,
                 message: user("hello"),
+                lane: "main".into(),
                 terminate: false,
             }],
             ..SessionSnapshot::default()
@@ -3580,6 +3835,7 @@ mod tests {
         let snapshot = SessionSnapshot {
             entries: vec![SessionEntry {
                 id: "entry-1".into(),
+                lane: "main".into(),
                 seq: 1,
                 parent_id: None,
                 timestamp: 7,
@@ -3620,6 +3876,7 @@ mod tests {
         let mut snapshot = SessionSnapshot {
             entries: vec![SessionEntry {
                 id: "entry-1".into(),
+                lane: "main".into(),
                 seq: 1,
                 parent_id: None,
                 timestamp: 7,
@@ -3804,6 +4061,7 @@ mod tests {
                 })],
                 ..Default::default()
             }),
+            lane: "main".into(),
             terminate: false,
         });
         let valid = serde_json::json!({
@@ -3952,6 +4210,7 @@ mod tests {
         let mut snapshot = SessionSnapshot::default();
         let message_entry = |seq: u64, parent_id: Option<&str>, id: &str| SessionEntry {
             id: id.into(),
+            lane: "main".into(),
             seq,
             parent_id: parent_id.map(str::to_owned),
             timestamp: 0,
@@ -3980,11 +4239,16 @@ mod tests {
     }
 
     #[test]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the regression covers mixed-lane branch ordering and filters"
+    )]
     fn branch_entry_query_requires_start_and_respects_stop_and_limit() {
         let snapshot = SessionSnapshot {
             entries: vec![
                 SessionEntry {
                     id: "message-1".into(),
+                    lane: "main".into(),
                     seq: 1,
                     parent_id: None,
                     timestamp: 0,
@@ -3993,6 +4257,7 @@ mod tests {
                 },
                 SessionEntry {
                     id: "message-2".into(),
+                    lane: "feature".into(),
                     seq: 2,
                     parent_id: Some("message-1".into()),
                     timestamp: 0,
@@ -4001,6 +4266,10 @@ mod tests {
                 },
             ],
             leaf_id: Some("message-2".into()),
+            entry_lanes: BTreeMap::from([
+                ("message-1".into(), "main".into()),
+                ("message-2".into(), "feature".into()),
+            ]),
             ..SessionSnapshot::default()
         };
         let entries = snapshot
@@ -4015,6 +4284,23 @@ mod tests {
         assert!(
             matches!(entries[0], SessionEntryRecord::Message(ref entry) if entry.id == "message-2")
         );
+        let feature_entries = snapshot
+            .find_entries_on_branch(&SessionBranchEntryQuery {
+                start: "message-2".into(),
+                lane: Some("feature".into()),
+                ..SessionBranchEntryQuery::default()
+            })
+            .expect("lane branch query");
+        assert_eq!(
+            feature_entries
+                .iter()
+                .filter_map(|entry| match entry {
+                    SessionEntryRecord::Message(entry) => Some(entry.id.as_str()),
+                    SessionEntryRecord::Config(_) => None,
+                })
+                .collect::<Vec<_>>(),
+            vec!["message-2"]
+        );
         assert!(snapshot
             .find_entries_on_branch(&SessionBranchEntryQuery {
                 start: "missing".into(),
@@ -4028,6 +4314,7 @@ mod tests {
         let snapshot = SessionSnapshot {
             entries: vec![SessionEntry {
                 id: "message-1".into(),
+                lane: "main".into(),
                 seq: 1,
                 parent_id: None,
                 timestamp: 0,
@@ -4062,6 +4349,7 @@ mod tests {
             entries: vec![
                 SessionEntry {
                     id: "message-1".into(),
+                    lane: "main".into(),
                     seq: 1,
                     parent_id: None,
                     timestamp: 0,
@@ -4070,6 +4358,7 @@ mod tests {
                 },
                 SessionEntry {
                     id: "message-2".into(),
+                    lane: "main".into(),
                     seq: 2,
                     parent_id: Some("message-1".into()),
                     timestamp: 0,
@@ -4078,6 +4367,7 @@ mod tests {
                 },
                 SessionEntry {
                     id: "message-3".into(),
+                    lane: "main".into(),
                     seq: 3,
                     parent_id: Some("message-2".into()),
                     timestamp: 0,
@@ -4114,6 +4404,7 @@ mod tests {
         let entries = vec![
             SessionEntry {
                 id: "user-1".into(),
+                lane: "main".into(),
                 seq: 1,
                 parent_id: None,
                 timestamp: 0,
@@ -4122,6 +4413,7 @@ mod tests {
             },
             SessionEntry {
                 id: "assistant-1".into(),
+                lane: "main".into(),
                 seq: 2,
                 parent_id: Some("user-1".into()),
                 timestamp: 0,
@@ -4216,10 +4508,16 @@ mod tests {
     }
 
     #[test]
+    #[allow(
+        clippy::too_many_lines,
+        clippy::cognitive_complexity,
+        reason = "the regression covers request construction and stale-plan rejection"
+    )]
     fn compaction_preparation_partitions_history_prefix_and_tail() {
         let entries = vec![
             SessionEntry {
                 id: "user-1".into(),
+                lane: "main".into(),
                 seq: 1,
                 parent_id: None,
                 timestamp: 0,
@@ -4228,6 +4526,7 @@ mod tests {
             },
             SessionEntry {
                 id: "assistant-1".into(),
+                lane: "main".into(),
                 seq: 2,
                 parent_id: Some("user-1".into()),
                 timestamp: 0,
@@ -4252,9 +4551,72 @@ mod tests {
         ));
         let invalid = CompactionPreparation {
             history_indices: vec![99],
-            ..preparation
+            ..preparation.clone()
         };
         assert!(CompactionSummaryRequest::from_preparation(&invalid, &entries, None).is_err());
+        let mut stale = preparation.clone();
+        stale.source_entry_ids[0] = "different-entry".into();
+        assert!(CompactionSummaryRequest::from_preparation(&stale, &entries, None).is_err());
+    }
+
+    #[test]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the regression covers both event construction and stale-index rejection"
+    )]
+    fn provider_compaction_summary_builds_validated_publication_event() {
+        let entries = vec![
+            SessionEntry {
+                id: "user-1".into(),
+                lane: "main".into(),
+                seq: 1,
+                parent_id: None,
+                timestamp: 0,
+                message: user("request"),
+                terminate: false,
+            },
+            SessionEntry {
+                id: "assistant-1".into(),
+                lane: "main".into(),
+                seq: 2,
+                parent_id: Some("user-1".into()),
+                timestamp: 0,
+                message: AgentMessage::Assistant(Default::default()),
+                terminate: false,
+            },
+        ];
+        let preparation = prepare_compaction_entries(&entries, &[40, 40], 20)
+            .expect("preparation")
+            .expect("non-empty");
+        let event = CompactionSummary {
+            summary: "prior context summarized".into(),
+            usage: None,
+            details: Some(serde_json::json!({"source":"provider"})),
+        }
+        .into_event(&preparation, &entries)
+        .expect("publication event");
+
+        assert!(matches!(
+            event,
+            AgentEvent::CompactionCreated {
+                ref summary,
+                ref retained_tail,
+                tokens_before: 80,
+                ..
+            } if summary == "prior context summarized" && retained_tail.len() == 1
+        ));
+
+        let invalid = CompactionPreparation {
+            retained_indices: vec![99],
+            ..preparation
+        };
+        assert!(CompactionSummary {
+            summary: "invalid".into(),
+            usage: None,
+            details: None,
+        }
+        .into_event(&invalid, &entries)
+        .is_err());
     }
 
     #[test]
@@ -4269,6 +4631,7 @@ mod tests {
             entries: vec![
                 SessionEntry {
                     id: "entry-1".into(),
+                    lane: "main".into(),
                     seq: 1,
                     parent_id: None,
                     timestamp: 0,
@@ -4277,6 +4640,7 @@ mod tests {
                 },
                 SessionEntry {
                     id: "entry-2".into(),
+                    lane: "main".into(),
                     seq: 2,
                     parent_id: Some("entry-1".into()),
                     timestamp: 0,
@@ -4285,6 +4649,7 @@ mod tests {
                 },
                 SessionEntry {
                     id: "entry-4".into(),
+                    lane: "main".into(),
                     seq: 4,
                     parent_id: Some("entry-3".into()),
                     timestamp: 0,
@@ -4320,6 +4685,10 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the actor regression covers fresh and stale compaction plans"
+    )]
     async fn actor_owns_compaction_preparation_through_mailbox() {
         let actor = SessionActor::new();
         actor.append(user("request")).await;
@@ -4333,6 +4702,46 @@ mod tests {
             .expect("non-empty preparation");
         assert_eq!(preparation.retained_indices, vec![1]);
         assert_eq!(actor.snapshot().entries.len(), 2);
+        let stale = preparation.clone();
+        actor.append(user("changed journal")).await;
+        assert!(actor
+            .publish_compaction(
+                stale,
+                CompactionSummary {
+                    summary: "stale".into(),
+                    usage: None,
+                    details: None,
+                },
+            )
+            .await
+            .is_err());
+        let preparation = actor
+            .prepare_compaction(vec![40, 40, 40], 20)
+            .await
+            .expect("fresh actor response")
+            .expect("fresh non-empty preparation");
+        actor
+            .publish_compaction(
+                preparation,
+                CompactionSummary {
+                    summary: "provider summary".into(),
+                    usage: None,
+                    details: None,
+                },
+            )
+            .await
+            .expect("compaction publication");
+        let snapshot = actor.snapshot();
+        assert_eq!(snapshot.config_records.len(), 1);
+        assert!(matches!(
+            snapshot.config_records[0].record,
+            SessionConfigRecord::CompactionCreated {
+                ref summary,
+                ref retained_tail,
+                tokens_before: 120,
+                ..
+            } if summary == "provider summary" && retained_tail.len() == 1
+        ));
     }
 
     #[allow(
@@ -4353,6 +4762,7 @@ mod tests {
             leaf_id: Some("entry-1".into()),
             entries: vec![SessionEntry {
                 id: "entry-1".into(),
+                lane: "main".into(),
                 seq: 1,
                 parent_id: None,
                 timestamp: 0,
@@ -4391,11 +4801,48 @@ mod tests {
         let (_, _, forked) = storage.load_snapshot(&fork_path).await.expect("fork load");
         assert_eq!(forked.sequence, 2);
         assert_eq!(forked.leaf_id.as_deref(), Some("entry-1"));
+        let feature_snapshot = SessionSnapshot {
+            sequence: 2,
+            leaf_id: Some("entry-1".into()),
+            entries: vec![
+                snapshot.entries[0].clone(),
+                SessionEntry {
+                    id: "entry-2".into(),
+                    lane: "feature".into(),
+                    seq: 2,
+                    parent_id: Some("entry-1".into()),
+                    timestamp: 0,
+                    message: user("feature fork me"),
+                    terminate: false,
+                },
+            ],
+            ..snapshot.clone()
+        };
+        let feature_fork_path = format!("{path_string}.feature-fork");
+        storage
+            .fork_snapshot_in_lane(
+                &feature_fork_path,
+                &feature_snapshot,
+                Some("feature"),
+                "entry-2",
+                "fork-feature",
+                3,
+                "/tmp",
+            )
+            .await
+            .expect("feature-lane fork publish");
+        let (_, _, feature_forked) = storage
+            .load_snapshot(&feature_fork_path)
+            .await
+            .expect("feature-lane fork load");
+        assert_eq!(feature_forked.entry_lane("entry-2"), Some("feature"));
+        assert_eq!(feature_forked.entries.len(), 2);
         assert!(!tokio::fs::try_exists(format!("{path_string}.tmp"))
             .await
             .expect("temporary file check"));
         let _ = tokio::fs::remove_file(path).await;
         let _ = tokio::fs::remove_file(fork_path).await;
+        let _ = tokio::fs::remove_file(feature_fork_path).await;
     }
 
     #[test]
@@ -4410,6 +4857,7 @@ mod tests {
         };
         snapshot.entries.push(SessionEntry {
             id: "entry-1".into(),
+            lane: "main".into(),
             seq: 1,
             parent_id: None,
             timestamp: 0,
@@ -4589,6 +5037,7 @@ mod tests {
             leaf_id: Some("entry-1".into()),
             entries: vec![SessionEntry {
                 id: "entry-1".into(),
+                lane: "main".into(),
                 seq: 1,
                 parent_id: None,
                 timestamp: 7,
@@ -4780,6 +5229,36 @@ mod tests {
             entry(1, serde_json::Value::Null, "branch")
         );
         assert!(SessionSnapshot::from_jsonl(&unsupported_kind).is_err());
+    }
+
+    #[test]
+    fn jsonl_import_rejects_operation_records_without_ordered_storage_metadata() {
+        let header = serde_json::json!({
+            "kind": "header", "version": 4, "id": "s", "createdAt": 5, "cwd": "/w"
+        })
+        .to_string();
+        let valid = serde_json::json!({
+            "kind": "entry", "lane": "main", "type": "operation_started",
+            "id": "run-1", "seq": 1, "timestamp": 7
+        });
+        assert!(SessionSnapshot::from_jsonl(&format!("{header}\n{valid}\n")).is_ok());
+
+        let missing_seq = serde_json::json!({
+            "kind": "entry", "lane": "main", "type": "operation_started",
+            "id": "run-1", "timestamp": 7
+        });
+        assert!(SessionSnapshot::from_jsonl(&format!("{header}\n{missing_seq}\n")).is_err());
+
+        let wrong_order = serde_json::json!({
+            "kind": "entry", "lane": "main", "type": "operation_started",
+            "id": "run-1", "seq": 0, "timestamp": 7
+        });
+        assert!(SessionSnapshot::from_jsonl(&format!("{header}\n{wrong_order}\n")).is_err());
+
+        let empty_lane = serde_json::json!({
+            "kind": "lane", "lane": "", "seq": 1, "leafId": null
+        });
+        assert!(SessionSnapshot::from_jsonl(&format!("{header}\n{empty_lane}\n")).is_err());
     }
 
     #[test]

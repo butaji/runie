@@ -1,5 +1,6 @@
 //! `ProviderActor` — owns the one in-flight stream per assistant turn.
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use tokio::sync::{broadcast, mpsc, oneshot};
@@ -217,7 +218,20 @@ async fn run_provider_worker(
                     .and_then(|options| options.telemetry.clone())
                 {
                     telemetry
-                        .start_span(None, "pi.provider.stream", Default::default())
+                        .start_span(
+                            None,
+                            "pi.ai.request",
+                            HashMap::from([
+                                ("pi.ai.operation".into(), serde_json::json!("stream")),
+                                (
+                                    "pi.ai.provider".into(),
+                                    serde_json::json!(model.provider.clone()),
+                                ),
+                                ("pi.ai.model".into(), serde_json::json!(model.id.clone())),
+                                ("pi.ai.api".into(), serde_json::json!(model.api.clone())),
+                                ("pi.ai.streaming".into(), serde_json::json!(true)),
+                            ]),
+                        )
                         .await
                 } else {
                     None
@@ -322,6 +336,10 @@ async fn run_provider_worker(
     }
 }
 
+#[allow(
+    clippy::cognitive_complexity,
+    reason = "the owned stream pump keeps event delivery and telemetry settlement ordered"
+)]
 async fn pump_stream(
     mut stream: AssistantMessageEventStream,
     tx: broadcast::Sender<crate::types::AssistantMessageEvent>,
@@ -329,6 +347,12 @@ async fn pump_stream(
 ) {
     use futures::StreamExt;
     while let Some(event) = stream.next().await {
+        if let Some(span) = &telemetry_span {
+            let attributes = telemetry_attributes_for_event(&event);
+            if !attributes.is_empty() {
+                span.set_attributes(attributes).await;
+            }
+        }
         // Errors from the broadcast are non-fatal (no current receivers).
         let _ = tx.send(event);
         if let Some(span) = &telemetry_span {
@@ -338,6 +362,53 @@ async fn pump_stream(
     if let Some(span) = telemetry_span {
         span.status(SpanStatus::Ok).await;
         span.end().await;
+    }
+}
+
+fn telemetry_attributes_for_event(
+    event: &crate::types::AssistantMessageEvent,
+) -> HashMap<String, serde_json::Value> {
+    match event {
+        crate::types::AssistantMessageEvent::Done {
+            stop_reason, usage, ..
+        } => HashMap::from([
+            (
+                "pi.ai.response.stop_reason".into(),
+                serde_json::json!(telemetry_stop_reason(*stop_reason)),
+            ),
+            (
+                "pi.ai.usage.input_tokens".into(),
+                serde_json::json!(usage.input),
+            ),
+            (
+                "pi.ai.usage.output_tokens".into(),
+                serde_json::json!(usage.output),
+            ),
+            (
+                "pi.ai.usage.total_tokens".into(),
+                serde_json::json!(usage.total_tokens),
+            ),
+        ]),
+        crate::types::AssistantMessageEvent::Error { reason, .. } => HashMap::from([
+            (
+                "pi.ai.response.stop_reason".into(),
+                serde_json::json!(telemetry_stop_reason(*reason)),
+            ),
+            ("pi.ai.error.type".into(), serde_json::json!("provider")),
+        ]),
+        _ => HashMap::new(),
+    }
+}
+
+fn telemetry_stop_reason(reason: crate::types::StopReason) -> &'static str {
+    match reason {
+        crate::types::StopReason::Stop => "stop",
+        crate::types::StopReason::ToolUse => "tool_use",
+        crate::types::StopReason::MaxTokens => "length",
+        crate::types::StopReason::Error => "error",
+        crate::types::StopReason::Aborted => "aborted",
+        crate::types::StopReason::Pending => "pending",
+        crate::types::StopReason::Deferred => "deferred",
     }
 }
 
@@ -558,14 +629,27 @@ mod tests {
             telemetry: Some(telemetry.clone()),
             ..Default::default()
         };
+        let model = Model {
+            provider: "test-provider".into(),
+            id: "test-model".into(),
+            api: "test-api".into(),
+            ..Model::default()
+        };
         let mut rx = actor
-            .start(Model::default(), AgentContext::default(), Some(options))
+            .start(model, AgentContext::default(), Some(options))
             .await
             .unwrap();
         while rx.recv().await.is_ok() {}
         let snapshot = telemetry.snapshot();
         assert_eq!(snapshot.spans.len(), 1);
         assert_eq!(snapshot.spans[0].events.len(), 3);
+        assert_eq!(snapshot.spans[0].name, "pi.ai.request");
+        assert_eq!(snapshot.spans[0].attributes["pi.ai.operation"], "stream");
+        assert_eq!(
+            snapshot.spans[0].attributes["pi.ai.response.stop_reason"],
+            "stop"
+        );
+        assert_eq!(snapshot.spans[0].attributes["pi.ai.usage.total_tokens"], 0);
         assert_eq!(snapshot.spans[0].status, SpanStatus::Ok);
         assert!(snapshot.spans[0].ended);
     }

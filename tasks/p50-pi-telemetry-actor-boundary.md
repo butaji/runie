@@ -1,8 +1,8 @@
 # p50 — Pi telemetry actor boundary
 
 Status: actor-owned lifecycle, structured attributes/events, callback-scoped
-settlement, structured errors, provider projection, and YAML runtime replay
-implemented; full Pi telemetry conformance remains (2026-08-07)
+settlement, structured errors, provider projection, optional exporter, and YAML
+runtime replay implemented; full Pi telemetry conformance remains (2026-08-08)
 
 ## Source-backed Pi contract
 
@@ -44,7 +44,8 @@ The renderer must never own spans or infer telemetry from status text.
 2. Define a capability-oriented `TelemetryContext` adapter for provider
    actors; keep it separate from `HttpRequest` serialization. **Partial:**
    `SimpleStreamOptions.telemetry` carries a cloneable `TelemetryActor`, and
-   `ProviderActor` opens `pi.provider.stream`, records one `assistant.event`
+   `ProviderActor` opens the source-defined `pi.ai.request` span with required
+   operation/provider/model/API/streaming attributes, records one `assistant.event`
    per streamed event, and acknowledges terminal status/end. Startup failures
    close the span with `Error`; the capability is not serialized.
 3. Emit core lifecycle events for span start, event, exception, and end. **In
@@ -81,8 +82,15 @@ The renderer must never own spans or infer telemetry from status text.
 
 The provider projection is covered by
 `provider_stream_projects_telemetry_through_owned_capability`; full Pi
-callback nesting, exceptions, exporter behavior, and YAML-declared span
-conformance vectors remain open.
+callback nesting, exceptions, exporter backend conformance, and YAML-declared
+span conformance vectors remain open.
+
+Exporter increment (2026-08-08): `TelemetryActor::new_with_exporter` accepts an
+optional actor-owned async exporter. A settled span exports the immutable
+snapshot after the reducer marks it ended; exporter failures do not mutate or
+rewind telemetry state. The no-exporter constructor remains the default, and a
+regression receives the settled snapshot through an async channel without
+sleep-based synchronization.
 
 Telemetry source reconciliation (2026-08-07): the checked-out Pi telemetry
 interface exposes `addEvent(name, attributes)` and
