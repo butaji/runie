@@ -1314,3 +1314,21 @@ tests (106 pre-existing + 2 new), the 220 `runie-tui` lib unit tests,
 the 5 `runie` binary unit tests, the 28 `visual_snapshots` replay
 tests, and the full `just ci` (fmt-check, clippy, lint, test, parity,
 source inventory, Pi event contract, feed-actor boundary) are green.
+
+**Spinner frame retirement (2026-08-08):** the Grok braille and dot
+spinner frame arrays now live in `runie-tui-model::status` so the
+actor-owned animation clock and the renderer share one vocabulary.
+The renderer-local `braille_spinner_frames`, `braille_spinner_fallback`,
+`dot_spinner_frames`, and `dot_spinner_fallback` functions at
+`crates/runie-tui/src/widgets/status.rs:37, 42, 47, 52` were collapsed
+to thin `&runie_tui_model::{...}` references, and the local
+`TurnStatus::FRAMES` constant at line 92 was replaced with the
+canonical `runie_tui_model::BRAILLE_SPINNER_FRAMES` reference. The new
+`spinner_frames_pin_grok_source_vocabularies` test in
+`crates/runie-tui-model/src/status.rs` pins the eight-frame braille
+order, the four-glyph ASCII fallback, the four-glyph dot pulse, and
+the three-glyph dot fallback. The 109 `runie-tui-model` lib unit tests
+(108 pre-existing + 1 new), the 220 `runie-tui` lib unit tests, the 5
+`runie` binary unit tests, the 28 `visual_snapshots` replay tests, and
+the full `just ci` (fmt-check, clippy, lint, test, parity, source
+inventory, Pi event contract, feed-actor boundary) are green.

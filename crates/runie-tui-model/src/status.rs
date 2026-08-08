@@ -4,6 +4,24 @@ use runie_core::types::{StopReason, ThemeKind, Usage, WaitingReason};
 
 const HEADER_TOKEN_BUDGET: u64 = 500_000;
 
+/// Grok's eight-frame braille foreground spinner. Centralized here so the
+/// actor-owned animation clock and the renderer share one vocabulary.
+pub const BRAILLE_SPINNER_FRAMES: [&str; 8] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"];
+
+/// Legacy `| / - \` fallback for the braille spinner (glyphs.rs:230).
+/// Centralized here so the renderer agrees with the model on the
+/// quiet terminal fallback shape.
+pub const BRAILLE_SPINNER_FALLBACK: [&str; 4] = ["|", "/", "-", "\\"];
+
+/// Pulsing dot progress frames (glyphs.rs:238: `⋅ : ⸬ ⁙`).
+/// Centralized here so the activity spinner and the renderer share one
+/// glyph vocabulary.
+pub const DOT_SPINNER_FRAMES: [&str; 4] = ["⋅", ":", "⸬", "⁙"];
+
+/// Quiet 1-column dot cycle fallback (glyphs.rs: `. : ·`). Centralized
+/// here so the renderer agrees with the model on the quiet fallback.
+pub const DOT_SPINNER_FALLBACK: [&str; 3] = [".", ":", "·"];
+
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum Status {
     #[default]
@@ -202,6 +220,22 @@ mod tests {
             ..StatusSnapshot::default()
         };
         assert_eq!(state.worked_for_label(), "Worked for 2.8s");
+    }
+
+    #[test]
+    fn spinner_frames_pin_grok_source_vocabularies() {
+        // Pin the braille foreground spinner: eight frames in the
+        // Grok source-backed order.
+        assert_eq!(
+            super::BRAILLE_SPINNER_FRAMES,
+            ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"]
+        );
+        // Pin the braille fallback: a four-frame ASCII quiet cycle.
+        assert_eq!(super::BRAILLE_SPINNER_FALLBACK, ["|", "/", "-", "\\"]);
+        // Pin the dot progress frames: the four-glyph pulse cycle.
+        assert_eq!(super::DOT_SPINNER_FRAMES, ["⋅", ":", "⸬", "⁙"]);
+        // Pin the dot fallback: a three-frame 1-column quiet cycle.
+        assert_eq!(super::DOT_SPINNER_FALLBACK, [".", ":", "·"]);
     }
 
     #[test]

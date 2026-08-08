@@ -35,22 +35,22 @@ impl StatusStyleExt for Status {
 /// Braille spinner frames matching grok's `braille_spinner_frames`
 /// (xai-grok-pager-render/src/glyphs.rs:225) — FANCY set.
 pub fn braille_spinner_frames() -> &'static [&'static str] {
-    &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"]
+    &runie_tui_model::BRAILLE_SPINNER_FRAMES
 }
 
 /// Legacy `| / - \` fallback for braille (glyphs.rs:230).
 pub fn braille_spinner_fallback() -> &'static [&'static str] {
-    &["|", "/", "-", "\\"]
+    &runie_tui_model::BRAILLE_SPINNER_FALLBACK
 }
 
 /// Pulsing dot progress frames (glyphs.rs:238: `⋅ : ⸬ ⁙`).
 pub fn dot_spinner_frames() -> &'static [&'static str] {
-    &["⋅", ":", "⸬", "⁙"]
+    &runie_tui_model::DOT_SPINNER_FRAMES
 }
 
 /// Quiet 1-column dot cycle fallback (glyphs.rs: `. : ·`).
 pub fn dot_spinner_fallback() -> &'static [&'static str] {
-    &[".", ":", "·"]
+    &runie_tui_model::DOT_SPINNER_FALLBACK
 }
 
 #[derive(Debug, Clone, Default)]
@@ -89,7 +89,7 @@ impl TurnStatus {
     /// each braille frame for four 30 Hz ticks (~133 ms), so three Runie
     /// ticks is the closest stable equivalent (~150 ms).
     const SPINNER_DIVISOR: usize = 3;
-    const FRAMES: [&'static str; 8] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"];
+    const FRAMES: [&'static str; 8] = runie_tui_model::BRAILLE_SPINNER_FRAMES;
 
     pub fn new(frame: usize) -> Self {
         Self {
