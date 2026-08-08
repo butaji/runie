@@ -6,7 +6,9 @@ use std::sync::Arc;
 use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio::task::JoinSet;
 
-use crate::telemetry::{SpanError, SpanStatus, TelemetrySpan};
+use crate::telemetry::{
+    validate_pi_ai_request_end_attributes, SpanError, SpanStatus, TelemetrySpan,
+};
 use crate::types::{AgentContext, Model, SimpleStreamOptions};
 
 use super::stream_fn::{AssistantMessageEventStream, StreamFn, WebSocketAdapter};
@@ -370,7 +372,8 @@ async fn pump_stream(
     while let Some(event) = stream.next().await {
         if let Some(span) = &telemetry_span {
             let attributes = telemetry_attributes_for_event(&event);
-            if !attributes.is_empty() {
+            if !attributes.is_empty() && validate_pi_ai_request_end_attributes(&attributes).is_ok()
+            {
                 span.set_attributes(attributes).await;
             }
         }

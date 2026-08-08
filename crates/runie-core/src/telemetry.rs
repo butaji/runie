@@ -95,6 +95,59 @@ pub fn validate_pi_ai_request_attributes(
     Ok(())
 }
 
+/// Validate the source-defined end vocabulary for Pi's `pi.ai.request` span.
+/// End attributes are optional, but known fields must retain Pi's primitive
+/// types and closed stop-reason values.
+#[allow(
+    clippy::too_many_lines,
+    reason = "the Pi schema keeps its closed end vocabulary together at one typed boundary"
+)]
+pub fn validate_pi_ai_request_end_attributes(
+    attributes: &HashMap<String, serde_json::Value>,
+) -> Result<(), String> {
+    const STRING_KEYS: [&str; 4] = [
+        "pi.ai.response.model",
+        "pi.ai.response.id",
+        "pi.ai.error.type",
+        "pi.ai.response.stop_reason",
+    ];
+    const NUMBER_KEYS: [&str; 9] = [
+        "pi.ai.http.status_code",
+        "pi.ai.usage.input_tokens",
+        "pi.ai.usage.output_tokens",
+        "pi.ai.usage.cache_read_tokens",
+        "pi.ai.usage.cache_write_tokens",
+        "pi.ai.usage.reasoning_tokens",
+        "pi.ai.usage.total_tokens",
+        "pi.ai.usage.cost",
+        "pi.ai.stream.chunk_count",
+    ];
+    for (key, value) in attributes {
+        if STRING_KEYS.contains(&key.as_str()) {
+            if !value.is_string() {
+                return Err(format!("Pi telemetry {key} must be a string"));
+            }
+            if key == "pi.ai.response.stop_reason"
+                && !matches!(
+                    value.as_str(),
+                    Some("stop" | "length" | "tool_use" | "error" | "aborted" | "deferred")
+                )
+            {
+                return Err("Pi telemetry response stop reason is not supported".to_owned());
+            }
+        } else if NUMBER_KEYS.contains(&key.as_str())
+            || key == "pi.ai.stream.time_to_first_chunk_ms"
+        {
+            if !value.is_number() {
+                return Err(format!("Pi telemetry {key} must be a number"));
+            }
+        } else {
+            return Err(format!("unknown Pi telemetry end attribute {key}"));
+        }
+    }
+    Ok(())
+}
+
 /// Pi telemetry attributes are deliberately narrower than arbitrary JSON:
 /// values are primitives or homogeneous primitive arrays. Invalid payloads
 /// are passive and the containing mutation is ignored atomically.
@@ -698,6 +751,28 @@ mod tests {
         assert!(validate_pi_ai_request_attributes(&attributes).is_err());
         attributes.remove("pi.ai.model");
         assert!(validate_pi_ai_request_attributes(&attributes).is_err());
+    }
+
+    #[test]
+    fn pi_ai_request_end_schema_rejects_unknown_and_invalid_stop_reason() {
+        let attributes = HashMap::from([
+            (
+                "pi.ai.response.stop_reason".into(),
+                serde_json::json!("deferred"),
+            ),
+            ("pi.ai.usage.total_tokens".into(), serde_json::json!(12)),
+        ]);
+        assert!(validate_pi_ai_request_end_attributes(&attributes).is_ok());
+        assert!(validate_pi_ai_request_end_attributes(&HashMap::from([(
+            "pi.ai.response.stop_reason".into(),
+            serde_json::json!("pending"),
+        )]))
+        .is_err());
+        assert!(validate_pi_ai_request_end_attributes(&HashMap::from([(
+            "pi.ai.unknown".into(),
+            serde_json::json!(true),
+        )]))
+        .is_err());
     }
 
     #[test]

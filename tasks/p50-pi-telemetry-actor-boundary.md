@@ -151,3 +151,9 @@ status was explicitly set. Callback failure only supplies automatic error
 status when no explicit status exists, matching Pi's preservation of an
 explicit `ok` or structured `error` status; YAML status fixtures assert the
 new snapshot fact.
+
+Typed end-schema increment (2026-08-09): the provider telemetry boundary now
+validates Pi's `pi.ai.request` end attributes, including the closed normalized
+stop-reason vocabulary and numeric usage/transport fields, before projecting
+terminal event metadata. Unknown or invalid end fields are rejected by the
+typed validator; generic extension spans remain schema-agnostic.
