@@ -7,8 +7,8 @@ use std::sync::{
 };
 
 use crate::types::{
-    AssistantMessage, AssistantMessageEvent, Model, SimpleStreamOptions, StopReason, ToolCall,
-    Usage,
+    AssistantMessage, AssistantMessageEvent, DeferredHandle, Model, SimpleStreamOptions,
+    StopReason, ToolCall, Usage,
 };
 use futures::stream;
 
@@ -23,6 +23,8 @@ use super::{
 pub struct ReplayProvider {
     events: Vec<AssistantMessageEvent>,
     deferred_events: Option<Vec<AssistantMessageEvent>>,
+    deferred_handle: Option<DeferredHandle>,
+    deferred_cancelled: std::sync::atomic::AtomicBool,
     /// Number of `stream()` calls. The first call replays the recorded trace;
     /// later calls (auto-continue after a tool batch) return a terminating
     /// `Done{stop}` so the loop does not re-replay the same trace forever.
@@ -130,6 +132,8 @@ impl ReplayProvider {
         Ok(Self {
             events,
             deferred_events: None,
+            deferred_handle: None,
+            deferred_cancelled: std::sync::atomic::AtomicBool::new(false),
             calls: AtomicUsize::new(0),
         })
     }
@@ -139,6 +143,14 @@ impl ReplayProvider {
     /// capability only supplies the adapter's already-decoded event stream.
     pub fn with_deferred_events(mut self, events: Vec<AssistantMessageEvent>) -> Self {
         self.deferred_events = Some(events);
+        self
+    }
+
+    /// Bind the replayed deferred response to the provider-scoped identity
+    /// Pi passes to an adapter. This keeps replay fixtures from accepting a
+    /// handle belonging to another provider/model/API lane.
+    pub fn with_deferred_handle(mut self, handle: DeferredHandle) -> Self {
+        self.deferred_handle = Some(handle);
         self
     }
 }
@@ -493,7 +505,7 @@ impl StreamFn for ReplayProvider {
     async fn fetch_deferred(
         &self,
         _model: &Model,
-        handle: &crate::types::DeferredHandle,
+        handle: &DeferredHandle,
         _options: Option<SimpleStreamOptions>,
     ) -> Result<AssistantMessageEventStream, StreamError> {
         let Some(events) = self.deferred_events.as_ref() else {
@@ -506,13 +518,30 @@ impl StreamFn for ReplayProvider {
                 "deferred response handle id is required".into(),
             ));
         }
+        if self.deferred_cancelled.load(Ordering::Acquire) {
+            return Err(StreamError::Api(format!(
+                "deferred response was cancelled: {}",
+                handle.id
+            )));
+        }
+        if let Some(expected) = &self.deferred_handle {
+            if expected.provider != handle.provider
+                || expected.model_id != handle.model_id
+                || expected.api != handle.api
+            {
+                return Err(StreamError::Invalid(format!(
+                    "deferred response handle scope mismatch: {}",
+                    handle.id
+                )));
+            }
+        }
         Ok(Box::pin(stream::iter(events.clone())))
     }
 
     async fn cancel_deferred(
         &self,
         _model: &Model,
-        handle: &crate::types::DeferredHandle,
+        handle: &DeferredHandle,
         _options: Option<SimpleStreamOptions>,
     ) -> Result<(), StreamError> {
         if handle.id.is_empty() {
@@ -520,6 +549,18 @@ impl StreamFn for ReplayProvider {
                 "deferred response handle id is required".into(),
             ));
         }
+        if let Some(expected) = &self.deferred_handle {
+            if expected.provider != handle.provider
+                || expected.model_id != handle.model_id
+                || expected.api != handle.api
+            {
+                return Err(StreamError::Invalid(format!(
+                    "deferred response handle scope mismatch: {}",
+                    handle.id
+                )));
+            }
+        }
+        self.deferred_cancelled.store(true, Ordering::Release);
         Ok(())
     }
 }
@@ -570,15 +611,6 @@ mod tests {
 
     #[tokio::test]
     async fn deferred_replay_uses_provider_scoped_event_fixture() {
-        let provider = ReplayProvider::from_sse_body(
-            "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\"}}\n",
-        )
-        .expect("ordinary replay trace")
-        .with_deferred_events(vec![AssistantMessageEvent::Done {
-            stop_reason: StopReason::Stop,
-            usage: Usage::default(),
-            message: None,
-        }]);
         let handle = crate::types::DeferredHandle {
             provider: "replay".into(),
             model_id: "model".into(),
@@ -588,6 +620,16 @@ mod tests {
             poll_after_ms: None,
             data: None,
         };
+        let provider = ReplayProvider::from_sse_body(
+            "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\"}}\n",
+        )
+        .expect("ordinary replay trace")
+        .with_deferred_events(vec![AssistantMessageEvent::Done {
+            stop_reason: StopReason::Stop,
+            usage: Usage::default(),
+            message: None,
+        }])
+        .with_deferred_handle(handle.clone());
         let mut events = provider
             .fetch_deferred(&Model::default(), &handle, None)
             .await
@@ -600,6 +642,42 @@ mod tests {
             .cancel_deferred(&Model::default(), &handle, None)
             .await
             .expect("deferred cancellation capability");
+        assert!(provider
+            .fetch_deferred(&Model::default(), &handle, None)
+            .await
+            .is_err());
+    }
+
+    #[tokio::test]
+    async fn deferred_replay_rejects_a_foreign_provider_scope() {
+        let expected = DeferredHandle {
+            provider: "replay".into(),
+            model_id: "model".into(),
+            api: "responses".into(),
+            id: "deferred-1".into(),
+            expires_at: None,
+            poll_after_ms: None,
+            data: None,
+        };
+        let provider = ReplayProvider::from_sse_body(
+            "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\"}}\n",
+        )
+        .expect("ordinary replay trace")
+        .with_deferred_events(vec![])
+        .with_deferred_handle(expected);
+        let foreign = DeferredHandle {
+            provider: "other".into(),
+            model_id: "model".into(),
+            api: "responses".into(),
+            id: "deferred-1".into(),
+            expires_at: None,
+            poll_after_ms: None,
+            data: None,
+        };
+        assert!(provider
+            .fetch_deferred(&Model::default(), &foreign, None)
+            .await
+            .is_err());
     }
 
     #[tokio::test]

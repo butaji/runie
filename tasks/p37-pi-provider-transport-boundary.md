@@ -225,6 +225,12 @@ The same replay capability now implements `cancel_deferred` with the matching
 validated handle boundary, so deterministic fetch/cancel tests exercise both
 optional provider operations without introducing a generic polling loop.
 
+Deferred scope/cancellation increment (2026-08-09): the replay capability now
+optionally binds the expected provider/model/API tuple, rejects foreign scoped
+handles, and makes a successfully cancelled handle fail subsequent fetches.
+This mirrors Pi's provider adapter contract without pretending the generic HTTP
+boundary can perform provider-specific polling or decoding.
+
 Provider lifecycle increment (2026-08-07): `ProviderActor` now aborts any
 previous owned pump before acknowledging a new `Start`. This matches the
 one-in-flight Pi turn contract and prevents superseded streams from publishing
