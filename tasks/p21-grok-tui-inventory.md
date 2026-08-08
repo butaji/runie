@@ -711,6 +711,13 @@ anchors and reveal semantics remain compatible, while duplicate live rows no
 longer share hidden-member positions. Focused dense/replay tests and `just ci`
 pass.
 
+Keyboard member-selection increment (2026-08-10): feed navigation now
+deduplicates selectable tool entries by the actor-derived header identity
+instead of provider call ID alone. Duplicate live cards can therefore be
+selected independently while compatibility-seeded rows retain their previous
+grouping. The focused reducer regression, complete replay suite, and `just ci`
+pass.
+
 Workflow status formatter audit (2026-08-06): compared against Grok's
 `WorkflowBlockStatus` renderer and added exact tests for `failed`, `cancelled`,
 and `paused` elapsed wording. Cancelled/paused statuses now use `after 1.2s`

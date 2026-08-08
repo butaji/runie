@@ -3209,6 +3209,25 @@ mod tests {
     }
 
     #[test]
+    fn keyboard_selection_keeps_duplicate_live_cards_selectable() {
+        let mut state = FeedState {
+            lines: vec![
+                Line::new(LineKind::Tool, "first")
+                    .for_tool("duplicate")
+                    .for_tool_row(1),
+                Line::new(LineKind::Tool, "second")
+                    .for_tool("duplicate")
+                    .for_tool_row(2),
+            ],
+            ..FeedState::default()
+        };
+        assert_eq!(state.selectable_entries(), vec![0, 1]);
+        state.select_entry(1);
+        state.select_entry(1);
+        assert_eq!(state.navigation.selected_entry, Some(1));
+    }
+
+    #[test]
     fn memory_card_rows_separate_metadata_from_snippet_content() {
         let lines = vec![
             Line::new(LineKind::Tool, "Memory Search actors").for_tool("memory-1"),
@@ -4638,7 +4657,7 @@ impl FeedState {
                     LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError => line
                         .tool_call_id
                         .as_ref()
-                        .is_none_or(|id| seen.insert(id.clone())),
+                        .is_none_or(|_| seen.insert(tool_member_key(&self.lines, index))),
                     LineKind::User | LineKind::Assistant | LineKind::Reasoning => true,
                     _ => false,
                 };
