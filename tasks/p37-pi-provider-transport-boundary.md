@@ -1,6 +1,6 @@
 # p37 — Pi provider transport boundary
 
-Status: in progress (HTTP/replay boundary complete; provider capability seam and YAML route coverage complete; Codex wire adapter lifecycle, production wiring, and source-aligned retry boundary implemented; provider-specific deferred polling remains open)
+Status: in progress (HTTP/replay boundary complete; provider capability seam and YAML route coverage complete; Codex WebSocket adapter lifecycle, production wiring, and source-aligned retry boundary implemented; provider-specific deferred polling remains open)
 
 The Pi `ProviderRequestOptions` contract is broader than Runie's current
 `HttpActor` abstraction. This task records the exact boundary so parity work
@@ -66,9 +66,10 @@ Not yet implemented behaviorally:
 - telemetry context remains unsupported because Pi's value is a live span
   capability (`startSpan`), not serializable request data; it requires a
   concrete telemetry backend and lifecycle contract before promotion.
-- transport selection is now typed and carried through `HttpRequest`; concrete
-  WebSocket adapters are still unsupported, so selecting one is observable but
-  cannot yet open a WebSocket.
+- transport selection is now typed and carried through `HttpRequest`; the
+  provider-scoped `CodexWebSocketAdapter` consumes WebSocket requests with an
+  injected connector. Generic HTTP remains transport-neutral and does not
+  emulate provider-specific WebSocket behavior.
 - nullable request headers: additive `HttpRequest` delivery now carries
   optional headers; the default adapter preserves existing body-only actors.
 - `maxRetryDelayMs`: retry delay is capped by the option, with provider
@@ -77,8 +78,9 @@ Not yet implemented behaviorally:
 - provider-specific temperature/cache marker generation: the generic actor
   now carries both options, but concrete payload mapping still requires an
   adapter contract and must not be inferred from transport metadata alone.
-- WebSocket open-handshake timeout is carried as separate request metadata;
-  the current HTTP actor still does not open WebSockets.
+- WebSocket open-handshake timeout is carried as separate request metadata and
+  consumed by the Codex adapter's owned connector; the generic HTTP actor does
+  not open WebSockets.
 
 ## Next implementation slice
 
