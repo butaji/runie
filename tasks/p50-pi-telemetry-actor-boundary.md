@@ -93,6 +93,12 @@ settlement ordering; adding wall-clock start/end fields would be a false
 parity feature. The remaining telemetry work is backend/exporter and complete
 conformance-vector coverage.
 
+Concurrent-child conformance increment (2026-08-08): Runie now has an owned
+task/channel regression matching Pi’s concurrent child callback case. It
+asserts both child parent IDs and the settlement order
+`second-child < first-child < parent` without sleeping or reading wall-clock
+time.
+
 Exporter increment (2026-08-08): `TelemetryActor::new_with_exporter` accepts an
 optional actor-owned async exporter. A settled span exports the immutable
 snapshot after the reducer marks it ended; exporter failures do not mutate or

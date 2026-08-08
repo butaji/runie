@@ -734,6 +734,60 @@ mod tests {
         assert_eq!(child, snapshot.spans[1].id);
     }
 
+    #[tokio::test]
+    #[allow(clippy::too_many_lines)]
+    async fn concurrent_child_callbacks_preserve_parentage_and_end_order() {
+        let actor = TelemetryActor::new();
+        let parent = actor
+            .start_span(None, "parent", HashMap::new())
+            .await
+            .unwrap();
+        let (release_tx, release_rx) = tokio::sync::oneshot::channel();
+        let first = parent.with_child("first-child", HashMap::new(), |child| async move {
+            let _ = release_rx.await;
+            Ok::<_, &'static str>(child.id)
+        });
+        tokio::pin!(first);
+        let second = parent.with_child("second-child", HashMap::new(), |_child| async {
+            Ok::<_, &'static str>(())
+        });
+        tokio::pin!(second);
+        let second_result = tokio::select! {
+            result = &mut second => result,
+            _ = &mut first => panic!("first child cannot settle before its release"),
+        };
+        second_result
+            .expect("second child callback")
+            .expect("second child success");
+        release_tx.send(()).expect("first child release");
+        first
+            .await
+            .expect("first child callback")
+            .expect("first child success");
+        parent.end().await;
+
+        let snapshot = actor.snapshot();
+        let first = snapshot
+            .spans
+            .iter()
+            .find(|span| span.name == "first-child")
+            .unwrap();
+        let second = snapshot
+            .spans
+            .iter()
+            .find(|span| span.name == "second-child")
+            .unwrap();
+        let parent = snapshot
+            .spans
+            .iter()
+            .find(|span| span.name == "parent")
+            .unwrap();
+        assert_eq!(first.parent_id, Some(parent.id));
+        assert_eq!(second.parent_id, Some(parent.id));
+        assert!(second.end_sequence < first.end_sequence);
+        assert!(first.end_sequence < parent.end_sequence);
+    }
+
     #[test]
     fn pi_ai_request_schema_rejects_missing_invalid_and_unknown_operations() {
         let mut attributes = HashMap::from([
