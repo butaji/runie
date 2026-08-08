@@ -201,3 +201,14 @@ branch-context role sequence through `session_branch_context_roles`.
 This closes context materialization for the selected branch. Full interactive
 tree-navigation admission and provider-summary generation remain owned by the
 existing navigation/provider actor seams.
+
+## Atomic navigation admission (2026-08-09)
+
+`SessionActor::admit_navigation` now sends one `AdmitNavigation` mailbox
+command. Target and optional summary-entry validation, operation-lane
+validation, reduction, and snapshot publication all execute against the same
+actor-owned state turn. The previous snapshot-read-then-record sequence could
+validate stale state if another session command arrived between those steps;
+the public API no longer performs that cross-turn read. The existing admission
+regression continues to prove invalid targets leave the active operation
+projection unchanged.

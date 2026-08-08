@@ -2623,6 +2623,14 @@ enum Command {
         reply: oneshot::Sender<()>,
     },
     Config(SessionConfigRecord, oneshot::Sender<Result<(), String>>),
+    AdmitNavigation {
+        operation_id: String,
+        lane: String,
+        target_id: String,
+        summarize: bool,
+        summary_entry_id: Option<String>,
+        reply: oneshot::Sender<Result<(), String>>,
+    },
     Lane {
         lane: String,
         leaf_id: Option<String>,
@@ -3129,6 +3137,58 @@ impl SessionActor {
                         let _ = snapshot_tx.send(state.clone());
                         let _ = reply.send(Ok(()));
                     }
+                    Command::AdmitNavigation {
+                        operation_id,
+                        lane,
+                        target_id,
+                        summarize,
+                        summary_entry_id,
+                        reply,
+                    } => {
+                        let exists = |id: &str| {
+                            state.entries.iter().any(|entry| entry.id == id)
+                                || state.config_records.iter().any(|entry| entry.id == id)
+                        };
+                        if !exists(&target_id) {
+                            let _ = reply.send(Err(format!(
+                                "navigation target does not exist: {target_id}"
+                            )));
+                            continue;
+                        }
+                        if let Some(summary_id) = &summary_entry_id {
+                            if !exists(summary_id) {
+                                let _ = reply.send(Err(format!(
+                                    "navigation summary entry does not exist: {summary_id}"
+                                )));
+                                continue;
+                            }
+                        }
+                        let record = SessionConfigRecord::TypedOperation(
+                            SessionLaneRecord::OperationStarted(serde_json::json!({
+                                "id": operation_id,
+                                "lane": lane,
+                                "intent": {
+                                    "kind": "navigation",
+                                    "targetId": target_id,
+                                    "summarize": summarize,
+                                    "summaryEntryId": summary_entry_id,
+                                },
+                            })),
+                        );
+                        let Some((record_type, data)) = operation_record_parts(&record) else {
+                            let _ = reply
+                                .send(Err("navigation operation could not be encoded".to_owned()));
+                            continue;
+                        };
+                        if let Err(error) = validate_session_lane_record(&state, record_type, data)
+                        {
+                            let _ = reply.send(Err(error));
+                            continue;
+                        }
+                        reduce_operation_record(&mut state, record_type, data);
+                        let _ = snapshot_tx.send(state.clone());
+                        let _ = reply.send(Ok(()));
+                    }
                     Command::Lane {
                         lane,
                         leaf_id,
@@ -3454,35 +3514,21 @@ impl SessionActor {
         summarize: bool,
         summary_entry_id: Option<String>,
     ) -> Result<(), String> {
-        let snapshot = self.snapshot();
-        let exists = |id: &str| {
-            snapshot.entries.iter().any(|entry| entry.id == id)
-                || snapshot.config_records.iter().any(|entry| entry.id == id)
-        };
-        if !exists(&target_id) {
-            return Err(format!("navigation target does not exist: {target_id}"));
-        }
-        if let Some(summary_id) = &summary_entry_id {
-            if !exists(summary_id) {
-                return Err(format!(
-                    "navigation summary entry does not exist: {summary_id}"
-                ));
-            }
-        }
-        self.record_operation(
-            SessionOperationKind::Started,
-            serde_json::json!({
-                "id": operation_id,
-                "lane": lane,
-                "intent": {
-                    "kind": "navigation",
-                    "targetId": target_id,
-                    "summarize": summarize,
-                    "summaryEntryId": summary_entry_id,
-                },
-            }),
-        )
-        .await
+        let (reply_tx, reply_rx) = oneshot::channel();
+        self.tx
+            .send(Command::AdmitNavigation {
+                operation_id,
+                lane,
+                target_id,
+                summarize,
+                summary_entry_id,
+                reply: reply_tx,
+            })
+            .await
+            .map_err(|_| "session actor is closed".to_owned())?;
+        reply_rx
+            .await
+            .map_err(|_| "session actor response was dropped".to_owned())?
     }
 
     pub async fn record_lane(
