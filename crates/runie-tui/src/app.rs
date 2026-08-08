@@ -686,25 +686,7 @@ impl App {
         else {
             return Ok(());
         };
-        let compaction_id = format!(
-            "compaction-{}",
-            snapshot
-                .lane_records
-                .iter()
-                .filter(|record| record.id.starts_with("compaction-"))
-                .count()
-                .saturating_add(1)
-        );
-        self.session_actor
-            .record_operation(
-                runie_core::session::SessionOperationKind::Started,
-                serde_json::json!({
-                    "id": compaction_id.clone(),
-                    "lane": "main",
-                    "intent": {"kind": "compaction"},
-                }),
-            )
-            .await?;
+        let compaction_id = self.session_actor.begin_compaction("main".into()).await?;
         let request = runie_core::session::CompactionSummaryRequest::from_preparation(
             &preparation,
             &snapshot.entries,

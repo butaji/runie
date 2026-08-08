@@ -2631,6 +2631,10 @@ enum Command {
         summary_entry_id: Option<String>,
         reply: oneshot::Sender<Result<(), String>>,
     },
+    BeginCompaction {
+        lane: String,
+        reply: oneshot::Sender<Result<String, String>>,
+    },
     Lane {
         lane: String,
         leaf_id: Option<String>,
@@ -3189,6 +3193,37 @@ impl SessionActor {
                         let _ = snapshot_tx.send(state.clone());
                         let _ = reply.send(Ok(()));
                     }
+                    Command::BeginCompaction { lane, reply } => {
+                        let next = state
+                            .lane_records
+                            .iter()
+                            .filter_map(|record| record.id.strip_prefix("compaction-"))
+                            .filter_map(|value| value.parse::<u64>().ok())
+                            .max()
+                            .unwrap_or_default()
+                            .saturating_add(1);
+                        let operation_id = format!("compaction-{next}");
+                        let record = SessionConfigRecord::TypedOperation(
+                            SessionLaneRecord::OperationStarted(serde_json::json!({
+                                "id": operation_id,
+                                "lane": lane,
+                                "intent": {"kind": "compaction"},
+                            })),
+                        );
+                        let Some((record_type, data)) = operation_record_parts(&record) else {
+                            let _ = reply
+                                .send(Err("compaction operation could not be encoded".to_owned()));
+                            continue;
+                        };
+                        if let Err(error) = validate_session_lane_record(&state, record_type, data)
+                        {
+                            let _ = reply.send(Err(error));
+                            continue;
+                        }
+                        reduce_operation_record(&mut state, record_type, data);
+                        let _ = snapshot_tx.send(state.clone());
+                        let _ = reply.send(Ok(operation_id));
+                    }
                     Command::Lane {
                         lane,
                         leaf_id,
@@ -3500,6 +3535,21 @@ impl SessionActor {
     pub async fn record_typed_operation(&self, record: SessionLaneRecord) -> Result<(), String> {
         self.record_config(SessionConfigRecord::TypedOperation(record))
             .await
+    }
+
+    /// Allocate and admit a compaction operation identity in one actor turn.
+    pub async fn begin_compaction(&self, lane: String) -> Result<String, String> {
+        let (reply_tx, reply_rx) = oneshot::channel();
+        self.tx
+            .send(Command::BeginCompaction {
+                lane,
+                reply: reply_tx,
+            })
+            .await
+            .map_err(|_| "session actor is closed".to_owned())?;
+        reply_rx
+            .await
+            .map_err(|_| "session actor response was dropped".to_owned())?
     }
 
     /// Admit a Pi navigation operation only when its target and optional
@@ -5389,6 +5439,37 @@ mod tests {
                 ..
             } if summary == "provider summary" && retained_tail.len() == 1
         ));
+    }
+
+    #[tokio::test]
+    async fn compaction_identity_is_allocated_inside_the_session_actor() {
+        let actor = SessionActor::new();
+        let first = actor
+            .begin_compaction("main".into())
+            .await
+            .expect("first compaction start");
+        assert_eq!(first, "compaction-1");
+        assert_eq!(
+            actor.snapshot().active_operations.get(&first),
+            Some(&"started".to_owned())
+        );
+        assert_eq!(
+            actor.snapshot().operation_kinds.get(&first),
+            Some(&"compaction".to_owned())
+        );
+
+        actor
+            .record_operation(
+                SessionOperationKind::Finished,
+                serde_json::json!({"id": first, "outcome": "completed"}),
+            )
+            .await
+            .expect("finish first compaction");
+        let second = actor
+            .begin_compaction("main".into())
+            .await
+            .expect("second compaction start");
+        assert_eq!(second, "compaction-2");
     }
 
     #[allow(

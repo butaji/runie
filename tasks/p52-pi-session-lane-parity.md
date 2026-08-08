@@ -423,6 +423,14 @@ publication/provider failure. The provider remains responsible only for the
 summary capability; the TUI does not mutate the session projection or invent
 a provider result.
 
+### Actor-owned compaction identity (2026-08-09)
+
+`SessionActor::begin_compaction` now allocates the `compaction-N` identity and
+admits the typed start record in one mailbox turn. `App::compact_session` no
+longer reads the session snapshot to count IDs before issuing a separate
+mutation, eliminating a stale-identity race while preserving the explicit
+prepare → summarize → publish → finish pipeline.
+
 ### Typed identity boundary (2026-08-08)
 
 `SessionLaneRecord` now owns the Pi identity-shape table through typed
