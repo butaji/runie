@@ -559,14 +559,21 @@ impl StreamFn for ReplayProvider {
                 )));
             }
         }
-        let events = self
+        let mut polls = self
             .deferred_poll_events
             .lock()
-            .map_err(|_| StreamError::Invalid("deferred replay poll state poisoned".into()))?
-            .as_mut()
-            .and_then(|polls| (!polls.is_empty()).then(|| polls.remove(0)))
-            .or_else(|| default_events.cloned())
-            .ok_or_else(|| StreamError::Invalid("deferred poll sequence is exhausted".into()))?;
+            .map_err(|_| StreamError::Invalid("deferred replay poll state poisoned".into()))?;
+        let events = match polls.as_mut() {
+            Some(polls) if polls.is_empty() => {
+                return Err(StreamError::Invalid(
+                    "deferred poll sequence is exhausted".into(),
+                ));
+            }
+            Some(polls) => polls.remove(0),
+            None => default_events.cloned().ok_or_else(|| {
+                StreamError::Invalid("deferred response fixture is missing".into())
+            })?,
+        };
         Ok(Box::pin(stream::iter(events)))
     }
 
@@ -766,6 +773,10 @@ mod tests {
                 ..
             })
         ));
+        assert!(provider
+            .fetch_deferred(&Model::default(), &handle, None)
+            .await
+            .is_err());
     }
 
     #[tokio::test]
