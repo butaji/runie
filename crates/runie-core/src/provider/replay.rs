@@ -98,7 +98,7 @@ impl ReplayProvider {
         for line in input.lines() {
             if let Some(raw_error) = line.strip_prefix("error:").map(str::trim_start) {
                 if let Ok(value) = serde_json::from_str::<serde_json::Value>(raw_error) {
-                    return Err(StreamError::Api(value.to_string()));
+                    return Err(StreamError::Api(response_error_message(&value)));
                 }
                 return Err(StreamError::Api(raw_error.to_owned()));
             }
@@ -170,7 +170,9 @@ impl ReplayProvider {
 
 fn response_error_message(value: &serde_json::Value) -> String {
     let response = value.get("response").unwrap_or(value);
-    let error = response.get("error");
+    let error = response
+        .get("error")
+        .or_else(|| response.get("code").map(|_| response));
     let code = error.and_then(|v| v.get("code")).and_then(|v| v.as_str());
     let message = error
         .and_then(|v| v.get("message"))
@@ -873,6 +875,17 @@ mod tests {
         assert!(matches!(
             error,
             StreamError::Api(message) if message == "rate_limit: try later"
+        ));
+    }
+
+    #[test]
+    fn raw_sse_error_preserves_provider_code_and_message() {
+        let result = ReplayProvider::from_sse_body(
+            "error: {\"code\":\"overloaded\",\"message\":\"try again\"}\n",
+        );
+        assert!(matches!(
+            result,
+            Err(StreamError::Api(message)) if message == "overloaded: try again"
         ));
     }
 
