@@ -674,3 +674,32 @@ the same event → transcript contract. The 25 `event_renderer::tests`
 unit tests, the 28 `visual_snapshots` replay tests, and the full
 `just ci` (fmt-check, clippy, lint, test, parity, source inventory,
 Pi event contract, feed-actor boundary) are green.
+
+**`handle_tool_end` atomic snapshot coalesce (2026-08-08):**
+`EventRenderer::handle_tool_end` in `crates/runie-tui/src/event_renderer.rs`
+walked `self.scrollback_actor.model_snapshot()` four times — once each
+through `active_tool_count`, `activity_counts`, `current_tool_header`,
+and `current_tool_args` — and each call cloned the full `FeedSnapshot`
+just to read a few fields. A concurrent `ScrollbackActor` `apply_batch`
+between any two reads could leave the tool-end card header, args,
+activity counts, and active-tool count disagreeing about which tool was
+closing. The four helpers are now free functions taking
+`snapshot: &FeedSnapshot` (placed at module scope right after the
+`impl EventRenderer` block) and `handle_tool_end` binds one
+`let snapshot = self.scrollback_actor.model_snapshot();` at the top of
+its body, threading `&snapshot` through every helper call so the card
+header, args, activity text, and active-tool count all observe the
+same atomic `FeedSnapshot`. The clippy `too_many_lines` allow reason
+now states the atomic-snapshot guarantee. The other three call sites
+of the converted helpers each get their own local snapshot read — no
+further consolidation: `handle_tool_start` reads once for
+`active_tool_count`, `handle_tool_update` reads once for
+`current_tool_header` (the earlier running-block check at the top of
+the function is a separate read), and `activity_counts_with_start`
+reads once for its internal `activity_counts` call. `activity_group_exists_since_latest_user`
+and `activity_counts_with_start` stay as `&self` methods. A new
+`use runie_tui_model::FeedSnapshot;` import backs the free-function
+signatures. The 219 `runie-tui` lib unit tests, the 5 `runie` binary
+unit tests, the 28 `visual_snapshots` replay tests, and the full
+`just ci` (fmt-check, clippy, lint, test, parity, source inventory,
+Pi event contract, feed-actor boundary) are green.

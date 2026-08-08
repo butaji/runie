@@ -14,6 +14,7 @@ use crate::{ScrollbackActor, StatusActor};
 use crate::widgets::Status;
 
 pub use runie_tui_model::status_messages_for_event;
+use runie_tui_model::FeedSnapshot;
 
 const LIVE_TIMESTAMP_SECONDS_MIN: i64 = 1_000_000_000;
 const DEFAULT_THINKING_ELAPSED_MS: u64 = 900;
@@ -560,8 +561,9 @@ impl EventRenderer {
         tool_name: String,
         args: serde_json::Value,
     ) -> ScrollbackMsg {
-        let starts_new_activity_group =
-            self.active_tool_count() == 0 && !self.activity_group_exists_since_latest_user();
+        let starts_new_activity_group = active_tool_count(&self.scrollback_actor.model_snapshot())
+            == 0
+            && !self.activity_group_exists_since_latest_user();
         let counts = self.activity_counts_with_start(&tool_name, starts_new_activity_group);
         let (
             activity_dirs,
@@ -618,7 +620,9 @@ impl EventRenderer {
                     output: output_lines,
                 });
             }
-            let Some(current_header) = self.current_tool_header(&tool_call_id) else {
+            let Some(current_header) =
+                current_tool_header(&self.scrollback_actor.model_snapshot(), &tool_call_id)
+            else {
                 return None;
             };
             let updated =
@@ -634,7 +638,8 @@ impl EventRenderer {
 
     #[allow(
         clippy::too_many_lines,
-        reason = "tool completion reduction keeps card and activity ownership together"
+        reason = "single atomic FeedSnapshot read keeps tool-end card, \
+                  activity, and args projections consistent"
     )]
     #[allow(clippy::cognitive_complexity)]
     fn handle_tool_end(
@@ -644,24 +649,25 @@ impl EventRenderer {
         result: serde_json::Value,
         is_error: bool,
     ) -> ScrollbackMsg {
+        let snapshot = self.scrollback_actor.model_snapshot();
         let (
             activity_dirs,
             activity_files,
             activity_commands,
             activity_subagents,
             mut activity_failures,
-        ) = self.activity_counts();
+        ) = activity_counts(&snapshot);
         if is_error {
             activity_failures += 1;
         }
-        let tool_buffer = self.current_tool_header(&tool_call_id).unwrap_or_default();
-        let tool_args = self.current_tool_args(&tool_call_id);
+        let tool_buffer = current_tool_header(&snapshot, &tool_call_id).unwrap_or_default();
+        let tool_args = current_tool_args(&snapshot, &tool_call_id);
         let tool_buffer = if is_error {
             tool_buffer
         } else {
             completed_tool_header_with_args(&tool_buffer, &tool_name, &tool_args, &result)
         };
-        let activity = if self.active_tool_count() <= 1
+        let activity = if active_tool_count(&snapshot) <= 1
             && activity_dirs + activity_files + activity_commands + activity_subagents > 0
         {
             Some(activity_text(
@@ -708,15 +714,6 @@ impl EventRenderer {
         }
     }
 
-    fn active_tool_count(&self) -> usize {
-        self.scrollback_actor
-            .model_snapshot()
-            .tool_blocks
-            .iter()
-            .filter(|block| block.is_running)
-            .count()
-    }
-
     fn activity_group_exists_since_latest_user(&self) -> bool {
         let lines = self.scrollback_actor.model_snapshot().lines;
         let latest_user = lines
@@ -728,17 +725,6 @@ impl EventRenderer {
             .any(|line| line.kind == LineKind::Activity)
     }
 
-    fn activity_counts(&self) -> (usize, usize, usize, usize, usize) {
-        let snapshot = self.scrollback_actor.model_snapshot();
-        (
-            snapshot.activity_dirs,
-            snapshot.activity_files,
-            snapshot.activity_commands,
-            snapshot.activity_subagents,
-            snapshot.activity_failures,
-        )
-    }
-
     fn activity_counts_with_start(
         &self,
         tool_name: &str,
@@ -747,7 +733,7 @@ impl EventRenderer {
         let (mut dirs, mut files, mut commands, mut subagents, failures) = if reset {
             (0, 0, 0, 0, 0)
         } else {
-            self.activity_counts()
+            activity_counts(&self.scrollback_actor.model_snapshot())
         };
         match runie_tui_model::classify_activity_tool(tool_name) {
             Some(runie_tui_model::ActivityKind::Dir) => dirs += 1,
@@ -758,25 +744,41 @@ impl EventRenderer {
         }
         (dirs, files, commands, subagents, failures)
     }
+}
 
-    fn current_tool_header(&self, tool_call_id: &str) -> Option<String> {
-        self.scrollback_actor
-            .model_snapshot()
-            .tool_blocks
-            .into_iter()
-            .rev()
-            .find(|block| block.tool_call_id == tool_call_id && block.is_running)
-            .map(|block| block.header)
-    }
+fn current_tool_header(snapshot: &FeedSnapshot, tool_call_id: &str) -> Option<String> {
+    snapshot
+        .tool_blocks
+        .iter()
+        .rev()
+        .find(|block| block.tool_call_id == tool_call_id && block.is_running)
+        .map(|block| block.header.clone())
+}
 
-    fn current_tool_args(&self, tool_call_id: &str) -> serde_json::Value {
-        self.scrollback_actor
-            .model_snapshot()
-            .tool_args
-            .get(tool_call_id)
-            .cloned()
-            .unwrap_or(serde_json::Value::Null)
-    }
+fn current_tool_args(snapshot: &FeedSnapshot, tool_call_id: &str) -> serde_json::Value {
+    snapshot
+        .tool_args
+        .get(tool_call_id)
+        .cloned()
+        .unwrap_or(serde_json::Value::Null)
+}
+
+fn active_tool_count(snapshot: &FeedSnapshot) -> usize {
+    snapshot
+        .tool_blocks
+        .iter()
+        .filter(|block| block.is_running)
+        .count()
+}
+
+fn activity_counts(snapshot: &FeedSnapshot) -> (usize, usize, usize, usize, usize) {
+    (
+        snapshot.activity_dirs,
+        snapshot.activity_files,
+        snapshot.activity_commands,
+        snapshot.activity_subagents,
+        snapshot.activity_failures,
+    )
 }
 
 fn format_clock_timestamp(timestamp: i64) -> String {
