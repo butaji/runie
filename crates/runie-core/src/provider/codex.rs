@@ -203,6 +203,12 @@ impl CodexWebSocketAdapter {
             fallback,
         )
     }
+
+    async fn mark_fallback(&self, cache_key: Option<&WebSocketSessionKey>) {
+        if let Some(key) = cache_key {
+            self.cache.lock().await.mark_sse_fallback(&key.session_id);
+        }
+    }
 }
 
 #[allow(
@@ -230,6 +236,19 @@ impl CodexWebSocketAdapter {
                     account_id: value.api_key.clone().unwrap_or_else(|| "default".into()),
                 })
         });
+        let fallback_active = if let Some(key) = cache_key.as_ref() {
+            self.cache
+                .lock()
+                .await
+                .is_sse_fallback_active(&key.session_id)
+        } else {
+            false
+        };
+        if fallback_active {
+            if let Some(fallback) = &self.fallback {
+                return fallback.stream(model, context, options).await;
+            }
+        }
         let continuation = if options
             .as_ref()
             .and_then(|value| value.transport)
@@ -266,6 +285,7 @@ impl CodexWebSocketAdapter {
             Ok(socket) => socket,
             Err(error) => {
                 if let Some(fallback) = &self.fallback {
+                    self.mark_fallback(cache_key.as_ref()).await;
                     return fallback.stream(model, context, options).await;
                 }
                 return Err(error);
@@ -275,6 +295,7 @@ impl CodexWebSocketAdapter {
         if let Err(error) = send_result {
             socket.close().await;
             if let Some(fallback) = &self.fallback {
+                self.mark_fallback(cache_key.as_ref()).await;
                 return fallback.stream(model, context, options).await;
             }
             return Err(error);
@@ -287,6 +308,7 @@ impl CodexWebSocketAdapter {
                     socket.close().await;
                     if !started {
                         if let Some(fallback) = &self.fallback {
+                            self.mark_fallback(cache_key.as_ref()).await;
                             return fallback.stream(model, context, options).await;
                         }
                     }
@@ -299,6 +321,7 @@ impl CodexWebSocketAdapter {
                             socket.close().await;
                             if !started {
                                 if let Some(fallback) = &self.fallback {
+                                    self.mark_fallback(cache_key.as_ref()).await;
                                     return fallback.stream(model, context, options).await;
                                 }
                             }
@@ -311,6 +334,7 @@ impl CodexWebSocketAdapter {
                         socket.close().await;
                         if !started {
                             if let Some(fallback) = &self.fallback {
+                                self.mark_fallback(cache_key.as_ref()).await;
                                 return fallback.stream(model, context, options).await;
                             }
                         }
@@ -382,6 +406,7 @@ impl CodexWebSocketAdapter {
         socket.close().await;
         if !started {
             if let Some(fallback) = &self.fallback {
+                self.mark_fallback(cache_key.as_ref()).await;
                 return fallback.stream(model, context, options).await;
             }
             return Err(StreamError::Network(
@@ -801,6 +826,10 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the fallback regression keeps socket closure, fallback output, and cache state together"
+    )]
     async fn adapter_falls_back_for_initial_error_before_marking_stream_started() {
         use futures::StreamExt;
 
@@ -838,12 +867,22 @@ mod tests {
             Some(fallback),
         );
 
+        let options = SimpleStreamOptions {
+            session_id: Some("fallback-session".into()),
+            api_key: Some("account-a".into()),
+            ..Default::default()
+        };
         let mut stream = adapter
-            .stream_websocket(&Model::default(), &AgentContext::default(), None)
+            .stream_websocket(&Model::default(), &AgentContext::default(), Some(options))
             .await
             .expect("initial provider error falls back");
         assert!(stream.next().await.is_some());
         assert!(closed.load(std::sync::atomic::Ordering::Acquire));
+        assert!(adapter
+            .cache
+            .lock()
+            .await
+            .is_sse_fallback_active("fallback-session"));
     }
 
     #[tokio::test]

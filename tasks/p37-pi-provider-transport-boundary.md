@@ -362,3 +362,8 @@ the live binary injects it into `ProviderActor` with the existing ordinary
 stream as fallback. Request options contribute authorization and provider
 headers at the adapter boundary, while replay continues to use injected fake
 connectors.
+Fallback-state increment (2026-08-08): provider-scoped pre-stream WebSocket
+failures now mark the session/account key as SSE-fallback-active inside the
+adapter-owned cache. Subsequent cached requests honor that state when a
+fallback capability is available, and the lifecycle regression asserts the
+state transition; generic HTTP remains uninvolved.
