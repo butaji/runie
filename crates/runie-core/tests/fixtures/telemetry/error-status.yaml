@@ -21,6 +21,7 @@ expected:
       attributes: {}
       events: []
       status: error
+      explicit_status: true
       error:
         name: UpstreamError
         message: request failed

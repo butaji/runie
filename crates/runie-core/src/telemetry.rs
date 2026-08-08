@@ -32,6 +32,8 @@ pub struct SpanSnapshot {
     pub events: Vec<TelemetryEventSnapshot>,
     pub status: SpanStatus,
     #[serde(default)]
+    pub explicit_status: bool,
+    #[serde(default)]
     pub error: Option<SpanError>,
     pub ended: bool,
     #[serde(default)]
@@ -263,6 +265,7 @@ impl TelemetryActor {
                             attributes,
                             events: Vec::new(),
                             status: SpanStatus::Ok,
+                            explicit_status: false,
                             error: None,
                             ended: false,
                             end_sequence: None,
@@ -323,6 +326,7 @@ impl TelemetryActor {
                         {
                             span.status = status;
                             span.error = error;
+                            span.explicit_status = true;
                             let _ = snapshot_tx.send(state.clone());
                         }
                         let _ = reply.send(());
@@ -475,7 +479,7 @@ impl TelemetryActor {
         if !span.noop {
             match &result {
                 Ok(_) => span.status(SpanStatus::Ok).await,
-                Err(error) => {
+                Err(error) if !span.explicit_status() => {
                     span.status_with_error(
                         SpanStatus::Error,
                         Some(SpanError {
@@ -485,6 +489,7 @@ impl TelemetryActor {
                     )
                     .await;
                 }
+                Err(_) => {}
             }
             span.end().await;
         }
@@ -506,6 +511,15 @@ pub struct TelemetrySpan {
 }
 
 impl TelemetrySpan {
+    fn explicit_status(&self) -> bool {
+        self.actor
+            .snapshot()
+            .spans
+            .iter()
+            .find(|span| span.id == self.id)
+            .is_some_and(|span| span.explicit_status)
+    }
+
     pub async fn event(
         &self,
         name: impl Into<String>,
@@ -613,7 +627,7 @@ impl TelemetrySpan {
         if !span.noop {
             match &result {
                 Ok(_) => span.status(SpanStatus::Ok).await,
-                Err(error) => {
+                Err(error) if !span.explicit_status() => {
                     span.status_with_error(
                         SpanStatus::Error,
                         Some(SpanError {
@@ -623,6 +637,7 @@ impl TelemetrySpan {
                     )
                     .await;
                 }
+                Err(_) => {}
             }
             span.end().await;
         }
@@ -805,6 +820,22 @@ mod tests {
             })
         );
         assert!(snapshot.spans.iter().all(|span| span.ended));
+    }
+
+    #[tokio::test]
+    async fn explicit_status_survives_callback_failure() {
+        let actor = TelemetryActor::new();
+        let result = actor
+            .with_span(None, "explicit", HashMap::new(), |span| async move {
+                span.status(SpanStatus::Ok).await;
+                Err::<(), _>("failure")
+            })
+            .await
+            .expect("callback result");
+        assert_eq!(result, Err("failure"));
+        let snapshot = actor.snapshot();
+        assert_eq!(snapshot.spans[0].status, SpanStatus::Ok);
+        assert!(snapshot.spans[0].explicit_status);
     }
 
     #[tokio::test]

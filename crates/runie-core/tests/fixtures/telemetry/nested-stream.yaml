@@ -32,6 +32,7 @@ expected:
         model: test-model
       events: []
       status: ok
+      explicit_status: true
       ended: true
       end_sequence: 1
     - id: 2
@@ -45,5 +46,6 @@ expected:
         pi.ai.streaming: true
       events: []
       status: ok
+      explicit_status: true
       ended: true
       end_sequence: 0

@@ -145,3 +145,9 @@ still execute `TelemetryActor::with_span` callbacks with an inert span, while
 leaving the actor snapshot unchanged. This matches Pi's passive
 `startSpan`/`NOOP_TELEMETRY_CONTEXT` behavior and is covered by a focused
 regression.
+
+Explicit-status settlement increment (2026-08-09): spans now retain whether a
+status was explicitly set. Callback failure only supplies automatic error
+status when no explicit status exists, matching Pi's preservation of an
+explicit `ok` or structured `error` status; YAML status fixtures assert the
+new snapshot fact.
