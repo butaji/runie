@@ -3,7 +3,7 @@
 use crossterm::event::KeyEvent;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use runie_core::commands::MappableBuiltinCommand;
+use runie_core::commands::{BuiltinCommandDisposition, MappableBuiltinCommand};
 use runie_core::events::EventBus;
 use runie_core::r#loop::LoopActor;
 use runie_core::types::{AgentEvent, AgentMessage, Model};
@@ -554,6 +554,24 @@ impl App {
                 true
             }
             MappableBuiltinCommand::Quit => false,
+        }
+    }
+
+    /// Route the complete Pi built-in classification through the shared
+    /// application boundary. Unsupported capabilities become an explicit
+    /// actor-delivered error; ordinary prompt text remains outside this path.
+    pub async fn route_builtin_command(&self, disposition: BuiltinCommandDisposition) -> bool {
+        match disposition {
+            BuiltinCommandDisposition::Mappable(command) => {
+                self.route_mappable_command(command).await
+            }
+            BuiltinCommandDisposition::Unsupported { name } => {
+                self.bus.publish(AgentEvent::Error {
+                    message: format!("Pi command /{name} is not supported by Runie"),
+                });
+                true
+            }
+            BuiltinCommandDisposition::NotBuiltin => false,
         }
     }
 

@@ -91,3 +91,6 @@ now distinguishes mappable commands, known Pi commands whose owning capability
 is still unsupported, and ordinary prompt text. This preserves the existing
 execution route while making unimplemented registry entries explicit typed
 capability results instead of silently treating them as successful commands.
+`App::route_builtin_command` now consumes that disposition in both the live
+binary and YAML runner; unsupported commands publish an actor-delivered error
+event and do not fall through to provider prompt submission.

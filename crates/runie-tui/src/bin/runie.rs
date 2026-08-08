@@ -23,7 +23,7 @@ use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::Terminal;
-use runie_core::commands::{parse_mappable_builtin_command, MappableBuiltinCommand};
+use runie_core::commands::{classify_builtin_command, BuiltinCommandDisposition};
 use runie_core::events::EventBus;
 use runie_core::provider::stream_fn::{AssistantMessageEventStream, StreamError, StreamFn};
 use runie_core::provider::ProviderActor;
@@ -728,11 +728,17 @@ async fn run_app(
                 KeyCode::Enter => {
                     let outcome = app.prompt.handle_key(key).await;
                     if let PromptOutcome::Submitted(text) = outcome {
-                        if let Some(command) = parse_mappable_builtin_command(&text) {
-                            if matches!(command, MappableBuiltinCommand::Quit) {
+                        let disposition = classify_builtin_command(&text);
+                        if !matches!(disposition, BuiltinCommandDisposition::NotBuiltin) {
+                            if matches!(
+                                disposition,
+                                BuiltinCommandDisposition::Mappable(
+                                    runie_core::commands::MappableBuiltinCommand::Quit
+                                )
+                            ) {
                                 return Err(AppExit::Quit);
                             }
-                            let _ = app.route_mappable_command(command).await;
+                            let _ = app.route_builtin_command(disposition).await;
                             return Ok(ui_commands);
                         }
                         if is_quit_command(&text) {

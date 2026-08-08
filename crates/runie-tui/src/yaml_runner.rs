@@ -13,7 +13,7 @@ use crate::event_renderer::EventRenderer;
 use crate::widgets::{FeedSnapshot, Line, LineKind, Scrollback, ScrollbackMsg, ToolBlock};
 use parking_lot::Mutex;
 use ratatui::buffer::Buffer;
-use runie_core::commands::parse_mappable_builtin_command;
+use runie_core::commands::{classify_builtin_command, BuiltinCommandDisposition};
 use runie_core::events::{EventBus, Subscriber};
 use runie_core::provider::stream_fn::{
     AssistantMessageEventStream, StreamError, StreamFn, WebSocketAdapter,
@@ -4812,10 +4812,11 @@ pub async fn render_visual_buffer(
                 })
                 .await;
             if let PromptOutcome::Submitted(text) = outcome {
-                if let Some(command) = parse_mappable_builtin_command(&text) {
+                let disposition = classify_builtin_command(&text);
+                if !matches!(disposition, BuiltinCommandDisposition::NotBuiltin) {
                     // The offline runner cannot terminate its test task;
                     // routing still crosses the same App boundary as live input.
-                    let _ = app.route_mappable_command(command).await;
+                    let _ = app.route_builtin_command(disposition).await;
                     continue;
                 }
                 let user_msg = AgentMessage::User(UserMessage {
