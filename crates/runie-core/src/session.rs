@@ -3885,16 +3885,16 @@ mod tests {
         let bus = EventBus::new();
         let actor = SessionActor::new_with_bus(&bus);
         let _ = actor
-            .record_config(SessionConfigRecord::OperationRecordCreated {
-                record_type: "operation_started".into(),
-                data: serde_json::json!({"id": "run-1"}),
-            })
+            .record_operation(
+                SessionOperationKind::Started,
+                serde_json::json!({"id": "run-1"}),
+            )
             .await;
         let _ = actor
-            .record_config(SessionConfigRecord::OperationRecordCreated {
-                record_type: "operation_started".into(),
-                data: serde_json::json!({"id": "run-1"}),
-            })
+            .record_operation(
+                SessionOperationKind::Started,
+                serde_json::json!({"id": "run-1"}),
+            )
             .await;
         bus.publish(AgentEvent::MessageEnd {
             message: user("one"),
@@ -3954,10 +3954,10 @@ mod tests {
         assert_eq!(actor.snapshot().active_operations["op-1"], "started");
         let before_rejected = actor.snapshot().lane_records.len();
         let rejected = actor
-            .record_config(SessionConfigRecord::OperationRecordCreated {
-                record_type: "operation_started".into(),
-                data: serde_json::json!({"id": "op-1"}),
-            })
+            .record_operation(
+                SessionOperationKind::Started,
+                serde_json::json!({"id": "op-1"}),
+            )
             .await;
         assert!(rejected.is_err());
         assert_eq!(actor.snapshot().lane_records.len(), before_rejected);
