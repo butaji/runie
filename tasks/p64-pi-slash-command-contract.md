@@ -74,6 +74,14 @@ hidden by a passing summary string.
 the post-step session actor configuration projection without compiling a
 scenario-specific Rust fixture.
 
+The remaining registry entries are intentionally explicit unsupported
+capabilities: `/settings`, `/share`, `/trust`, `/login`, `/logout`, and
+`/reload`. The source checkout exposes these names in the registry, but does
+not provide an interactive-session handler that Runie can map to an existing
+actor-owned state boundary. `commands::tests::remaining_pi_commands_are_explicitly_unsupported`
+pins this classification so they cannot regress into prompt submission or
+successful no-ops while their source-specific capabilities are implemented.
+
 Routing consolidation (2026-08-08): `App::route_mappable_command` is now the
 single async dispatch boundary for live and YAML input. The binary owns only
 process exit for `/quit`; stateful commands cannot acquire a second reducer by

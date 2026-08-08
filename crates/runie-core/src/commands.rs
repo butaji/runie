@@ -336,4 +336,24 @@ mod tests {
             BuiltinCommandDisposition::NotBuiltin
         );
     }
+
+    #[test]
+    fn remaining_pi_commands_are_explicitly_unsupported() {
+        for input in [
+            "/settings",
+            "/share",
+            "/trust",
+            "/login anthropic",
+            "/logout",
+            "/reload",
+        ] {
+            assert!(
+                matches!(
+                    classify_builtin_command(input),
+                    BuiltinCommandDisposition::Unsupported { .. }
+                ),
+                "expected unsupported classification for {input}"
+            );
+        }
+    }
 }
