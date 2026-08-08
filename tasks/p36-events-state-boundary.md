@@ -817,3 +817,27 @@ zero-padding, so replay and live paths share one identity. The 66
 `format_clock_timestamp_pins_short_clock_shape`), the 218 `runie-tui` lib
 unit tests, and the full `just ci` (fmt-check, clippy, lint, test, parity,
 source inventory, Pi event contract, feed-actor boundary) are green.
+
+Workflow-row formatter relocation (2026-08-08): the Grok "Workflow name:
+objective" transcript projection now lives in
+`runie_tui_model::feed::workflow_text`. The four renderer-local test-only
+duplicates — `format_elapsed`, `format_duration`, `workflow_phase_mark`, and
+`workflow_text` at `crates/runie-tui/src/widgets/scrollback.rs:27-95` —
+were removed; the three call sites in `#[cfg(test)] fn Scrollback::apply_legacy`
+at lines 427, 462, and 488 (`ScrollbackMsg::WorkflowStart`,
+`ScrollbackMsg::WorkflowProgress`, `ScrollbackMsg::WorkflowEnd`) now call
+`runie_tui_model::workflow_text(header, phases, status, elapsed_ms, active_agents)`,
+and the six focused assertions in
+`workflow_card_uses_grok_status_and_phase_glyph_order` and
+`workflow_objective_flattens_multiline_source_text` invoke the same
+canonical helper. The model-side test
+`workflow_phase_glyphs_match_grok_fallback_for_terminal_states` was renamed
+in place from `super::workflow_text_model` to `super::workflow_text`, and
+`pub use runie_tui_model::workflow_text;` was added to
+`crates/runie-tui-model/src/lib.rs` next to the existing
+`thinking_summary` re-export. Signatures match exactly
+(`header: &str, phases: &[(String, String)], status: &str, elapsed_ms: Option<u64>, active_agents: u32`),
+so the call sites needed no parameter rewrites. The 66 `runie-tui-model`
+lib unit tests, the 218 `runie-tui` lib unit tests, and the full `just ci`
+(fmt-check, clippy, lint, test, parity, source inventory, Pi event
+contract, feed-actor boundary) are green.

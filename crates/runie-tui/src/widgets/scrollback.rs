@@ -24,76 +24,6 @@ const TIMESTAMP_GUTTER_SPACES: usize = 3;
 // gutter and its short-clock inset when materializing a plain text row.
 const ASSISTANT_TIMESTAMP_WRAPPED_RESERVATION: usize = 14;
 
-#[cfg(test)]
-#[allow(dead_code, reason = "only retained by quarantined legacy reducer code")]
-fn format_elapsed(elapsed_ms: Option<u64>) -> String {
-    elapsed_ms
-        .map(format_duration)
-        .map(|duration| format!(" in {duration}"))
-        .unwrap_or_default()
-}
-
-#[cfg(test)]
-#[allow(dead_code, reason = "only retained by quarantined legacy reducer code")]
-fn format_duration(elapsed_ms: u64) -> String {
-    format!("{:.1}s", elapsed_ms as f64 / 1_000.0)
-}
-
-#[cfg(test)]
-#[allow(dead_code, reason = "only retained by quarantined legacy reducer code")]
-fn workflow_phase_mark(state: &str) -> char {
-    match state {
-        "done" => '✓',
-        "active" => '●',
-        "failed" | "error" | "interrupted" => '✗',
-        _ => '○',
-    }
-}
-
-#[cfg(test)]
-#[allow(dead_code, reason = "only retained by quarantined legacy reducer code")]
-fn workflow_text(
-    header: &str,
-    phases: &[(String, String)],
-    status: &str,
-    elapsed_ms: Option<u64>,
-    active_agents: u32,
-) -> String {
-    let body = header.strip_prefix("Workflow ").unwrap_or(header);
-    let (name, objective) = body.split_once(':').unwrap_or((body, ""));
-    let verb = match status {
-        "active" => format!("{name}: "),
-        "cancelled" => format!(
-            "{name} ◌ cancelled after {}: ",
-            elapsed_ms
-                .map(format_duration)
-                .unwrap_or_else(|| "?".into())
-        ),
-        "paused" => format!(
-            "{name} paused at {}: ",
-            elapsed_ms
-                .map(format_duration)
-                .unwrap_or_else(|| "?".into())
-        ),
-        "failed" | "interrupted" => format!("{name} failed{}: ", format_elapsed(elapsed_ms)),
-        _ => format!("{name} done{}: ", format_elapsed(elapsed_ms)),
-    };
-    let trail = phases
-        .iter()
-        .map(|(title, phase_state)| format!("{title} {}", workflow_phase_mark(phase_state)))
-        .collect::<Vec<_>>()
-        .join(" · ");
-    let objective = objective.split_whitespace().collect::<Vec<_>>().join(" ");
-    let mut result = format!("Workflow {verb}{objective}");
-    if !trail.is_empty() {
-        result.push_str(&format!("  [{trail}]"));
-    }
-    if status == "active" && active_agents > 0 {
-        result.push_str(&format!("  ({active_agents} agents)"));
-    }
-    result
-}
-
 /// Grok's default dense activity-group budget. A zero budget is reserved for
 /// the source-compatible "no truncation" configuration.
 pub const GROK_GROUP_MAX_VISIBLE: usize = 10;
@@ -494,7 +424,7 @@ impl Scrollback {
                 self.append(
                     Line::new(
                         LineKind::ToolRunning,
-                        workflow_text(
+                        runie_tui_model::workflow_text(
                             &format!("Workflow {name}: {objective}"),
                             &[],
                             "active",
@@ -529,7 +459,7 @@ impl Scrollback {
                     .unwrap_or("Workflow");
                 self.replace_tool_by_id(
                     &run_id,
-                    workflow_text(
+                    runie_tui_model::workflow_text(
                         header,
                         self.navigation
                             .workflow_phases
@@ -555,7 +485,7 @@ impl Scrollback {
                     .unwrap_or("Workflow");
                 self.replace_tool_by_id(
                     &run_id,
-                    workflow_text(
+                    runie_tui_model::workflow_text(
                         header,
                         self.navigation
                             .workflow_phases
@@ -3795,7 +3725,7 @@ mod tests {
     )]
     fn workflow_card_uses_grok_status_and_phase_glyph_order() {
         assert_eq!(
-            workflow_text(
+            runie_tui_model::workflow_text(
                 "Workflow release: ship the release",
                 &[
                     ("plan".into(), "done".into()),
@@ -3808,7 +3738,7 @@ mod tests {
             "Workflow release done in 1.2s: ship the release  [plan ✓ · tests ●]"
         );
         assert_eq!(
-            workflow_text(
+            runie_tui_model::workflow_text(
                 "Workflow release: ship the release",
                 &[("tests".into(), "active".into())],
                 "active",
@@ -3818,7 +3748,7 @@ mod tests {
             "Workflow release: ship the release  [tests ●]  (2 agents)"
         );
         assert_eq!(
-            workflow_text(
+            runie_tui_model::workflow_text(
                 "Workflow release: ship the release",
                 &[("tests".into(), "failed".into())],
                 "failed",
@@ -3828,7 +3758,7 @@ mod tests {
             "Workflow release failed in 1.2s: ship the release  [tests ✗]"
         );
         assert_eq!(
-            workflow_text(
+            runie_tui_model::workflow_text(
                 "Workflow release: ship the release",
                 &[],
                 "cancelled",
@@ -3838,7 +3768,7 @@ mod tests {
             "Workflow release ◌ cancelled after 1.2s: ship the release"
         );
         assert_eq!(
-            workflow_text(
+            runie_tui_model::workflow_text(
                 "Workflow release: ship the release",
                 &[],
                 "paused",
@@ -3852,7 +3782,7 @@ mod tests {
     #[test]
     fn workflow_objective_flattens_multiline_source_text() {
         assert_eq!(
-            workflow_text(
+            runie_tui_model::workflow_text(
                 "Workflow research: compare A\nthen compare B\r\nfinish",
                 &[],
                 "active",

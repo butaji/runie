@@ -1502,7 +1502,7 @@ mod tests {
     #[test]
     fn workflow_phase_glyphs_match_grok_fallback_for_terminal_states() {
         assert_eq!(
-            super::workflow_text_model(
+            super::workflow_text(
                 "Workflow release: ship it",
                 &[("upload".into(), "cancelled".into())],
                 "cancelled",
@@ -1601,7 +1601,11 @@ mod tests {
     }
 }
 
-fn workflow_text_model(
+/// Pure formatter for the Grok "Workflow name: objective" transcript row.
+/// Renderers and replay fixtures share this projection so the live and
+/// legacy reducers cannot drift on phase glyphs, duration punctuation,
+/// or the trailing agent-count badge.
+pub fn workflow_text(
     header: &str,
     phases: &[(String, String)],
     status: &str,
@@ -2160,7 +2164,7 @@ impl FeedState {
                     .unwrap_or_default();
                 self.replace_tool(
                     &run_id,
-                    workflow_text_model(&header, &phases, "active", None, active_agents),
+                    workflow_text(&header, &phases, "active", None, active_agents),
                 );
             }
             ScrollbackMsg::WorkflowEnd {
@@ -2182,7 +2186,7 @@ impl FeedState {
                     .unwrap_or_default();
                 self.replace_tool(
                     &run_id,
-                    workflow_text_model(&header, &phases, &status, elapsed_ms, 0),
+                    workflow_text(&header, &phases, &status, elapsed_ms, 0),
                 );
             }
             ScrollbackMsg::FinalizeAssistant {
