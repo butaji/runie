@@ -1217,3 +1217,23 @@ lib unit tests (98 pre-existing + 1 new), the 220 `runie-tui` lib unit
 tests, the 5 `runie` binary unit tests, the 28 `visual_snapshots` replay
 tests, and the full `just ci` (fmt-check, clippy, lint, test, parity,
 source inventory, Pi event contract, feed-actor boundary) are green.
+
+**Session start messages retirement (2026-08-08):** the wrapping
+`session_start_messages` projection now lives in `runie-tui-model::feed`
+so the actor-owned session-start projection and the renderer share one
+shape. The renderer-local `fn session_start_messages` at
+`crates/runie-tui/src/event_renderer.rs:850` was collapsed to a thin
+`runie_tui_model::session_start_messages` delegate, so the live `run`
+branch and the replay `apply_actor_event` arm keep their public symbol
+but lose the duplicated projection. The two new tests
+`session_start_messages_emits_three_bracket_rows` and
+`session_start_messages_pins_separator_and_hooks_content` in
+`crates/runie-tui-model/src/feed.rs` pin the three-message count, the
+outer blank `LineKind::Separator` rows, and the middle
+`LineKind::SessionStart` row carrying the `◆ session_start  [hooks: 1]`
+content. The test was split into two after the single combined variant
+hit the cognitive-complexity lint threshold. The 101 `runie-tui-model`
+lib unit tests (99 pre-existing + 2 new), the 220 `runie-tui` lib unit
+tests, the 5 `runie` binary unit tests, the 28 `visual_snapshots` replay
+tests, and the full `just ci` (fmt-check, clippy, lint, test, parity,
+source inventory, Pi event contract, feed-actor boundary) are green.

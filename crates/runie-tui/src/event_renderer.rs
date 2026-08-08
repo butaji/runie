@@ -848,14 +848,7 @@ fn structured_memory_lines(output: &str) -> Vec<String> {
     reason = "activity label projection keeps Grok's ordered vocabulary together"
 )]
 fn session_start_messages() -> Vec<ScrollbackMsg> {
-    vec![
-        ScrollbackMsg::Append(Line::new(LineKind::Separator, "")),
-        ScrollbackMsg::Append(Line::new(
-            LineKind::SessionStart,
-            "◆ session_start  [hooks: 1]",
-        )),
-        ScrollbackMsg::Append(Line::new(LineKind::Separator, "")),
-    ]
+    runie_tui_model::session_start_messages()
 }
 
 #[cfg(test)]

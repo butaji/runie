@@ -645,6 +645,21 @@ pub fn welcome_modal_lines() -> Vec<Line> {
     ]
 }
 
+/// Wrapping scrollback messages that bracket the `◆ session_start`
+/// marker. Centralized here so the actor-owned session-start projection
+/// and the renderer share the same `[hooks: 1]` count and the
+/// surrounding separator rows.
+pub fn session_start_messages() -> Vec<ScrollbackMsg> {
+    vec![
+        ScrollbackMsg::Append(Line::new(LineKind::Separator, "")),
+        ScrollbackMsg::Append(Line::new(
+            LineKind::SessionStart,
+            "◆ session_start  [hooks: 1]",
+        )),
+        ScrollbackMsg::Append(Line::new(LineKind::Separator, "")),
+    ]
+}
+
 /// Minimum unix-timestamp value (seconds) treated as a live prompt timestamp.
 /// Values below this are either absent or fixtures; values at or above are
 /// rendered with the short clock format. Centralized here so the renderer
@@ -1721,6 +1736,44 @@ mod tests {
         assert_eq!(texts[3], "│ /help for commands");
         assert_eq!(texts[4], "╰─");
         assert_eq!(texts[5], "◆ session_start");
+    }
+
+    #[test]
+    fn session_start_messages_emits_three_bracket_rows() {
+        // Pin the smoke path: the projection emits exactly three messages
+        // so the actor-owned session-start projection and the renderer
+        // agree on the wrapping shape.
+        let messages = super::session_start_messages();
+        assert_eq!(messages.len(), 3);
+        assert!(matches!(&messages[0], super::ScrollbackMsg::Append(_)));
+        assert!(matches!(&messages[1], super::ScrollbackMsg::Append(_)));
+        assert!(matches!(&messages[2], super::ScrollbackMsg::Append(_)));
+    }
+
+    #[test]
+    fn session_start_messages_pins_separator_and_hooks_content() {
+        // Pin the wrapping shape: the outer rows are blank `Separator`
+        // lines and the middle row is the `SessionStart` marker with the
+        // `[hooks: 1]` count.
+        let messages = super::session_start_messages();
+        let first = match &messages[0] {
+            super::ScrollbackMsg::Append(line) => line,
+            other => panic!("expected separator append, got {other:?}"),
+        };
+        assert_eq!(first.kind, super::LineKind::Separator);
+        assert!(first.text.is_empty());
+        let middle = match &messages[1] {
+            super::ScrollbackMsg::Append(line) => line,
+            other => panic!("expected session start append, got {other:?}"),
+        };
+        assert_eq!(middle.kind, super::LineKind::SessionStart);
+        assert_eq!(middle.text, "◆ session_start  [hooks: 1]");
+        let last = match &messages[2] {
+            super::ScrollbackMsg::Append(line) => line,
+            other => panic!("expected separator append, got {other:?}"),
+        };
+        assert_eq!(last.kind, super::LineKind::Separator);
+        assert!(last.text.is_empty());
     }
 
     #[test]
