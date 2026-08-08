@@ -41,7 +41,26 @@ fn palette_command_for(state: &UiState, message: &UiMsg) -> Option<UiCommand> {
 fn ui_command_for(state: &UiState, message: &UiMsg) -> Option<UiCommand> {
     match message {
         UiMsg::CopyText(text) => Some(UiCommand::CopyText(text.clone())),
-        _ => palette_command_for(state, message),
+        UiMsg::ActivateCommandPalette => palette_command_for(state, message),
+        UiMsg::HideWelcome
+        | UiMsg::ToggleShortcuts
+        | UiMsg::ToggleCommandPalette
+        | UiMsg::CommandPaletteChar(_)
+        | UiMsg::CommandPaletteBackspace
+        | UiMsg::CommandPaletteMove(_)
+        | UiMsg::CommandPaletteEscape
+        | UiMsg::ToggleModelSelector
+        | UiMsg::ModelSelectorChar(_)
+        | UiMsg::ModelSelectorBackspace
+        | UiMsg::ModelSelectorMove(_)
+        | UiMsg::ModelSelectorEscape
+        | UiMsg::ModelSelectorToggleScope
+        | UiMsg::ActivateModelSelector
+        | UiMsg::SetModelSelectorResultCount(_)
+        | UiMsg::SetModelSelectorRows(_)
+        | UiMsg::ToggleSessionInfo
+        | UiMsg::ToggleChangelog
+        | UiMsg::Reset => None,
     }
 }
 

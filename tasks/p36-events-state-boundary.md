@@ -300,6 +300,10 @@ Prompt mailbox increment (2026-08-08): `PromptMsg::ApplyEvent` now uses the
 same explicit event classification as the subscribed actor path, preventing a
 second wildcard reducer from silently swallowing newly added core events.
 
+UI effect dispatch increment (2026-08-08): `ui_command_for` now explicitly
+routes only copy and palette-activation messages to external UI effects; all
+other reducer messages are deliberate no-ops at that boundary.
+
 `status_messages_for_event` now names every intentionally ignored outer
 `AgentEvent` variant and every intentionally ignored assistant sub-event.
 This removes the wildcard fallback at the status boundary: adding a Pi event
