@@ -653,6 +653,11 @@ Web-fetch title metadata increment (2026-08-08): optional `title:` response
 fields join `status:` and `content_type:` in the typed muted metadata family;
 body content remains a separate content row.
 
+Web-fetch title typography increment (2026-08-08): the terminal adapter now
+splits `title:` metadata into a muted/dim key and primary value, matching the
+existing response-field typography without moving style ownership into the
+feed model.
+
 Typed-card row vocabulary slice (2026-08-06): added model-owned
 `ToolCardRowKind`/`ToolCardRow` projections for header, content, and status
 semantics. The existing truncation projection now consumes those rows for

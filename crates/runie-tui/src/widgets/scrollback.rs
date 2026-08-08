@@ -2214,7 +2214,7 @@ fn styled_line_for(kind: LineKind, text: &str, theme: ThemeKind) -> RatLine<'sta
             }
         }
         if let Some((key, value)) = text.split_once(": ") {
-            if matches!(key, "status" | "content_type") && !value.is_empty() {
+            if matches!(key, "status" | "content_type" | "title") && !value.is_empty() {
                 return RatLine::from(vec![
                     Span::styled(
                         format!("{key}: "),
@@ -3078,18 +3078,20 @@ mod tests {
 
     #[test]
     fn web_fetch_metadata_rows_split_muted_keys_from_primary_values() {
-        let rendered = styled_line_for(
-            LineKind::ToolOutput,
-            "content_type: text/html",
-            ThemeKind::GrokNight,
-        );
-        assert_eq!(rendered.spans[0].content, "content_type: ");
-        assert!(rendered.spans[0].style.add_modifier.contains(Modifier::DIM));
-        assert_eq!(rendered.spans[1].content, "text/html");
-        assert_eq!(
-            rendered.spans[1].style.fg,
-            appearance::base_style_for(ThemeKind::GrokNight).fg
-        );
+        for (key, value) in [("content_type", "text/html"), ("title", "Release notes")] {
+            let rendered = styled_line_for(
+                LineKind::ToolOutput,
+                &format!("{key}: {value}"),
+                ThemeKind::GrokNight,
+            );
+            assert_eq!(rendered.spans[0].content, format!("{key}: "));
+            assert!(rendered.spans[0].style.add_modifier.contains(Modifier::DIM));
+            assert_eq!(rendered.spans[1].content, value);
+            assert_eq!(
+                rendered.spans[1].style.fg,
+                appearance::base_style_for(ThemeKind::GrokNight).fg
+            );
+        }
     }
 
     #[test]
