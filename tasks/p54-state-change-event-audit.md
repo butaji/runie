@@ -96,6 +96,12 @@ regression verifies the persisted wire projection and typed round-trip, keeping
 generic `(record_type, data)` compatibility at the event/storage edge rather
 than in live producer callers.
 
+Admission outcome increment (2026-08-08): the session bus bridge now publishes
+an actor-delivered `AgentEvent::Error` when a declared lane record fails
+admission, while direct mailbox callers continue to receive the typed
+`Result`. Invalid records still leave the journal unchanged; a bus regression
+covers the observable rejection without adding a Pi persistence record.
+
 ## Non-negotiable checks
 
 - No cross-actor direct mutation.

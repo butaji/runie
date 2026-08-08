@@ -3297,6 +3297,7 @@ impl SessionActor {
     pub fn new_with_bus(bus: &EventBus) -> Self {
         let mut actor = Self::new();
         let events = bus.subscribe();
+        let rejection_bus = bus.clone();
         let tx = actor.tx.clone();
         actor._bus_owner = Some(spawn_owned_worker!(async move {
             let mut events = events;
@@ -3357,10 +3358,15 @@ impl SessionActor {
                     _ => {
                         if let Some(record) = session_config_record!(&event) {
                             let (reply_tx, reply_rx) = oneshot::channel();
-                            if tx.send(Command::Config(record, reply_tx)).await.is_err()
-                                || reply_rx.await.is_err()
-                            {
+                            if tx.send(Command::Config(record, reply_tx)).await.is_err() {
                                 break;
+                            }
+                            match reply_rx.await {
+                                Ok(Ok(())) => {}
+                                Ok(Err(error)) => rejection_bus.publish(AgentEvent::Error {
+                                    message: format!("Session event rejected: {error}"),
+                                }),
+                                Err(_) => break,
                             }
                         }
                     }
@@ -4001,6 +4007,28 @@ mod tests {
                 "intent": {"kind": "run"}
             }))
         );
+    }
+
+    #[tokio::test]
+    async fn bus_lane_admission_rejection_is_published_as_an_error_event() {
+        let bus = EventBus::new();
+        let mut events = bus.subscribe();
+        let _actor = SessionActor::new_with_bus(&bus);
+        bus.publish(AgentEvent::TypedOperationRecordCreated {
+            kind: crate::types::OperationRecordKind::StepAttempt,
+            data: serde_json::json!({"runId": "missing", "step": "assistant"}),
+        });
+
+        let rejection = tokio::time::timeout(std::time::Duration::from_secs(1), async {
+            loop {
+                if let AgentEvent::Error { message } = events.recv().await.expect("event bus") {
+                    break message;
+                }
+            }
+        })
+        .await
+        .expect("session rejection event");
+        assert!(rejection.starts_with("Session event rejected:"));
     }
 
     #[tokio::test]
