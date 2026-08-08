@@ -508,6 +508,20 @@ impl StreamFn for ReplayProvider {
         }
         Ok(Box::pin(stream::iter(events.clone())))
     }
+
+    async fn cancel_deferred(
+        &self,
+        _model: &Model,
+        handle: &crate::types::DeferredHandle,
+        _options: Option<SimpleStreamOptions>,
+    ) -> Result<(), StreamError> {
+        if handle.id.is_empty() {
+            return Err(StreamError::Invalid(
+                "deferred response handle id is required".into(),
+            ));
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -565,26 +579,27 @@ mod tests {
             usage: Usage::default(),
             message: None,
         }]);
+        let handle = crate::types::DeferredHandle {
+            provider: "replay".into(),
+            model_id: "model".into(),
+            api: "responses".into(),
+            id: "deferred-1".into(),
+            expires_at: None,
+            poll_after_ms: None,
+            data: None,
+        };
         let mut events = provider
-            .fetch_deferred(
-                &Model::default(),
-                &crate::types::DeferredHandle {
-                    provider: "replay".into(),
-                    model_id: "model".into(),
-                    api: "responses".into(),
-                    id: "deferred-1".into(),
-                    expires_at: None,
-                    poll_after_ms: None,
-                    data: None,
-                },
-                None,
-            )
+            .fetch_deferred(&Model::default(), &handle, None)
             .await
             .expect("deferred replay capability");
         assert!(matches!(
             events.next().await,
             Some(AssistantMessageEvent::Done { .. })
         ));
+        provider
+            .cancel_deferred(&Model::default(), &handle, None)
+            .await
+            .expect("deferred cancellation capability");
     }
 
     #[tokio::test]
