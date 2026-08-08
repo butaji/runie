@@ -860,3 +860,9 @@ without selection/reveal and asserts the visible `╶╶ 1 more` hidden-prefix r
 the newest member, and exclusion of the hidden first two members. This closes
 the screen-cell evidence gap for the expanded dense projection; collapsed
 activity and generalized wrapped-card reflow remain separate contracts.
+
+Wrapped selection-box evidence (2026-08-08): selected tool members now carry
+selection styling across every physical continuation row produced by narrow
+viewport wrapping. The focused `selected_wrapped_tool_member_box_spans_physical_rows`
+regression covers the event-selected tool at width 18; generalized wrapped-card
+reflow and cast-wide frame reconciliation remain open.

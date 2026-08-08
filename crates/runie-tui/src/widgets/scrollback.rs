@@ -1041,6 +1041,7 @@ impl Scrollback {
 
         let mut selected_non_tool_row = None;
         let mut selected_tool_rows = Vec::new();
+        let mut selected_tool_wrap_active = false;
         for (row, (kind, text, code_row)) in physical_rows[start..end].iter().enumerate() {
             let line = if *code_row {
                 styled_code_line(text, self.navigation.theme)
@@ -1129,6 +1130,20 @@ impl Scrollback {
                     .any(|(selected_kind, selected_text)| {
                         *selected_kind == *kind && selected_text == comparable_text
                     });
+            let selected_tool_continuation = selected_tool_wrap_active
+                && matches!(
+                    *kind,
+                    LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
+                )
+                && !text.starts_with("⌄ ")
+                && !text.starts_with("◆ ")
+                && !text.starts_with("› ");
+            let selected_tool_row = selected_tool_row || selected_tool_continuation;
+            selected_tool_wrap_active = selected_tool_row
+                && matches!(
+                    *kind,
+                    LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
+                );
             let selected_row = selected_tool_row
                 || text.starts_with("› ")
                 || text.starts_with("⌄ ")
@@ -3548,6 +3563,10 @@ mod tests {
     fn selected_tool_header_uses_grok_fold_indicator() {
         let mut scrollback = Scrollback::new();
         scrollback.set_activity_expanded(true);
+        scrollback.apply(ScrollbackMsg::Append(Line::new(
+            LineKind::Assistant,
+            "before",
+        )));
         scrollback.apply(ScrollbackMsg::ToolStart {
             tool_call_id: "selected".into(),
             header: "Read README.md".into(),
@@ -3656,6 +3675,39 @@ mod tests {
         assert!((0..40).any(|column| buffer
             .cell((column, 0))
             .is_some_and(|cell| cell.symbol() == "┌")));
+    }
+
+    #[test]
+    fn selected_wrapped_tool_member_box_spans_physical_rows() {
+        let mut scrollback = Scrollback::new();
+        scrollback.set_activity_expanded(true);
+        scrollback.apply(ScrollbackMsg::Append(Line::new(
+            LineKind::Assistant,
+            "before",
+        )));
+        scrollback.apply(ScrollbackMsg::ToolStart {
+            tool_call_id: "wrapped".into(),
+            header: "Run a very long command header that wraps".into(),
+            activity: None,
+        });
+        scrollback.apply(ScrollbackMsg::SelectNextTool);
+
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 18, 8));
+        scrollback.render(Rect::new(0, 0, 18, 8), &mut buffer);
+        let selected_background = buffer.cell((5, 0)).expect("wrapped header").style().bg;
+        let selected_rows = (0..8)
+            .filter(|row| {
+                (0..18).any(|column| {
+                    buffer
+                        .cell((column, *row))
+                        .is_some_and(|cell| cell.style().bg == selected_background)
+                })
+            })
+            .count();
+        assert!(
+            selected_rows >= 3,
+            "selected wrapped member should style all physical rows"
+        );
     }
 
     fn selected_cell_row(buffer: &Buffer) -> u16 {
