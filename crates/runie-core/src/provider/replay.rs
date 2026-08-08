@@ -65,8 +65,19 @@ impl ReplayProvider {
     {
         let input = messages
             .into_iter()
-            .map(|message| format!("data: {}", message.as_ref()))
-            .collect::<Vec<_>>()
+            .map(|message| {
+                let text = message.as_ref();
+                let value = serde_json::from_str::<serde_json::Value>(text).map_err(|error| {
+                    StreamError::Invalid(format!("invalid Codex WebSocket JSON: {error}"))
+                })?;
+                if !value.is_object() {
+                    return Err(StreamError::Invalid(
+                        "Codex WebSocket message must be a JSON object".into(),
+                    ));
+                }
+                Ok(format!("data: {text}"))
+            })
+            .collect::<Result<Vec<_>, StreamError>>()?
             .join("\n");
         Self::from_sse_body(&input)
     }
@@ -545,6 +556,19 @@ mod tests {
                 ..
             })
         ));
+    }
+
+    #[test]
+    fn websocket_decoder_rejects_malformed_or_non_object_messages() {
+        let malformed = ReplayProvider::from_websocket_messages(["not-json"]);
+        assert!(
+            matches!(malformed, Err(StreamError::Invalid(message)) if message.contains("invalid Codex WebSocket JSON"))
+        );
+
+        let scalar = ReplayProvider::from_websocket_messages(["null"]);
+        assert!(
+            matches!(scalar, Err(StreamError::Invalid(message)) if message.contains("must be a JSON object"))
+        );
     }
 
     #[tokio::test]

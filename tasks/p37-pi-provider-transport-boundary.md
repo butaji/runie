@@ -156,7 +156,8 @@ remain provider-adapter responsibilities.
 Responses decoder seam increment (2026-08-09): `ReplayProvider::from_websocket_messages`
 now feeds provider-scoped Codex WebSocket text messages through the same
 source-aligned Responses event decoder used by SSE replay. A regression pins
-created, text-delta, and completion ordering. This is decoder coverage only;
+created, text-delta, and completion ordering, and malformed/non-object frames
+are rejected like Pi's WebSocket parser. This is decoder coverage only;
 socket acquisition, continuation caching, pre-stream retry, SSE fallback, and
 session/account cleanup remain concrete adapter responsibilities.
 
