@@ -134,3 +134,10 @@ source-aligned bounded pre-stream retry policy are now implemented and tested.
 The remaining Codex item is provider-specific deferred behavior and any
 future live-environment integration evidence; the generic HTTP actor remains
 intentionally transport-neutral.
+
+Deferred loop-boundary evidence (2026-08-10): `LoopActor::fetch_deferred` and
+`LoopActor::cancel_deferred` now forward the provider-owned capability through
+the loop boundary, with a deterministic integration test asserting the
+deferred terminal event and cancellation. This closes the agent-level routing
+gap while preserving the explicitly open provider-specific live polling and
+decoding contract.
