@@ -779,3 +779,22 @@ unchanged. The 25 `event_renderer::tests` unit tests (including
 `visual_snapshots` replay tests, and the full `just ci` (fmt-check, clippy,
 lint, test, parity, source inventory, Pi event contract, feed-actor boundary)
 are green.
+
+**Thinking summary helper relocation (2026-08-08):** the Grok "◆ Thought for X.Xs"
+label and its 900 ms fallback duration now live in
+`runie-tui-model::feed::thinking_summary` and
+`runie-tui-model::DEFAULT_THINKING_ELAPSED_MS`. Both call sites in
+`crates/runie-tui/src/event_renderer.rs` (`run` at line 371 and
+`apply_actor_event` at line 505) consume the model helper via
+`pub use runie_tui_model::thinking_summary;` placed next to the existing
+`pub use runie_tui_model::status_messages_for_event;` re-export, so the
+`ScrollbackMsg::FinalizeAssistant { summary, .. }` payload keeps its exact
+"◆ Thought for 0.9s" default and "◆ Thought for N.Ns" observed shape
+without keeping a renderer-local copy. The renderer-local constant and
+function were removed. A focused unit test
+`thinking_summary_pins_default_and_observed_elapsed` pins both the
+`None → DEFAULT_THINKING_ELAPSED_MS` fallback and the observed
+`Some(2_500) → "◆ Thought for 2.5s"` projection. The 25
+`event_renderer::tests` unit tests, the 65 `runie-tui-model` lib unit
+tests, and the full `just ci` (fmt-check, clippy, lint, test, parity,
+source inventory, Pi event contract, feed-actor boundary) are green.

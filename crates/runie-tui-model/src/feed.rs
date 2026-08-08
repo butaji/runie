@@ -388,6 +388,19 @@ pub fn format_error(is_error: bool, error: Option<&str>) -> String {
     }
 }
 
+/// Fallback thinking-window duration used when the status actor never
+/// observed a reasoning turn. Pinned here so the "Thought for X.Xs" line
+/// stays renderer-independent and reproducible across replay paths.
+pub const DEFAULT_THINKING_ELAPSED_MS: u64 = 900;
+
+/// Render the Grok "Thought for …" summary line. `None` resolves to the
+/// pinned [`DEFAULT_THINKING_ELAPSED_MS`] so callers can rely on a stable
+/// label regardless of whether the status actor observed a reasoning turn.
+pub fn thinking_summary(elapsed_ms: Option<u64>) -> String {
+    let elapsed_ms = elapsed_ms.unwrap_or(DEFAULT_THINKING_ELAPSED_MS);
+    format!("◆ Thought for {:.1}s", elapsed_ms as f64 / 1_000.0)
+}
+
 /// Append the streaming tool-update fragment to a retained tool header. The
 /// serialized partial result is the transport payload verbatim; a payload that
 /// cannot be serialized degrades to an empty fragment so the header stays
@@ -1171,6 +1184,23 @@ mod tests {
     fn format_error_suppresses_suffix_when_not_error() {
         assert_eq!(super::format_error(false, None), String::new());
         assert_eq!(super::format_error(false, Some("ignored")), String::new());
+    }
+
+    #[test]
+    fn thinking_summary_pins_default_and_observed_elapsed() {
+        // Pin the fallback path: when no reasoning elapsed is observed, the
+        // summary still renders the pinned default rather than an empty or
+        // missing label, so replay and live paths share one identity.
+        assert_eq!(
+            super::thinking_summary(None),
+            format!(
+                "◆ Thought for {:.1}s",
+                super::DEFAULT_THINKING_ELAPSED_MS as f64 / 1_000.0
+            )
+        );
+        // Pin the observed path: an explicit elapsed value overrides the
+        // default and renders the same "◆ Thought for …" shape.
+        assert_eq!(super::thinking_summary(Some(2_500)), "◆ Thought for 2.5s");
     }
 
     #[test]

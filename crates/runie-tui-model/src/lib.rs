@@ -18,10 +18,11 @@ pub use feed::{
     activity_text, classify_activity_tool, completed_tool_header_with_args,
     default_tool_display_mode, format_elapsed, format_error, is_output_tool,
     is_transport_only_update, logical_tool_member_index, project_tool_blocks,
-    project_tool_card_rows, structured_update_text, tool_header, tool_mode_for_line,
-    tool_mode_override_for_line, tool_result_text, tool_update_header_text, ActivityKind,
-    CellPosition, CellSelection, FeedNavigation, FeedSnapshot, FeedState, Line, LineKind,
-    ScrollbackMsg, ToolBlock, ToolCardKind, ToolCardPaintIntent, ToolCardRow, ToolCardRowKind,
+    project_tool_card_rows, structured_update_text, thinking_summary, tool_header,
+    tool_mode_for_line, tool_mode_override_for_line, tool_result_text, tool_update_header_text,
+    ActivityKind, CellPosition, CellSelection, FeedNavigation, FeedSnapshot, FeedState, Line,
+    LineKind, ScrollbackMsg, ToolBlock, ToolCardKind, ToolCardPaintIntent, ToolCardRow,
+    ToolCardRowKind, DEFAULT_THINKING_ELAPSED_MS,
 };
 pub use memory::{memory_display_lines, parse_memory_results, MemoryResult};
 pub use prompt::{InputMode, PromptOutcome, PromptSnapshot};

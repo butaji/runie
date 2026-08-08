@@ -14,10 +14,10 @@ use crate::{ScrollbackActor, StatusActor};
 use crate::widgets::Status;
 
 pub use runie_tui_model::status_messages_for_event;
+pub use runie_tui_model::thinking_summary;
 use runie_tui_model::FeedSnapshot;
 
 const LIVE_TIMESTAMP_SECONDS_MIN: i64 = 1_000_000_000;
-const DEFAULT_THINKING_ELAPSED_MS: u64 = 900;
 
 #[allow(
     clippy::too_many_lines,
@@ -219,11 +219,6 @@ pub fn scrollback_messages_for_event(event: &AgentEvent) -> Vec<ScrollbackMsg> {
         | AgentEvent::MessageEnd { .. }
         | AgentEvent::ToolExecutionUpdate { .. } => Vec::new(),
     }
-}
-
-fn thinking_summary(elapsed_ms: Option<u64>) -> String {
-    let elapsed_ms = elapsed_ms.unwrap_or(DEFAULT_THINKING_ELAPSED_MS);
-    format!("◆ Thought for {:.1}s", elapsed_ms as f64 / 1_000.0)
 }
 
 pub struct EventRenderer {
