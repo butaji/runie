@@ -195,6 +195,48 @@ frames. The event-to-snapshot contract is now identical between the live
 bus path and the YAML replay path, so the closure-evidence replay
 fixtures no longer drift from a real captured session.
 
+**BackgroundWork live/replay closure (2026-08-08):** the live
+`EventRenderer::run` arm at the bus boundary used to drop every
+`BackgroundWork*` event before delegating to `scrollback_messages_for_event`,
+so the scrollback actor never received the `Subagent started/running/
+completed/failed/cancelled` rows even though `apply_actor_event` and the
+actor's own `bus_messages_for_event` adapter both projected them. The
+filter
+```rust
+if matches!(event,
+    AgentEvent::BackgroundWorkStarted { .. }
+        | AgentEvent::BackgroundWorkProgress { .. }
+        | AgentEvent::BackgroundWorkFinished { .. }
+        | AgentEvent::BackgroundWorkCancelled { .. }) {
+    Vec::new()
+} else {
+    scrollback_messages_for_event(&event)
+}
+```
+was a stale relic from the period when the live `App` path double-subscribed
+the scrollback actor to the bus and the renderer had to suppress one of the
+two projections. After the live subscription consolidation in p36, the
+scrollback actor is mailbox-only in production and the live `run` branch is
+the single bus delivery boundary, so suppressing BackgroundWork* events only
+deprived the transcript of the closure rows that the replay path already
+emitted. The filter was removed so the live `run` branch now matches the
+`apply_actor_event` replay arm at line 473 exactly:
+`scrollback_messages_for_event(&event)` produces one `ToolStart` for
+`BackgroundWorkStarted`, one `ToolUpdate` for `BackgroundWorkProgress`, and
+a `ToolEnd` plus the optional `MarkToolError` for the finished/cancelled
+variants. The `live_renderer_delivers_background_work_lifecycle_to_the_feed_actor`
+test drives every variant through the live `run` branch and asserts the
+matching `Subagent` row (started/running/completed/failed/cancelled), the
+final `LineKind::ToolError` for the failed and cancelled closures, and the
+exact single-row transcript state for the started variant. The paired
+`live_and_replay_background_work_paths_produce_identical_rows` test drives
+the same event sequence through both paths and compares the per-`work_id`
+`(LineKind, text)` rows one work_id at a time, which would have failed
+against the previous buggy code because the live path produced empty
+transcripts while the replay path produced the full `Subagent` row set.
+The BackgroundWork* event → transcript contract is now identical between
+the live bus path and the YAML replay path.
+
 The first two historical bullets are now closed. Production scroll, selection,
 palette, and prompt transitions have named owner-local messages, and replay
 assertions already support ordered `exact_events`, closed-contract `pi_events`,

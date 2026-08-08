@@ -331,17 +331,7 @@ impl EventRenderer {
                                 _ => None,
                             };
                             let turn_was_started = scrollback_actor.model_snapshot().turn_started;
-                            let mut feed_messages = if matches!(
-                                event,
-                                AgentEvent::BackgroundWorkStarted { .. }
-                                    | AgentEvent::BackgroundWorkProgress { .. }
-                                    | AgentEvent::BackgroundWorkFinished { .. }
-                                    | AgentEvent::BackgroundWorkCancelled { .. }
-                            ) {
-                                Vec::new()
-                            } else {
-                                scrollback_messages_for_event(&event)
-            };
+                            let mut feed_messages = scrollback_messages_for_event(&event);
                             if matches!(event, AgentEvent::TurnStart) {
                                 feed_messages.push(ScrollbackMsg::TurnStart);
                             }
@@ -1475,6 +1465,368 @@ mod tests {
 
         shutdown_tx.send(true).expect("renderer shutdown");
         task.await.expect("renderer task");
+    }
+
+    #[allow(
+        clippy::too_many_lines,
+        reason = "live BackgroundWork* regression keeps all four lifecycle variants explicit"
+    )]
+    #[tokio::test]
+    async fn live_renderer_delivers_background_work_lifecycle_to_the_feed_actor() {
+        // Regression: the live `run` path used to drop every BackgroundWork*
+        // event so the scrollback actor never produced the `Subagent`
+        // started/running/completed/failed/cancelled rows. The replay path
+        // (`apply_actor_event`) drove `scrollback_messages_for_event` directly,
+        // so the two paths drifted apart. After dropping the filter, the live
+        // bus loop must produce exactly the same rows the replay path emits.
+        let snapshot_lines = |scrollback: &ScrollbackActor, work_id: &str| {
+            let snapshot = scrollback.snapshot();
+            snapshot
+                .lines()
+                .iter()
+                .filter(|line| line.tool_call_id.as_deref() == Some(work_id))
+                .map(|line| (line.kind, line.text.clone()))
+                .collect::<Vec<_>>()
+        };
+
+        // 1. BackgroundWorkStarted — must seed the `Subagent started: …`
+        //    row that the replay path emits for `background: true`.
+        let started_bus = runie_core::events::EventBus::new();
+        let started_scrollback = ScrollbackActor::new();
+        let mut started_feed = started_scrollback.subscribe();
+        let started_renderer =
+            EventRenderer::with_live_actors(started_scrollback.clone(), StatusActor::new());
+        let (started_shutdown, started_shutdown_rx) = tokio::sync::watch::channel(false);
+        // OWNER: test — joins the renderer after the shutdown event.
+        let started_task =
+            tokio::spawn(started_renderer.run(started_bus.subscribe(), started_shutdown_rx));
+        started_bus.publish(AgentEvent::BackgroundWorkStarted {
+            work_id: "worker-started".into(),
+            description: "inspect files".into(),
+            background: true,
+        });
+        started_feed
+            .changed()
+            .await
+            .expect("background start delivery");
+        let started_lines = snapshot_lines(&started_scrollback, "worker-started");
+        assert!(
+            started_lines
+                .iter()
+                .any(|(kind, text)| matches!(kind, LineKind::Tool)
+                    && text.contains("Subagent started")
+                    && text.contains("inspect files")),
+            "live `run` path must produce the `Subagent started: …` row: {started_lines:?}"
+        );
+        // And the row kind/kind must mirror what the replay path emits:
+        // `scrollback_messages_for_event(BackgroundWorkStarted { background: true })`
+        // is a single `ToolStart` whose header starts with `Subagent started`.
+        assert_eq!(
+            started_lines.len(),
+            1,
+            "started branch should emit exactly one transcript row, got: {started_lines:?}"
+        );
+        started_shutdown.send(true).expect("renderer shutdown");
+        started_task.await.expect("renderer task");
+
+        // 2. BackgroundWorkProgress — must append the `Subagent running: …`
+        //    header update that the replay path emits.
+        let progress_bus = runie_core::events::EventBus::new();
+        let progress_scrollback = ScrollbackActor::new();
+        let mut progress_feed = progress_scrollback.subscribe();
+        let progress_renderer =
+            EventRenderer::with_live_actors(progress_scrollback.clone(), StatusActor::new());
+        let (progress_shutdown, progress_shutdown_rx) = tokio::sync::watch::channel(false);
+        // OWNER: test — joins the renderer after the shutdown event.
+        let progress_task =
+            tokio::spawn(progress_renderer.run(progress_bus.subscribe(), progress_shutdown_rx));
+        progress_bus.publish(AgentEvent::BackgroundWorkStarted {
+            work_id: "worker-progress".into(),
+            description: "list docs".into(),
+            background: false,
+        });
+        progress_feed
+            .changed()
+            .await
+            .expect("background start delivery");
+        progress_bus.publish(AgentEvent::BackgroundWorkProgress {
+            work_id: "worker-progress".into(),
+            description: "list docs".into(),
+            activity: "scanning".into(),
+        });
+        progress_feed
+            .changed()
+            .await
+            .expect("background progress delivery");
+        let progress_lines = snapshot_lines(&progress_scrollback, "worker-progress");
+        assert!(
+            progress_lines
+                .iter()
+                .any(|(_, text)| text.contains("Subagent running")
+                    && text.contains("scanning")),
+            "live `run` path must produce the `Subagent running: … — scanning` row: {progress_lines:?}"
+        );
+        // The replay path replaces the existing header row in place, so the
+        // transcript still contains a single line tied to `worker-progress`.
+        assert_eq!(
+            progress_lines.len(),
+            1,
+            "progress branch should keep exactly one transcript row: {progress_lines:?}"
+        );
+        progress_shutdown.send(true).expect("renderer shutdown");
+        progress_task.await.expect("renderer task");
+
+        // 3. BackgroundWorkFinished (success) — must emit the
+        //    `Subagent completed …` closure header.
+        let finished_bus = runie_core::events::EventBus::new();
+        let finished_scrollback = ScrollbackActor::new();
+        let mut finished_feed = finished_scrollback.subscribe();
+        let finished_renderer =
+            EventRenderer::with_live_actors(finished_scrollback.clone(), StatusActor::new());
+        let (finished_shutdown, finished_shutdown_rx) = tokio::sync::watch::channel(false);
+        // OWNER: test — joins the renderer after the shutdown event.
+        let finished_task =
+            tokio::spawn(finished_renderer.run(finished_bus.subscribe(), finished_shutdown_rx));
+        finished_bus.publish(AgentEvent::BackgroundWorkStarted {
+            work_id: "worker-finished".into(),
+            description: "compile".into(),
+            background: true,
+        });
+        finished_feed
+            .changed()
+            .await
+            .expect("background start delivery");
+        finished_bus.publish(AgentEvent::BackgroundWorkFinished {
+            work_id: "worker-finished".into(),
+            description: "compile".into(),
+            is_error: false,
+            elapsed_ms: Some(1_250),
+            error: None,
+        });
+        finished_feed
+            .changed()
+            .await
+            .expect("background finished delivery");
+        let finished_lines = snapshot_lines(&finished_scrollback, "worker-finished");
+        assert!(
+            finished_lines
+                .iter()
+                .any(|(_, text)| text.contains("Subagent completed") && text.contains("compile")),
+            "live `run` path must produce the `Subagent completed …` row: {finished_lines:?}"
+        );
+        assert!(
+            finished_lines
+                .iter()
+                .all(|(_, text)| !text.contains("Subagent failed")),
+            "successful BackgroundWorkFinished must not produce a `Subagent failed` row: {finished_lines:?}"
+        );
+        assert_eq!(
+            finished_lines.len(),
+            1,
+            "finished success branch should keep exactly one transcript row: {finished_lines:?}"
+        );
+        finished_shutdown.send(true).expect("renderer shutdown");
+        finished_task.await.expect("renderer task");
+
+        // 4. BackgroundWorkFinished (failure) — must emit the
+        //    `Subagent failed …` closure header.
+        let failed_bus = runie_core::events::EventBus::new();
+        let failed_scrollback = ScrollbackActor::new();
+        let mut failed_feed = failed_scrollback.subscribe();
+        let failed_renderer =
+            EventRenderer::with_live_actors(failed_scrollback.clone(), StatusActor::new());
+        let (failed_shutdown, failed_shutdown_rx) = tokio::sync::watch::channel(false);
+        // OWNER: test — joins the renderer after the shutdown event.
+        let failed_task =
+            tokio::spawn(failed_renderer.run(failed_bus.subscribe(), failed_shutdown_rx));
+        failed_bus.publish(AgentEvent::BackgroundWorkStarted {
+            work_id: "worker-failed".into(),
+            description: "compile".into(),
+            background: true,
+        });
+        failed_feed
+            .changed()
+            .await
+            .expect("background start delivery");
+        failed_bus.publish(AgentEvent::BackgroundWorkFinished {
+            work_id: "worker-failed".into(),
+            description: "compile".into(),
+            is_error: true,
+            elapsed_ms: Some(900),
+            error: Some("boom".to_string()),
+        });
+        failed_feed
+            .changed()
+            .await
+            .expect("background finished delivery");
+        let failed_lines = snapshot_lines(&failed_scrollback, "worker-failed");
+        assert!(
+            failed_lines
+                .iter()
+                .any(|(_, text)| text.contains("Subagent failed") && text.contains("compile")),
+            "live `run` path must produce the `Subagent failed …` row: {failed_lines:?}"
+        );
+        assert!(
+            failed_lines
+                .iter()
+                .any(|(kind, _)| matches!(kind, LineKind::ToolError)),
+            "failed BackgroundWorkFinished must mark the tool row as ToolError: {failed_lines:?}"
+        );
+        failed_shutdown.send(true).expect("renderer shutdown");
+        failed_task.await.expect("renderer task");
+
+        // 5. BackgroundWorkCancelled — must emit the
+        //    `Subagent cancelled …` closure header and mark the row as
+        //    `ToolError`, matching the replay path.
+        let cancelled_bus = runie_core::events::EventBus::new();
+        let cancelled_scrollback = ScrollbackActor::new();
+        let mut cancelled_feed = cancelled_scrollback.subscribe();
+        let cancelled_renderer =
+            EventRenderer::with_live_actors(cancelled_scrollback.clone(), StatusActor::new());
+        let (cancelled_shutdown, cancelled_shutdown_rx) = tokio::sync::watch::channel(false);
+        // OWNER: test — joins the renderer after the shutdown event.
+        let cancelled_task =
+            tokio::spawn(cancelled_renderer.run(cancelled_bus.subscribe(), cancelled_shutdown_rx));
+        cancelled_bus.publish(AgentEvent::BackgroundWorkStarted {
+            work_id: "worker-cancelled".into(),
+            description: "compile".into(),
+            background: false,
+        });
+        cancelled_feed
+            .changed()
+            .await
+            .expect("background start delivery");
+        cancelled_bus.publish(AgentEvent::BackgroundWorkCancelled {
+            work_id: "worker-cancelled".into(),
+            description: "compile".into(),
+            elapsed_ms: Some(250),
+        });
+        cancelled_feed
+            .changed()
+            .await
+            .expect("background cancelled delivery");
+        let cancelled_lines = snapshot_lines(&cancelled_scrollback, "worker-cancelled");
+        assert!(
+            cancelled_lines
+                .iter()
+                .any(|(_, text)| text.contains("Subagent cancelled") && text.contains("compile")),
+            "live `run` path must produce the `Subagent cancelled …` row: {cancelled_lines:?}"
+        );
+        assert!(
+            cancelled_lines
+                .iter()
+                .any(|(kind, _)| matches!(kind, LineKind::ToolError)),
+            "BackgroundWorkCancelled must mark the tool row as ToolError: {cancelled_lines:?}"
+        );
+        cancelled_shutdown.send(true).expect("renderer shutdown");
+        cancelled_task.await.expect("renderer task");
+    }
+
+    /// The replay path (`apply_actor_event`) and the live `run` path must
+    /// project the same `Subagent …` rows for BackgroundWork* events. This
+    /// pins the parity by driving one of each event through both paths and
+    /// asserting the per-`work_id` transcript lines match.
+    #[allow(
+        clippy::too_many_lines,
+        reason = "paired live/replay BackgroundWork parity keeps every variant explicit"
+    )]
+    #[tokio::test]
+    async fn live_and_replay_background_work_paths_produce_identical_rows() {
+        let events = vec![
+            AgentEvent::BackgroundWorkStarted {
+                work_id: "parity-started".into(),
+                description: "started task".into(),
+                background: true,
+            },
+            AgentEvent::BackgroundWorkStarted {
+                work_id: "parity-foreground".into(),
+                description: "running task".into(),
+                background: false,
+            },
+            AgentEvent::BackgroundWorkProgress {
+                work_id: "parity-foreground".into(),
+                description: "running task".into(),
+                activity: "scanning".into(),
+            },
+            AgentEvent::BackgroundWorkFinished {
+                work_id: "parity-started".into(),
+                description: "started task".into(),
+                is_error: false,
+                elapsed_ms: Some(500),
+                error: None,
+            },
+            AgentEvent::BackgroundWorkFinished {
+                work_id: "parity-failed".into(),
+                description: "failed task".into(),
+                is_error: true,
+                elapsed_ms: Some(700),
+                error: Some("oops".to_string()),
+            },
+            AgentEvent::BackgroundWorkCancelled {
+                work_id: "parity-cancelled".into(),
+                description: "cancelled task".into(),
+                elapsed_ms: Some(100),
+            },
+        ];
+
+        // Live path — drive every event through a `run` loop and snapshot
+        // the per-`work_id` transcript rows.
+        let live_bus = runie_core::events::EventBus::new();
+        let live_scrollback = ScrollbackActor::new();
+        let live_renderer =
+            EventRenderer::with_live_actors(live_scrollback.clone(), StatusActor::new());
+        let (live_shutdown, live_shutdown_rx) = tokio::sync::watch::channel(false);
+        // OWNER: test — joins the renderer after the shutdown event.
+        let live_task = tokio::spawn(live_renderer.run(live_bus.subscribe(), live_shutdown_rx));
+        for event in &events {
+            live_bus.publish(event.clone());
+        }
+        // Wait until the scrollback has reduced every event. The actor
+        // publishes a snapshot after each batch, so reading the snapshot
+        // once the bus has been drained is sufficient — no sleeps.
+        for _ in 0..events.len() {
+            live_scrollback
+                .subscribe()
+                .changed()
+                .await
+                .expect("scrollback actor alive");
+        }
+        live_shutdown.send(true).expect("renderer shutdown");
+        live_task.await.expect("renderer task");
+
+        // Replay path — apply the same events through `apply_actor_event`.
+        let replay_scrollback = ScrollbackActor::new();
+        let mut replay_renderer =
+            EventRenderer::with_actors(replay_scrollback.clone(), StatusActor::new());
+        for event in events {
+            replay_renderer.apply_actor_event(event).await;
+        }
+
+        let live_snapshot = live_scrollback.snapshot();
+        let replay_snapshot = replay_scrollback.snapshot();
+        for work_id in [
+            "parity-started",
+            "parity-foreground",
+            "parity-failed",
+            "parity-cancelled",
+        ] {
+            let live_rows = live_snapshot
+                .lines()
+                .iter()
+                .filter(|line| line.tool_call_id.as_deref() == Some(work_id))
+                .map(|line| (line.kind, line.text.clone()))
+                .collect::<Vec<_>>();
+            let replay_rows = replay_snapshot
+                .lines()
+                .iter()
+                .filter(|line| line.tool_call_id.as_deref() == Some(work_id))
+                .map(|line| (line.kind, line.text.clone()))
+                .collect::<Vec<_>>();
+            assert_eq!(
+                live_rows, replay_rows,
+                "live and replay paths must emit the same BackgroundWork rows for {work_id}",
+            );
+        }
     }
 
     #[tokio::test]
