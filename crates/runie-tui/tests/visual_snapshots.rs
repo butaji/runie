@@ -43,6 +43,33 @@ async fn hey_yaml_replays_across_capture_matrix_sizes() {
     }
 }
 
+#[tokio::test]
+async fn unsupported_slash_command_replays_across_capture_matrix_sizes() {
+    let scenario = load_scenario(&fixture("visual-slash-unsupported.yaml"))
+        .expect("unsupported slash-command fixture");
+    for (cols, rows) in [(62, 32), (80, 24), (100, 30), (120, 36)] {
+        let mut visual = scenario
+            .assertions
+            .visual
+            .clone()
+            .expect("unsupported visual assertions");
+        visual.cols = cols;
+        visual.rows = rows;
+        let buffer = render_visual_buffer(&scenario, &visual)
+            .await
+            .unwrap_or_else(|error| panic!("{cols}x{rows}: {error}"));
+        let screen = buffer
+            .content()
+            .iter()
+            .map(|cell| cell.symbol())
+            .collect::<String>();
+        assert!(
+            screen.contains("not supported by Runie"),
+            "{cols}x{rows}: missing unsupported-command diagnostic"
+        );
+    }
+}
+
 fn fixture(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("tests/e2e")

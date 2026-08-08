@@ -137,3 +137,9 @@ The live binary owns the terminal-side OSC 52 clipboard effect; replay and
 model tests cover the payload selection without invoking terminal I/O.
 `visual-slash-copy.yaml` drives the post-replay command through the same
 application boundary and asserts the emitted immutable payload.
+
+Geometry-matrix increment (2026-08-08): the typed unsupported-command fixture
+now replays at 62×32, 80×24, 100×30, and 120×36 and asserts the complete
+rendered screen still exposes the actor-delivered capability diagnostic. This
+closes the four-standard-geometry evidence gap for the command/error surface;
+the remaining unsupported capabilities still require their owning actors.
