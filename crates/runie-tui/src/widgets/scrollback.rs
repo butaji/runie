@@ -24,6 +24,9 @@ const TIMESTAMP_GUTTER_SPACES: usize = 3;
 // gutter and its short-clock inset when materializing a plain text row.
 const ASSISTANT_TIMESTAMP_WRAPPED_RESERVATION: usize = 14;
 
+type PhysicalRow = (LineKind, String, bool);
+type PhysicalRowsWithSources = (Vec<PhysicalRow>, Vec<Option<usize>>);
+
 /// Grok's default dense activity-group budget. A zero budget is reserved for
 /// the source-compatible "no truncation" configuration.
 pub const GROK_GROUP_MAX_VISIBLE: usize = 10;
@@ -1139,6 +1142,15 @@ impl Scrollback {
         if text.is_empty() {
             return None;
         }
+        let compact = crate::layout::grok_effective_compact(false, terminal_rows);
+        let (physical_rows, sources) =
+            self.physical_rows_with_sources(area.width as usize, compact, area.height);
+        if let Some(row) = sources
+            .iter()
+            .position(|source| *source == Some(selected_index))
+        {
+            return Some(row);
+        }
         // Physical rows are a rendered projection and may contain duplicate
         // text. Preserve the selected logical entry's identity by selecting
         // the same occurrence among projected rows instead of taking the
@@ -1152,8 +1164,7 @@ impl Scrollback {
         // text. Use a leading fragment as the identity probe, while keeping
         // the full text for short rows; occurrence selection still prevents
         // duplicate logical rows from collapsing onto the first match.
-        let compact = crate::layout::grok_effective_compact(false, terminal_rows);
-        self.physical_rows(area.width as usize, compact, area.height)
+        physical_rows
             .iter()
             .enumerate()
             .filter(|(_, (kind, candidate, _))| {
@@ -1213,7 +1224,27 @@ impl Scrollback {
         compact: bool,
         available_height: u16,
     ) -> Vec<(LineKind, String, bool)> {
+        self.physical_rows_with_sources(width, compact, available_height)
+            .0
+    }
+
+    /// Build physical rows together with the logical feed line that produced
+    /// each row. Synthetic layout rows retain the current logical source so
+    /// selection/measurement can use one identity across wrapping.
+    #[allow(
+        clippy::cognitive_complexity,
+        clippy::too_many_lines,
+        clippy::type_complexity,
+        reason = "physical row projection keeps fold, markdown, and wrapping rules together"
+    )]
+    fn physical_rows_with_sources(
+        &self,
+        width: usize,
+        compact: bool,
+        available_height: u16,
+    ) -> PhysicalRowsWithSources {
         let mut rows = Vec::new();
+        let mut sources = Vec::new();
         let mut code_block = false;
         let mut truncated_output = HashSet::new();
         let mut preview_output_totals: HashMap<String, usize> = HashMap::new();
@@ -1234,6 +1265,7 @@ impl Scrollback {
         let mut user_vpad_emitted = false;
         let mut skip_full_user_separator = false;
         for (line_index, line) in self.lines.iter().enumerate() {
+            let line_start = rows.len();
             // Grok keeps one blank row between the settled thought summary
             // and the completed assistant body in the live no-tool turn. The
             // separator is a pure physical-row rule: actor-owned logical
@@ -1308,6 +1340,10 @@ impl Scrollback {
                                     false,
                                 ));
                             }
+                            sources.extend(std::iter::repeat_n(
+                                Some(line_index),
+                                rows.len().saturating_sub(line_start),
+                            ));
                             continue;
                         }
                     }
@@ -1529,8 +1565,12 @@ impl Scrollback {
             if fence {
                 code_block = !code_block;
             }
+            sources.extend(std::iter::repeat_n(
+                Some(line_index),
+                rows.len().saturating_sub(line_start),
+            ));
         }
-        rows
+        (rows, sources)
     }
 
     /// Build the ordered, consecutive tool-member groups used by Grok's

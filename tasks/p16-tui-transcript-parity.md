@@ -946,3 +946,10 @@ wrapped rows to retain their anchor instead of searching for text that cannot
 fit in one physical fragment. Duplicate logical occurrences remain selected by
 occurrence index, including distinct rows with a shared leading fragment, with
 focused coverage for duplicate and wrapped rows.
+
+Logical physical-row source increment (2026-08-10): the scrollback projection
+now carries each physical row's logical feed-line source alongside its
+compatibility tuple. Measured selection resolves the exact selected source
+identity before using the text/occurrence fallback, so wrapped and duplicate
+rows share one identity path without adding renderer-owned state. Focused
+duplicate/wrapped regressions and the complete local CI gate pass.
