@@ -14,7 +14,7 @@ mod sticky;
 mod theme;
 mod ui;
 
-pub use events::{is_actor_feed_event, status_messages_for_event};
+pub use events::{is_actor_feed_event, scrollback_messages_for_event, status_messages_for_event};
 pub use feed::{
     active_tool_count, activity_counts, activity_counts_with_start,
     activity_group_exists_since_latest_user, activity_text, append_user_with_timestamp,

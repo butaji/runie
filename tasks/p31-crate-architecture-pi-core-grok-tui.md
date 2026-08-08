@@ -112,6 +112,15 @@ can share event construction without sharing delivery policy. Until that
 scope is represented, the two mapper surfaces remain deliberately separate;
 the actor-boundary validator and full replay suite are the safety evidence.
 
+**Compatibility projection extraction (2026-08-10):** The complete
+`scrollback_messages_for_event` mapper now lives in `runie-tui-model::events`
+and is re-exported as a pure renderer-independent projection. The existing
+`runie-tui` function is only a compatibility wrapper, so live and YAML replay
+call sites retain their API while the event-to-intent mapping has one
+model-owned implementation. A model-layer tool-start regression proves the
+actor intent shape directly; the full workspace and visual replay gates remain
+green.
+
 **First scope slice (2026-08-06):** `runie-tui-model::is_actor_feed_event`
 now owns the actor-feed admission policy. The bus projection rejects
 transcript lifecycle events before its narrower mapping runs, and a pure model
