@@ -629,6 +629,10 @@ snippet content. Metadata receives the muted semantic paint intent while
 snippet rows retain content ownership; a reducer projection test pins the
 distinction before terminal styling.
 
+Memory metadata fill increment (2026-08-08): the physical-row adapter now
+extends Grok's panel background through metadata-row trailing cells as well as
+snippet rows, with a renderer regression covering both row classes.
+
 Typed-card row vocabulary slice (2026-08-06): added model-owned
 `ToolCardRowKind`/`ToolCardRow` projections for header, content, and status
 semantics. The existing truncation projection now consumes those rows for

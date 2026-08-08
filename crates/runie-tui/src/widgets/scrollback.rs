@@ -1095,7 +1095,14 @@ impl Scrollback {
             }
             if self.navigation.live_grok_layout
                 && matches!(*kind, LineKind::ToolOutput | LineKind::ToolResult)
-                && (text.starts_with("    ") || text.starts_with("Result "))
+                && (text.starts_with("    ")
+                    || text.starts_with("Result ")
+                    || (text
+                        .trim_start()
+                        .as_bytes()
+                        .first()
+                        .is_some_and(u8::is_ascii_digit)
+                        && text.contains(". ")))
             {
                 // Grok's memory/search rows are panel rows, not merely
                 // panel-colored text. Make the trailing cells explicit so a
@@ -2706,6 +2713,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn memory_snippet_paints_grok_panel_background_across_the_row() {
         let mut scrollback = Scrollback::new();
         scrollback.apply(ScrollbackMsg::SetToolName(
@@ -2721,7 +2729,13 @@ mod tests {
             tool_call_id: "memory-1".into(),
             header: "Memory Search memory".into(),
             activity: None,
-            output: vec![(LineKind::ToolOutput, "    memory snippet".into())],
+            output: vec![
+                (
+                    LineKind::ToolOutput,
+                    "  1. notes.md:4-8  (score: 0.72, global)".into(),
+                ),
+                (LineKind::ToolOutput, "    memory snippet".into()),
+            ],
         });
         scrollback.set_tool_mode("memory-1", runie_core::types::ToolDisplayMode::Expanded);
         scrollback.set_live_grok_layout(true);
@@ -2730,6 +2744,10 @@ mod tests {
             .iter()
             .position(|(_, text, _)| text.contains("memory snippet"))
             .expect("memory snippet row");
+        let metadata_row = rows
+            .iter()
+            .position(|(_, text, _)| text.contains("notes.md"))
+            .expect("memory metadata row");
         let mut buffer = Buffer::empty(Rect::new(0, 0, 80, 8));
         scrollback.render_with_terminal_height(Rect::new(0, 0, 80, 8), 24, &mut buffer);
         let row = snippet_row as u16;
@@ -2737,6 +2755,13 @@ mod tests {
             buffer
                 .cell((79, row))
                 .expect("full snippet row background")
+                .bg,
+            Color::Rgb(36, 36, 36)
+        );
+        assert_eq!(
+            buffer
+                .cell((79, metadata_row as u16))
+                .expect("full metadata row background")
                 .bg,
             Color::Rgb(36, 36, 36)
         );
