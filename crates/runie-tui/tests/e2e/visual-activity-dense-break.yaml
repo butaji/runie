@@ -1,9 +1,5 @@
-name: visual-activity-dense-groups
-description: |
-  Twelve ordered tool members exercise Grok's dense-group threshold. The trace
-  is intentionally contiguous so the hidden-prefix and newest-ten policy is
-  observable without depending on a screenshot-only fixture. Group breaks
-  are covered separately by visual-activity-dense-break.yaml.
+name: visual-activity-dense-break
+description: A non-tool assistant row breaks two dense activity groups.
 initial_prompt: "inspect the repository"
 tool_execution: sequential
 tools:
@@ -17,6 +13,7 @@ events:
   - tool_call: { name: bash, args: { cmd: "four" } }
   - tool_call: { name: bash, args: { cmd: "five" } }
   - tool_call: { name: bash, args: { cmd: "six" } }
+  - text_delta: "between groups"
   - tool_call: { name: bash, args: { cmd: "seven" } }
   - tool_call: { name: bash, args: { cmd: "eight" } }
   - tool_call: { name: bash, args: { cmd: "nine" } }
@@ -33,9 +30,11 @@ assertions:
     cols: 80
     rows: 50
     activity_expanded: true
-    center_revealed_entry: true
-    steps: [Down, Down, Down, Down, Down, Down, Down, Down, Down, Down, Down]
     screen_text:
-      - "Run one"
-      - "Run eleven"
+      - "between groups"
+      - "╶╶ 1 more"
+      - "Run seven"
       - "Run twelve"
+    screen_excludes:
+      - "Run one"
+      - "Run two"

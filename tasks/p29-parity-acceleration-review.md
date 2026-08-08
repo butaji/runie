@@ -96,7 +96,14 @@ geometries.
 Acceleration result: the dense collapsed fixture now distinguishes collapsed
 activity from Grok's bounded visible-tail behavior and runs through the
 runtime YAML matrix without recompilation. Remaining dense parity is limited
-to additional group-break and interactive reveal variants.
+to interactive reveal and viewport-preservation variants.
+
+Group-break replay increment (2026-08-09):
+`visual-activity-dense-break.yaml` places assistant text between two
+six-member tool runs and asserts separate hidden-prefix markers, visible tail
+members, and hidden first members. This closes the documented group-break
+coverage gap through runtime YAML discovery; interactive reveal and
+viewport-preservation behavior remain separately event-driven.
 
 Implementation progress (2026-08-06): `runie-tui` now exposes a pure
 `dense_tool_group_members` policy helper and the named
