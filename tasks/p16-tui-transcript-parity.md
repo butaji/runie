@@ -546,7 +546,10 @@ keeps the newest ten members, and emits a semantic `╶╶ N more` row for the
 hidden prefix. The 12-member YAML oracle covers the threshold path; small
 groups and the existing full visual suite remain green. Explicit
 Selecting a hidden member now reveals the entire dense group through the
-actor-owned selection reducer; exact viewport centering remains open.
+actor-owned selection reducer and centers the selected member in the pure
+viewport projection. The focused renderer regression pins the selected row at
+the viewport midpoint after dense-group reveal; broader Grok card geometry
+remains open.
 
 Workflow-card contract (2026-08-06): Grok's `WorkflowBlock` requires
 `run_id`, `name`, `objective`, status (`running`/`done`/`failed`/`cancelled`/

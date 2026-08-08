@@ -4078,6 +4078,48 @@ mod tests {
     }
 
     #[test]
+    fn selecting_hidden_dense_member_centers_the_revealed_member() {
+        let mut scrollback = Scrollback::new();
+        scrollback.set_activity_expanded(true);
+        scrollback.append(Line::new(LineKind::Activity, "❙  ◈ Ran 12 commands"));
+        for index in 1..=12 {
+            scrollback.append(
+                Line::new(LineKind::Tool, format!("Run command-{index}"))
+                    .for_tool(format!("call-{index}")),
+            );
+        }
+        for _ in 0..11 {
+            scrollback.apply(ScrollbackMsg::SelectNextTool);
+        }
+
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 40, 6));
+        scrollback.render(Rect::new(0, 0, 40, 6), &mut buffer);
+        let selected_row = (0..6)
+            .find(|row| {
+                (0..40)
+                    .filter_map(|column| buffer.cell((column, *row)))
+                    .map(|cell| cell.symbol())
+                    .collect::<String>()
+                    .contains("command-11")
+            })
+            .unwrap_or_else(|| {
+                let visible = (0..6)
+                    .map(|row| {
+                        (0..40)
+                            .filter_map(|column| buffer.cell((column, row)))
+                            .map(|cell| cell.symbol())
+                            .collect::<String>()
+                    })
+                    .collect::<Vec<_>>();
+                panic!("selected hidden member is visible: {visible:?}");
+            });
+        assert_eq!(
+            selected_row, 4,
+            "selected member should be viewport-centered"
+        );
+    }
+
+    #[test]
     #[allow(
         clippy::too_many_lines,
         reason = "the workflow status matrix keeps Grok's source variants together"
