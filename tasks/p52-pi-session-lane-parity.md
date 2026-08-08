@@ -610,3 +610,10 @@ operation facts survive while `config_records` contains no operation records.
 
 This workstream is required for the stated 100% Pi-core parity goal; it is not
 classified as out of scope.
+
+Typed snapshot access increment (2026-08-08): `SessionLaneRecordSnapshot`
+now exposes one validated `typed_record()`/`kind()` boundary for internal
+consumers. The JSONL-facing `record_type` and lossless `data` fields remain
+unchanged for Pi compatibility, while callers no longer need to independently
+decode or match the persisted JSON shape. Core session and replay regressions
+cover the boundary; the wire representation remains intentionally generic.

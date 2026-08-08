@@ -326,6 +326,20 @@ pub struct SessionLaneRecordSnapshot {
     pub data: serde_json::Value,
 }
 
+impl SessionLaneRecordSnapshot {
+    /// Decode the lossless wire payload at the actor-owned typed boundary.
+    /// Persistence keeps `record_type` and `data` for Pi compatibility, while
+    /// callers that need behavior use this one validated projection instead
+    /// of matching JSON fields independently.
+    pub fn typed_record(&self) -> Result<SessionLaneRecord, String> {
+        SessionLaneRecord::decode(&self.record_type, &self.data)
+    }
+
+    pub fn kind(&self) -> Result<SessionLaneRecordKind, String> {
+        self.typed_record().map(|record| record.kind())
+    }
+}
+
 /// Declarative read boundary matching Pi's durable operation-lane query.
 /// Filters are applied by the session owner to its immutable snapshot; the
 /// query does not expose mutable journal state to callers.
@@ -848,7 +862,7 @@ impl SessionSnapshot {
             .iter()
             .cloned()
             .map(|record| {
-                let typed = SessionLaneRecord::decode(&record.record_type, &record.data)?;
+                let typed = record.typed_record()?;
                 Ok((record, typed))
             })
             .collect()
@@ -4116,6 +4130,28 @@ mod tests {
         assert_eq!(record.run_id(), Some("op-1"));
         assert!(matches!(record, SessionLaneRecord::ToolStarted(value) if value == payload));
         assert!(SessionLaneRecord::decode("unknown", &payload).is_err());
+    }
+
+    #[test]
+    fn lane_snapshot_exposes_one_validated_typed_boundary() {
+        let payload = serde_json::json!({"id": "op-1", "intent": {"kind": "prompt"}});
+        let snapshot = SessionLaneRecordSnapshot {
+            record_type: "operation_started".into(),
+            id: "op-1".into(),
+            lane: Some("operation".into()),
+            seq: Some(1),
+            timestamp: Some(0),
+            data: payload.clone(),
+        };
+
+        assert_eq!(
+            snapshot.kind().expect("known typed lane family"),
+            SessionLaneRecordKind::OperationStarted
+        );
+        assert!(matches!(
+            snapshot.typed_record().expect("valid snapshot payload"),
+            SessionLaneRecord::OperationStarted(value) if value == payload
+        ));
     }
 
     #[test]
