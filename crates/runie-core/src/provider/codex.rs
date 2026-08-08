@@ -233,6 +233,7 @@ impl CodexWebSocketAdapter {
         context: &AgentContext,
         options: Option<SimpleStreamOptions>,
         retried_connection_limit: bool,
+        retried_missing_continuation: bool,
     ) -> Result<AssistantMessageEventStream, StreamError> {
         let url = resolve_websocket_url(self.base_url.as_deref()).map_err(StreamError::Invalid)?;
         let body = (self.request_builder)(model, context, options.as_ref())
@@ -354,6 +355,7 @@ impl CodexWebSocketAdapter {
                     }
                     let message_type = value.get("type").and_then(|value| value.as_str());
                     if message_type == Some("error")
+                        && !started
                         && !retried_connection_limit
                         && value
                             .pointer("/error/code")
@@ -366,11 +368,12 @@ impl CodexWebSocketAdapter {
                             context,
                             options.clone(),
                             true,
+                            retried_missing_continuation,
                         ))
                         .await;
                     }
                     if message_type == Some("error")
-                        && continuation.is_some()
+                        && !retried_missing_continuation
                         && value
                             .pointer("/error/code")
                             .and_then(|value| value.as_str())
@@ -389,6 +392,7 @@ impl CodexWebSocketAdapter {
                             context,
                             options.clone(),
                             retried_connection_limit,
+                            true,
                         ))
                         .await;
                     }
@@ -446,7 +450,7 @@ impl WebSocketAdapter for CodexWebSocketAdapter {
         context: &AgentContext,
         options: Option<SimpleStreamOptions>,
     ) -> Result<AssistantMessageEventStream, StreamError> {
-        self.stream_websocket_attempt(model, context, options, false)
+        self.stream_websocket_attempt(model, context, options, false, false)
             .await
     }
 }
