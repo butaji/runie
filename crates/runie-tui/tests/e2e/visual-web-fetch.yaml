@@ -17,6 +17,7 @@ assertions:
   state:
     tool_blocks: 1
     tool_kinds: [web_fetch]
+    tool_row_kinds: [header, metadata, metadata, content, content]
   visual:
     cols: 80
     rows: 24

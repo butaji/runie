@@ -1603,6 +1603,11 @@ fn is_memory_metadata(text: &str) -> bool {
     trimmed.as_bytes().first().is_some_and(u8::is_ascii_digit) && trimmed.contains(". ")
 }
 
+fn is_web_fetch_metadata(text: &str) -> bool {
+    let trimmed = text.trim_start();
+    trimmed.starts_with("status:") || trimmed.starts_with("content_type:")
+}
+
 /// Project transcript rows into semantic card rows in transcript order.
 #[allow(
     clippy::too_many_lines,
@@ -1633,7 +1638,9 @@ pub fn project_tool_card_rows(
             LineKind::ToolOutput | LineKind::ToolResult
                 if (card_kind == ToolCardKind::MemorySearch && is_memory_metadata(&line.text))
                     || (card_kind == ToolCardKind::WebSearch
-                        && line.text.trim_start().starts_with("Sources:")) =>
+                        && line.text.trim_start().starts_with("Sources:"))
+                    || (card_kind == ToolCardKind::WebFetch
+                        && is_web_fetch_metadata(&line.text)) =>
             {
                 ToolCardRowKind::Metadata
             }
@@ -3111,6 +3118,21 @@ mod tests {
         let rows = project_tool_card_rows(&lines, &names, &HashMap::new());
         assert_eq!(rows[1].row_kind, ToolCardRowKind::Metadata);
         assert_eq!(rows[1].paint_intent(), ToolCardPaintIntent::Muted);
+    }
+
+    #[test]
+    fn web_fetch_response_fields_are_metadata_rows() {
+        let lines = vec![
+            Line::new(LineKind::Tool, "Fetch https://example.com").for_tool("fetch-1"),
+            Line::new(LineKind::ToolOutput, "status: 200").for_tool("fetch-1"),
+            Line::new(LineKind::ToolOutput, "content_type: text/html").for_tool("fetch-1"),
+            Line::new(LineKind::ToolOutput, "body").for_tool("fetch-1"),
+        ];
+        let names = HashMap::from([(String::from("fetch-1"), String::from("web_fetch"))]);
+        let rows = project_tool_card_rows(&lines, &names, &HashMap::new());
+        assert_eq!(rows[1].row_kind, ToolCardRowKind::Metadata);
+        assert_eq!(rows[2].row_kind, ToolCardRowKind::Metadata);
+        assert_eq!(rows[3].row_kind, ToolCardRowKind::Content);
     }
 
     #[test]
