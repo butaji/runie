@@ -421,6 +421,9 @@ The remaining exact-parity gaps are deliberately limited to the following:
   boundary lossless by decoding known families into `SessionLaneRecord` and
   preserving unknown extensions as explicit opaque records. The persisted
   representation remains Pi-shaped rather than a Rust-tagged wire union;
+- `SessionSnapshot::lossless_lane_records()` now exposes that boundary to
+  actor consumers without forcing extension records through a known-family
+  decoder or silently dropping them;
 - compaction does not yet implement Pi's complete context-building,
   summarization, and result-publication lifecycle for a concrete provider.
 

@@ -918,6 +918,23 @@ impl SessionSnapshot {
             .collect()
     }
 
+    /// Return every lane record through the lossless typed/opaque boundary.
+    /// Known Pi families remain validated; extension records are preserved for
+    /// consumers that need to inspect or round-trip them without admitting
+    /// unsupported reducer semantics.
+    pub fn lossless_lane_records(
+        &self,
+    ) -> Vec<(SessionLaneRecordSnapshot, SessionLaneRecordEnvelope)> {
+        self.lane_records
+            .iter()
+            .cloned()
+            .map(|record| {
+                let envelope = record.lossless_record();
+                (record, envelope)
+            })
+            .collect()
+    }
+
     /// Recompute Pi's session statistics from the immutable journal.
     pub fn stats(&self) -> SessionStats {
         let mut stats = SessionStats {
@@ -4522,6 +4539,40 @@ mod tests {
             snapshot.lossless_record(),
             SessionLaneRecordEnvelope::Opaque { ref record_type, ref data }
                 if record_type == "plugin_extension" && data == &serde_json::json!({"custom": true})
+        ));
+    }
+
+    #[test]
+    fn session_snapshot_exposes_known_and_opaque_lane_records_losslessly() {
+        let snapshot = SessionSnapshot {
+            lane_records: vec![
+                SessionLaneRecordSnapshot {
+                    record_type: "usage".into(),
+                    id: "entry-1".into(),
+                    lane: Some("main".into()),
+                    seq: Some(1),
+                    timestamp: None,
+                    data: serde_json::json!({"entryId": "entry-1"}),
+                },
+                SessionLaneRecordSnapshot {
+                    record_type: "plugin_extension".into(),
+                    id: "extension-1".into(),
+                    lane: Some("main".into()),
+                    seq: Some(2),
+                    timestamp: None,
+                    data: serde_json::json!({"custom": true}),
+                },
+            ],
+            ..SessionSnapshot::default()
+        };
+        let records = snapshot.lossless_lane_records();
+        assert!(matches!(
+            records[0].1,
+            SessionLaneRecordEnvelope::Known(SessionLaneRecord::Usage(_))
+        ));
+        assert!(matches!(
+            records[1].1,
+            SessionLaneRecordEnvelope::Opaque { .. }
         ));
     }
 
