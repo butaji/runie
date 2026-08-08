@@ -102,6 +102,12 @@ admission, while direct mailbox callers continue to receive the typed
 `Result`. Invalid records still leave the journal unchanged; a bus regression
 covers the observable rejection without adding a Pi persistence record.
 
+Declarative rejection increment (2026-08-08): the YAML runner now preserves
+session-actor admission errors in `ScenarioOutcome`, and
+`visual-operation-admission.yaml` asserts `session_error_contains` after an
+explicit flush. Replay therefore checks both unchanged lane state and the
+typed rejection outcome without scenario-specific Rust code.
+
 ## Non-negotiable checks
 
 - No cross-actor direct mutation.

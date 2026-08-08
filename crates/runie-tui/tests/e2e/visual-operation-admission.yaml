@@ -45,6 +45,7 @@ events:
         outcome: completed
 assertions:
   state:
+    session_error_contains: "Session event rejected:"
     session_config_records: []
     session_lane_records:
       - operation_started

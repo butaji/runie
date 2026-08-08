@@ -1076,6 +1076,8 @@ pub struct StateAssertions {
     pub session_lane_branch_entry_ids: Option<BTreeMap<String, Vec<String>>>,
     /// Ordered admitted Pi operation-lane record kinds.
     pub session_lane_records: Option<Vec<String>>,
+    /// Error text published by the session actor for rejected bus facts.
+    pub session_error_contains: Option<String>,
     /// Ordered actor-owned assistant step operation IDs.
     pub session_step_run_ids: Option<Vec<String>>,
     /// Ordered actor-owned assistant step result entry IDs.
@@ -1834,6 +1836,7 @@ pub struct ScenarioOutcome {
     pub scroll_offset: usize,
     pub state: runie_core::state::AgentStateSnapshot,
     pub session: runie_core::session::SessionSnapshot,
+    pub session_errors: Vec<String>,
     pub status: crate::widgets::StatusSnapshot,
     pub provider_options: Vec<SimpleStreamOptions>,
     pub steering_mode: runie_core::types::QueueMode,
@@ -1921,6 +1924,7 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
     }
 
     let actor_snapshot = actor.clone();
+    let mut session_errors = Vec::new();
     let mut events_from_task = record_and_run_scenario(actor, bus, scenario).await;
     session.flush().await;
     let declared_events = declared_control_events(scenario);
@@ -1937,7 +1941,9 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
         }
         if let Some(event) = declared.waiting_event() {
             actor_snapshot.apply_event(&event).await;
-            let _ = session.apply_event(&event).await;
+            if let Err(error) = session.apply_event(&event).await {
+                session_errors.push(format!("Session event rejected: {error}"));
+            }
         }
     }
 
@@ -1956,6 +1962,7 @@ pub async fn run_scenario(scenario: &Scenario) -> Result<ScenarioOutcome, Scenar
         feed,
         state: actor_snapshot.state_snapshot(),
         session: session.snapshot(),
+        session_errors,
         status,
         provider_options,
         steering_mode: actor_snapshot.steering_mode().await,
@@ -3409,6 +3416,18 @@ fn assert_state_expectations(outcome: &ScenarioOutcome, scenario: &Scenario) -> 
         let error = actual.error_message.as_deref().unwrap_or_default();
         if !error.contains(needle) {
             return Err(format!("state error missing {needle:?}: {error:?}"));
+        }
+    }
+    if let Some(needle) = &expected.session_error_contains {
+        if !outcome
+            .session_errors
+            .iter()
+            .any(|error| error.contains(needle))
+        {
+            return Err(format!(
+                "session error missing {needle:?}: {:?}",
+                outcome.session_errors
+            ));
         }
     }
     if let Some(needle) = &expected.system_prompt_contains {
