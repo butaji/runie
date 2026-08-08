@@ -926,3 +926,76 @@ to the canonical helper. The 67 `runie-tui-model` lib unit tests,
 the 218 `runie-tui` lib unit tests, and the full `just ci`
 (fmt-check, clippy, lint, test, parity, source inventory, Pi event
 contract, feed-actor boundary) are green.
+
+Web-search summary projection centralization (2026-08-08): the Grok
+web-search summary projection now has a single owner. The renderer-local
+`fn web_search_site_count` at `crates/runie-tui/src/event_renderer.rs:1103-1126`
+and `fn web_search_sources_line` at
+`crates/runie-tui/src/event_renderer.rs:1128-1163` were removed; the
+two call sites at `crates/runie-tui/src/event_renderer.rs:710-715`
+(successful `web_search` / `web-search` completion row appended to the
+`ToolEnd` output, built from `runie_tui_model::tool_result_text(&result)`)
+and `:981-986` (the `pending_header ({n} site{s})` activity suffix,
+`n` derived from the same `web_search_site_count` helper) now invoke
+`runie_tui_model::web_search_sources_line` and
+`runie_tui_model::web_search_site_count` directly. The inline web-search
+parser inside `runie_tui_model::completed_tool_header_with_args` at
+`crates/runie-tui-model/src/feed.rs:305-325` was replaced with a
+single `web_search_site_count(output)` call, removing a second copy of
+the URL-token hostname extraction that quietly diverged from the
+renderer contract (the renderer counted `, `, `) `, and `] ` as URL
+terminators; the model only treated `/` as one — `crates.rs/foo?q=1#x`
+and `github.com/path)` were split on the wrong boundary, so the
+header suffix and the Sources row could disagree on the same payload).
+The two new canonical helpers now live at
+`crates/runie-tui-model/src/feed.rs:184-219` next to `tool_result_text`
+and are re-exported through `crates/runie-tui-model/src/lib.rs` next to
+the existing `tool_result_text` / `activity_text` /
+`completed_tool_header_with_args` re-exports. The renderer contract is
+preserved exactly: URL terminators are `/`, `?`, `#`, `)`, `]`, `,`;
+domain deduplication is case-insensitive; the first-seen order is
+preserved; the first three unique hostnames are listed and any remainder
+is summarized as `(+N more)`; URLs that contain no hostnames are not
+emitted (returning `None`); the URL-free fallback counts non-empty lines
+so the `pending_header ({n} site{s})` suffix stays well-defined when
+the renderer receives a plain-text web-search result. The actor's
+direct event projection in `crates/runie-tui/src/scrollback_actor.rs:416-431`
+also appends the canonical `  Sources: …` row to the `ToolEnd`
+output for successful `web_search` / `web-search` completions only, so
+event-driven tests (and any future bus-subscription use) get the same
+projection without going through the renderer. The model-side test
+coverage was extended with seven focused assertions appended to
+`crates/runie-tui-model/src/feed.rs` (the `tests` module, near the
+existing `tool_result_text` and `completed_tool_header_with_args`
+assertions): `web_search_sources_line_dedups_case_insensitively_in_first_seen_order`
+pins case-insensitive dedup plus first-seen ordering against the same
+five-URL payload the old renderer test used; `web_search_sources_line_returns_none_for_empty_source_line`
+covers the empty-input / whitespace-only / URL-free cases that must
+return `None`; `web_search_sources_line_paginates_with_plus_n_more`
+covers the pagination `(+N more)` suffix when more than three unique
+hostnames appear; `web_search_sources_line_trims_url_terminators_and_punctuation`
+covers the `,`, `?`, `#`, `)`, and `]` URL terminators against a
+sentence that mixes punctuation outside the URLs and three different
+terminators inside; `web_search_site_count_dedups_case_insensitively`
+pins the `n site{s}` count against the same three-URL mixed-case
+payload the old renderer test used; `web_search_site_count_trims_url_terminators_and_punctuation`
+covers the count-side URL terminator handling; and
+`web_search_site_count_falls_back_to_non_empty_lines_when_url_free`
+covers the URL-free non-empty-line fallback. The renderer test
+`web_search_sources_projection_matches_grok_summary` at
+`crates/runie-tui/src/event_renderer.rs:1122-1131` and the
+`web_search_site_count(...)` assertion inside the unrelated
+`handle_tool_end` test were removed (the model-side coverage subsumes
+both). Two new actor tests were appended at
+`crates/runie-tui/src/scrollback_actor.rs` (the `tests` module, near
+the other completion and turn-summary assertions):
+`actor_appends_canonical_sources_row_for_successful_web_search`
+delivers `ToolExecutionEnd` with a successful web-search result via
+`apply_event` and pins the `  Sources: docs.rs, rust-lang.org, github.com`
+row in the actor snapshot, and `actor_skips_sources_row_for_failed_web_search`
+delivers the same tool name with `is_error = true` and asserts that no
+`  Sources:` row appears. The 67 `runie-tui-model` lib unit tests,
+the 220 `runie-tui` lib unit tests, and the full `just ci`
+(fmt-check, clippy, lint, test, parity, source inventory, Pi event
+contract, feed-actor boundary) plus `just e2e-one visual-web-search.yaml`
+are green.

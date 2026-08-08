@@ -418,11 +418,17 @@ fn ordinary_tool_end_messages(
     } else {
         LineKind::ToolResult
     };
-    let output = runie_tui_model::tool_result_text(result)
+    let result_text = runie_tui_model::tool_result_text(result);
+    let mut output = result_text
         .lines()
         .filter(|line| !line.is_empty())
         .map(|line| (output_kind, line.to_owned()))
-        .collect();
+        .collect::<Vec<_>>();
+    if !*is_error && matches!(name.as_str(), "web_search" | "web-search") {
+        if let Some(sources) = runie_tui_model::web_search_sources_line(&result_text) {
+            output.push((LineKind::ToolResult, sources));
+        }
+    }
     let mut messages = vec![ScrollbackMsg::ToolEnd {
         tool_call_id: tool_call_id.clone(),
         header,
@@ -803,6 +809,64 @@ mod tests {
         assert_eq!(lines.lines().len(), 1);
         assert_eq!(lines.lines()[0].kind, LineKind::TurnSummary);
         assert_eq!(lines.lines()[0].text, "Worked for 1.0s");
+    }
+
+    #[tokio::test]
+    async fn actor_appends_canonical_sources_row_for_successful_web_search() {
+        let actor = ScrollbackActor::new();
+        actor
+            .apply_event(&AgentEvent::ToolExecutionStart {
+                tool_call_id: "web-1".into(),
+                tool_name: "web_search".into(),
+                args: serde_json::json!({"query": "runie"}),
+            })
+            .await;
+        actor
+            .apply_event(&AgentEvent::ToolExecutionEnd {
+                tool_call_id: "web-1".into(),
+                tool_name: "web_search".into(),
+                result: serde_json::json!({
+                    "output": "https://docs.rs/runie https://docs.rs/ratatui https://rust-lang.org/learn https://github.com/runie"
+                }),
+                is_error: false,
+            })
+            .await;
+        let lines = actor.snapshot();
+        assert!(
+            lines
+                .lines()
+                .iter()
+                .any(|line| line.text == "  Sources: docs.rs, rust-lang.org, github.com"),
+            "expected canonical Sources row, got {lines:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn actor_skips_sources_row_for_failed_web_search() {
+        let actor = ScrollbackActor::new();
+        actor
+            .apply_event(&AgentEvent::ToolExecutionStart {
+                tool_call_id: "web-err".into(),
+                tool_name: "web_search".into(),
+                args: serde_json::json!({"query": "runie"}),
+            })
+            .await;
+        actor
+            .apply_event(&AgentEvent::ToolExecutionEnd {
+                tool_call_id: "web-err".into(),
+                tool_name: "web_search".into(),
+                result: serde_json::json!({"error": "denied"}),
+                is_error: true,
+            })
+            .await;
+        let lines = actor.snapshot();
+        assert!(
+            !lines
+                .lines()
+                .iter()
+                .any(|line| line.text.starts_with("  Sources:")),
+            "failed web searches must not emit a Sources row, got {lines:?}"
+        );
     }
 
     #[tokio::test]

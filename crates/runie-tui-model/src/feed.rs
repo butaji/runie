@@ -181,6 +181,79 @@ pub fn tool_result_text(result: &serde_json::Value) -> String {
         .unwrap_or_else(|| serde_json::to_string(result).unwrap_or_default())
 }
 
+/// Count the unique hostnames surfaced by a web-search result payload.
+///
+/// The projection is URL-first: each `https://`/`http://` token contributes its
+/// hostname, lowercased, with URL punctuation (`/`, `?`, `#`, `)`, `]`, `,`)
+/// terminating the host. When the payload contains no URLs the count falls back
+/// to the number of non-empty lines, preserving the renderer contract for
+/// URL-free web-search outputs.
+pub fn web_search_site_count(output: &str) -> usize {
+    let mut domains = std::collections::HashSet::new();
+    for token in output.split_whitespace() {
+        let Some(url) = token
+            .strip_prefix("https://")
+            .or_else(|| token.strip_prefix("http://"))
+        else {
+            continue;
+        };
+        if let Some(domain) = url.split(['/', '?', '#', ')', ']', ',']).next() {
+            if !domain.is_empty() {
+                domains.insert(domain.to_ascii_lowercase());
+            }
+        }
+    }
+    if domains.is_empty() {
+        output
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+            .count()
+    } else {
+        domains.len()
+    }
+}
+
+/// Render the canonical `  Sources: …` summary line for a successful web-search
+/// completion. Returns `None` when no URL hostname can be extracted, so the
+/// caller can skip the row entirely. The first three unique hostnames are
+/// listed in first-seen order; any remainder is summarized as `(+N more)`.
+pub fn web_search_sources_line(output: &str) -> Option<String> {
+    let mut domains = Vec::new();
+    for token in output.split_whitespace() {
+        let Some(url) = token
+            .strip_prefix("https://")
+            .or_else(|| token.strip_prefix("http://"))
+        else {
+            continue;
+        };
+        let Some(domain) = url
+            .split(['/', '?', '#', ')', ']', ','])
+            .next()
+            .filter(|domain| !domain.is_empty())
+        else {
+            continue;
+        };
+        if !domains.iter().any(|seen| seen == domain) {
+            domains.push(domain.to_owned());
+        }
+    }
+    if domains.is_empty() {
+        return None;
+    }
+    let shown = domains
+        .iter()
+        .take(3)
+        .cloned()
+        .collect::<Vec<_>>()
+        .join(", ");
+    let remaining = domains.len().saturating_sub(3);
+    Some(if remaining == 0 {
+        format!("  Sources: {shown}")
+    } else {
+        format!("  Sources: {shown} (+{remaining} more)")
+    })
+}
+
 /// Project Grok's grouped tool activity label without terminal concerns.
 #[allow(
     clippy::cognitive_complexity,
@@ -303,21 +376,7 @@ pub fn completed_tool_header_with_args(
             )
         }
         "web_search" | "web-search" => {
-            let mut domains = std::collections::HashSet::new();
-            for token in output.split_whitespace() {
-                if let Some(url) = token
-                    .strip_prefix("https://")
-                    .or_else(|| token.strip_prefix("http://"))
-                {
-                    domains.insert(
-                        url.split('/')
-                            .next()
-                            .unwrap_or(url)
-                            .trim_end_matches(|c: char| !c.is_ascii_alphanumeric() && c != '.'),
-                    );
-                }
-            }
-            let n = domains.len();
+            let n = web_search_site_count(&output);
             format!(
                 "{pending_header} ({n} site{})",
                 if n == 1 { "" } else { "s" }
@@ -1598,6 +1657,69 @@ mod tests {
         });
         assert_eq!(state.snapshot().scroll_offset, 8);
         assert!(!state.snapshot().autoscroll);
+    }
+
+    #[test]
+    fn web_search_sources_line_dedups_and_keeps_first_seen_order() {
+        assert_eq!(
+            super::web_search_sources_line(
+                "https://docs.rs/runie https://docs.rs/ratatui https://rust-lang.org/learn https://github.com/runie https://docs.rs/extra"
+            ),
+            Some("  Sources: docs.rs, rust-lang.org, github.com".to_owned())
+        );
+    }
+
+    #[test]
+    fn web_search_sources_line_returns_none_for_empty_source_line() {
+        assert_eq!(super::web_search_sources_line(""), None);
+        assert_eq!(super::web_search_sources_line("   \n  "), None);
+        assert_eq!(super::web_search_sources_line("no citations"), None);
+    }
+
+    #[test]
+    fn web_search_sources_line_paginates_with_plus_n_more() {
+        assert_eq!(
+            super::web_search_sources_line(
+                "https://a.example https://b.example https://c.example https://d.example https://e.example"
+            ),
+            Some("  Sources: a.example, b.example, c.example (+2 more)".to_owned())
+        );
+    }
+
+    #[test]
+    fn web_search_sources_line_trims_url_terminators_and_punctuation() {
+        assert_eq!(
+            super::web_search_sources_line(
+                "see https://docs.rs/runie/page, https://crates.io?q=foo#bar and https://github.com/path) (also https://github.com/path] more"
+            ),
+            Some("  Sources: docs.rs, crates.io, github.com".to_owned())
+        );
+    }
+
+    #[test]
+    fn web_search_site_count_dedups_case_insensitively() {
+        assert_eq!(
+            super::web_search_site_count(
+                "https://docs.rs/a\nhttps://DOCS.RS/b\nhttps://rust-lang.org/learn"
+            ),
+            2
+        );
+    }
+
+    #[test]
+    fn web_search_site_count_trims_url_terminators_and_punctuation() {
+        assert_eq!(
+            super::web_search_site_count(
+                "see https://docs.rs/a), https://crates.io?q=foo#bar, https://github.com/b"
+            ),
+            3
+        );
+    }
+
+    #[test]
+    fn web_search_site_count_falls_back_to_non_empty_lines_when_url_free() {
+        assert_eq!(super::web_search_site_count("one\ntwo\n\nthree\n"), 3);
+        assert_eq!(super::web_search_site_count("plain prose only"), 1);
     }
 }
 

@@ -708,9 +708,9 @@ impl EventRenderer {
                 output.push((kind, line.to_owned()));
             }
             if !is_error && matches!(tool_name.as_str(), "web_search" | "web-search") {
-                if let Some(sources) =
-                    web_search_sources_line(&runie_tui_model::tool_result_text(&result))
-                {
+                if let Some(sources) = runie_tui_model::web_search_sources_line(
+                    &runie_tui_model::tool_result_text(&result),
+                ) {
                     output.push((LineKind::ToolResult, sources));
                 }
             }
@@ -979,7 +979,7 @@ pub(crate) fn completed_tool_header(
             )
         }
         "web_search" | "web-search" => {
-            let sites = web_search_site_count(&output);
+            let sites = runie_tui_model::web_search_site_count(&output);
             format!(
                 "{pending_header} ({sites} site{})",
                 if sites == 1 { "" } else { "s" }
@@ -1100,68 +1100,6 @@ fn structured_memory_lines(output: &str) -> Vec<String> {
     runie_tui_model::memory_display_lines(output)
 }
 
-fn web_search_site_count(output: &str) -> usize {
-    let mut domains = std::collections::HashSet::new();
-    for token in output.split_whitespace() {
-        let Some(url) = token
-            .strip_prefix("https://")
-            .or_else(|| token.strip_prefix("http://"))
-        else {
-            continue;
-        };
-        if let Some(domain) = url.split(['/', '?', '#', ')', ']', ',']).next() {
-            if !domain.is_empty() {
-                domains.insert(domain.to_ascii_lowercase());
-            }
-        }
-    }
-    if domains.is_empty() {
-        output
-            .lines()
-            .filter(|line| !line.trim().is_empty())
-            .count()
-    } else {
-        domains.len()
-    }
-}
-
-fn web_search_sources_line(output: &str) -> Option<String> {
-    let mut domains = Vec::new();
-    for token in output.split_whitespace() {
-        let Some(url) = token
-            .strip_prefix("https://")
-            .or_else(|| token.strip_prefix("http://"))
-        else {
-            continue;
-        };
-        let Some(domain) = url
-            .split(['/', '?', '#', ')', ']', ','])
-            .next()
-            .filter(|domain| !domain.is_empty())
-        else {
-            continue;
-        };
-        if !domains.iter().any(|seen| seen == domain) {
-            domains.push(domain.to_owned());
-        }
-    }
-    if domains.is_empty() {
-        return None;
-    }
-    let shown = domains
-        .iter()
-        .take(3)
-        .cloned()
-        .collect::<Vec<_>>()
-        .join(", ");
-    let remaining = domains.len().saturating_sub(3);
-    Some(if remaining == 0 {
-        format!("  Sources: {shown}")
-    } else {
-        format!("  Sources: {shown} (+{remaining} more)")
-    })
-}
-
 #[allow(
     clippy::cognitive_complexity,
     reason = "activity label projection keeps Grok's ordered vocabulary together"
@@ -1181,16 +1119,6 @@ fn session_start_messages() -> Vec<ScrollbackMsg> {
 mod tests {
     use super::*;
 
-    #[test]
-    fn web_search_sources_projection_matches_grok_summary() {
-        assert_eq!(
-            web_search_sources_line(
-                "https://docs.rs/runie https://docs.rs/ratatui https://rust-lang.org/learn https://github.com/runie https://docs.rs/extra"
-            ),
-            Some("  Sources: docs.rs, rust-lang.org, github.com".to_owned())
-        );
-        assert_eq!(web_search_sources_line("no citations"), None);
-    }
     use runie_core::types::{AgentMessage, StopReason, ThemeKind, Usage, UserContent, UserMessage};
 
     #[test]
@@ -2199,7 +2127,7 @@ mod tests {
             "denied"
         );
         assert_eq!(
-            web_search_site_count(
+            runie_tui_model::web_search_site_count(
                 "https://docs.rs/a\nhttps://docs.rs/b\nhttps://rust-lang.org/learn"
             ),
             2
