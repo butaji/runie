@@ -313,7 +313,10 @@ impl ScrollNormalizer {
             ScrollMode::Trackpad => true,
             ScrollMode::Wheel => false,
             ScrollMode::Auto if self.events_per_tick == 1 => {
-                interval <= self.trackpad_detect_max_interval_ms || self.stream_trackpad
+                self.stream_trackpad
+                    || (self.stream_events > 2
+                        && self.stream_elapsed_ms / (self.stream_events.saturating_sub(1) as u64)
+                            < self.trackpad_detect_max_interval_ms)
             }
             ScrollMode::Auto => {
                 self.stream_trackpad
@@ -446,6 +449,17 @@ mod tests {
         assert_eq!(vscode.accel_medium_interval_ms, 50);
         assert_eq!(unknown.accel_fast_interval_ms, 8);
         assert_eq!(unknown.accel_medium_interval_ms, 20);
+    }
+
+    #[test]
+    fn ept_one_profiles_wait_for_three_events_before_trackpad_promotion() {
+        let normalizer = ScrollNormalizer::for_terminal_context("wezterm", false);
+        let (normalizer, first) = normalizer.push_at(0, ScrollDirection::Down);
+        let (normalizer, second) = normalizer.push_at(10, ScrollDirection::Down);
+        let (normalizer, third) = normalizer.push_at(20, ScrollDirection::Down);
+        assert_eq!((first, second), (1, 1));
+        assert_eq!(third, 1);
+        assert!(normalizer.stream_trackpad);
     }
 
     #[test]

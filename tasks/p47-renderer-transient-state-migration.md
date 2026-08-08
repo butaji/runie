@@ -417,6 +417,11 @@ longer advances the cadence anchor. This preserves the source contract that a
 no-op flush must not postpone the next eligible redraw, with focused model
 coverage.
 
+Ept-one promotion increment (2026-08-08): auto classification now waits for
+more than two reports and evaluates their average interval before promoting an
+ept-one terminal stream to trackpad pricing. This prevents a two-report wheel
+notch from being re-priced as a trackpad gesture.
+
 ## Grok scroll flush contract audit (2026-08-07)
 
 The authoritative implementation and tests in
