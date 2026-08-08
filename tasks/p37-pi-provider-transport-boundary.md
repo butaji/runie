@@ -350,3 +350,8 @@ Continuation retry increment (2026-08-09): a cached
 account-scoped continuation, and performs exactly one fresh connection. A
 two-socket regression proves the second envelope omits the stale response ID;
 repeated errors cannot recurse indefinitely.
+
+Connection-limit retry increment (2026-08-09): an initial
+`websocket_connection_limit_reached` envelope closes and reconnects once with
+the same request; a second such failure is not retried. The adapter regression
+covers the two owned attempts and terminal cleanup.

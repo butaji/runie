@@ -186,17 +186,18 @@ impl CodexWebSocketAdapter {
     }
 }
 
-#[async_trait::async_trait]
 #[allow(
     clippy::too_many_lines,
+    clippy::cognitive_complexity,
     reason = "the provider adapter keeps socket lifecycle and decoder settlement in one boundary"
 )]
-impl WebSocketAdapter for CodexWebSocketAdapter {
-    async fn stream_websocket(
+impl CodexWebSocketAdapter {
+    async fn stream_websocket_attempt(
         &self,
         model: &Model,
         context: &AgentContext,
         options: Option<SimpleStreamOptions>,
+        retried_connection_limit: bool,
     ) -> Result<AssistantMessageEventStream, StreamError> {
         let url = resolve_websocket_url(self.base_url.as_deref()).map_err(StreamError::Invalid)?;
         let body = (self.request_builder)(model, context, options.as_ref())
@@ -292,6 +293,22 @@ impl WebSocketAdapter for CodexWebSocketAdapter {
                     }
                     let message_type = value.get("type").and_then(|value| value.as_str());
                     if message_type == Some("error")
+                        && !retried_connection_limit
+                        && value
+                            .pointer("/error/code")
+                            .and_then(|value| value.as_str())
+                            == Some("websocket_connection_limit_reached")
+                    {
+                        socket.close().await;
+                        return Box::pin(self.stream_websocket_attempt(
+                            model,
+                            context,
+                            options.clone(),
+                            true,
+                        ))
+                        .await;
+                    }
+                    if message_type == Some("error")
                         && continuation.is_some()
                         && value
                             .pointer("/error/code")
@@ -306,7 +323,13 @@ impl WebSocketAdapter for CodexWebSocketAdapter {
                         if let Some(key) = &cache_key {
                             self.cache.lock().await.continuations.remove(key);
                         }
-                        return self.stream_websocket(model, context, options.clone()).await;
+                        return Box::pin(self.stream_websocket_attempt(
+                            model,
+                            context,
+                            options.clone(),
+                            retried_connection_limit,
+                        ))
+                        .await;
                     }
                     // Pi treats an initial provider `error` envelope as a
                     // transport/setup failure. It must remain pre-stream so
@@ -350,6 +373,19 @@ impl WebSocketAdapter for CodexWebSocketAdapter {
         }
         let provider = crate::provider::replay::ReplayProvider::from_websocket_messages(messages)?;
         provider.stream(model, context, options).await
+    }
+}
+
+#[async_trait::async_trait]
+impl WebSocketAdapter for CodexWebSocketAdapter {
+    async fn stream_websocket(
+        &self,
+        model: &Model,
+        context: &AgentContext,
+        options: Option<SimpleStreamOptions>,
+    ) -> Result<AssistantMessageEventStream, StreamError> {
+        self.stream_websocket_attempt(model, context, options, false)
+            .await
     }
 }
 
@@ -862,6 +898,64 @@ mod tests {
             .unwrap()
             .get("previous_response_id")
             .is_none());
+        assert!(closed.load(std::sync::atomic::Ordering::Acquire));
+    }
+
+    #[tokio::test]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "the connection-limit regression keeps both owned attempts and terminal assertions together"
+    )]
+    async fn adapter_retries_connection_limit_once_before_fallback_or_failure() {
+        use futures::StreamExt;
+
+        let sent = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let closed = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let connector = Arc::new(FakeConnector {
+            socket: std::sync::Mutex::new(
+                [
+                    FakeSocket {
+                        messages: [
+                            r#"{"type":"error","error":{"code":"websocket_connection_limit_reached"}}"#
+                                .into(),
+                        ]
+                        .into_iter()
+                        .collect(),
+                        sent: sent.clone(),
+                        closed: closed.clone(),
+                    },
+                    FakeSocket {
+                        messages: [
+                            r#"{"type":"response.created","response":{"id":"retry"}}"#
+                                .into(),
+                            r#"{"type":"response.completed","response":{"status":"completed"}}"#
+                                .into(),
+                        ]
+                        .into_iter()
+                        .collect(),
+                        sent: sent.clone(),
+                        closed: closed.clone(),
+                    },
+                ]
+                .into_iter()
+                .collect(),
+            ),
+            url: std::sync::Mutex::new(None),
+            headers: std::sync::Mutex::new(None),
+        });
+        let adapter = CodexWebSocketAdapter::new(
+            connector,
+            Arc::new(|_, _, _| Ok(serde_json::json!({"model":"test-model"}))),
+            Some("https://example.test/codex".into()),
+            HashMap::new(),
+            None,
+        );
+        let mut stream = adapter
+            .stream_websocket(&Model::default(), &AgentContext::default(), None)
+            .await
+            .expect("connection-limit retry");
+        let _ = stream.by_ref().collect::<Vec<_>>().await;
+        assert_eq!(sent.lock().unwrap().len(), 2);
         assert!(closed.load(std::sync::atomic::Ordering::Acquire));
     }
 }
