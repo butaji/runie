@@ -933,6 +933,13 @@ with event-driven coverage for upward, downward, and missing-anchor cases.
 This keeps responsive wrapping corrections in the feed model and avoids
 renderer-local cursor state; generalized logical-member reflow remains open.
 
+Measured-anchor selection increment (2026-08-10): the renderer now consumes the
+occurrence-aware measured anchor before falling back to full-text matching when
+revealing or centering a selected entry. Duplicate shared-prefix rows and
+narrow wrapped tool members therefore use the same physical-row identity for
+measurement and viewport selection; the fallback remains for unmeasured
+compatibility projections.
+
 Wrapped-anchor identity increment (2026-08-08): measured selection anchors now
 probe a stable leading fragment of the selected logical row, allowing narrow
 wrapped rows to retain their anchor instead of searching for text that cannot

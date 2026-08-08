@@ -657,10 +657,25 @@ impl Scrollback {
             .and_then(|index| self.lines.get(index).map(|line| line.text.as_str()))
         {
             if !selected_text.is_empty() {
-                if let Some(selected_row) = physical_rows
-                    .iter()
-                    .position(|(_, text, _)| text.contains(selected_text))
-                {
+                let measured_row = self.measured_anchor_row(area, terminal_rows);
+                let selected_row = measured_row
+                    .map(|row| {
+                        if self.navigation.follow_latest_user {
+                            let user_row = physical_rows
+                                .iter()
+                                .position(|(kind, _, _)| *kind == LineKind::User)
+                                .unwrap_or(total);
+                            row.saturating_add(if user_row <= row { prompt_lead_rows } else { 0 })
+                        } else {
+                            row
+                        }
+                    })
+                    .or_else(|| {
+                        physical_rows
+                            .iter()
+                            .position(|(_, text, _)| text.contains(selected_text))
+                    });
+                if let Some(selected_row) = selected_row {
                     if self.navigation.center_revealed_entry {
                         let max_offset = total.saturating_sub(visible);
                         effective_scroll_offset =
