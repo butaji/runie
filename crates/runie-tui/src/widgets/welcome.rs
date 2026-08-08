@@ -14,21 +14,7 @@ use runie_core::types::ThemeKind;
 #[derive(Debug, Clone, Copy, Default)]
 pub struct WelcomeWidget;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum VersionBadgeVariant {
-    Full,
-    HeroFooter,
-    HeroInline,
-}
-
-pub fn version_badge(variant: VersionBadgeVariant) -> String {
-    let version = env!("CARGO_PKG_VERSION");
-    match variant {
-        VersionBadgeVariant::Full => format!("runie v{version} · Beta"),
-        VersionBadgeVariant::HeroFooter => format!("runie Beta · v{version}"),
-        VersionBadgeVariant::HeroInline => format!("runie v{version}"),
-    }
-}
+pub use runie_tui_model::{version_badge, VersionBadgeVariant};
 
 impl Widget for WelcomeWidget {
     fn render(self, area: Rect, buf: &mut Buffer) {

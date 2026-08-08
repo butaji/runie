@@ -1159,3 +1159,24 @@ unit tests (93 pre-existing + 2 new), the 220 `runie-tui` lib unit
 tests, the 5 `runie` binary unit tests, the 28 `visual_snapshots` replay
 tests, and the full `just ci` (fmt-check, clippy, lint, test, parity,
 source inventory, Pi event contract, feed-actor boundary) are green.
+
+**Version badge retirement (2026-08-08):** the Grok welcome version
+badge helper and its `VersionBadgeVariant` enum now live in
+`runie-tui-model::feed` so the actor-owned welcome payload and the
+renderer share one shape. The renderer-local `pub fn version_badge`
+and `pub enum VersionBadgeVariant` at
+`crates/runie-tui/src/widgets/welcome.rs:24, 18` were replaced with a
+`pub use runie_tui_model::{version_badge, VersionBadgeVariant}` re-export,
+so the widget's existing call sites keep their type but lose the
+duplicated projection. The same re-export cascades through
+`crates/runie-tui/src/lib.rs` and `crates/runie-tui/src/widgets/mod.rs`
+via the existing `pub use welcome::...` wiring, so the public
+`runie_tui::VersionBadgeVariant` symbol stays stable. The new
+`version_badge_pins_three_grok_welcome_variants` test in
+`crates/runie-tui-model/src/feed.rs` pins the full `runie v{version} ·
+Beta` shape, the hero-footer `runie Beta · v{version}` order, and the
+inline `runie v{version}` compact form. The 96 `runie-tui-model` lib
+unit tests (95 pre-existing + 1 new), the 220 `runie-tui` lib unit
+tests, the 5 `runie` binary unit tests, the 28 `visual_snapshots` replay
+tests, and the full `just ci` (fmt-check, clippy, lint, test, parity,
+source inventory, Pi event contract, feed-actor boundary) are green.

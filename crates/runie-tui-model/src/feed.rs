@@ -595,6 +595,29 @@ pub fn append_wrapped_words(
     }
 }
 
+/// Position variant for the Grok welcome surface version badge. The full
+/// badge is the long `v0.1.0 · Beta` label, the hero footer appears as
+/// the right-aligned footer on the wide hero, and the inline variant is
+/// the compact `v0.1.0` form used in compact widgets.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum VersionBadgeVariant {
+    Full,
+    HeroFooter,
+    HeroInline,
+}
+
+/// Render the welcome version badge for the given variant. Centralized
+/// here so the actor-owned welcome payload and the renderer agree on the
+/// exact `runie v{version} · Beta` shapes.
+pub fn version_badge(variant: VersionBadgeVariant) -> String {
+    let version = env!("CARGO_PKG_VERSION");
+    match variant {
+        VersionBadgeVariant::Full => format!("runie v{version} · Beta"),
+        VersionBadgeVariant::HeroFooter => format!("runie Beta · v{version}"),
+        VersionBadgeVariant::HeroInline => format!("runie v{version}"),
+    }
+}
+
 /// Minimum unix-timestamp value (seconds) treated as a live prompt timestamp.
 /// Values below this are either absent or fixtures; values at or above are
 /// rendered with the short clock format. Centralized here so the renderer
@@ -1607,6 +1630,24 @@ mod tests {
         );
         let projected: Vec<&str> = rows.iter().map(|(_, text, _)| text.as_str()).collect();
         assert_eq!(projected, vec!["    indented", "    prompt"]);
+    }
+
+    #[test]
+    fn version_badge_pins_three_grok_welcome_variants() {
+        // Pin the full variant: the long `v{version} · Beta` label that
+        // the wide hero footer renders right-aligned.
+        let full = super::version_badge(super::VersionBadgeVariant::Full);
+        assert!(full.starts_with("runie v"), "{full}");
+        assert!(full.ends_with(" · Beta"), "{full}");
+        // Pin the hero-footer variant: the same version appears in the
+        // `Beta · v{version}` order for the right-aligned wide hero.
+        let footer = super::version_badge(super::VersionBadgeVariant::HeroFooter);
+        assert!(footer.starts_with("runie Beta · v"), "{footer}");
+        // Pin the inline variant: the compact `v{version}` form used in
+        // compact widgets.
+        let inline = super::version_badge(super::VersionBadgeVariant::HeroInline);
+        assert!(inline.starts_with("runie v"), "{inline}");
+        assert!(!inline.contains("Beta"), "{inline}");
     }
 
     #[test]
