@@ -259,7 +259,7 @@ impl StatusBar {
         self.elapsed_ticks_override.unwrap_or(self.elapsed_ticks)
     }
 
-    /// Event-derived context meter for the live header. Keeping this on the
+    /// Event-derived turn-token meter for the live header. Keeping this on the
     /// status projection avoids a second mutable source of truth in the
     /// binary's render loop.
     pub fn header_meter(&self) -> String {
@@ -270,7 +270,7 @@ impl StatusBar {
             .unwrap_or_default();
         let budget = self.context_window.unwrap_or(500_000);
         format!(
-            "{} / {}",
+            "{} turn / {}",
             format_token_count(used).replace('k', "K"),
             format_token_count(budget).replace('k', "K")
         )
@@ -662,7 +662,7 @@ mod tests {
     #[test]
     fn header_meter_projects_event_owned_usage() {
         let mut bar = StatusBar::new();
-        assert_eq!(bar.header_meter(), "0 / 500K");
+        assert_eq!(bar.header_meter(), "0 turn / 500K");
         bar.finish_turn(
             Usage {
                 total_tokens: 18_000,
@@ -670,7 +670,7 @@ mod tests {
             },
             StopReason::Stop,
         );
-        assert_eq!(bar.header_meter(), "18K / 500K");
+        assert_eq!(bar.header_meter(), "18K turn / 500K");
     }
 
     #[test]
@@ -688,7 +688,7 @@ mod tests {
             },
             StopReason::Stop,
         ));
-        assert_eq!(bar.header_meter(), "1.2K / 500K");
+        assert_eq!(bar.header_meter(), "1.2K turn / 500K");
     }
 
     #[test]

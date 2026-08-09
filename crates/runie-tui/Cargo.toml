@@ -21,6 +21,7 @@ runie-tui-model = { path = "../runie-tui-model" }
 ratatui = "0.29"
 crossterm = { version = "0.28", features = ["event-stream"] }
 async-trait = { workspace = true }
+async-stream = { workspace = true }
 opaline = "0.4"
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -31,6 +32,7 @@ tracing = { workspace = true }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 anyhow = { workspace = true }
 futures = { workspace = true }
+reqwest = { workspace = true }
 unicode-width = "0.2"
 parking_lot = { workspace = true }
 vt100 = "0.15"

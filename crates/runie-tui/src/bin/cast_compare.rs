@@ -98,6 +98,10 @@ fn dimensions(header: &Value) -> Result<(u16, u16)> {
     ))
 }
 
+#[allow(
+    clippy::too_many_lines,
+    reason = "paired metadata validation keeps the complete capture evidence contract together"
+)]
 fn validate_capture_metadata(left: &Path, right: &Path) -> Result<()> {
     let left_path = left.with_extension("meta.json");
     let right_path = right.with_extension("meta.json");
@@ -121,6 +125,8 @@ fn validate_capture_metadata(left: &Path, right: &Path) -> Result<()> {
     )?;
     validate_capture_metadata_shape(&left_meta, &left_path)?;
     validate_capture_metadata_shape(&right_meta, &right_path)?;
+    validate_capture_artifacts(&left_meta, &left_path)?;
+    validate_capture_artifacts(&right_meta, &right_path)?;
     validate_resize_artifact(&left_meta, &left_path)?;
     validate_resize_artifact(&right_meta, &right_path)?;
     for (path, label) in [
@@ -141,6 +147,28 @@ fn validate_capture_metadata(left: &Path, right: &Path) -> Result<()> {
     Ok(())
 }
 
+fn validate_capture_artifacts(meta: &Value, metadata_path: &Path) -> Result<()> {
+    for artifact in ["cast", "raw", "settled_ansi", "grok_doctor"] {
+        let path = meta
+            .pointer(&format!("/artifacts/{artifact}"))
+            .and_then(Value::as_str)
+            .map(Path::new)
+            .with_context(|| {
+                format!(
+                    "capture metadata missing artifacts.{artifact}: {}",
+                    metadata_path.display()
+                )
+            })?;
+        if !path.exists() {
+            bail!(
+                "capture metadata artifact does not exist (artifacts.{artifact}): {}",
+                path.display()
+            );
+        }
+    }
+    Ok(())
+}
+
 fn validate_resize_artifact(meta: &Value, metadata_path: &Path) -> Result<()> {
     let Some(report_path) = meta
         .pointer("/artifacts/resize_report")
@@ -153,7 +181,10 @@ fn validate_resize_artifact(meta: &Value, metadata_path: &Path) -> Result<()> {
         );
     };
     if !report_path.exists() {
-        return Ok(());
+        bail!(
+            "capture metadata resize report artifact does not exist: {}",
+            report_path.display()
+        );
     }
     let report: Value = serde_json::from_str(
         &std::fs::read_to_string(report_path)
@@ -655,7 +686,8 @@ fn main() -> Result<()> {
 mod tests {
     use super::{
         dimensions, frame_cell_difference_counts, ordered_common_frame_count, replay_frames,
-        validate_capture_metadata_shape, validate_resize_report, Cell,
+        validate_capture_artifacts, validate_capture_metadata_shape, validate_resize_artifact,
+        validate_resize_report, Cell,
     };
     use std::path::{Path, PathBuf};
 
@@ -776,5 +808,31 @@ mod tests {
         let mut invalid = report;
         invalid["observed"][1]["geometry"] = serde_json::Value::String("99,24".into());
         assert!(validate_resize_report(&invalid, "250,80,12;500,100,24").is_err());
+    }
+
+    #[test]
+    fn capture_metadata_rejects_missing_resize_report_artifact() {
+        let metadata = serde_json::json!({
+            "artifacts": {"resize_report": "/tmp/runie-nonexistent-resize-report.json"},
+            "resize_schedule": "250,80,12"
+        });
+        let error = validate_resize_artifact(&metadata, Path::new("capture.meta.json"))
+            .expect_err("missing resize report must invalidate capture evidence");
+        assert!(error.to_string().contains("does not exist"));
+    }
+
+    #[test]
+    fn capture_metadata_rejects_missing_required_capture_artifact() {
+        let metadata = serde_json::json!({
+            "artifacts": {
+                "cast": "/tmp/runie-missing-cast.cast",
+                "raw": "/tmp/runie-missing-cast.raw",
+                "settled_ansi": "/tmp/runie-missing-cast.settled.ansi",
+                "grok_doctor": "/tmp/runie-missing-cast.doctor.json"
+            }
+        });
+        let error = validate_capture_artifacts(&metadata, Path::new("capture.meta.json"))
+            .expect_err("missing capture artifact must invalidate evidence");
+        assert!(error.to_string().contains("artifacts.cast"));
     }
 }

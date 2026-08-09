@@ -739,9 +739,9 @@ impl App {
             BuiltinCommandDisposition::Mappable(command) => {
                 self.route_mappable_command(command).await
             }
-            BuiltinCommandDisposition::Unsupported { name } => {
+            BuiltinCommandDisposition::Unsupported(command) => {
                 self.bus.publish(AgentEvent::Error {
-                    message: format!("Pi command /{name} is not supported by Runie"),
+                    message: format!("Pi command /{} is not supported by Runie", command.name()),
                 });
                 true
             }

@@ -1,9 +1,10 @@
 //! `runie` — minimal TUI binary. Bootstraps the loop actor and runs the App.
 //!
-//! Note: without a real `StreamFn` adapter wired up, this binary is a UI
-//! shell — the loop will publish events but no real LLM stream will drive
-//! it. A `StreamFn` adapter is a follow-up task.
+//! When `MINIMAX_API_KEY` is configured, the binary uses the live Minimax
+//! `StreamFn` adapter; without it, the deterministic placeholder remains
+//! available for local UI and replay-oriented development.
 
+use std::collections::BTreeMap;
 use std::io::{self, Stdout};
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
@@ -37,7 +38,9 @@ use runie_core::tools::executor::ToolExecHooks;
 use runie_core::tools::ToolExecutorActor;
 use runie_core::tools::ToolRegistry;
 use runie_core::types::{
-    AgentContext, Model, QueueMode, SimpleStreamOptions, ThemeKind, ToolExecutionMode,
+    AgentContext, AgentTool, AgentToolResult, AssistantMessage, AssistantMessageEvent, Model,
+    QueueMode, SimpleStreamOptions, StopReason, ThemeKind, ToolCall, ToolExecutionMode,
+    ToolResultContent, Usage,
 };
 
 use futures::StreamExt;
@@ -54,6 +57,509 @@ fn osc52_clipboard_sequence(text: &str) -> String {
 
 /// Placeholder StreamFn: emits a single "Hello from runie!" then Done.
 struct PlaceholderStream;
+
+/// Safe, opt-in provider integration probe. It exercises the complete
+/// Minimax tool-call round trip without granting the live TUI filesystem or
+/// process access.
+struct MinimaxEchoTool;
+
+#[async_trait::async_trait]
+impl AgentTool for MinimaxEchoTool {
+    fn name(&self) -> &str {
+        "echo"
+    }
+
+    fn label(&self) -> &str {
+        "Echo"
+    }
+
+    fn description(&self) -> &str {
+        "Returns the supplied text unchanged. Safe integration probe."
+    }
+
+    fn parameters(&self) -> Option<serde_json::Value> {
+        Some(serde_json::json!({
+            "type": "object",
+            "properties": {"text": {"type": "string"}},
+            "required": ["text"]
+        }))
+    }
+
+    async fn execute(
+        &self,
+        _tool_call_id: &str,
+        args: serde_json::Value,
+        _signal: Option<tokio_util::sync::CancellationToken>,
+        _on_update: Option<Box<dyn Fn(serde_json::Value) + Send + Sync>>,
+    ) -> Result<AgentToolResult, String> {
+        let text = args
+            .get("text")
+            .and_then(serde_json::Value::as_str)
+            .ok_or_else(|| "echo requires a string `text` argument".to_owned())?;
+        Ok(AgentToolResult {
+            content: vec![ToolResultContent::Text {
+                text: text.to_owned(),
+            }],
+            ..AgentToolResult::default()
+        })
+    }
+}
+
+/// Minimal OpenAI-compatible Minimax adapter for the live binary. The core
+/// provider actor still owns cancellation and lifecycle events; this adapter
+/// only translates the remote response into assistant events.
+struct MinimaxStream {
+    client: reqwest::Client,
+    base_url: String,
+    model: String,
+}
+
+impl MinimaxStream {
+    fn from_environment() -> Option<Self> {
+        std::env::var("MINIMAX_API_KEY")
+            .ok()
+            .filter(|key| !key.is_empty())?;
+        Some(Self {
+            client: reqwest::Client::new(),
+            base_url: std::env::var("MINIMAX_BASE_URL")
+                .unwrap_or_else(|_| "https://api.minimax.io/v1/text/chatcompletion_v2".into()),
+            model: std::env::var("MINIMAX_MODEL").unwrap_or_else(|_| "MiniMax-M2.1".into()),
+        })
+    }
+
+    fn streaming_enabled() -> bool {
+        std::env::var("MINIMAX_STREAM")
+            .map(|value| !matches!(value.as_str(), "0" | "false" | "off"))
+            .unwrap_or(true)
+    }
+}
+
+fn minimax_messages(context: &AgentContext) -> Result<Vec<serde_json::Value>, StreamError> {
+    let mut messages = Vec::with_capacity(context.messages.len() + 1);
+    if !context.system_prompt.trim().is_empty() {
+        messages.push(serde_json::json!({
+            "role": "system",
+            "content": context.system_prompt,
+        }));
+    }
+    messages.extend(
+        context
+            .messages
+            .iter()
+            .map(|message| {
+                serde_json::to_value(message)
+                    .map(normalize_minimax_message)
+                    .map_err(|error| StreamError::Invalid(error.to_string()))
+            })
+            .collect::<Result<Vec<_>, _>>()?,
+    );
+    Ok(messages)
+}
+
+#[allow(
+    clippy::too_many_lines,
+    reason = "provider message normalization keeps tool-result and assistant-call wire rules together"
+)]
+fn normalize_minimax_message(mut message: serde_json::Value) -> serde_json::Value {
+    let role = message
+        .get("role")
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_owned);
+    if matches!(role.as_deref(), Some("toolResult" | "tool_result")) {
+        message["role"] = serde_json::Value::String("tool".into());
+        if let Some(id) = message.get("toolCallId").cloned() {
+            message["tool_call_id"] = id;
+            message
+                .as_object_mut()
+                .expect("tool result message object")
+                .remove("toolCallId");
+        }
+    } else if role.as_deref() == Some("assistant") {
+        let blocks = message
+            .get("content")
+            .and_then(serde_json::Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        let tool_calls = blocks
+            .iter()
+            .filter(|block| {
+                matches!(
+                    block.get("type").and_then(serde_json::Value::as_str),
+                    Some("toolCall" | "tool_call")
+                )
+            })
+            .filter_map(|block| {
+                let id = block.get("id")?.clone();
+                let name = block.get("name")?.clone();
+                let arguments = block.get("arguments")?.clone();
+                Some(serde_json::json!({
+                "id": id,
+                "type": "function",
+                "function": {
+                    "name": name,
+                        "arguments": serde_json::to_string(&arguments).ok()?
+                    }
+                }))
+            })
+            .collect::<Vec<_>>();
+        if !tool_calls.is_empty() {
+            message["tool_calls"] = serde_json::Value::Array(tool_calls);
+            message["content"] = serde_json::Value::Null;
+        }
+    }
+    message
+}
+
+fn minimax_tool_definitions(context: &AgentContext) -> Option<Vec<serde_json::Value>> {
+    let tools = context.tools.as_ref()?;
+    Some(
+        tools
+            .iter()
+            .map(|tool| {
+                serde_json::json!({
+                    "type": "function",
+                    "function": {
+                        "name": tool.name(),
+                        "description": tool.description(),
+                        "parameters": tool.parameters().unwrap_or_else(|| serde_json::json!({
+                            "type": "object",
+                            "properties": {}
+                        }))
+                    }
+                })
+            })
+            .collect(),
+    )
+}
+
+fn minimax_error(payload: &serde_json::Value, status: reqwest::StatusCode) -> StreamError {
+    let message = payload
+        .pointer("/base_resp/status_msg")
+        .and_then(serde_json::Value::as_str)
+        .or_else(|| {
+            payload
+                .pointer("/error/message")
+                .and_then(serde_json::Value::as_str)
+        })
+        .unwrap_or("Minimax request failed");
+    StreamError::Provider {
+        message: message.into(),
+        status: Some(status.as_u16()),
+        headers: std::collections::HashMap::new(),
+    }
+}
+
+fn minimax_status_code(payload: &serde_json::Value) -> Option<i64> {
+    let value = payload.pointer("/base_resp/status_code")?;
+    value
+        .as_i64()
+        .or_else(|| value.as_str()?.parse::<i64>().ok())
+}
+
+fn minimax_usage(payload: &serde_json::Value) -> Usage {
+    let usage = payload.pointer("/usage");
+    let read = |names: &[&str]| {
+        names
+            .iter()
+            .find_map(|name| usage?.get(*name)?.as_u64())
+            .unwrap_or_default()
+    };
+    Usage {
+        input: read(&["prompt_tokens", "input_tokens"]),
+        output: read(&["completion_tokens", "output_tokens"]),
+        total_tokens: read(&["total_tokens"]),
+        ..Usage::default()
+    }
+}
+
+#[allow(
+    clippy::too_many_lines,
+    reason = "provider completion translation keeps text, reasoning, and tool-call ordering together"
+)]
+fn minimax_events(payload: &serde_json::Value) -> Vec<AssistantMessageEvent> {
+    let choice = payload.pointer("/choices/0/message").unwrap_or(payload);
+    let tool_calls = choice
+        .get("tool_calls")
+        .and_then(serde_json::Value::as_array)
+        .map(|calls| {
+            calls
+                .iter()
+                .filter_map(|call| {
+                    let function = call.get("function")?;
+                    let arguments = function
+                        .get("arguments")
+                        .and_then(serde_json::Value::as_str)
+                        .and_then(|value| serde_json::from_str(value).ok())
+                        .or_else(|| function.get("arguments").cloned())
+                        .unwrap_or_else(|| serde_json::json!({}));
+                    Some(ToolCall {
+                        id: call.get("id")?.as_str()?.to_owned(),
+                        name: function.get("name")?.as_str()?.to_owned(),
+                        arguments,
+                        thought_signature: None,
+                    })
+                })
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    let text = choice
+        .get("content")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or_default()
+        .to_owned();
+    let reasoning = choice
+        .get("reasoning_content")
+        .and_then(serde_json::Value::as_str)
+        .filter(|text| !text.is_empty())
+        .map(str::to_owned);
+    let mut events = vec![AssistantMessageEvent::Start {
+        partial: Default::default(),
+    }];
+    for (index, tool_call) in tool_calls.iter().enumerate() {
+        events.push(AssistantMessageEvent::ToolCallStart {
+            index,
+            partial: Default::default(),
+        });
+        events.push(AssistantMessageEvent::ToolCallEnd {
+            index,
+            tool_call: tool_call.clone(),
+            partial: Default::default(),
+        });
+    }
+    if let Some(reasoning) = reasoning {
+        events.push(AssistantMessageEvent::ThinkingDelta {
+            index: 0,
+            delta: reasoning.clone(),
+            partial: Default::default(),
+        });
+        events.push(AssistantMessageEvent::ThinkingEnd {
+            index: 0,
+            content: reasoning,
+            elapsed_ms: None,
+            partial: Default::default(),
+        });
+    }
+    if !text.is_empty() {
+        events.push(AssistantMessageEvent::TextDelta {
+            index: 0,
+            delta: text,
+            partial: Default::default(),
+        });
+    }
+    events.push(AssistantMessageEvent::Done {
+        stop_reason: if tool_calls.is_empty() {
+            StopReason::Stop
+        } else {
+            StopReason::ToolUse
+        },
+        usage: minimax_usage(payload),
+        message: None,
+    });
+    events
+}
+
+fn minimax_stream_error(message: impl Into<String>) -> AssistantMessageEvent {
+    AssistantMessageEvent::Error {
+        reason: StopReason::Error,
+        error: AssistantMessage {
+            content: vec![runie_core::types::AssistantContent::Text {
+                text: message.into(),
+            }],
+            ..AssistantMessage::default()
+        },
+    }
+}
+
+fn minimax_stream_delta(payload: &serde_json::Value, field: &str) -> Option<String> {
+    payload
+        .pointer("/choices/0/delta")
+        .and_then(|value| value.get(field))
+        .and_then(serde_json::Value::as_str)
+        .filter(|value| !value.is_empty())
+        .map(str::to_owned)
+}
+
+#[allow(
+    clippy::too_many_lines,
+    reason = "the SSE event reducer keeps provider chunk ordering and terminal handling together"
+)]
+fn minimax_sse_stream(response: reqwest::Response) -> AssistantMessageEventStream {
+    let output = async_stream::stream! {
+        let response = response;
+        let mut bytes = response.bytes_stream();
+        let mut buffer = String::new();
+        let mut reasoning = String::new();
+        let mut usage = Usage::default();
+        let mut tool_calls: BTreeMap<usize, (String, String, String)> = BTreeMap::new();
+        yield AssistantMessageEvent::Start { partial: Default::default() };
+        while let Some(chunk) = bytes.next().await {
+            let chunk = match chunk {
+                Ok(chunk) => chunk,
+                Err(error) => {
+                    yield minimax_stream_error(format!("Minimax stream failed: {error}"));
+                    return;
+                }
+            };
+            buffer.push_str(&String::from_utf8_lossy(&chunk));
+            while let Some(newline) = buffer.find('\n') {
+                let line = buffer[..newline].trim_end_matches('\r').to_owned();
+                buffer.drain(..=newline);
+                let Some(data) = line.strip_prefix("data:").map(str::trim) else { continue };
+                if data == "[DONE]" { continue }
+                let payload = match serde_json::from_str::<serde_json::Value>(data) {
+                    Ok(payload) => payload,
+                    Err(error) => {
+                        yield minimax_stream_error(format!("Invalid Minimax stream event: {error}"));
+                        return;
+                    }
+                };
+                if minimax_status_code(&payload).is_some_and(|code| code != 0) {
+                    yield minimax_stream_error(
+                        payload.pointer("/base_resp/status_msg")
+                            .and_then(serde_json::Value::as_str)
+                            .unwrap_or("Minimax stream request failed")
+                            .to_owned(),
+                    );
+                    return;
+                }
+                if let Some(delta) = minimax_stream_delta(&payload, "reasoning_content") {
+                    reasoning.push_str(&delta);
+                    yield AssistantMessageEvent::ThinkingDelta {
+                        index: 0, delta, partial: Default::default()
+                    };
+                }
+                if let Some(delta) = minimax_stream_delta(&payload, "content") {
+                    yield AssistantMessageEvent::TextDelta {
+                        index: 0, delta, partial: Default::default()
+                    };
+                }
+                if let Some(calls) = payload
+                    .pointer("/choices/0/delta/tool_calls")
+                    .and_then(serde_json::Value::as_array)
+                {
+                    for call in calls {
+                        let index = call
+                            .get("index")
+                            .and_then(serde_json::Value::as_u64)
+                            .unwrap_or_default() as usize;
+                        let entry = tool_calls.entry(index).or_default();
+                        if let Some(id) = call.get("id").and_then(serde_json::Value::as_str) {
+                            entry.0 = id.to_owned();
+                            yield AssistantMessageEvent::ToolCallStart {
+                                index,
+                                partial: Default::default(),
+                            };
+                        }
+                        if let Some(function) = call.get("function") {
+                            if let Some(name) =
+                                function.get("name").and_then(serde_json::Value::as_str)
+                            {
+                                entry.1.push_str(name);
+                            }
+                            if let Some(arguments) =
+                                function.get("arguments").and_then(serde_json::Value::as_str)
+                            {
+                                entry.2.push_str(arguments);
+                                yield AssistantMessageEvent::ToolCallDelta {
+                                    index,
+                                    delta: arguments.to_owned(),
+                                    partial: Default::default(),
+                                };
+                            }
+                        }
+                    }
+                }
+                let parsed_usage = minimax_usage(&payload);
+                if parsed_usage.total_tokens != 0 { usage = parsed_usage; }
+            }
+        }
+        if !buffer.trim().is_empty() {
+            yield minimax_stream_error("Incomplete Minimax stream event");
+            return;
+        }
+        if !reasoning.is_empty() {
+            yield AssistantMessageEvent::ThinkingEnd {
+                index: 0, content: reasoning, elapsed_ms: None, partial: Default::default()
+            };
+        }
+        let has_tool_calls = !tool_calls.is_empty();
+        for (index, (id, name, arguments)) in tool_calls {
+            let arguments = serde_json::from_str(&arguments)
+                .unwrap_or_else(|_| serde_json::json!({"raw": arguments}));
+            yield AssistantMessageEvent::ToolCallEnd {
+                index,
+                tool_call: ToolCall {
+                    id,
+                    name,
+                    arguments,
+                    thought_signature: None,
+                },
+                partial: Default::default(),
+            };
+        }
+        yield AssistantMessageEvent::Done {
+            stop_reason: if has_tool_calls {
+                StopReason::ToolUse
+            } else {
+                StopReason::Stop
+            },
+            usage,
+            message: None,
+        };
+    };
+    Box::pin(output)
+}
+
+#[async_trait::async_trait]
+impl StreamFn for MinimaxStream {
+    async fn stream(
+        &self,
+        _model: &Model,
+        context: &AgentContext,
+        options: Option<SimpleStreamOptions>,
+    ) -> Result<AssistantMessageEventStream, StreamError> {
+        let key = options
+            .as_ref()
+            .and_then(|options| options.api_key.clone())
+            .or_else(|| std::env::var("MINIMAX_API_KEY").ok())
+            .ok_or_else(|| StreamError::Api("MINIMAX_API_KEY is not configured".into()))?;
+        let messages = minimax_messages(context)?;
+        let mut body = serde_json::json!({
+            "model": self.model,
+            "messages": messages,
+            "stream": Self::streaming_enabled(),
+        });
+        if let Some(tools) = minimax_tool_definitions(context) {
+            body["tools"] = serde_json::Value::Array(tools);
+        }
+        let response = self
+            .client
+            .post(&self.base_url)
+            .bearer_auth(key)
+            .json(&body)
+            .send()
+            .await
+            .map_err(|error| StreamError::Network(error.to_string()))?;
+        let status = response.status();
+        let is_sse = response
+            .headers()
+            .get(reqwest::header::CONTENT_TYPE)
+            .and_then(|value| value.to_str().ok())
+            .is_some_and(|value| value.starts_with("text/event-stream"));
+        if Self::streaming_enabled() && status.is_success() && is_sse {
+            return Ok(minimax_sse_stream(response));
+        }
+        let payload = response
+            .json::<serde_json::Value>()
+            .await
+            .map_err(|error| StreamError::Api(error.to_string()))?;
+        if !status.is_success() || minimax_status_code(&payload).is_some_and(|code| code != 0) {
+            return Err(minimax_error(&payload, status));
+        }
+        let events = minimax_events(&payload);
+        Ok(Box::pin(futures::stream::iter(events)))
+    }
+}
 
 enum InputEvent {
     Key(KeyEvent),
@@ -336,8 +842,14 @@ async fn run_app(
     let state = AgentStateActor::new();
     let steering = SteeringQueueActor::new();
     let follow_up = FollowUpQueueActor::new();
-    let tool_executor = ToolExecutorActor::new_live(std::sync::Arc::new(ToolRegistry::new()));
-    let fallback: std::sync::Arc<dyn StreamFn> = std::sync::Arc::new(PlaceholderStream);
+    let mut tools = ToolRegistry::new();
+    if std::env::var("MINIMAX_ENABLE_ECHO_TOOL").is_ok_and(|value| value == "1") {
+        tools.register(std::sync::Arc::new(MinimaxEchoTool));
+    }
+    let tool_executor = ToolExecutorActor::new_live(std::sync::Arc::new(tools));
+    let fallback: std::sync::Arc<dyn StreamFn> = MinimaxStream::from_environment()
+        .map(|stream| std::sync::Arc::new(stream) as std::sync::Arc<dyn StreamFn>)
+        .unwrap_or_else(|| std::sync::Arc::new(PlaceholderStream));
     let websocket = std::sync::Arc::new(CodexWebSocketAdapter::production(Some(fallback.clone())));
     let provider = ProviderActor::new_with_websocket(fallback, Some(websocket));
     let deps = LoopDeps {
@@ -366,8 +878,9 @@ async fn run_app(
     }
     let mut ui_commands = app.subscribe_ui_commands();
     let mut placeholder_hidden = false;
+    let live_model = std::env::var("MINIMAX_MODEL").unwrap_or_else(|_| "MiniMax-M2.1".into());
     app.prompt
-        .set_model_caption("Grok 4.5 (high) · always-approve".into())
+        .set_model_caption(format!("{live_model} · always-approve"))
         .await;
     let color_level = runie_tui::terminal_color::ColorLevel::from_environment();
 
@@ -1002,6 +1515,120 @@ mod tests {
     use ratatui::buffer::Buffer;
     use ratatui::layout::Rect;
     use ratatui::style::Modifier;
+
+    #[test]
+    fn minimax_usage_maps_openai_compatible_token_fields() {
+        let payload = serde_json::json!({
+            "usage": {
+                "prompt_tokens": 12,
+                "completion_tokens": 8,
+                "total_tokens": 20
+            }
+        });
+        let usage = super::minimax_usage(&payload);
+        assert_eq!(usage.input, 12);
+        assert_eq!(usage.output, 8);
+        assert_eq!(usage.total_tokens, 20);
+    }
+
+    #[test]
+    fn minimax_status_code_accepts_numeric_and_string_provider_codes() {
+        const MINIMAX_AUTH_FAILURE_CODE: i64 = 1004;
+        assert_eq!(
+            super::minimax_status_code(&serde_json::json!({
+                "base_resp": {"status_code": MINIMAX_AUTH_FAILURE_CODE}
+            })),
+            Some(MINIMAX_AUTH_FAILURE_CODE)
+        );
+        assert_eq!(
+            super::minimax_status_code(&serde_json::json!({
+                "base_resp": {"status_code": "0"}
+            })),
+            Some(0)
+        );
+    }
+
+    #[test]
+    fn minimax_stream_ignores_final_non_delta_message_payloads() {
+        let final_message = serde_json::json!({
+            "choices": [{"message": {"content": "already emitted"}}]
+        });
+        assert_eq!(super::minimax_stream_delta(&final_message, "content"), None);
+    }
+
+    #[test]
+    fn minimax_messages_preserves_the_context_system_prompt() {
+        let context = runie_core::types::AgentContext {
+            system_prompt: "Be concise".into(),
+            messages: Vec::new(),
+            tools: None,
+        };
+        let messages = super::minimax_messages(&context).expect("messages serialize");
+        assert_eq!(messages[0]["role"], "system");
+        assert_eq!(messages[0]["content"], "Be concise");
+    }
+
+    #[test]
+    fn minimax_events_translates_complete_tool_calls() {
+        let events = super::minimax_events(&serde_json::json!({
+            "choices": [{
+                "message": {
+                    "tool_calls": [{
+                        "id": "call-1",
+                        "function": {
+                            "name": "read_file",
+                            "arguments": "{\"path\":\"README.md\"}"
+                        }
+                    }]
+                }
+            }]
+        }));
+        assert!(matches!(
+            events[1],
+            runie_core::types::AssistantMessageEvent::ToolCallStart { index: 0, .. }
+        ));
+        let runie_core::types::AssistantMessageEvent::ToolCallEnd { tool_call, .. } = &events[2]
+        else {
+            panic!("expected tool call end");
+        };
+        assert_eq!(tool_call.name, "read_file");
+        assert_eq!(tool_call.arguments["path"], "README.md");
+        assert!(matches!(
+            events.last(),
+            Some(runie_core::types::AssistantMessageEvent::Done {
+                stop_reason: runie_core::types::StopReason::ToolUse,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn minimax_normalizes_tool_result_role_and_call_id() {
+        let normalized = super::normalize_minimax_message(serde_json::json!({
+            "role": "toolResult",
+            "toolCallId": "call-1",
+            "content": "ok"
+        }));
+        assert_eq!(normalized["role"], "tool");
+        assert_eq!(normalized["tool_call_id"], "call-1");
+        assert!(normalized.get("toolCallId").is_none());
+    }
+
+    #[test]
+    fn minimax_normalizes_assistant_tool_call_blocks() {
+        let normalized = super::normalize_minimax_message(serde_json::json!({
+            "role": "assistant",
+            "content": [{
+                "type": "toolCall",
+                "id": "call-1",
+                "name": "echo",
+                "arguments": {"text": "ok"}
+            }]
+        }));
+        assert_eq!(normalized["tool_calls"][0]["id"], "call-1");
+        assert_eq!(normalized["tool_calls"][0]["function"]["name"], "echo");
+        assert_eq!(normalized["content"], serde_json::Value::Null);
+    }
 
     #[test]
     fn osc52_clipboard_sequence_base64_encodes_payload() {

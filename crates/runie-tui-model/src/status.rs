@@ -173,7 +173,9 @@ impl StatusSnapshot {
         }
     }
 
-    /// Pure event-derived context meter for the declarative header props.
+    /// Pure event-derived turn-token meter for the declarative header props.
+    /// The provider reports usage per request; it is not a cumulative session
+    /// context count, so the UI must not present it as one.
     pub fn header_meter(&self) -> String {
         let used = self
             .turn_usage
@@ -182,7 +184,7 @@ impl StatusSnapshot {
             .unwrap_or_default();
         let budget = self.context_window.unwrap_or(HEADER_TOKEN_BUDGET);
         format!(
-            "{} / {}",
+            "{} turn / {}",
             format_token_count(used),
             format_token_count(budget)
         )
@@ -326,6 +328,6 @@ mod tests {
     fn context_window_is_actor_owned_and_changes_the_meter() {
         let mut state = StatusSnapshot::default();
         state.apply(StatusMsg::SetContextWindow(Some(1_000_000)), None);
-        assert_eq!(state.header_meter(), "0 / 1M");
+        assert_eq!(state.header_meter(), "0 turn / 1M");
     }
 }

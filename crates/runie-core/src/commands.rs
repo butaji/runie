@@ -94,12 +94,70 @@ pub enum MappableBuiltinCommand {
     Resume { path: String },
 }
 
+/// A known Pi command whose provider/UI capability has no Runie owner yet.
+/// Keeping this closed prevents unsupported commands from becoming an
+/// accidental successful no-op when the registry grows.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UnsupportedBuiltinCommand {
+    Settings,
+    Model,
+    ScopedModels,
+    Export,
+    Import,
+    Share,
+    Copy,
+    Name,
+    Session,
+    Changelog,
+    Hotkeys,
+    Trust,
+    Login,
+    Logout,
+    New,
+    Compact,
+    Reload,
+    Fork,
+    Clone,
+    Tree,
+    Resume,
+    Quit,
+}
+
+impl UnsupportedBuiltinCommand {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Settings => "settings",
+            Self::Model => "model",
+            Self::ScopedModels => "scoped-models",
+            Self::Export => "export",
+            Self::Import => "import",
+            Self::Share => "share",
+            Self::Copy => "copy",
+            Self::Name => "name",
+            Self::Session => "session",
+            Self::Changelog => "changelog",
+            Self::Hotkeys => "hotkeys",
+            Self::Trust => "trust",
+            Self::Login => "login",
+            Self::Logout => "logout",
+            Self::New => "new",
+            Self::Compact => "compact",
+            Self::Reload => "reload",
+            Self::Fork => "fork",
+            Self::Clone => "clone",
+            Self::Tree => "tree",
+            Self::Resume => "resume",
+            Self::Quit => "quit",
+        }
+    }
+}
+
 /// Classification at the slash-command boundary. Unsupported Pi commands are
 /// observable capabilities rather than silent successful no-ops.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BuiltinCommandDisposition {
     Mappable(MappableBuiltinCommand),
-    Unsupported { name: String },
+    Unsupported(UnsupportedBuiltinCommand),
     NotBuiltin,
 }
 
@@ -196,15 +254,32 @@ pub fn classify_builtin_command(input: &str) -> BuiltinCommandDisposition {
     }) else {
         return BuiltinCommandDisposition::NotBuiltin;
     };
-    if PI_BUILTIN_SLASH_COMMANDS
-        .iter()
-        .any(|command| command.name == name)
-    {
-        BuiltinCommandDisposition::Unsupported {
-            name: name.to_owned(),
+    match name {
+        "settings" => BuiltinCommandDisposition::Unsupported(UnsupportedBuiltinCommand::Settings),
+        "model" => BuiltinCommandDisposition::Unsupported(UnsupportedBuiltinCommand::Model),
+        "scoped-models" => {
+            BuiltinCommandDisposition::Unsupported(UnsupportedBuiltinCommand::ScopedModels)
         }
-    } else {
-        BuiltinCommandDisposition::NotBuiltin
+        "export" => BuiltinCommandDisposition::Unsupported(UnsupportedBuiltinCommand::Export),
+        "import" => BuiltinCommandDisposition::Unsupported(UnsupportedBuiltinCommand::Import),
+        "share" => BuiltinCommandDisposition::Unsupported(UnsupportedBuiltinCommand::Share),
+        "copy" => BuiltinCommandDisposition::Unsupported(UnsupportedBuiltinCommand::Copy),
+        "name" => BuiltinCommandDisposition::Unsupported(UnsupportedBuiltinCommand::Name),
+        "session" => BuiltinCommandDisposition::Unsupported(UnsupportedBuiltinCommand::Session),
+        "changelog" => BuiltinCommandDisposition::Unsupported(UnsupportedBuiltinCommand::Changelog),
+        "hotkeys" => BuiltinCommandDisposition::Unsupported(UnsupportedBuiltinCommand::Hotkeys),
+        "trust" => BuiltinCommandDisposition::Unsupported(UnsupportedBuiltinCommand::Trust),
+        "login" => BuiltinCommandDisposition::Unsupported(UnsupportedBuiltinCommand::Login),
+        "logout" => BuiltinCommandDisposition::Unsupported(UnsupportedBuiltinCommand::Logout),
+        "new" => BuiltinCommandDisposition::Unsupported(UnsupportedBuiltinCommand::New),
+        "compact" => BuiltinCommandDisposition::Unsupported(UnsupportedBuiltinCommand::Compact),
+        "reload" => BuiltinCommandDisposition::Unsupported(UnsupportedBuiltinCommand::Reload),
+        "fork" => BuiltinCommandDisposition::Unsupported(UnsupportedBuiltinCommand::Fork),
+        "clone" => BuiltinCommandDisposition::Unsupported(UnsupportedBuiltinCommand::Clone),
+        "tree" => BuiltinCommandDisposition::Unsupported(UnsupportedBuiltinCommand::Tree),
+        "resume" => BuiltinCommandDisposition::Unsupported(UnsupportedBuiltinCommand::Resume),
+        "quit" => BuiltinCommandDisposition::Unsupported(UnsupportedBuiltinCommand::Quit),
+        _ => BuiltinCommandDisposition::NotBuiltin,
     }
 }
 
@@ -319,9 +394,7 @@ mod tests {
         );
         assert_eq!(
             classify_builtin_command("/login openai"),
-            BuiltinCommandDisposition::Unsupported {
-                name: "login".into()
-            }
+            BuiltinCommandDisposition::Unsupported(UnsupportedBuiltinCommand::Login)
         );
         assert!(matches!(
             classify_builtin_command("/name release"),
@@ -350,10 +423,47 @@ mod tests {
             assert!(
                 matches!(
                     classify_builtin_command(input),
-                    BuiltinCommandDisposition::Unsupported { .. }
+                    BuiltinCommandDisposition::Unsupported(_)
                 ),
                 "expected unsupported classification for {input}"
             );
+        }
+    }
+
+    #[test]
+    fn every_registry_name_has_a_typed_malformed_input_classification() {
+        let cases = [
+            ("settings", UnsupportedBuiltinCommand::Settings),
+            ("model", UnsupportedBuiltinCommand::Model),
+            ("scoped-models", UnsupportedBuiltinCommand::ScopedModels),
+            ("export", UnsupportedBuiltinCommand::Export),
+            ("import", UnsupportedBuiltinCommand::Import),
+            ("share", UnsupportedBuiltinCommand::Share),
+            ("copy", UnsupportedBuiltinCommand::Copy),
+            ("name", UnsupportedBuiltinCommand::Name),
+            ("session", UnsupportedBuiltinCommand::Session),
+            ("changelog", UnsupportedBuiltinCommand::Changelog),
+            ("hotkeys", UnsupportedBuiltinCommand::Hotkeys),
+            ("fork", UnsupportedBuiltinCommand::Fork),
+            ("clone", UnsupportedBuiltinCommand::Clone),
+            ("tree", UnsupportedBuiltinCommand::Tree),
+            ("trust", UnsupportedBuiltinCommand::Trust),
+            ("login", UnsupportedBuiltinCommand::Login),
+            ("logout", UnsupportedBuiltinCommand::Logout),
+            ("new", UnsupportedBuiltinCommand::New),
+            ("compact", UnsupportedBuiltinCommand::Compact),
+            ("resume", UnsupportedBuiltinCommand::Resume),
+            ("reload", UnsupportedBuiltinCommand::Reload),
+            ("quit", UnsupportedBuiltinCommand::Quit),
+        ];
+        assert_eq!(cases.len(), PI_BUILTIN_SLASH_COMMANDS.len());
+        for (name, expected) in cases {
+            let disposition = classify_builtin_command(&format!("/{name} invalid"));
+            assert_eq!(expected.name(), name);
+            assert!(!matches!(
+                disposition,
+                BuiltinCommandDisposition::NotBuiltin
+            ));
         }
     }
 }

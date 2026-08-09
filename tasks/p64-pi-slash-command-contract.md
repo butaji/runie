@@ -165,3 +165,12 @@ now replays at 62×32, 80×24, 100×30, and 120×36 and asserts the complete
 rendered screen still exposes the actor-delivered capability diagnostic. This
 closes the four-standard-geometry evidence gap for the command/error surface;
 the remaining unsupported capabilities still require their owning actors.
+
+Exhaustive capability classification increment (2026-08-10): unsupported
+classification is now a closed `UnsupportedBuiltinCommand` enum covering every
+entry in Pi's 22-command registry. Malformed arguments to a known command
+(for example `/export session.html`) cannot fall through as ordinary provider
+prompt text: they remain an explicit typed capability result and cross the
+same actor-delivered application error path. A core regression iterates every
+registry name to enforce this boundary, while the existing YAML visual fixture
+proves the rendered diagnostic.

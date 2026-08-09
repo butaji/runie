@@ -195,7 +195,7 @@ mod tests {
             context_window: None,
             thinking_elapsed_ms: None,
         };
-        assert_eq!(snapshot.header_meter(), "0 / 500K");
+        assert_eq!(snapshot.header_meter(), "0 turn / 500K");
     }
 
     #[test]

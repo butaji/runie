@@ -2112,7 +2112,7 @@ fn styled_line_for(kind: LineKind, text: &str, theme: ThemeKind) -> RatLine<'sta
             return RatLine::from(text.to_owned()).style(diff_style);
         }
     }
-    if kind != LineKind::Assistant {
+    if !matches!(kind, LineKind::Assistant | LineKind::CompletedAssistant) {
         return RatLine::from(text.to_owned()).style(style);
     }
     styled_assistant_line(text, style)
@@ -3177,6 +3177,19 @@ mod tests {
             })
             .collect::<String>();
         assert!(row.starts_with(" └───────┴──────┘"), "{row:?}");
+    }
+
+    #[test]
+    fn completed_assistant_markdown_renders_table_box_drawing_rows() {
+        let line = styled_line_for(
+            LineKind::CompletedAssistant,
+            "| Name | Value |",
+            ThemeKind::GrokNight,
+        );
+        assert_eq!(
+            line.spans.last().expect("completed table header").content,
+            "│ Name │ Value │"
+        );
     }
 
     #[test]
