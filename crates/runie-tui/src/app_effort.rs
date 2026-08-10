@@ -73,6 +73,15 @@ impl App {
 
 #[cfg(test)]
 mod tests {
+    use serde::Deserialize;
+
+    #[derive(Deserialize)]
+    struct EffortTrace {
+        model: runie_core::types::Model,
+        selected: String,
+        unsupported: String,
+    }
+
     #[test]
     fn declared_effort_options_preserve_model_order() {
         let model = runie_core::types::Model {
@@ -99,5 +108,25 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(super::App::declared_effort_options(&model), vec!["off"]);
+    }
+
+    #[test]
+    fn yaml_effort_trace_uses_only_the_model_declared_levels() {
+        let trace: EffortTrace =
+            serde_yaml::from_str(include_str!("fixtures/effort-selection.yaml"))
+                .expect("effort fixture");
+        assert_eq!(
+            super::App::declared_effort_options(&trace.model),
+            vec!["low", "high"]
+        );
+        assert!(trace
+            .model
+            .thinking_level_map
+            .as_ref()
+            .unwrap()
+            .high
+            .is_some());
+        assert!(!super::App::declared_effort_options(&trace.model).contains(&trace.unsupported));
+        assert!(super::App::declared_effort_options(&trace.model).contains(&trace.selected));
     }
 }

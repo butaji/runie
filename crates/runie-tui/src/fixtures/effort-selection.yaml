@@ -1,0 +1,10 @@
+model:
+  provider: xai
+  id: grok-4
+  name: Grok 4
+  api: xai-chat
+  thinkingLevelMap:
+    low: low-wire
+    high: high-wire
+selected: high
+unsupported: max
