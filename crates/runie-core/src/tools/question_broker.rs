@@ -15,6 +15,8 @@ pub struct UserQuestionTrace {
     pub question: String,
     pub outcome: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attempted_answer: Option<serde_json::Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
 }
 
@@ -99,10 +101,16 @@ impl UserQuestionBroker {
             .cloned()
             .ok_or_else(|| "question is no longer pending".to_owned())?;
         if let Err(error) = validate_answer(&request, &value) {
-            self.record_trace(id, &request.question, "rejected", Some(error.clone()));
+            self.record_trace(
+                id,
+                &request.question,
+                "rejected",
+                Some(value),
+                Some(error.clone()),
+            );
             return Err(error);
         }
-        self.record_trace(id, &request.question, "answered", None);
+        self.record_trace(id, &request.question, "answered", None, None);
         self.requests
             .lock()
             .expect("question requests lock")
@@ -123,7 +131,7 @@ impl UserQuestionBroker {
             .expect("question requests lock")
             .remove(id)
             .ok_or_else(|| "question is no longer pending".to_owned())?;
-        self.record_trace(id, &request.question, "cancelled", None);
+        self.record_trace(id, &request.question, "cancelled", None, None);
         self.answers
             .lock()
             .expect("question answers lock")
@@ -133,12 +141,20 @@ impl UserQuestionBroker {
             .map_err(|_| "question waiter is closed".to_owned())
     }
 
-    fn record_trace(&self, id: &str, question: &str, outcome: &str, error: Option<String>) {
+    fn record_trace(
+        &self,
+        id: &str,
+        question: &str,
+        outcome: &str,
+        attempted_answer: Option<serde_json::Value>,
+        error: Option<String>,
+    ) {
         let mut traces = self.traces.lock().expect("question traces lock");
         traces.push(UserQuestionTrace {
             id: id.to_owned(),
             question: question.to_owned(),
             outcome: outcome.to_owned(),
+            attempted_answer,
             error,
         });
         if traces.len() > MAX_QUESTION_TRACES {
@@ -289,13 +305,30 @@ mod tests {
         let error = broker
             .answer(&pending.id, serde_json::json!({"answer": "no"}))
             .unwrap_err();
-        assert!(error.contains("not offered"));
-        assert_eq!(broker.traces()[0].outcome, "rejected");
+        assert!(error.contains("not offered") && broker.traces()[0].outcome == "rejected");
         assert!(broker.traces()[0].error.is_some());
+        assert_eq!(
+            broker.traces()[0].attempted_answer,
+            Some(serde_json::json!({"answer": "no"}))
+        );
         broker
             .answer(&pending.id, serde_json::json!({"answer": "yes"}))
             .unwrap();
         assert_eq!(waiter.await.unwrap().unwrap()["answer"], "yes");
         assert_eq!(broker.traces()[1].outcome, "answered");
+        assert!(broker.traces()[1].attempted_answer.is_none());
+    }
+
+    #[test]
+    fn question_trace_deserializes_legacy_error_only_records() {
+        let trace: UserQuestionTrace = serde_json::from_value(serde_json::json!({
+            "id": "7",
+            "question": "Continue?",
+            "outcome": "rejected",
+            "error": "invalid answer"
+        }))
+        .unwrap();
+        assert!(trace.attempted_answer.is_none());
+        assert_eq!(trace.error.as_deref(), Some("invalid answer"));
     }
 }
