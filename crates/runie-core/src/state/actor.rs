@@ -50,23 +50,27 @@ pub enum StateCommand {
 pub struct AgentStateActor {
     tx: mpsc::Sender<StateCommand>,
     snapshot_rx: watch::Receiver<AgentStateSnapshot>,
+    shared_snapshot_rx: watch::Receiver<crate::SharedSnapshot<AgentStateSnapshot>>,
     _worker: Arc<TaskOwner>,
 }
 
 impl AgentStateActor {
     /// Spawn the actor worker on the current Tokio runtime.
     pub fn new() -> Self {
-        let (snap_tx, snap_rx) = watch::channel(AgentStateSnapshot::default());
+        let initial = AgentStateSnapshot::default();
+        let (snap_tx, snap_rx) = watch::channel(initial.clone());
+        let (shared_tx, shared_snapshot_rx) = watch::channel(crate::SharedSnapshot::new(initial));
 
         // OWNER: AgentStateActor — the worker handle is retained by TaskOwner
         // and is aborted when the final actor handle is dropped.
         let (tx, worker) = spawn_actor_worker!(MAILBOX_CAPACITY, move |rx| async move {
-            run_worker(rx, snap_tx).await;
+            run_worker(rx, snap_tx, shared_tx).await;
         });
 
         Self {
             tx,
             snapshot_rx: snap_rx,
+            shared_snapshot_rx,
             _worker: worker,
         }
     }
@@ -206,6 +210,14 @@ impl AgentStateActor {
     /// Borrow the current snapshot. Use this for read-only views.
     pub fn snapshot(&self) -> AgentStateSnapshot {
         self.snapshot_rx.borrow().clone()
+    }
+
+    pub fn shared_snapshot(&self) -> crate::SharedSnapshot<AgentStateSnapshot> {
+        self.shared_snapshot_rx.borrow().clone()
+    }
+
+    pub fn shared_subscribe(&self) -> watch::Receiver<crate::SharedSnapshot<AgentStateSnapshot>> {
+        self.shared_snapshot_rx.clone()
     }
 
     /// Wait until the snapshot reflects all previously sent commands.
@@ -432,13 +444,14 @@ impl Default for AgentStateActor {
 async fn run_worker(
     mut rx: mpsc::Receiver<StateCommand>,
     snap_tx: watch::Sender<AgentStateSnapshot>,
+    shared_tx: watch::Sender<crate::SharedSnapshot<AgentStateSnapshot>>,
 ) {
     let mut state = AgentStateSnapshot::default();
 
     while let Some(cmd) = rx.recv().await {
         apply(&mut state, cmd);
         // Best-effort: ignore send errors (no readers).
-        let _ = snap_tx.send(state.clone());
+        crate::publish_shared_snapshot(&snap_tx, &shared_tx, state.clone());
     }
 }
 

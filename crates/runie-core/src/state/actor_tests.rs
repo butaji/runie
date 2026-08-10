@@ -16,6 +16,24 @@ async fn push_message_visible_in_snapshot() {
 }
 
 #[tokio::test]
+async fn state_actor_publishes_immutable_shared_projection() {
+    let actor = AgentStateActor::new();
+    actor.set_error(Some("failed".into())).await;
+    let shared = actor.shared_snapshot();
+    assert_eq!(shared.get().error_message.as_deref(), Some("failed"));
+    assert_eq!(shared.strong_count(), 2);
+    assert_eq!(
+        actor
+            .shared_subscribe()
+            .borrow()
+            .get()
+            .error_message
+            .as_deref(),
+        Some("failed")
+    );
+}
+
+#[tokio::test]
 async fn replace_messages_acknowledges_before_returning() {
     let actor = AgentStateActor::new();
     actor

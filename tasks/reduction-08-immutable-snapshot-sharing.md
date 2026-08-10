@@ -44,3 +44,6 @@ retaining the existing compatibility subscription.
 `SessionActor` now uses one publisher value to fan out every journal state
 transition to both its owned compatibility channel and immutable shared
 channel; all existing worker publication sites retain the same reducer shape.
+`AgentStateActor` now publishes the same immutable shared projection alongside
+its compatibility channel, covering the core agent-state boundary without
+duplicating event reduction logic.
