@@ -21,6 +21,8 @@ compatibility-owned channel, with an event-driven subscription test.
 The live renderer uses the shared feed projection for animation-demand reads.
 The prompt actor now publishes the same shared projection alongside its
 compatibility-owned channel, with focused actor coverage for shared reads.
+The event renderer now keeps the shared feed projection for its per-event
+atomic read, avoiding a deep snapshot clone on that hot path.
 
 Acceptance: snapshot isolation tests, allocation-sensitive focused benchmark,
 and workspace tests.

@@ -153,7 +153,7 @@ impl EventRenderer {
                             // the turn flag and the assistant-finalize inputs
                             // observe the same scrollback generation instead
                             // of two independently torn reads.
-                            let scrollback_snapshot = scrollback_actor.model_snapshot();
+                            let scrollback_snapshot = scrollback_actor.shared_snapshot();
                             let turn_was_started = scrollback_snapshot.facts.turn_started;
                             let mut feed_messages = scrollback_messages_for_event(&event);
                             if matches!(event, AgentEvent::TurnStart) {

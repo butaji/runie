@@ -127,7 +127,6 @@ impl Default for ScrollbackActor {
 }
 
 include!("scrollback_shared.rs");
-
 #[cfg(test)]
 #[path = "scrollback_actor_grouped_tests.rs"]
 mod grouped_tests;
@@ -161,6 +160,7 @@ mod tests {
         assert_eq!(snapshot.lines[0].text, "hello");
         assert!(!snapshot.is_empty());
     }
+
     #[tokio::test]
     async fn bus_owned_actor_clears_on_reset() {
         let bus = runie_core::events::EventBus::new();
