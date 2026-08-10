@@ -100,6 +100,7 @@ pub struct LoopDeps {
     pub transform_context: Option<TransformContext>,
     pub convert_to_llm: Option<ConvertToLlm>,
     pub api_key_resolver: Option<ApiKeyResolver>,
+    pub context_recovery: Option<crate::r#loop::driver::ContextRecoveryHook>,
     pub stream_options: crate::types::SimpleStreamOptions,
     /// Abort signal receiver; `LoopActor::new` injects its own channel.
     pub abort: Option<tokio::sync::watch::Receiver<bool>>,
@@ -124,6 +125,7 @@ impl LoopDeps {
             transform_context: self.transform_context.clone(),
             convert_to_llm: self.convert_to_llm.clone(),
             api_key_resolver: self.api_key_resolver.clone(),
+            context_recovery: self.context_recovery.clone(),
             stream_options: self.stream_options.clone(),
             abort: self.abort.clone(),
             tool_execution_mode: self.tool_execution_mode,

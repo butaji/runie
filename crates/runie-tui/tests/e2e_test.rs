@@ -139,6 +139,7 @@ fn build_app_with(provider_stream: Arc<dyn StreamFn>) -> App {
         turn_hooks: runie_core::hooks::TurnHooks::default(),
         transform_context: None,
         api_key_resolver: None,
+        context_recovery: None,
         convert_to_llm: None,
         stream_options: Default::default(),
         abort: None,

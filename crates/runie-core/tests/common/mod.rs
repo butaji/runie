@@ -17,7 +17,9 @@ use runie_core::hooks::TurnHooks;
 use runie_core::provider::stream_fn::{AssistantMessageEventStream, StreamError, StreamFn};
 use runie_core::provider::ProviderActor;
 use runie_core::queues::{FollowUpQueueActor, SteeringQueueActor};
-use runie_core::r#loop::driver::{run_loop, ApiKeyResolver, ConvertToLlm, RunLoopDeps};
+use runie_core::r#loop::driver::{
+    run_loop, ApiKeyResolver, ContextRecoveryHook, ConvertToLlm, RunLoopDeps,
+};
 use runie_core::r#loop::{LoopActor, LoopDeps};
 use runie_core::state::AgentStateActor;
 use runie_core::tools::executor::ToolExecHooks;
@@ -102,6 +104,7 @@ pub struct TestLoopBuilder {
         >,
     >,
     pub api_key_resolver: Option<ApiKeyResolver>,
+    pub context_recovery: Option<ContextRecoveryHook>,
     pub convert_to_llm: Option<ConvertToLlm>,
     pub stream_options: runie_core::types::SimpleStreamOptions,
     pub tool_execution: ToolExecutionMode,
@@ -118,6 +121,7 @@ impl TestLoopBuilder {
             turn_hooks: TurnHooks::default(),
             transform_context: None,
             api_key_resolver: None,
+            context_recovery: None,
             convert_to_llm: None,
             stream_options: Default::default(),
             tool_execution: ToolExecutionMode::Parallel,
@@ -162,6 +166,11 @@ impl TestLoopBuilder {
         self
     }
 
+    pub fn context_recovery(mut self, recover: ContextRecoveryHook) -> Self {
+        self.context_recovery = Some(recover);
+        self
+    }
+
     pub fn build(self) -> TestLoop {
         let state = AgentStateActor::new();
         let steering = SteeringQueueActor::new();
@@ -187,6 +196,7 @@ impl TestLoopBuilder {
             turn_hooks: self.turn_hooks,
             transform_context: self.transform_context,
             api_key_resolver: self.api_key_resolver,
+            context_recovery: self.context_recovery,
             convert_to_llm: self.convert_to_llm,
             stream_options: self.stream_options,
             abort: None,

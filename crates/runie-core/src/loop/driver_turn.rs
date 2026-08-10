@@ -1,4 +1,18 @@
 use super::*;
+
+async fn recover_context(context: AgentContext, deps: &RunLoopDeps) -> Option<AgentContext> {
+    let Some(recover) = &deps.context_recovery else {
+        return Some(context);
+    };
+    match recover(context).await {
+        Ok(context) => Some(context),
+        Err(error) => {
+            publish_and_apply(deps, AgentEvent::Error { message: error }).await;
+            None
+        }
+    }
+}
+
 pub(super) async fn run_assistant_turn(
     override_model: Option<Model>,
     override_ctx: Option<AgentContext>,
@@ -13,6 +27,7 @@ pub(super) async fn run_assistant_turn(
         tools: Some(snap.tools),
     };
     let context = override_ctx.unwrap_or(base_context);
+    let context = recover_context(context, deps).await?;
     let wire_context = prepare_wire_context(&context, deps).await;
     let assistant = stream_assistant(model, wire_context, deps).await?;
     let assistant_message = AgentMessage::Assistant(assistant.clone());

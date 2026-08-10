@@ -42,6 +42,14 @@ pub type ConvertToLlm = Arc<
 pub type ApiKeyResolver =
     Arc<dyn Fn(String) -> futures::future::BoxFuture<'static, Option<String>> + Send + Sync>;
 
+/// Actor-owned context recovery invoked immediately before a provider turn.
+/// The loop owns timing; the hook owner owns compaction state and events.
+pub type ContextRecoveryHook = Arc<
+    dyn Fn(AgentContext) -> futures::future::BoxFuture<'static, Result<AgentContext, String>>
+        + Send
+        + Sync,
+>;
+
 /// Bag of dependencies the driver needs.
 #[derive(Clone)]
 pub struct RunLoopDeps {
@@ -62,6 +70,7 @@ pub struct RunLoopDeps {
     /// pi `convertToLlm`: customize the final wire projection per request.
     pub convert_to_llm: Option<ConvertToLlm>,
     pub api_key_resolver: Option<ApiKeyResolver>,
+    pub context_recovery: Option<ContextRecoveryHook>,
     /// Static provider options inherited by each request; dynamic credentials
     /// are applied on top immediately before the call.
     pub stream_options: SimpleStreamOptions,
