@@ -1,5 +1,25 @@
 impl App {
     async fn route_extended_command(&self, name: &str, args: &str) -> bool {
+        if name == "sessions" {
+            let root = if args.trim().is_empty() {
+                std::env::current_dir()
+                    .map(|path| path.to_string_lossy().into_owned())
+                    .unwrap_or_else(|_| ".".into())
+            } else {
+                args.trim().to_owned()
+            };
+            let result = match self.session_storage.discover_rows(root, 64, "").await {
+                Ok(rows) if rows.is_empty() => "No stored sessions found".into(),
+                Ok(rows) => rows
+                    .into_iter()
+                    .map(|row| format!("{} · {} · {}", row.session_id, row.label, row.cwd))
+                    .collect::<Vec<_>>()
+                    .join("\n"),
+                Err(error) => format!("Session discovery failed: {error}"),
+            };
+            self.ui.send(UiMsg::ShowCommandResult(result)).await;
+            return true;
+        }
         if name == "undo" {
             let result = self.session_actor.undo().await;
             if let Err(error) = &result {
