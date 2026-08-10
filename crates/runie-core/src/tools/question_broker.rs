@@ -20,6 +20,37 @@ pub struct UserQuestionTrace {
     pub error: Option<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct UserQuestionHistoryRow {
+    pub id: String,
+    pub question: String,
+    pub outcome: String,
+    pub detail: Option<String>,
+}
+
+impl From<UserQuestionTrace> for UserQuestionHistoryRow {
+    fn from(trace: UserQuestionTrace) -> Self {
+        Self {
+            id: trace.id,
+            question: trace.question,
+            outcome: trace.outcome,
+            detail: trace.error,
+        }
+    }
+}
+
+pub fn question_history_rows(
+    traces: &[UserQuestionTrace],
+    text: &str,
+    outcome: Option<&str>,
+    limit: usize,
+) -> Vec<UserQuestionHistoryRow> {
+    query_question_history(traces, text, outcome, limit)
+        .into_iter()
+        .map(Into::into)
+        .collect()
+}
+
 /// Encode question resolutions as a bounded, append-friendly session stream.
 pub fn encode_question_traces(traces: &[UserQuestionTrace]) -> Result<String, serde_json::Error> {
     traces
@@ -441,6 +472,12 @@ mod tests {
                 .map(|trace| trace.id.as_str())
                 .collect::<Vec<_>>(),
             ["2"]
+        );
+        let rows = question_history_rows(&traces, "deploy", Some("answered"), 8);
+        assert_eq!(rows[0].question, "Continue deploy?");
+        assert_eq!(
+            serde_json::to_value(&rows[0]).unwrap()["outcome"],
+            "answered"
         );
     }
 }

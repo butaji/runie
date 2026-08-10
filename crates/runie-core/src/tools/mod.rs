@@ -47,8 +47,8 @@ pub use policy::{
     ApprovalModeStore, ApprovalTrace,
 };
 pub use question_broker::{
-    decode_question_traces, encode_question_traces, PendingUserQuestion, UserQuestionBroker,
-    UserQuestionTrace,
+    decode_question_traces, encode_question_traces, question_history_rows, PendingUserQuestion,
+    UserQuestionBroker, UserQuestionHistoryRow, UserQuestionTrace,
 };
 pub use registry::ToolRegistry;
 pub use subagent::{
