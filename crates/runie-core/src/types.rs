@@ -143,7 +143,9 @@ mod stop_reason_tests {
 #[path = "types_messages.rs"]
 mod types_messages;
 pub use types_messages::*;
-/// Static model description.
+#[path = "types_media.rs"]
+mod types_media;
+pub use types_media::*;
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Model {
@@ -185,7 +187,6 @@ mod media;
 #[path = "model_capabilities.rs"]
 mod model_capabilities;
 
-/// Response metadata exposed to pi-compatible provider response hooks.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(
     tag = "type",

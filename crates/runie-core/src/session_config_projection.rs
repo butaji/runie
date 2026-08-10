@@ -54,7 +54,8 @@ pub fn estimate_message_tokens(message: &AgentMessage) -> u64 {
             .iter()
             .map(|content| match content {
                 crate::types::UserContent::Text { text } => pi_text_units(text),
-                crate::types::UserContent::Image { .. } => ESTIMATED_IMAGE_CHARS,
+                crate::types::UserContent::Image { .. }
+                | crate::types::UserContent::Video { .. } => ESTIMATED_IMAGE_CHARS,
             })
             .sum(),
         AgentMessage::Assistant(message) => message

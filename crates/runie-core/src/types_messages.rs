@@ -3,15 +3,6 @@ pub struct TextContent {
     pub text: String,
 }
 
-/// Image content block.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ImageContent {
-    /// Base64-encoded image data, matching pi-ai's wire representation.
-    pub data: String,
-    #[serde(rename = "mimeType")]
-    pub mime_type: String,
-}
-
 /// Single content block on a user message.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -20,6 +11,11 @@ pub enum UserContent {
         text: String,
     },
     Image {
+        data: String,
+        #[serde(rename = "mimeType")]
+        mime_type: String,
+    },
+    Video {
         data: String,
         #[serde(rename = "mimeType")]
         mime_type: String,
@@ -468,12 +464,13 @@ pub enum WireMessage {
     },
 }
 
-/// Modality a model accepts (pi: `input: ("text"|"image")[]`).
+/// Modality a model accepts.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum InputKind {
     Text,
     Image,
+    Video,
 }
 
 /// Provider-specific reasoning-effort mappings (pi: `thinkingLevelMap?`).

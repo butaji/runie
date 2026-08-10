@@ -379,4 +379,20 @@ mod extra {
         assert!(ImageContent::new("text/plain", "aGVsbG8=").is_err());
         assert!(ImageContent::new("image/png", "not base64!").is_err());
     }
+
+    #[test]
+    fn video_content_and_capability_are_typed_data() {
+        let model = Model {
+            input: vec![InputKind::Video],
+            ..Model::default()
+        };
+        assert!(model.supports_input(InputKind::Video));
+        assert!(VideoContent::new("video/mp4", "aGVsbG8=").is_ok());
+        assert!(VideoContent::new("image/png", "aGVsbG8=").is_err());
+        let content = UserContent::Video {
+            data: "aGVsbG8=".into(),
+            mime_type: "video/mp4".into(),
+        };
+        assert_eq!(serde_json::to_value(content).unwrap()["type"], "video");
+    }
 }
