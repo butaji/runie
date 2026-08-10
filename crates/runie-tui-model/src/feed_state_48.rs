@@ -5,10 +5,7 @@ impl FeedState {
             .iter()
             .enumerate()
             .filter_map(|(index, line)| {
-                (matches!(
-                    line.kind,
-                    LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
-                ) && line.tool_call_id.is_some()
+                (line.kind.is_tool_header() && line.tool_call_id.is_some()
                     && seen.insert(tool_member_key(&self.lines, index)))
                 .then_some(index)
             })

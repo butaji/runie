@@ -6,7 +6,7 @@ impl FeedState {
             .enumerate()
             .filter_map(|(index, line)| {
                 let selectable = match line.kind {
-                    LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError => line
+                    kind if kind.is_tool_header() => line
                         .tool_call_id
                         .as_ref()
                         .is_none_or(|_| seen.insert(tool_member_key(&self.lines, index))),

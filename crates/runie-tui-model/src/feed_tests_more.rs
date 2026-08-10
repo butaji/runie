@@ -44,6 +44,19 @@ fn line_kind_prefix_pins_activity_rail() {
 }
 
 #[test]
+fn line_kind_tool_predicates_share_the_declared_vocabulary() {
+    for kind in [LineKind::Tool, LineKind::ToolRunning, LineKind::ToolError] {
+        assert!(kind.is_tool_header());
+        assert!(kind.is_tool_line());
+    }
+    for kind in [LineKind::ToolOutput, LineKind::ToolResult] {
+        assert!(!kind.is_tool_header());
+        assert!(kind.is_tool_line());
+    }
+    assert!(!LineKind::Assistant.is_tool_line());
+}
+
+#[test]
 fn format_clock_timestamp_pins_short_clock_shape() {
     // Pin the fallback path: when libc cannot resolve the local clock,
     // the UTC-derived 12-hour shape with a zero-padded minute is still

@@ -108,6 +108,14 @@ pub enum LineKind {
 }
 
 impl LineKind {
+    pub const fn is_tool_header(self) -> bool {
+        matches!(self, Self::Tool | Self::ToolRunning | Self::ToolError)
+    }
+
+    pub const fn is_tool_line(self) -> bool {
+        self.is_tool_header() || matches!(self, Self::ToolOutput | Self::ToolResult)
+    }
+
     /// Render the prefix glyphs for a transcript line. Centralized
     /// here so the actor-owned transcript projection and the
     /// renderer share one vocabulary.

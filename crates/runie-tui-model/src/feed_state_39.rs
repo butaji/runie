@@ -6,10 +6,7 @@ impl FeedState {
         }
         if let Some(line) = self.lines.iter_mut().rev().find(|line| {
             line.tool_call_id.as_deref() == Some(id)
-                && matches!(
-                    line.kind,
-                    LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
-                )
+                && line.kind.is_tool_header()
         }) {
             line.text = text;
         }

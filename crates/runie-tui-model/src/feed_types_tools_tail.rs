@@ -76,14 +76,7 @@ pub fn line_is_blank(line: &Line) -> bool {
 }
 
 fn is_tool_line(kind: LineKind) -> bool {
-    matches!(
-        kind,
-        LineKind::Tool
-            | LineKind::ToolRunning
-            | LineKind::ToolError
-            | LineKind::ToolOutput
-            | LineKind::ToolResult
-    )
+    kind.is_tool_line()
 }
 
 /// Find the first index in `lines` whose `text` contains the

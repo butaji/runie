@@ -40,6 +40,8 @@ per call ID for name and arguments instead of parallel name/argument maps.
 mode now has one canonical owner and tool-card projection reads it directly.
 Remaining work is removal of duplicated derived indexes and normalization of
 individual line/tool records.
+Tool-header and tool-line classification is now owned by `LineKind` predicates,
+so feed update, selection, error, and rendering paths share one vocabulary.
 
 Acceptance: snapshot parity, replay parity, and no stale derived index after
 insert/update/remove sequences.
