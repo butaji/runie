@@ -26,6 +26,7 @@ include!("session_lane_records.rs");
 include!("session_tool_validation.rs");
 include!("session_lane_validation.rs");
 include!("session_snapshot_projection.rs");
+include!("session_history.rs");
 include!("session_json.rs");
 include!("session_commands.rs");
 #[path = "session_storage.rs"]

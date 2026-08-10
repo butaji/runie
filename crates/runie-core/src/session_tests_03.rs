@@ -150,6 +150,19 @@
         );
     }
 
+    #[test]
+    fn history_rows_preserve_alternate_undo_targets_and_mark_selected_branch() {
+        let snapshot = branch_snapshot();
+        let rows = snapshot.history_rows();
+        assert_eq!(rows.iter().map(|row| row.id.as_str()).collect::<Vec<_>>(), [
+            "message-1", "message-2", "config-1"
+        ]);
+        assert_eq!(rows.iter().map(|row| row.selected).collect::<Vec<_>>(), [
+            true, true, false
+        ]);
+        assert_eq!(rows[2].record_type, "session_name");
+    }
+
     fn branch_snapshot() -> SessionSnapshot {
         SessionSnapshot {
             entries: vec![
