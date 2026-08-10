@@ -68,6 +68,66 @@ pub struct IdeSnapshot {
     pub diagnostics: BTreeMap<String, Vec<IdeDiagnostic>>,
 }
 
+enum IdeCommand {
+    Apply {
+        event: IdeEvent,
+        reply: tokio::sync::oneshot::Sender<Result<(), String>>,
+    },
+    Snapshot {
+        reply: tokio::sync::oneshot::Sender<IdeSnapshot>,
+    },
+}
+
+#[derive(Clone)]
+pub struct IdeActor {
+    tx: tokio::sync::mpsc::Sender<IdeCommand>,
+    _owner: std::sync::Arc<crate::task_owner::TaskOwner>,
+}
+
+impl IdeActor {
+    pub fn new() -> Self {
+        let (tx, owner) =
+            crate::spawn_actor_worker!(32, move |mut rx: tokio::sync::mpsc::Receiver<
+                IdeCommand,
+            >| async move {
+                let mut snapshot = IdeSnapshot::default();
+                while let Some(command) = rx.recv().await {
+                    match command {
+                        IdeCommand::Apply { event, reply } => {
+                            let _ = reply.send(reduce_ide_event(&mut snapshot, event));
+                        }
+                        IdeCommand::Snapshot { reply } => {
+                            let _ = reply.send(snapshot.clone());
+                        }
+                    }
+                }
+            });
+        Self { tx, _owner: owner }
+    }
+
+    pub async fn apply(&self, event: IdeEvent) -> Result<(), String> {
+        let (reply, response) = tokio::sync::oneshot::channel();
+        self.tx
+            .send(IdeCommand::Apply { event, reply })
+            .await
+            .map_err(|_| "IDE actor is closed".to_owned())?;
+        response
+            .await
+            .map_err(|_| "IDE actor response was dropped".to_owned())?
+    }
+
+    pub async fn snapshot(&self) -> Result<IdeSnapshot, String> {
+        let (reply, response) = tokio::sync::oneshot::channel();
+        self.tx
+            .send(IdeCommand::Snapshot { reply })
+            .await
+            .map_err(|_| "IDE actor is closed".to_owned())?;
+        response
+            .await
+            .map_err(|_| "IDE actor snapshot was dropped".to_owned())
+    }
+}
+
 impl IdeSnapshot {
     /// Apply one host-owned JSON-RPC notification through the typed event
     /// boundary. Socket lifecycle remains outside the reducer actor.
@@ -299,6 +359,20 @@ mod tests {
         assert_eq!(snapshot.connection, IdeConnectionStatus::Reconnecting);
         reduce_ide_event(&mut snapshot, IdeEvent::ConnectionRestored).unwrap();
         assert_eq!(snapshot.connection, IdeConnectionStatus::Connected);
+    }
+
+    #[tokio::test]
+    async fn ide_actor_reduces_events_and_returns_owned_snapshot() {
+        let actor = IdeActor::new();
+        actor
+            .apply(IdeEvent::Initialized {
+                workspace: "/workspace".into(),
+            })
+            .await
+            .unwrap();
+        let snapshot = actor.snapshot().await.unwrap();
+        assert_eq!(snapshot.connection, IdeConnectionStatus::Connected);
+        assert_eq!(snapshot.workspace.as_deref(), Some("/workspace"));
     }
 
     #[test]
