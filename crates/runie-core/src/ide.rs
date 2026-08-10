@@ -96,6 +96,55 @@ pub fn encode_ide_response(response: &IdeRpcResponse) -> Result<String, String> 
     serde_json::to_string(response).map_err(|error| format!("encode IDE response: {error}"))
 }
 
+/// Convert common LSP/ACP notifications into the replayable IDE event model.
+pub fn ide_event_from_rpc(method: &str, params: serde_json::Value) -> Result<IdeEvent, String> {
+    match method {
+        "initialized" => Ok(IdeEvent::Initialized {
+            workspace: params
+                .get("workspace")
+                .and_then(serde_json::Value::as_str)
+                .ok_or("IDE initialized notification is missing workspace")?
+                .into(),
+        }),
+        "textDocument/didOpen" => Ok(IdeEvent::DocumentOpened(document_from_params(&params)?)),
+        "textDocument/didChange" => Ok(IdeEvent::DocumentChanged(document_from_params(&params)?)),
+        "textDocument/didClose" => Ok(IdeEvent::DocumentClosed {
+            uri: params
+                .get("textDocument")
+                .and_then(|value| value.get("uri"))
+                .and_then(serde_json::Value::as_str)
+                .ok_or("IDE close notification is missing document URI")?
+                .into(),
+        }),
+        _ => Err(format!("unsupported IDE notification: {method}")),
+    }
+}
+
+fn document_from_params(value: &serde_json::Value) -> Result<IdeDocument, String> {
+    let text_document = value.get("textDocument").unwrap_or(value);
+    Ok(IdeDocument {
+        uri: text_document
+            .get("uri")
+            .and_then(serde_json::Value::as_str)
+            .ok_or("IDE notification is missing document URI")?
+            .into(),
+        language_id: text_document
+            .get("languageId")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("text")
+            .into(),
+        version: text_document
+            .get("version")
+            .and_then(serde_json::Value::as_u64)
+            .unwrap_or_default(),
+        text: text_document
+            .get("text")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default()
+            .into(),
+    })
+}
+
 pub fn reduce_ide_event(snapshot: &mut IdeSnapshot, event: IdeEvent) -> Result<(), String> {
     match event {
         IdeEvent::Initialized { workspace } => {
@@ -198,5 +247,18 @@ mod tests {
         })
         .expect("response");
         assert!(encoded.contains(&IDE_INVALID_REQUEST_CODE.to_string()));
+    }
+
+    #[test]
+    fn lsp_notifications_project_into_replayable_document_events() {
+        let event = ide_event_from_rpc(
+            "textDocument/didOpen",
+            serde_json::json!({"textDocument":{"uri":"file:///a","languageId":"rust","version":2,"text":"fn main() {}"}}),
+        )
+        .unwrap();
+        let mut snapshot = IdeSnapshot::default();
+        reduce_ide_event(&mut snapshot, event).unwrap();
+        assert_eq!(snapshot.documents["file:///a"].version, 2);
+        assert!(ide_event_from_rpc("workspace/unknown", serde_json::json!({})).is_err());
     }
 }
