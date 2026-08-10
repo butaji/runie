@@ -42,5 +42,7 @@ pub use question_broker::{PendingUserQuestion, UserQuestionBroker};
 pub use registry::ToolRegistry;
 pub use subagent::{SubagentRequest, SubagentRole, SubagentTool};
 pub use todo::{TodoActor, TodoItem, TodoSnapshot, TodoStatus, TodoWriteTool};
-pub use web::{WebSearchRequest, WebSearchTool};
+pub use web::{
+    WebSearchHttpClient, WebSearchRequest, WebSearchResponse, WebSearchResult, WebSearchTool,
+};
 pub use workspace::{BashTool, EditFileTool, GlobTool, GrepTool, ReadFileTool, WriteFileTool};

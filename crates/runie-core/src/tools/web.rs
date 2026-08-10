@@ -1,6 +1,72 @@
 //! Provider-neutral web search boundary. Transport belongs to the owning app.
 
 use crate::types::{AgentTool, AgentToolResult, ToolResultContent};
+use std::time::Duration;
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct WebSearchResult {
+    pub title: String,
+    pub url: String,
+    #[serde(default)]
+    pub snippet: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct WebSearchResponse {
+    #[serde(default)]
+    pub results: Vec<WebSearchResult>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WebSearchHttpClient {
+    pub endpoint: String,
+    pub bearer_token: Option<String>,
+    pub timeout: Duration,
+}
+
+impl WebSearchHttpClient {
+    pub fn new(
+        endpoint: impl Into<String>,
+        bearer_token: Option<String>,
+        timeout: Duration,
+    ) -> Result<Self, String> {
+        let endpoint = endpoint.into();
+        if endpoint.trim().is_empty() {
+            return Err("web search endpoint must not be empty".into());
+        }
+        if timeout.is_zero() {
+            return Err("web search timeout must be positive".into());
+        }
+        Ok(Self {
+            endpoint,
+            bearer_token,
+            timeout,
+        })
+    }
+    pub async fn search(&self, request: WebSearchRequest) -> Result<WebSearchResponse, String> {
+        let client = reqwest::Client::builder()
+            .timeout(self.timeout)
+            .build()
+            .map_err(|error| error.to_string())?;
+        let mut call = client.post(&self.endpoint).json(&request);
+        if let Some(token) = &self.bearer_token {
+            call = call.bearer_auth(token);
+        }
+        let response = call
+            .send()
+            .await
+            .map_err(|error| format!("web search request: {error}"))?;
+        let status = response.status();
+        let body = response
+            .text()
+            .await
+            .map_err(|error| format!("web search body: {error}"))?;
+        if !status.is_success() {
+            return Err(format!("web search HTTP status {status}: {body}"));
+        }
+        serde_json::from_str(&body).map_err(|error| format!("invalid web search response: {error}"))
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct WebSearchRequest {
@@ -84,5 +150,32 @@ mod tests {
         assert!(tool
             .validate_arguments(&serde_json::json!({"query":"x","max_results":21}))
             .is_err());
+    }
+
+    #[tokio::test]
+    async fn http_client_decodes_citation_results() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let mut tasks = tokio::task::JoinSet::new();
+        tasks.spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut request = vec![0_u8; 2048];
+            let _ = tokio::io::AsyncReadExt::read(&mut socket, &mut request).await;
+            let body = r#"{"results":[{"title":"Rust","url":"https://rust-lang.org","snippet":"language"}]}"#;
+            let response = format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\nContent-Type: application/json\r\n\r\n{}", body.len(), body);
+            tokio::io::AsyncWriteExt::write_all(&mut socket, response.as_bytes()).await.unwrap();
+        });
+        let client =
+            WebSearchHttpClient::new(format!("http://{address}"), None, Duration::from_secs(1))
+                .unwrap();
+        let response = client
+            .search(WebSearchRequest {
+                query: "rust".into(),
+                max_results: 1,
+            })
+            .await
+            .unwrap();
+        tasks.join_next().await.unwrap().unwrap();
+        assert_eq!(response.results[0].url, "https://rust-lang.org");
     }
 }
