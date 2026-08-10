@@ -18,6 +18,71 @@ pub struct GitConflictRecoveryPlan {
     pub actions: Vec<GitConflictAction>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum GitConflictRecoveryStatus {
+    Ready,
+    Completed,
+    Cancelled,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct GitConflictRecoveryState {
+    pub plan: GitConflictRecoveryPlan,
+    pub selected_path: Option<String>,
+    pub selected_action: Option<GitConflictAction>,
+    pub status: GitConflictRecoveryStatus,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case", tag = "type")]
+pub enum GitConflictRecoveryEvent {
+    PathSelected { path: String },
+    ActionSelected { action: GitConflictAction },
+    Completed,
+    Cancelled,
+}
+
+pub fn begin_conflict_recovery(plan: GitConflictRecoveryPlan) -> GitConflictRecoveryState {
+    GitConflictRecoveryState {
+        plan,
+        selected_path: None,
+        selected_action: None,
+        status: GitConflictRecoveryStatus::Ready,
+    }
+}
+
+pub fn reduce_conflict_recovery(
+    mut state: GitConflictRecoveryState,
+    event: GitConflictRecoveryEvent,
+) -> Result<GitConflictRecoveryState, String> {
+    if state.status != GitConflictRecoveryStatus::Ready {
+        return Err("git conflict recovery is no longer active".into());
+    }
+    match event {
+        GitConflictRecoveryEvent::PathSelected { path } => {
+            if !state.plan.admits(&GitConflictAction::Inspect, Some(&path)) {
+                return Err("selected path is not conflicted".into());
+            }
+            state.selected_path = Some(path);
+        }
+        GitConflictRecoveryEvent::ActionSelected { action } => {
+            if !state.plan.admits(&action, state.selected_path.as_deref()) {
+                return Err("selected conflict action is not allowed".into());
+            }
+            state.selected_action = Some(action);
+        }
+        GitConflictRecoveryEvent::Completed => {
+            if state.selected_action.is_none() {
+                return Err("cannot complete without an action".into());
+            }
+            state.status = GitConflictRecoveryStatus::Completed;
+        }
+        GitConflictRecoveryEvent::Cancelled => state.status = GitConflictRecoveryStatus::Cancelled,
+    }
+    Ok(state)
+}
+
 impl GitConflictRecoveryPlan {
     pub fn admits(&self, action: &GitConflictAction, path: Option<&str>) -> bool {
         if !self.actions.contains(action) {

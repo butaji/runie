@@ -128,3 +128,27 @@ fn conflict_recovery_plan_admits_only_known_actions_and_paths() {
     assert!(plan.admits(&GitConflictAction::Abort, None));
     assert!(!plan.admits(&GitConflictAction::Inspect, Some("other.rs")));
 }
+
+#[test]
+fn conflict_recovery_reduces_interactive_events_and_rejects_dead_ends() {
+    let plan = plan_conflict_recovery(&classify_conflicts("UU src/main.rs\n"));
+    let state = begin_conflict_recovery(plan);
+    assert!(reduce_conflict_recovery(state.clone(), GitConflictRecoveryEvent::Completed).is_err());
+    let state = reduce_conflict_recovery(
+        state,
+        GitConflictRecoveryEvent::PathSelected {
+            path: "src/main.rs".into(),
+        },
+    )
+    .unwrap();
+    let state = reduce_conflict_recovery(
+        state,
+        GitConflictRecoveryEvent::ActionSelected {
+            action: GitConflictAction::Resolve,
+        },
+    )
+    .unwrap();
+    let state = reduce_conflict_recovery(state, GitConflictRecoveryEvent::Completed).unwrap();
+    assert_eq!(state.status, GitConflictRecoveryStatus::Completed);
+    assert!(reduce_conflict_recovery(state, GitConflictRecoveryEvent::Cancelled).is_err());
+}
