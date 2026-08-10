@@ -13,4 +13,7 @@ pub use http::{
     HttpResponse, ReplayHttpActor,
 };
 pub use replay::ReplayProvider;
-pub use stream_fn::{AssistantMessageEventStream, StreamError, StreamFn, WebSocketAdapter};
+pub use stream_fn::{
+    classify_failure, AssistantMessageEventStream, ProviderFailure, ProviderFailureKind,
+    StreamError, StreamFn, WebSocketAdapter,
+};

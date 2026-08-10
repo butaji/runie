@@ -124,6 +124,57 @@ pub enum StreamError {
     Invalid(String),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ProviderFailureKind {
+    Network,
+    Api,
+    Provider,
+    Aborted,
+    Invalid,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct ProviderFailure {
+    pub kind: ProviderFailureKind,
+    pub message: String,
+    pub status: Option<u16>,
+    pub retryable: bool,
+}
+
+pub fn classify_failure(error: &StreamError) -> ProviderFailure {
+    let (kind, message, status, retryable) = match error {
+        StreamError::Network(message) => {
+            (ProviderFailureKind::Network, message.clone(), None, true)
+        }
+        StreamError::Api(message) => (ProviderFailureKind::Api, message.clone(), None, false),
+        StreamError::Provider {
+            message,
+            status,
+            headers,
+        } => (
+            ProviderFailureKind::Provider,
+            message.clone(),
+            *status,
+            headers
+                .iter()
+                .find(|(key, _)| key.eq_ignore_ascii_case("x-should-retry"))
+                .map(|(_, value)| value)
+                .is_some_and(|value| value.eq_ignore_ascii_case("true")),
+        ),
+        StreamError::Aborted => (ProviderFailureKind::Aborted, "aborted".into(), None, false),
+        StreamError::Invalid(message) => {
+            (ProviderFailureKind::Invalid, message.clone(), None, false)
+        }
+    };
+    ProviderFailure {
+        kind,
+        message,
+        status,
+        retryable,
+    }
+}
+
 #[async_trait::async_trait]
 pub trait StreamFn: Send + Sync + 'static {
     async fn stream(
@@ -232,5 +283,23 @@ mod tests {
         );
         // Garbage yields None.
         assert_eq!(parse_streaming_json("not json at all"), None);
+    }
+
+    #[test]
+    fn failure_classification_preserves_kind_status_and_retry_policy() {
+        let error = StreamError::Provider {
+            message: "busy".into(),
+            status: Some(503),
+            headers: [("x-should-retry".into(), "true".into())]
+                .into_iter()
+                .collect(),
+        };
+        let failure = classify_failure(&error);
+        assert_eq!(failure.kind, ProviderFailureKind::Provider);
+        assert_eq!(failure.status, Some(503));
+        assert!(failure.retryable);
+        let decoded: ProviderFailure =
+            serde_json::from_value(serde_json::to_value(failure).unwrap()).unwrap();
+        assert_eq!(decoded.message, "busy");
     }
 }
