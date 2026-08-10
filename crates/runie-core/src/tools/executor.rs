@@ -447,8 +447,8 @@ async fn execute_subagent(
     let request: crate::tools::SubagentRequest = serde_json::from_value(call.arguments.clone())
         .map_err(|error| format!("invalid subagent request: {error}"))?;
     let output = hook(request.clone()).await?;
-    request.role.clone().validate_output(&output)?;
-    Ok(crate::tools::subagent::result(&request, output))
+    let usage = request.role.clone().validate_output_usage(&output)?;
+    Ok(crate::tools::subagent::result(&request, output, usage))
 }
 fn tool_update_callback(
     call: &ToolCall,

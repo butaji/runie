@@ -25,11 +25,21 @@ pub struct SubagentResourceLimits {
     pub max_tool_calls: u32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct SubagentResourceUsage {
     pub turns: u32,
     pub output_bytes: u64,
     pub tool_calls: u32,
+}
+
+impl SubagentResourceUsage {
+    pub const fn one_turn_one_tool(output_bytes: u64) -> Self {
+        Self {
+            turns: 1,
+            output_bytes,
+            tool_calls: 1,
+        }
+    }
 }
 
 impl SubagentRole {
@@ -73,15 +83,38 @@ impl SubagentRole {
         Ok(())
     }
 
-    pub fn validate_output(self, output: &serde_json::Value) -> Result<(), String> {
-        let output_bytes = serde_json::to_vec(output)
+    pub fn output_bytes(output: &serde_json::Value) -> Result<u64, String> {
+        serde_json::to_vec(output)
             .map_err(|error| format!("subagent output is not serializable: {error}"))?
-            .len() as u64;
-        self.validate_resource_usage(SubagentResourceUsage {
-            turns: 0,
-            output_bytes,
-            tool_calls: 0,
-        })
+            .len()
+            .try_into()
+            .map_err(|_| "subagent output byte count overflowed".to_owned())
+    }
+
+    pub fn validate_usage(self, usage: SubagentResourceUsage) -> Result<(), String> {
+        self.validate_resource_usage(usage)
+    }
+
+    pub fn validate_output(self, output: &serde_json::Value) -> Result<(), String> {
+        self.clone().validate_usage(self.usage_for_output(output)?)
+    }
+
+    pub fn usage_for_output(
+        self,
+        output: &serde_json::Value,
+    ) -> Result<SubagentResourceUsage, String> {
+        Ok(SubagentResourceUsage::one_turn_one_tool(
+            Self::output_bytes(output)?,
+        ))
+    }
+
+    pub fn validate_output_usage(
+        self,
+        output: &serde_json::Value,
+    ) -> Result<SubagentResourceUsage, String> {
+        let usage = self.clone().usage_for_output(output)?;
+        self.validate_usage(usage)?;
+        Ok(usage)
     }
 }
 
@@ -141,6 +174,7 @@ pub struct SubagentRequest {
 pub struct SubagentResult {
     pub role: SubagentRole,
     pub capabilities: Vec<SubagentCapability>,
+    pub usage: SubagentResourceUsage,
     pub output: serde_json::Value,
 }
 
@@ -192,10 +226,15 @@ impl AgentTool for SubagentTool {
     }
 }
 
-pub(crate) fn result(request: &SubagentRequest, value: serde_json::Value) -> AgentToolResult {
+pub(crate) fn result(
+    request: &SubagentRequest,
+    value: serde_json::Value,
+    usage: SubagentResourceUsage,
+) -> AgentToolResult {
     let result = SubagentResult {
         role: request.role.clone(),
         capabilities: request.role.clone().capabilities().to_vec(),
+        usage,
         output: value,
     };
     let details = serde_json::to_value(result).expect("subagent result is serializable");
@@ -266,10 +305,15 @@ mod tests {
             context: String::new(),
             capabilities: vec![SubagentCapability::ProducePlan],
         };
-        let result = result(&request, serde_json::json!({"steps": ["test"]}));
+        let result = result(
+            &request,
+            serde_json::json!({"steps": ["test"]}),
+            SubagentResourceUsage::one_turn_one_tool(16),
+        );
         let decoded: SubagentResult = serde_json::from_value(result.details).unwrap();
         assert_eq!(decoded.role, SubagentRole::Plan);
         assert_eq!(decoded.output["steps"][0], "test");
+        assert_eq!(decoded.usage.turns, 1);
         assert!(decoded
             .capabilities
             .contains(&SubagentCapability::ProducePlan));
@@ -312,5 +356,12 @@ mod tests {
             .is_ok());
         let output = serde_json::json!("x".repeat(32 * 1024));
         assert!(SubagentRole::Explore.validate_output(&output).is_err());
+    }
+
+    #[test]
+    fn usage_counts_owned_execution_boundary() {
+        let usage = SubagentResourceUsage::one_turn_one_tool(8);
+        assert!(SubagentRole::Explore.validate_usage(usage).is_ok());
+        assert_eq!(usage.tool_calls, 1);
     }
 }

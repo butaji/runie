@@ -49,7 +49,8 @@ pub use question_broker::{
 };
 pub use registry::ToolRegistry;
 pub use subagent::{
-    SubagentCapability, SubagentRequest, SubagentResult, SubagentRole, SubagentTool,
+    SubagentCapability, SubagentRequest, SubagentResourceUsage, SubagentResult, SubagentRole,
+    SubagentTool,
 };
 pub use todo::{
     summarize_todo_plan, TodoActor, TodoItem, TodoPlanStatus, TodoPlanSummary, TodoSnapshot,
