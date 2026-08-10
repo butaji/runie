@@ -30,3 +30,5 @@ and include boundary.
 Tool start/finish and display-mode fragments are consolidated in
 `feed_tool_lifecycle.rs`; mode settlement now uses one key fold instead of
 repeating the two map writes.
+Activity facts and transcript presentation transitions are consolidated in
+`feed_activity.rs`, keeping activity ownership and spacing behavior together.
