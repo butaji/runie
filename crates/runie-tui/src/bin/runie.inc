@@ -1347,6 +1347,9 @@ fn restore_terminal(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result
 }
 
 async fn build_live_app() -> App {
+    const PRODUCTION_CONTEXT_WINDOW: u64 = 128_000;
+    const PRODUCTION_RESERVE_TOKENS: u64 = 20_000;
+    const PRODUCTION_KEEP_RECENT_TOKENS: u64 = 20;
     let bus = EventBus::new();
     let question_broker = runie_core::tools::UserQuestionBroker::default();
     let approval_mode = runie_core::tools::ApprovalModeStore::default();
@@ -1393,6 +1396,55 @@ async fn build_live_app() -> App {
         std::sync::Arc::new(MinimaxStream::from_environment(provider_registry.clone()));
     let websocket = std::sync::Arc::new(CodexWebSocketAdapter::production(Some(fallback.clone())));
     let provider = ProviderActor::new_with_websocket(fallback, Some(websocket));
+    let session_actor = runie_core::session::SessionActor::new_with_bus(&bus);
+    let recovery_session = session_actor.clone();
+    let recovery_provider = provider.clone();
+    let context_recovery: Option<runie_core::r#loop::driver::ContextRecoveryHook> = Some(
+        std::sync::Arc::new(move |context| {
+            let session = recovery_session.clone();
+            let provider = recovery_provider.clone();
+            Box::pin(async move {
+                let estimate = runie_core::session::estimate_context_tokens(&context.messages);
+                let settings = runie_core::session::CompactionSettings {
+                    enabled: true,
+                    reserve_tokens: PRODUCTION_RESERVE_TOKENS,
+                    keep_recent_tokens: PRODUCTION_KEEP_RECENT_TOKENS,
+                };
+                if !runie_core::session::should_compact(
+                    estimate.tokens,
+                    PRODUCTION_CONTEXT_WINDOW,
+                    settings,
+                ) {
+                    return Ok(context);
+                }
+                let snapshot = session.snapshot();
+                let token_estimates = snapshot
+                    .entries
+                    .iter()
+                    .map(|entry| runie_core::session::estimate_message_tokens(&entry.message))
+                    .collect();
+                let Some(preparation) = session
+                    .prepare_compaction(token_estimates, PRODUCTION_KEEP_RECENT_TOKENS)
+                    .await?
+                else {
+                    return Ok(context);
+                };
+                let request = runie_core::session::CompactionSummaryRequest::from_preparation(
+                    &preparation,
+                    &snapshot.entries,
+                    None,
+                )?;
+                let summary = provider
+                    .summarize_compaction(request)
+                    .await
+                    .map_err(|error| error.to_string())?;
+                session.publish_compaction(preparation, summary).await?;
+                let mut recovered = context;
+                recovered.messages = session.snapshot().branch_context_messages();
+                Ok(recovered)
+            })
+        }),
+    );
     let deps = LoopDeps {
         state,
         steering,
@@ -1530,7 +1582,7 @@ async fn build_live_app() -> App {
         turn_hooks: runie_core::hooks::TurnHooks::default(),
         transform_context: None,
         api_key_resolver: None,
-        context_recovery: None,
+        context_recovery,
         convert_to_llm: None,
         stream_options: Default::default(),
         abort: None,
@@ -1540,7 +1592,13 @@ async fn build_live_app() -> App {
     };
     let loop_actor = LoopActor::new(deps);
     let _ = subagent_loop.set(loop_actor.clone());
-    let mut app = App::new_with_broker_and_approval(loop_actor, bus, question_broker, approval_mode);
+    let mut app = App::new_with_session(
+        loop_actor,
+        bus,
+        question_broker,
+        approval_mode,
+        session_actor,
+    );
     app.attach_background_actor(background_actor);
     app.attach_todo_actor(todo_actor);
     app.provider_registry = provider_registry;

@@ -1,4 +1,4 @@
-    fn configuration_snapshot() -> SessionSnapshot {
+fn configuration_snapshot() -> SessionSnapshot {
         SessionSnapshot {
             sequence: 2,
             leaf_id: Some("entry-2".into()),
@@ -35,6 +35,22 @@
             navigation: None,
         }
     }
+
+#[tokio::test]
+async fn cloned_session_handles_share_one_actor_snapshot() {
+    let owner = SessionActor::new();
+    let tui_handle = owner.clone();
+    owner
+        .append(crate::types::AgentMessage::User(crate::types::UserMessage {
+            content: vec![crate::types::UserContent::Text {
+                text: "shared".into(),
+            }],
+            timestamp: 0,
+        }))
+        .await;
+    assert_eq!(tui_handle.snapshot().entries.len(), 1);
+    assert_eq!(owner.snapshot().entries[0].id, tui_handle.snapshot().entries[0].id);
+}
 
     #[test]
     fn jsonl_round_trip_preserves_configuration_records() {

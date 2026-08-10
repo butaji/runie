@@ -51,6 +51,19 @@ impl App {
         }
     }
 
+    pub fn new_with_session(
+        loop_actor: LoopActor,
+        bus: EventBus,
+        question_broker: runie_core::tools::UserQuestionBroker,
+        approval_mode: runie_core::tools::ApprovalModeStore,
+        session_actor: SessionActor,
+    ) -> Self {
+        let mut app =
+            Self::new_with_broker_and_approval(loop_actor, bus, question_broker, approval_mode);
+        app.session_actor = session_actor;
+        app
+    }
+
     pub fn new_with_welcome(loop_actor: LoopActor, bus: EventBus) -> Self {
         let ui = UiActor::new_with_welcome(&bus, true);
         let (submission_tx, submission_owner) = submission_actor(loop_actor.clone());

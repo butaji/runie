@@ -41,6 +41,17 @@ pub struct SessionActor {
     _bus_owner: Option<Arc<TaskOwner>>,
 }
 
+impl Clone for SessionActor {
+    fn clone(&self) -> Self {
+        Self {
+            tx: self.tx.clone(),
+            snapshot: self.snapshot.clone(),
+            _owner: self._owner.clone(),
+            _bus_owner: self._bus_owner.clone(),
+        }
+    }
+}
+
 type SessionEventReceiver = tokio::sync::broadcast::Receiver<AgentEvent>;
 type SessionMailbox = mpsc::Sender<Command>;
 
