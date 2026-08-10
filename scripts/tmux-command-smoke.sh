@@ -19,7 +19,7 @@ parameterized=(
   "Export Session" "Import Session" "Clone Session" "Resume Session" "Help" "Settings" "Doctor"
   "Rewind Session" "Prompt History" "Find Transcript" "Jump Transcript" "Set Reasoning Effort"
   "Always Approve" "Automatic Approval" "Plan Mode" "Login" "Logout" "Trust Project" "Remember"
-  "Goal" "Workflow" "Loop" "Deep Research" "Feedback" "Usage"
+  "Goal" "Workflow" "Loop" "Deep Research" "Feedback" "Usage" "Background Jobs"
 )
 
 is_parameterized() {
