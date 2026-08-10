@@ -79,10 +79,11 @@ impl App {
             return true;
         }
         if name == "questions" {
+            let query = runie_core::tools::parse_question_history_query(args);
             let rows = runie_core::tools::question_history_rows(
                 &self.question_broker.traces(),
-                args,
-                None,
+                &query.text,
+                query.outcome.as_deref(),
                 32,
             );
             let result = rows

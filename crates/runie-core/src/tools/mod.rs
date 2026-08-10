@@ -9,6 +9,7 @@ pub mod mcp;
 pub mod path_policy;
 pub mod policy;
 pub mod question_broker;
+pub mod question_query;
 pub mod registry;
 pub mod subagent;
 pub mod todo;
@@ -50,6 +51,7 @@ pub use question_broker::{
     decode_question_traces, encode_question_traces, question_history_rows, PendingUserQuestion,
     UserQuestionBroker, UserQuestionHistoryRow, UserQuestionTrace,
 };
+pub use question_query::{parse_question_history_query, QuestionHistoryQuery};
 pub use registry::ToolRegistry;
 pub use subagent::{
     SubagentCapability, SubagentRequest, SubagentResourceUsage, SubagentResult, SubagentRole,
