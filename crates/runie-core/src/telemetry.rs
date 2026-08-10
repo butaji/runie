@@ -314,6 +314,7 @@ enum TelemetryCommand {
 pub struct TelemetryActor {
     tx: mpsc::Sender<TelemetryCommand>,
     snapshot: watch::Receiver<TelemetrySnapshot>,
+    shared_snapshot: watch::Receiver<crate::SharedSnapshot<TelemetrySnapshot>>,
     _owner: Arc<TaskOwner>,
 }
 

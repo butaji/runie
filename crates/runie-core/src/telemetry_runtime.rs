@@ -1,8 +1,17 @@
 use super::*;
 impl TelemetryActor {
+    fn publish(
+        snapshot_tx: &watch::Sender<TelemetrySnapshot>,
+        shared_tx: &watch::Sender<crate::SharedSnapshot<TelemetrySnapshot>>,
+        state: &TelemetrySnapshot,
+    ) {
+        crate::publish_shared_snapshot(snapshot_tx, shared_tx, state.clone());
+    }
+
     fn handle_start(
         state: &mut TelemetrySnapshot,
         snapshot_tx: &watch::Sender<TelemetrySnapshot>,
+        shared_tx: &watch::Sender<crate::SharedSnapshot<TelemetrySnapshot>>,
         parent_id: Option<u64>,
         name: String,
         attributes: HashMap<String, serde_json::Value>,
@@ -33,13 +42,14 @@ impl TelemetryActor {
             ended: false,
             end_sequence: None,
         });
-        let _ = snapshot_tx.send(state.clone());
+        Self::publish(snapshot_tx, shared_tx, state);
         let _ = reply.send(Some(id));
     }
 
     fn handle_event(
         state: &mut TelemetrySnapshot,
         snapshot_tx: &watch::Sender<TelemetrySnapshot>,
+        shared_tx: &watch::Sender<crate::SharedSnapshot<TelemetrySnapshot>>,
         id: u64,
         name: String,
         attributes: HashMap<String, serde_json::Value>,
@@ -53,7 +63,7 @@ impl TelemetryActor {
             {
                 span.events
                     .push(TelemetryEventSnapshot { name, attributes });
-                let _ = snapshot_tx.send(state.clone());
+                Self::publish(snapshot_tx, shared_tx, state);
             }
         }
         let _ = reply.send(());
@@ -62,6 +72,7 @@ impl TelemetryActor {
     fn handle_attributes(
         state: &mut TelemetrySnapshot,
         snapshot_tx: &watch::Sender<TelemetrySnapshot>,
+        shared_tx: &watch::Sender<crate::SharedSnapshot<TelemetrySnapshot>>,
         id: u64,
         attributes: HashMap<String, serde_json::Value>,
         reply: oneshot::Sender<()>,
@@ -73,7 +84,7 @@ impl TelemetryActor {
                 .find(|span| span.id == id && !span.ended)
             {
                 span.attributes.extend(attributes);
-                let _ = snapshot_tx.send(state.clone());
+                Self::publish(snapshot_tx, shared_tx, state);
             }
         }
         let _ = reply.send(());
@@ -82,6 +93,7 @@ impl TelemetryActor {
     fn handle_status(
         state: &mut TelemetrySnapshot,
         snapshot_tx: &watch::Sender<TelemetrySnapshot>,
+        shared_tx: &watch::Sender<crate::SharedSnapshot<TelemetrySnapshot>>,
         id: u64,
         status: SpanStatus,
         error: Option<SpanError>,
@@ -95,7 +107,7 @@ impl TelemetryActor {
             span.status = status;
             span.error = error;
             span.explicit_status = true;
-            let _ = snapshot_tx.send(state.clone());
+            Self::publish(snapshot_tx, shared_tx, state);
         }
         let _ = reply.send(());
     }
@@ -103,6 +115,7 @@ impl TelemetryActor {
     async fn handle_end(
         state: &mut TelemetrySnapshot,
         snapshot_tx: &watch::Sender<TelemetrySnapshot>,
+        shared_tx: &watch::Sender<crate::SharedSnapshot<TelemetrySnapshot>>,
         exporter: &Option<Arc<dyn TelemetryExporter>>,
         next_end_sequence: &mut u64,
         id: u64,
@@ -116,7 +129,7 @@ impl TelemetryActor {
             span.ended = true;
             span.end_sequence = Some(*next_end_sequence);
             *next_end_sequence = next_end_sequence.wrapping_add(1);
-            let _ = snapshot_tx.send(state.clone());
+            Self::publish(snapshot_tx, shared_tx, state);
             if let Some(exporter) = exporter.as_ref() {
                 let _ = exporter.export(state.clone()).await;
             }
@@ -127,6 +140,7 @@ impl TelemetryActor {
     async fn run_telemetry_worker(
         mut rx: mpsc::Receiver<TelemetryCommand>,
         snapshot_tx: watch::Sender<TelemetrySnapshot>,
+        shared_tx: watch::Sender<crate::SharedSnapshot<TelemetrySnapshot>>,
         exporter: Option<Arc<dyn TelemetryExporter>>,
     ) {
         let mut state = TelemetrySnapshot {
@@ -138,6 +152,7 @@ impl TelemetryActor {
             Self::dispatch_command(
                 &mut state,
                 &snapshot_tx,
+                &shared_tx,
                 &exporter,
                 &mut next_end_sequence,
                 command,
@@ -149,8 +164,32 @@ impl TelemetryActor {
     async fn dispatch_command(
         state: &mut TelemetrySnapshot,
         snapshot_tx: &watch::Sender<TelemetrySnapshot>,
+        shared_tx: &watch::Sender<crate::SharedSnapshot<TelemetrySnapshot>>,
         exporter: &Option<Arc<dyn TelemetryExporter>>,
         next_end_sequence: &mut u64,
+        command: TelemetryCommand,
+    ) {
+        match command {
+            TelemetryCommand::End { id, reply } => {
+                Self::handle_end(
+                    state,
+                    snapshot_tx,
+                    shared_tx,
+                    exporter,
+                    next_end_sequence,
+                    id,
+                    reply,
+                )
+                .await
+            }
+            command => Self::dispatch_non_terminal(state, snapshot_tx, shared_tx, command),
+        }
+    }
+
+    fn dispatch_non_terminal(
+        state: &mut TelemetrySnapshot,
+        snapshot_tx: &watch::Sender<TelemetrySnapshot>,
+        shared_tx: &watch::Sender<crate::SharedSnapshot<TelemetrySnapshot>>,
         command: TelemetryCommand,
     ) {
         match command {
@@ -159,26 +198,48 @@ impl TelemetryActor {
                 name,
                 attributes,
                 reply,
-            } => Self::handle_start(state, snapshot_tx, parent_id, name, attributes, reply),
+            } => Self::handle_start(
+                state,
+                snapshot_tx,
+                shared_tx,
+                parent_id,
+                name,
+                attributes,
+                reply,
+            ),
             TelemetryCommand::Event {
                 id,
                 name,
                 attributes,
                 reply,
-            } => Self::handle_event(state, snapshot_tx, id, name, attributes, reply),
+            } => Self::handle_event(state, snapshot_tx, shared_tx, id, name, attributes, reply),
+            command => Self::dispatch_state_change(state, snapshot_tx, shared_tx, command),
+        }
+    }
+
+    fn dispatch_state_change(
+        state: &mut TelemetrySnapshot,
+        snapshot_tx: &watch::Sender<TelemetrySnapshot>,
+        shared_tx: &watch::Sender<crate::SharedSnapshot<TelemetrySnapshot>>,
+        command: TelemetryCommand,
+    ) {
+        match command {
             TelemetryCommand::SetAttributes {
                 id,
                 attributes,
                 reply,
-            } => Self::handle_attributes(state, snapshot_tx, id, attributes, reply),
+            } => Self::handle_attributes(state, snapshot_tx, shared_tx, id, attributes, reply),
             TelemetryCommand::Status {
                 id,
                 status,
                 error,
                 reply,
-            } => Self::handle_status(state, snapshot_tx, id, status, error, reply),
-            TelemetryCommand::End { id, reply } => {
-                Self::handle_end(state, snapshot_tx, exporter, next_end_sequence, id, reply).await
+            } => Self::handle_status(state, snapshot_tx, shared_tx, id, status, error, reply),
+            TelemetryCommand::End { .. } => {
+                unreachable!("terminal command handled by dispatch_command")
+            }
+            TelemetryCommand::Start { .. } | TelemetryCommand::Event { .. } => {
+                unreachable!("lifecycle command handled by dispatch_non_terminal")
             }
         }
     }
@@ -197,20 +258,32 @@ impl TelemetryActor {
     )]
     pub fn new_with_exporter(exporter: Option<Arc<dyn TelemetryExporter>>) -> Self {
         let (snapshot_tx, snapshot) = watch::channel(TelemetrySnapshot::default());
+        let (shared_tx, shared_snapshot) =
+            watch::channel(crate::SharedSnapshot::new(TelemetrySnapshot::default()));
         let (tx, owner) =
             spawn_actor_worker!(32, move |rx: mpsc::Receiver<TelemetryCommand>| async move {
-                TelemetryActor::run_telemetry_worker(rx, snapshot_tx.clone(), exporter.clone())
-                    .await;
+                TelemetryActor::run_telemetry_worker(
+                    rx,
+                    snapshot_tx.clone(),
+                    shared_tx.clone(),
+                    exporter.clone(),
+                )
+                .await;
             });
         Self {
             tx,
             snapshot,
+            shared_snapshot,
             _owner: owner,
         }
     }
 
     pub fn snapshot(&self) -> TelemetrySnapshot {
         self.snapshot.borrow().clone()
+    }
+
+    pub fn shared_snapshot(&self) -> crate::SharedSnapshot<TelemetrySnapshot> {
+        self.shared_snapshot.borrow().clone()
     }
 
     /// Apply one declarative replay action through the actor mailbox.
