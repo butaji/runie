@@ -5,7 +5,7 @@ use crate::types::{AgentTool, AgentToolResult, ToolResultContent};
 const GIT_OUTPUT_MAX_BYTES: usize = 100 * 1024;
 
 macro_rules! git_tool_types { ($($name:ident),+ $(,)?) => { $(#[derive(Default)] pub struct $name;)+ }; }
-git_tool_types!(GitStatusTool, GitDiffTool, GitReviewTool);
+git_tool_types!(GitStatusTool, GitDiffTool, GitReviewTool, GitWorktreeTool);
 
 #[async_trait::async_trait]
 impl AgentTool for GitStatusTool {
@@ -109,6 +109,31 @@ impl AgentTool for GitReviewTool {
     }
 }
 
+#[async_trait::async_trait]
+impl AgentTool for GitWorktreeTool {
+    fn name(&self) -> &str {
+        "git_worktree"
+    }
+    fn label(&self) -> &str {
+        "Git worktrees"
+    }
+    fn description(&self) -> &str {
+        "List Git worktrees and their branch and commit identities."
+    }
+    fn parameters(&self) -> Option<serde_json::Value> {
+        Some(serde_json::json!({"type":"object"}))
+    }
+    async fn execute(
+        &self,
+        _: &str,
+        _: serde_json::Value,
+        signal: Option<tokio_util::sync::CancellationToken>,
+        _: Option<Box<dyn Fn(serde_json::Value) + Send + Sync>>,
+    ) -> Result<AgentToolResult, String> {
+        git_result(&["worktree", "list", "--porcelain"], signal).await
+    }
+}
+
 async fn git_result(
     args: &[&str],
     signal: Option<tokio_util::sync::CancellationToken>,
@@ -185,5 +210,13 @@ mod tests {
             .unwrap();
         assert!(result.details["clean"].is_boolean());
         assert!(result.details["stat"].is_string());
+    }
+    #[tokio::test]
+    async fn worktree_listing_is_read_only() {
+        let result = GitWorktreeTool
+            .execute("1", serde_json::json!({}), None, None)
+            .await
+            .unwrap();
+        assert_eq!(result.details["command"][0], "worktree");
     }
 }
