@@ -23,6 +23,8 @@ pub struct BackgroundJob {
     pub command: String,
     pub status: BackgroundStatus,
     pub output: String,
+    #[serde(default)]
+    pub exit_code: Option<i32>,
 }
 
 enum Message {
@@ -112,7 +114,7 @@ async fn run_worker(
             message = rx.recv() => match message {
                 Some(Message::Start { command, reply }) => {
                     let id = next_id.to_string(); next_id += 1;
-                    jobs.insert(id.clone(), BackgroundJob { id: id.clone(), command: command.clone(), status: BackgroundStatus::Running, output: String::new() });
+                    jobs.insert(id.clone(), BackgroundJob { id: id.clone(), command: command.clone(), status: BackgroundStatus::Running, output: String::new(), exit_code: None });
                     handles.insert(id.clone(), tasks.spawn(run_command(id.clone(), command)));
                     publish(&snapshot_tx, &jobs);
                     let _ = reply.send(Ok(id));
@@ -128,7 +130,7 @@ async fn run_worker(
                 if let Some(Ok((id, result))) = result {
                     handles.remove(&id);
                     if let Some(job) = jobs.get_mut(&id) {
-                        match result { Ok(output) => { job.status = BackgroundStatus::Completed; job.output = output; }, Err(output) => { job.status = BackgroundStatus::Failed; job.output = output; } }
+                        match result { Ok((output, code)) => { job.status = BackgroundStatus::Completed; job.output = output; job.exit_code = code; }, Err((output, code)) => { job.status = BackgroundStatus::Failed; job.output = output; job.exit_code = code; } }
                     }
                     publish(&snapshot_tx, &jobs);
                 }
@@ -161,14 +163,18 @@ fn publish(tx: &watch::Sender<Vec<BackgroundJob>>, jobs: &BTreeMap<String, Backg
     let _ = tx.send(jobs.values().cloned().collect());
 }
 
-async fn run_command(id: String, command: String) -> (String, Result<String, String>) {
+async fn run_command(
+    id: String,
+    command: String,
+) -> (String, Result<(String, Option<i32>), (String, Option<i32>)>) {
     let result = tokio::process::Command::new("sh")
         .arg("-c")
         .arg(&command)
         .output()
         .await
-        .map_err(|error| error.to_string())
+        .map_err(|error| (error.to_string(), None))
         .and_then(|output| {
+            let code = output.status.code();
             let text = format!(
                 "{}{}",
                 String::from_utf8_lossy(&output.stdout),
@@ -176,9 +182,9 @@ async fn run_command(id: String, command: String) -> (String, Result<String, Str
             );
             let text = bounded_output(text);
             if output.status.success() {
-                Ok(text)
+                Ok((text, code))
             } else {
-                Err(text)
+                Err((text, code))
             }
         });
     (id, result)
@@ -227,6 +233,7 @@ mod tests {
             if let Some(job) = actor.snapshot().into_iter().find(|job| job.id == id) {
                 if job.status == BackgroundStatus::Failed {
                     assert_eq!(job.output, "failed");
+                    assert_eq!(job.exit_code, Some(3));
                     break;
                 }
             }
