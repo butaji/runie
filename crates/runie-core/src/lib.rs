@@ -44,6 +44,7 @@ pub mod provider_registry;
 pub mod queues;
 pub mod session;
 pub mod session_search;
+pub use session_search::filter_storage_rows;
 pub mod state;
 pub mod tools;
 

@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 use tokio::sync::{mpsc, oneshot};
 
-use crate::session::SessionSnapshot;
+use crate::session::{SessionSnapshot, SessionStorageRow};
 use crate::task_owner::{spawn_actor_worker, TaskOwner};
 
 const MAX_SESSION_PREVIEW_CHARS: usize = 512;
@@ -24,6 +24,22 @@ pub struct SessionSearchResult {
     pub name: Option<String>,
     pub score: u8,
     pub matched_by: SessionMatchField,
+}
+
+/// Filter storage metadata for a picker without coupling search to a widget.
+/// Empty queries preserve discovery order; non-empty queries match id, label,
+/// or cwd case-insensitively and remain deterministic.
+pub fn filter_storage_rows(rows: &[SessionStorageRow], query: &str) -> Vec<SessionStorageRow> {
+    let query = query.trim().to_ascii_lowercase();
+    rows.iter()
+        .filter(|row| {
+            query.is_empty()
+                || row.session_id.to_ascii_lowercase().contains(&query)
+                || row.label.to_ascii_lowercase().contains(&query)
+                || row.cwd.to_ascii_lowercase().contains(&query)
+        })
+        .cloned()
+        .collect()
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -243,5 +259,26 @@ mod tests {
         let document = document_from_snapshot("session-1", &snapshot);
         assert_eq!(document.name.as_deref(), Some("Deploy"));
         assert!(document.preview.chars().count() <= MAX_SESSION_PREVIEW_CHARS);
+    }
+
+    #[test]
+    fn storage_rows_filter_by_id_label_or_cwd_without_reordering() {
+        let rows = vec![
+            SessionStorageRow {
+                session_id: "one".into(),
+                label: "Deploy".into(),
+                cwd: "/work/a".into(),
+                created_at: 1,
+            },
+            SessionStorageRow {
+                session_id: "two".into(),
+                label: "Notes".into(),
+                cwd: "/work/b".into(),
+                created_at: 2,
+            },
+        ];
+        assert_eq!(filter_storage_rows(&rows, "deploy")[0].session_id, "one");
+        assert_eq!(filter_storage_rows(&rows, "/WORK/B")[0].session_id, "two");
+        assert_eq!(filter_storage_rows(&rows, "").len(), 2);
     }
 }
