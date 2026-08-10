@@ -51,7 +51,7 @@ impl App {
                 .background_actor
                 .snapshot()
                 .into_iter()
-                .map(|job| format!("{} · {:?} · {}", job.id, job.status, job.command))
+                .map(|job| job.terminal_line())
                 .collect::<Vec<_>>();
             self.ui
                 .send(UiMsg::ShowCommandResult(if result.is_empty() {

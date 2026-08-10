@@ -27,6 +27,24 @@ pub struct BackgroundJob {
     pub exit_code: Option<i32>,
 }
 
+impl BackgroundJob {
+    pub fn terminal_line(&self) -> String {
+        let exit = self
+            .exit_code
+            .map(|code| format!(" exit={code}"))
+            .unwrap_or_default();
+        let output = if self.output.is_empty() {
+            String::new()
+        } else {
+            format!(" · {}", self.output.replace('\n', "\\n"))
+        };
+        format!(
+            "{} · {:?} · {}{}{}",
+            self.id, self.status, self.command, exit, output
+        )
+    }
+}
+
 enum Message {
     Start {
         command: String,
@@ -223,6 +241,21 @@ mod tests {
         let output = bounded_output("x".repeat(BACKGROUND_OUTPUT_MAX_BYTES + 1));
         assert!(output.len() <= BACKGROUND_OUTPUT_MAX_BYTES);
         assert!(output.ends_with(OUTPUT_TRUNCATION_MARKER));
+    }
+
+    #[test]
+    fn terminal_line_preserves_status_exit_and_output_as_data() {
+        let job = BackgroundJob {
+            id: "3".into(),
+            command: "printf done".into(),
+            status: BackgroundStatus::Completed,
+            output: "done\nnext".into(),
+            exit_code: Some(0),
+        };
+        assert_eq!(
+            job.terminal_line(),
+            "3 · Completed · printf done exit=0 · done\\nnext"
+        );
     }
 
     #[tokio::test]
