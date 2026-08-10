@@ -1,5 +1,6 @@
 use super::{MCP_HTTP_MAX_RESPONSE_BYTES, MCP_MAX_STREAM_EVENTS};
 use std::collections::BTreeMap;
+use std::collections::VecDeque;
 
 const MAX_MCP_STREAM_NOTIFICATIONS: usize = 4_096;
 
@@ -15,6 +16,35 @@ pub struct McpStreamEvent {
 pub struct McpStreamSnapshot {
     pub responses: BTreeMap<String, serde_json::Value>,
     pub notifications: Vec<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct McpNotificationQueue {
+    pub capacity: usize,
+    pub pending: VecDeque<serde_json::Value>,
+    pub dropped: usize,
+}
+
+impl McpNotificationQueue {
+    pub fn new(capacity: usize) -> Self {
+        Self {
+            capacity,
+            pending: VecDeque::new(),
+            dropped: 0,
+        }
+    }
+
+    pub fn push(&mut self, notification: serde_json::Value) {
+        if self.pending.len() >= self.capacity {
+            self.dropped = self.dropped.saturating_add(1);
+            return;
+        }
+        self.pending.push_back(notification);
+    }
+
+    pub fn pop(&mut self) -> Option<serde_json::Value> {
+        self.pending.pop_front()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -273,5 +303,18 @@ mod tests {
             data: serde_json::json!({"method": "notice"}),
         };
         assert!(reduce_mcp_stream_event(&mut snapshot, &event).is_err());
+    }
+
+    #[test]
+    fn notification_queue_accounts_for_backpressure_without_reordering() {
+        let mut queue = McpNotificationQueue::new(2);
+        queue.push(serde_json::json!({"n": 1}));
+        queue.push(serde_json::json!({"n": 2}));
+        queue.push(serde_json::json!({"n": 3}));
+        assert_eq!(queue.dropped, 1);
+        assert_eq!(queue.pop().unwrap()["n"], 1);
+        assert_eq!(queue.pop().unwrap()["n"], 2);
+        assert!(queue.pop().is_none());
+        assert_eq!(serde_json::to_value(&queue).unwrap()["capacity"], 2);
     }
 }
