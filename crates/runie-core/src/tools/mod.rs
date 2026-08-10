@@ -38,8 +38,9 @@ pub use git::{
     GitWorktreeTool,
 };
 pub use mcp::{
-    McpCallHook, McpCallRequest, McpHttpClient, McpHttpSession, McpServer, McpStdioClient, McpTool,
-    McpToolSpec,
+    McpCallHook, McpCallRequest, McpConnectionStatus, McpHttpClient, McpHttpSession,
+    McpReconnectDecision, McpReconnectPolicy, McpReconnectState, McpServer, McpStdioClient,
+    McpTool, McpToolSpec,
 };
 pub use policy::{
     decide as approval_decision, record_approval_trace, ApprovalDecision, ApprovalMode,

@@ -15,8 +15,8 @@ pub use http_session::McpHttpSession;
 #[path = "mcp_stream.rs"]
 mod stream;
 pub use stream::{
-    parse_mcp_event_stream, reduce_mcp_stream_event, McpReconnectPolicy, McpStreamEvent,
-    McpStreamSnapshot,
+    parse_mcp_event_stream, reduce_mcp_stream_event, McpConnectionStatus, McpReconnectDecision,
+    McpReconnectPolicy, McpReconnectState, McpStreamEvent, McpStreamSnapshot,
 };
 #[path = "mcp_http_stream.rs"]
 mod http_stream;

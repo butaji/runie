@@ -24,6 +24,59 @@ pub struct McpReconnectPolicy {
     pub max_delay_ms: u64,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum McpConnectionStatus {
+    Connected,
+    Reconnecting,
+    Exhausted,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct McpReconnectState {
+    pub attempts: u32,
+    pub status: McpConnectionStatus,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum McpReconnectDecision {
+    RetryAfter { delay_ms: u64 },
+    Exhausted,
+}
+
+impl McpReconnectState {
+    pub const fn connected() -> Self {
+        Self {
+            attempts: 0,
+            status: McpConnectionStatus::Connected,
+        }
+    }
+
+    pub fn disconnected(self, policy: McpReconnectPolicy) -> (Self, McpReconnectDecision) {
+        let attempts = self.attempts.saturating_add(1);
+        match policy.delay_ms(attempts - 1) {
+            Some(delay_ms) => (
+                Self {
+                    attempts,
+                    status: McpConnectionStatus::Reconnecting,
+                },
+                McpReconnectDecision::RetryAfter { delay_ms },
+            ),
+            None => (
+                Self {
+                    attempts,
+                    status: McpConnectionStatus::Exhausted,
+                },
+                McpReconnectDecision::Exhausted,
+            ),
+        }
+    }
+
+    pub const fn reconnected() -> Self {
+        Self::connected()
+    }
+}
+
 impl McpReconnectPolicy {
     pub const fn bounded() -> Self {
         Self {
@@ -189,6 +242,21 @@ mod tests {
         assert_eq!(policy.delay_ms(1), Some(500));
         assert_eq!(policy.delay_ms(2), Some(1_000));
         assert_eq!(policy.delay_ms(3), None);
+    }
+
+    #[test]
+    fn reconnect_state_reduces_disconnects_and_resets_after_connection() {
+        let policy = McpReconnectPolicy::bounded();
+        let state = McpReconnectState::connected();
+        let (state, decision) = state.disconnected(policy);
+        assert_eq!(decision, McpReconnectDecision::RetryAfter { delay_ms: 250 });
+        assert_eq!(state.status, McpConnectionStatus::Reconnecting);
+        let (state, _) = state.disconnected(policy);
+        let (state, _) = state.disconnected(policy);
+        let (state, exhausted) = state.disconnected(policy);
+        assert_eq!(exhausted, McpReconnectDecision::Exhausted);
+        assert_eq!(state.status, McpConnectionStatus::Exhausted);
+        assert_eq!(McpReconnectState::reconnected().attempts, 0);
     }
 
     #[test]
