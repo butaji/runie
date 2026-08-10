@@ -11,6 +11,36 @@ pub enum ApprovalMode {
     Yolo,
 }
 
+const READ_ONLY_TOOLS: &[&str] = &["read", "grep", "glob", "list_dir", "echo"];
+const MUTATING_TOOLS: &[&str] = &[
+    "write",
+    "edit",
+    "bash",
+    "shell",
+    "exec",
+    "run",
+    "git_commit",
+    "git_push",
+    "git_revert",
+];
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ToolClass {
+    ReadOnly,
+    Mutating,
+    Unknown,
+}
+
+fn classify_tool(tool: &str) -> ToolClass {
+    if READ_ONLY_TOOLS.contains(&tool) {
+        ToolClass::ReadOnly
+    } else if MUTATING_TOOLS.contains(&tool) {
+        ToolClass::Mutating
+    } else {
+        ToolClass::Unknown
+    }
+}
+
 #[derive(Clone)]
 pub struct ApprovalModeStore {
     tx: tokio::sync::watch::Sender<ApprovalMode>,
@@ -72,9 +102,8 @@ pub fn decide(mode: ApprovalMode, tool: &str) -> ApprovalDecision {
 }
 
 pub fn decide_registered(mode: ApprovalMode, tool: &str, registered: bool) -> ApprovalDecision {
-    if matches!(mode, ApprovalMode::Auto | ApprovalMode::Yolo)
-        || matches!(tool, "read" | "grep" | "glob" | "list_dir" | "echo")
-    {
+    let class = classify_tool(tool);
+    if matches!(mode, ApprovalMode::Auto | ApprovalMode::Yolo) || class == ToolClass::ReadOnly {
         ApprovalDecision::Allow
     } else if registered && mode != ApprovalMode::Deny {
         ApprovalDecision::Allow
@@ -84,18 +113,7 @@ pub fn decide_registered(mode: ApprovalMode, tool: &str, registered: bool) -> Ap
         }
     } else {
         ApprovalDecision::Ask {
-            reason: if matches!(
-                tool,
-                "write"
-                    | "edit"
-                    | "bash"
-                    | "shell"
-                    | "exec"
-                    | "run"
-                    | "git_commit"
-                    | "git_push"
-                    | "git_revert"
-            ) {
+            reason: if class == ToolClass::Mutating {
                 "This tool can change files or execute a process"
             } else if registered {
                 "This registered tool can change files or execute a process"
@@ -122,6 +140,13 @@ mod tests {
             decide(ApprovalMode::Ask, "bash"),
             ApprovalDecision::Ask { .. }
         ));
+    }
+
+    #[test]
+    fn tool_classification_is_one_declarative_state_table() {
+        assert_eq!(classify_tool("read"), ToolClass::ReadOnly);
+        assert_eq!(classify_tool("git_push"), ToolClass::Mutating);
+        assert_eq!(classify_tool("plugin__demo__inspect"), ToolClass::Unknown);
     }
 
     #[test]
