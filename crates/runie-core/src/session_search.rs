@@ -6,7 +6,10 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 use tokio::sync::{mpsc, oneshot};
 
+use crate::session::SessionSnapshot;
 use crate::task_owner::{spawn_actor_worker, TaskOwner};
+
+const MAX_SESSION_PREVIEW_CHARS: usize = 512;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SessionSearchDocument {
@@ -20,6 +23,23 @@ pub struct SessionSearchResult {
     pub id: String,
     pub name: Option<String>,
     pub score: u8,
+}
+
+pub fn document_from_snapshot(
+    id: impl Into<String>,
+    snapshot: &SessionSnapshot,
+) -> SessionSearchDocument {
+    let preview = snapshot
+        .branch_context_messages()
+        .into_iter()
+        .rev()
+        .find_map(|message| serde_json::to_string(&message).ok())
+        .unwrap_or_default();
+    SessionSearchDocument {
+        id: id.into(),
+        name: snapshot.name(),
+        preview: preview.chars().take(MAX_SESSION_PREVIEW_CHARS).collect(),
+    }
 }
 
 enum SearchMessage {
@@ -68,6 +88,10 @@ impl SessionSearchIndex {
 
     pub async fn upsert(&self, document: SessionSearchDocument) {
         let _ = self.tx.send(SearchMessage::Upsert(document)).await;
+    }
+
+    pub async fn upsert_snapshot(&self, id: impl Into<String>, snapshot: &SessionSnapshot) {
+        self.upsert(document_from_snapshot(id, snapshot)).await;
     }
 
     pub async fn remove(&self, id: impl Into<String>) {
@@ -174,5 +198,25 @@ mod tests {
         assert_eq!(index.search("first").await[0].id, "one");
         index.remove("one").await;
         assert!(index.search("first").await.is_empty());
+    }
+
+    #[test]
+    fn snapshot_projection_keeps_name_and_bounds_preview() {
+        let snapshot = SessionSnapshot {
+            config_records: vec![crate::session::SessionConfigEntry {
+                id: "name".into(),
+                parent_id: None,
+                seq: 1,
+                timestamp: 0,
+                lane: "main".into(),
+                record: crate::session::SessionConfigRecord::NameChanged {
+                    name: "Deploy".into(),
+                },
+            }],
+            ..SessionSnapshot::default()
+        };
+        let document = document_from_snapshot("session-1", &snapshot);
+        assert_eq!(document.name.as_deref(), Some("Deploy"));
+        assert!(document.preview.chars().count() <= MAX_SESSION_PREVIEW_CHARS);
     }
 }
