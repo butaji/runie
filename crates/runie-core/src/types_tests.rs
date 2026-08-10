@@ -48,6 +48,12 @@ mod tests {
             assert_eq!(transport.wire_name(), wire);
             assert_eq!(serde_json::to_value(transport).unwrap(), wire);
         }
+        assert_eq!(DeferredWindow::FifteenMinutes.wire_name(), "15m");
+        assert_eq!(DeferredWindow::OneHour.wire_name(), "1h");
+        assert_eq!(DeferredWindow::OneDay.wire_name(), "24h");
+        assert_eq!(CacheRetention::None.wire_name(), "none");
+        assert_eq!(CacheRetention::Short.wire_name(), "short");
+        assert_eq!(CacheRetention::Long.wire_name(), "long");
     }
 
     #[test]

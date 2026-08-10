@@ -99,6 +99,23 @@ pub enum DeferredWindow {
     OneDay,
 }
 
+macro_rules! provider_wire_projection {
+    ($type:ty, $(($variant:path, $wire:literal)),+ $(,)?) => {
+        impl $type {
+            pub const fn wire_name(self) -> &'static str {
+                match self { $($variant => $wire),+ }
+            }
+        }
+    };
+}
+
+provider_wire_projection! {
+    DeferredWindow,
+    (DeferredWindow::FifteenMinutes, "15m"),
+    (DeferredWindow::OneHour, "1h"),
+    (DeferredWindow::OneDay, "24h"),
+}
+
 macro_rules! provider_transports {
     ($(($variant:ident, $wire:literal)),+ $(,)?) => {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -130,6 +147,13 @@ pub enum CacheRetention {
     None,
     Short,
     Long,
+}
+
+provider_wire_projection! {
+    CacheRetention,
+    (CacheRetention::None, "none"),
+    (CacheRetention::Short, "short"),
+    (CacheRetention::Long, "long"),
 }
 
 impl std::fmt::Debug for SimpleStreamOptions {
