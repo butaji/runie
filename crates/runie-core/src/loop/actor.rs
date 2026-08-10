@@ -265,6 +265,33 @@ mod tests {
         assert!(!snapshot.running);
     }
 
+    #[test]
+    fn context_recovery_plan_uses_loop_message_projection() {
+        let messages = vec![crate::types::AgentMessage::User(
+            crate::types::UserMessage {
+                content: vec![crate::types::UserContent::Text {
+                    text: "x".repeat(4_001),
+                }],
+                timestamp: 0,
+            },
+        )];
+        let plan = LoopActor::context_recovery_plan(
+            &messages,
+            1_000,
+            crate::session::CompactionSettings {
+                enabled: true,
+                reserve_tokens: 100,
+                keep_recent_tokens: 20,
+            },
+        );
+        assert_eq!(
+            plan.action,
+            crate::session::CompactionRecoveryAction::Prepare {
+                keep_recent_tokens: 20
+            }
+        );
+    }
+
     struct DeliverySubscriber {
         delivered: Option<tokio::sync::oneshot::Sender<AgentEvent>>,
     }

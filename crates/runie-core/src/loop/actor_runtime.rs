@@ -1,5 +1,17 @@
 use super::*;
 impl LoopActor {
+    /// Project the next context-recovery operation without mutating any
+    /// actor. Callers can route `Prepare` through the session owner and keep
+    /// summarization in the provider owner.
+    pub fn context_recovery_plan(
+        messages: &[crate::types::AgentMessage],
+        context_window: u64,
+        settings: crate::session::CompactionSettings,
+    ) -> crate::session::CompactionRecoveryPlan {
+        let estimate = crate::session::estimate_context_tokens(messages);
+        crate::session::plan_compaction_recovery(estimate.tokens, context_window, settings)
+    }
+
     pub fn new(mut deps: LoopDeps) -> Self {
         let (abort_tx, abort_rx) = tokio::sync::watch::channel(false);
         deps.abort = Some(abort_rx);
