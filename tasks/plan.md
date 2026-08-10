@@ -102,8 +102,9 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
 5. MCP lifecycle ownership — `harness-10`.
    The stdio actor now publishes ready/busy/failed/closed lifecycle state,
    `/mcps` projects it through the loop-owned executor, and registry-backed
-   stdio calls reuse an actor-owned persistent session; persistent HTTP session
-   integration remains.
+   stdio calls reuse an actor-owned persistent session, and both stdio and HTTP
+   actors expose ready/busy/failed/closed lifecycle projections; persistent HTTP
+   registry integration remains.
 6. Session and Git interactive UX — `harness-12` and `harness-13`.
    Complete picker/history/conflict interactions over the existing actor-owned
    projections and inverse-safe event boundaries.

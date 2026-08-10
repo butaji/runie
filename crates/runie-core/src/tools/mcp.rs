@@ -11,7 +11,7 @@ pub(crate) const MCP_SESSION_HEADER: &str = "mcp-session-id";
 
 #[path = "mcp_http_session.rs"]
 mod http_session;
-pub use http_session::{McpHttpActor, McpHttpSession};
+pub use http_session::{McpHttpActor, McpHttpSession, McpHttpStatus};
 #[path = "mcp_stream.rs"]
 mod stream;
 pub use stream::{

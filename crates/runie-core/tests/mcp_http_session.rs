@@ -1,4 +1,4 @@
-use runie_core::tools::{McpHttpActor, McpHttpClient, McpHttpSession};
+use runie_core::tools::{McpHttpActor, McpHttpClient, McpHttpSession, McpHttpStatus};
 use std::time::Duration;
 
 #[tokio::test]
@@ -115,10 +115,27 @@ async fn http_actor_serializes_session_and_closes_owned_transport() {
     let actor = McpHttpActor::new(
         McpHttpClient::new(format!("http://{address}"), None, Duration::from_secs(1)).unwrap(),
     );
+    assert_eq!(actor.status(), McpHttpStatus::Ready);
     assert_eq!(
         actor.request(serde_json::json!({"id":1})).await.unwrap()["result"]["ok"],
         true
     );
+    assert_eq!(actor.status(), McpHttpStatus::Ready);
+    let status = actor.subscribe_status();
     actor.close().await.unwrap();
+    assert_eq!(*status.borrow(), McpHttpStatus::Closed);
     task.await.unwrap();
+}
+
+#[tokio::test]
+async fn http_actor_projects_failed_request_status() {
+    let client = McpHttpClient::new(
+        "http://127.0.0.1:1".to_owned(),
+        None,
+        Duration::from_millis(50),
+    )
+    .unwrap();
+    let actor = McpHttpActor::new(client);
+    assert!(actor.request(serde_json::json!({"id": 1})).await.is_err());
+    assert_eq!(actor.status(), McpHttpStatus::Failed);
 }

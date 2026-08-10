@@ -1,5 +1,13 @@
 use super::{McpHttpClient, MCP_SESSION_HEADER};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum McpHttpStatus {
+    Ready,
+    Busy,
+    Failed,
+    Closed,
+}
+
 enum McpHttpCommand {
     Request {
         request: serde_json::Value,
@@ -13,11 +21,13 @@ enum McpHttpCommand {
 #[derive(Clone)]
 pub struct McpHttpActor {
     tx: tokio::sync::mpsc::Sender<McpHttpCommand>,
+    status: tokio::sync::watch::Receiver<McpHttpStatus>,
     _owner: std::sync::Arc<crate::task_owner::TaskOwner>,
 }
 
 impl McpHttpActor {
     pub fn new(client: McpHttpClient) -> Self {
+        let (status_tx, status) = tokio::sync::watch::channel(McpHttpStatus::Ready);
         let (tx, owner) =
             crate::spawn_actor_worker!(32, move |mut rx: tokio::sync::mpsc::Receiver<
                 McpHttpCommand,
@@ -26,16 +36,36 @@ impl McpHttpActor {
                 while let Some(command) = rx.recv().await {
                     match command {
                         McpHttpCommand::Request { request, reply } => {
-                            let _ = reply.send(session.request(request).await);
+                            let _ = status_tx.send(McpHttpStatus::Busy);
+                            let result = session.request(request).await;
+                            let _ = status_tx.send(if result.is_ok() {
+                                McpHttpStatus::Ready
+                            } else {
+                                McpHttpStatus::Failed
+                            });
+                            let _ = reply.send(result);
                         }
                         McpHttpCommand::Close { reply } => {
                             let _ = reply.send(session.close().await);
+                            let _ = status_tx.send(McpHttpStatus::Closed);
                             break;
                         }
                     }
                 }
             });
-        Self { tx, _owner: owner }
+        Self {
+            tx,
+            status,
+            _owner: owner,
+        }
+    }
+
+    pub fn status(&self) -> McpHttpStatus {
+        *self.status.borrow()
+    }
+
+    pub fn subscribe_status(&self) -> tokio::sync::watch::Receiver<McpHttpStatus> {
+        self.status.clone()
     }
 
     pub async fn request(&self, request: serde_json::Value) -> Result<serde_json::Value, String> {
