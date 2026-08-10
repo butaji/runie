@@ -336,4 +336,29 @@ mod extra {
             None
         );
     }
+
+    #[test]
+    fn provider_outcome_preserves_normalized_and_raw_finish_data() {
+        let message = AssistantMessage {
+            stop_reason: Some(StopReason::MaxTokens),
+            raw_stop_reason: Some("max_output_tokens".into()),
+            response_id: Some("response-1".into()),
+            response_model: Some("routed-model".into()),
+            usage: Usage {
+                total_tokens: 12,
+                ..Usage::default()
+            },
+            ..AssistantMessage::default()
+        };
+        let outcome = message.provider_outcome();
+        assert_eq!(outcome.finish_reason, Some(StopReason::MaxTokens));
+        assert_eq!(
+            outcome.raw_finish_reason.as_deref(),
+            Some("max_output_tokens")
+        );
+        assert_eq!(outcome.usage.total_tokens, 12);
+        let round_trip: ProviderOutcome =
+            serde_json::from_value(serde_json::to_value(outcome).unwrap()).unwrap();
+        assert_eq!(round_trip, message.provider_outcome());
+    }
 }

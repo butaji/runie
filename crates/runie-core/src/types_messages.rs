@@ -171,6 +171,21 @@ pub struct AssistantMessage {
     pub timestamp: i64,
 }
 
+/// Provider-independent terminal data projected from an assistant message.
+/// Raw provider fields remain available for diagnostics while consumers can
+/// reduce on the closed `StopReason` vocabulary.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProviderOutcome {
+    pub finish_reason: Option<StopReason>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub raw_finish_reason: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub response_id: Option<String>,
+    pub response_model: Option<String>,
+    pub usage: Usage,
+}
+
 impl AssistantMessage {
     /// Build the minimal assistant partial used by Pi's tool-call stream
     /// events. The provider partial is a complete assistant message, even
@@ -194,6 +209,16 @@ impl AssistantMessage {
         self.error_message
             .clone()
             .unwrap_or_else(|| "assistant stream failed".to_owned())
+    }
+
+    pub fn provider_outcome(&self) -> ProviderOutcome {
+        ProviderOutcome {
+            finish_reason: self.stop_reason,
+            raw_finish_reason: self.raw_stop_reason.clone(),
+            response_id: self.response_id.clone(),
+            response_model: self.response_model.clone(),
+            usage: self.usage.clone(),
+        }
     }
 }
 

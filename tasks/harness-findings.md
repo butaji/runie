@@ -17,7 +17,7 @@ evidence prove the item.
 11. `harness-11-plugins` — installable skills, commands, tools, and hooks.
 12. `harness-12-git` — **partial** — bounded read-only Git inspection, typed non-mutating `git_commit_prepare`, approval-gated `git_commit`, explicit validated `git_push`, and safe inverse-commit `git_revert` now exist; richer conflict recovery remains.
 13. `harness-13-sessions` — resume, fork, rename, undo, export, and session search UX.
-14. `harness-14-provider-contract` — normalized usage, finish reasons, retries, IDs, and errors.
+14. `harness-14-provider-contract` — **partial** — normalized usage, typed finish reasons with lossless raw provider values, response IDs/models, and retry policy exist; provider-wide error taxonomy and adapter conformance remain.
 15. `harness-15-user-questions` — **partial** — structured validation, owned broker, live selector, multi-select answers, YAML replay, explicit broker cancellation, broker-side option validation, and bounded resolution traces for answered/cancelled/rejected requests are implemented; rejected traces now retain the attempted structured answer, while durable session export remains.
 16. `harness-16-media` — image/video input and capability-aware tool exposure.
 17. `harness-17-ide` — ACP or equivalent IDE protocol.
