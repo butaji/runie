@@ -49,6 +49,8 @@ Transcript-selectability is also a `LineKind` predicate, so navigation does
 not maintain a separate classification table.
 Append/reset, layout measurement, and scroll transitions now share the
 semantic `feed_view_state.rs` boundary.
+An interleaved lifecycle regression now verifies tool-card ordering and stale
+row absence across update, settle, and concurrent insert events.
 
 Acceptance: snapshot parity, replay parity, and no stale derived index after
 insert/update/remove sequences.

@@ -117,6 +117,9 @@ As of 2026-08-09, the reduction work has these verified results:
   in `feed_assistant.rs`, alongside activity reset in its activity module.
 - Tool output update routing is now part of `feed_tool_lifecycle.rs`; no
   numbered feed fragments remain.
+- Added an interleaved tool-lifecycle replay regression proving the projected
+  tool-card sequence has no stale rows after update, settle, and a concurrent
+  second tool.
 - Append/reset, layout measurement, and scroll transitions are consolidated in
   `feed_view_state.rs`.
 - `component_specs!` generates the declarative component ownership table.

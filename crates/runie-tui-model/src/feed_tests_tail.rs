@@ -61,6 +61,48 @@ fn terminal_tool_output_replay_is_not_appended_twice() {
 }
 
 #[test]
+fn tool_projection_replay_has_no_stale_rows_after_interleaved_lifecycles() {
+    let mut state = super::FeedState::default();
+    for message in [
+        super::ScrollbackMsg::SetToolName("first".into(), "read".into()),
+        super::ScrollbackMsg::ToolStart {
+            tool_call_id: "first".into(),
+            header: "Read one".into(),
+            activity: None,
+        },
+        super::ScrollbackMsg::ToolUpdate {
+            tool_call_id: "first".into(),
+            header: Some("Read one updated".into()),
+            output: vec![],
+        },
+        super::ScrollbackMsg::SetToolName("second".into(), "bash".into()),
+        super::ScrollbackMsg::ToolStartRunning {
+            tool_call_id: "second".into(),
+            header: "bash two".into(),
+            activity: None,
+        },
+        super::ScrollbackMsg::ToolEnd {
+            tool_call_id: "first".into(),
+            header: "Read one done".into(),
+            activity: None,
+            output: vec![],
+        },
+    ] {
+        state.reduce(message);
+    }
+    let blocks = state.snapshot().tool_blocks;
+    assert_eq!(
+        blocks
+            .iter()
+            .map(|block| block.tool_call_id.as_str())
+            .collect::<Vec<_>>(),
+        ["first", "second"]
+    );
+    assert_eq!(blocks[0].header, "Read one done");
+    assert!(blocks[1].is_running);
+}
+
+#[test]
 fn workflow_phase_glyphs_match_grok_fallback_for_terminal_states() {
     assert_eq!(
         super::workflow_text(
