@@ -7,6 +7,7 @@ use crate::types::{AgentTool, Model, ToolExecutionMode};
 
 pub struct ToolRegistry {
     tools: HashMap<String, Arc<dyn AgentTool>>,
+    mcp_stdio: Vec<Arc<crate::tools::McpStdioActor>>,
 }
 
 impl Default for ToolRegistry {
@@ -19,6 +20,7 @@ impl ToolRegistry {
     pub fn new() -> Self {
         Self {
             tools: HashMap::new(),
+            mcp_stdio: Vec::new(),
         }
     }
 
@@ -56,11 +58,17 @@ impl ToolRegistry {
     ) -> Result<usize, String> {
         let server = client.discover().await?;
         let owner = Arc::new(crate::tools::McpStdioActor::new(client));
+        let owner_for_call = owner.clone();
         let call: crate::tools::McpCallHook = Arc::new(move |request| {
-            let owner = owner.clone();
+            let owner = owner_for_call.clone();
             Box::pin(async move { owner.call_tool(request.tool, request.arguments).await })
         });
+        self.mcp_stdio.push(owner);
         self.register_mcp_server(server, call)
+    }
+
+    pub fn mcp_stdio_statuses(&self) -> Vec<crate::tools::McpStdioStatus> {
+        self.mcp_stdio.iter().map(|owner| owner.status()).collect()
     }
 
     pub fn lookup(&self, name: &str) -> Option<Arc<dyn AgentTool>> {
@@ -238,6 +246,10 @@ mod tests {
         .unwrap();
         let mut registry = ToolRegistry::new();
         assert_eq!(registry.register_mcp_stdio(client).await.unwrap(), 1);
+        assert_eq!(
+            registry.mcp_stdio_statuses(),
+            vec![crate::tools::McpStdioStatus::Ready]
+        );
         let tool = registry.lookup("mcp__demo__echo").unwrap();
         assert_eq!(
             tool.execute("1", serde_json::json!({"x":1}), None, None)
@@ -245,6 +257,10 @@ mod tests {
                 .unwrap()
                 .details["value"],
             7
+        );
+        assert_eq!(
+            registry.mcp_stdio_statuses(),
+            vec![crate::tools::McpStdioStatus::Ready]
         );
     }
 }
