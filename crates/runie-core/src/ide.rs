@@ -69,6 +69,14 @@ pub struct IdeSnapshot {
 }
 
 impl IdeSnapshot {
+    /// Apply one host-owned JSON-RPC notification through the typed event
+    /// boundary. Socket lifecycle remains outside the reducer actor.
+    pub fn apply_rpc_notification(&mut self, input: &str) -> Result<(), String> {
+        let request = decode_ide_request(input)?;
+        let event = ide_event_from_rpc(&request.method, request.params)?;
+        reduce_ide_event(self, event)
+    }
+
     pub fn terminal_lines(&self) -> Vec<String> {
         vec![
             format!("connection: {:?}", self.connection),
@@ -324,5 +332,22 @@ mod tests {
         reduce_ide_event(&mut snapshot, event).unwrap();
         assert_eq!(snapshot.documents["file:///a"].version, 2);
         assert!(ide_event_from_rpc("workspace/unknown", serde_json::json!({})).is_err());
+    }
+
+    #[test]
+    fn rpc_notification_adapter_replays_through_one_snapshot_boundary() {
+        let mut snapshot = IdeSnapshot::default();
+        snapshot
+            .apply_rpc_notification(
+                r#"{"jsonrpc":"2.0","id":1,"method":"initialized","params":{"workspace":"/repo"}}"#,
+            )
+            .unwrap();
+        snapshot
+            .apply_rpc_notification(
+                r#"{"jsonrpc":"2.0","id":2,"method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///main.rs","languageId":"rust","version":1,"text":"fn main() {}"}}}"#,
+            )
+            .unwrap();
+        assert_eq!(snapshot.workspace.as_deref(), Some("/repo"));
+        assert_eq!(snapshot.documents.len(), 1);
     }
 }
