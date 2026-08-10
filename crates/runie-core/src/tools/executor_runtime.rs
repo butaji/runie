@@ -1,12 +1,33 @@
 use super::*;
 
-pub(super) fn has_resource_conflict(calls: &[ToolCall], ctx: &ToolExecContext) -> bool {
-    let mut keys = std::collections::HashSet::new();
-    calls
-        .iter()
-        .filter_map(|call| ctx.registry.resource_key(&call.name, &call.arguments))
-        .any(|key| !keys.insert(key))
+pub(super) fn resource_batches(calls: Vec<ToolCall>, ctx: &ToolExecContext) -> Vec<Vec<ToolCall>> {
+    let mut batches: Vec<Vec<ToolCall>> = Vec::new();
+    for call in calls {
+        let serial = requires_serial_execution(&call.name);
+        let key = ctx.registry.resource_key(&call.name, &call.arguments);
+        let target = (!serial).then(|| {
+            batches.iter().position(|batch| {
+                !batch.iter().any(|other| {
+                    let other_key = ctx.registry.resource_key(&other.name, &other.arguments);
+                    key.is_some() && key == other_key
+                })
+            })
+        });
+        match target.flatten() {
+            Some(index) => batches[index].push(call),
+            None => batches.push(vec![call]),
+        }
+    }
+    batches
 }
+
+fn requires_serial_execution(tool: &str) -> bool {
+    matches!(
+        tool,
+        "write" | "edit" | "bash" | "shell" | "exec" | "run" | "subagent"
+    )
+}
+
 pub(super) async fn await_tool_result<F>(
     tool_future: F,
     abort: Option<tokio::sync::watch::Receiver<bool>>,

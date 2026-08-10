@@ -157,7 +157,7 @@ fn scheduler_detects_shared_resource_keys_across_tool_names() {
             thought_signature: None,
         },
     ];
-    assert!(has_resource_conflict(&calls, &ctx));
+    assert_eq!(super::resource_batches(calls, &ctx).len(), 2);
 }
 
 #[test]

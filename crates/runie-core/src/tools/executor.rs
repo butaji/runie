@@ -1,12 +1,4 @@
 //! Sequential and parallel tool dispatch.
-
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
-
-use futures::StreamExt;
-
 use super::{
     policy::{decide, ApprovalDecision},
     registry::ToolRegistry,
@@ -15,7 +7,11 @@ use crate::types::{
     AgentContext, AgentToolResult, AssistantMessage, BeforeToolCallContext, BeforeToolCallResult,
     ToolCall, ToolResultContent, ToolResultMessage,
 };
-
+use futures::StreamExt;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 #[path = "executor_hooks.rs"]
 mod executor_hooks;
 pub use executor_hooks::*;
@@ -121,13 +117,24 @@ fn tool_result_message(
 }
 
 pub async fn execute_parallel(calls: Vec<ToolCall>, ctx: ToolExecContext) -> DispatchOutcome {
-    if calls
-        .iter()
-        .any(|call| requires_serial_execution(&call.name))
-        || has_resource_conflict(&calls, &ctx)
-    {
-        return execute_sequential(calls, ctx).await;
+    let batches = resource_batches(calls, &ctx);
+    if batches.len() > 1 {
+        let mut combined = DispatchOutcome {
+            all_terminated: true,
+            ..DispatchOutcome::default()
+        };
+        for batch in batches {
+            let outcome = execute_parallel_batch(batch, &ctx).await;
+            combined.all_terminated &= outcome.all_terminated;
+            combined.tool_results.extend(outcome.tool_results);
+            combined.events.extend(outcome.events);
+        }
+        return combined;
     }
+    execute_parallel_batch(batches.into_iter().next().unwrap_or_default(), &ctx).await
+}
+
+async fn execute_parallel_batch(calls: Vec<ToolCall>, ctx: &ToolExecContext) -> DispatchOutcome {
     let (preflighted, mut outcome, had_invalid) = preflight_calls(calls, &ctx);
 
     if preflighted.is_empty() {
@@ -158,13 +165,6 @@ pub async fn execute_parallel(calls: Vec<ToolCall>, ctx: ToolExecContext) -> Dis
 
     outcome.all_terminated = !had_invalid && all_terminated;
     outcome
-}
-
-fn requires_serial_execution(tool: &str) -> bool {
-    matches!(
-        tool,
-        "write" | "edit" | "bash" | "shell" | "exec" | "run" | "subagent"
-    )
 }
 
 async fn run_parallel_calls(
