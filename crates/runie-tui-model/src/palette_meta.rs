@@ -53,6 +53,7 @@ macro_rules! palette_slash_command {
             Self::DeepResearch => "/deep-research",
             Self::Feedback => "/feedback",
             Self::Usage => "/usage",
+            Self::Jobs => "/jobs",
         }
     };
 }
@@ -110,6 +111,7 @@ macro_rules! palette_description {
             Self::DeepResearch => "Run bounded research",
             Self::Feedback => "Submit feedback",
             Self::Usage => "Show usage or billing information",
+            Self::Jobs => "Inspect owned background jobs",
         }
     };
 }
@@ -256,6 +258,7 @@ impl PaletteAction {
                 | Self::DeepResearch
                 | Self::Feedback
                 | Self::Usage
+                | Self::Jobs
         )
     }
 

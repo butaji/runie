@@ -62,6 +62,7 @@ runie_core::typed_action_registry! {
         DeepResearch => "Deep Research",
         Feedback => "Feedback",
         Usage => "Usage",
+        Jobs => "Background Jobs",
     }
 }
 
