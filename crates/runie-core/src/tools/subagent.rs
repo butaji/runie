@@ -25,11 +25,37 @@ pub struct SubagentResourceLimits {
     pub max_tool_calls: u32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct SubagentResourceUsage {
     pub turns: u32,
     pub output_bytes: u64,
     pub tool_calls: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct SubagentTurnEvent {
+    pub output_bytes: u64,
+    pub tool_calls: u32,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct SubagentUsageState {
+    pub usage: SubagentResourceUsage,
+}
+
+pub fn reduce_subagent_turn(
+    role: SubagentRole,
+    state: &mut SubagentUsageState,
+    event: SubagentTurnEvent,
+) -> Result<(), String> {
+    let usage = SubagentResourceUsage {
+        turns: state.usage.turns.saturating_add(1),
+        output_bytes: state.usage.output_bytes.saturating_add(event.output_bytes),
+        tool_calls: state.usage.tool_calls.saturating_add(event.tool_calls),
+    };
+    role.validate_resource_usage(usage)?;
+    state.usage = usage;
+    Ok(())
 }
 
 impl SubagentResourceUsage {
@@ -363,5 +389,32 @@ mod tests {
         let usage = SubagentResourceUsage::one_turn_one_tool(8);
         assert!(SubagentRole::Explore.validate_usage(usage).is_ok());
         assert_eq!(usage.tool_calls, 1);
+    }
+
+    #[test]
+    fn multi_turn_usage_reduces_and_rejects_only_the_overflowing_trace() {
+        let mut state = SubagentUsageState::default();
+        for _ in 0..SubagentRole::Explore.resource_limits().max_turns {
+            reduce_subagent_turn(
+                SubagentRole::Explore,
+                &mut state,
+                SubagentTurnEvent {
+                    output_bytes: 8,
+                    tool_calls: 1,
+                },
+            )
+            .unwrap();
+        }
+        assert_eq!(state.usage.turns, 4);
+        assert!(reduce_subagent_turn(
+            SubagentRole::Explore,
+            &mut state,
+            SubagentTurnEvent {
+                output_bytes: 1,
+                tool_calls: 1,
+            },
+        )
+        .is_err());
+        assert_eq!(state.usage.turns, 4);
     }
 }
