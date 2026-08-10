@@ -50,6 +50,19 @@ impl ToolRegistry {
         Ok(count)
     }
 
+    pub async fn register_mcp_stdio(
+        &mut self,
+        client: crate::tools::McpStdioClient,
+    ) -> Result<usize, String> {
+        let server = client.discover().await?;
+        let owner = Arc::new(client);
+        let call: crate::tools::McpCallHook = Arc::new(move |request| {
+            let owner = owner.clone();
+            Box::pin(async move { owner.call_tool(&request.tool, request.arguments).await })
+        });
+        self.register_mcp_server(server, call)
+    }
+
     pub fn lookup(&self, name: &str) -> Option<Arc<dyn AgentTool>> {
         self.tools.get(name).cloned()
     }
@@ -135,5 +148,26 @@ mod tests {
             Arc::new(|_| Box::pin(async { Ok(serde_json::json!({})) }));
         assert_eq!(registry.register_mcp_server(server, hook).unwrap(), 1);
         assert!(registry.lookup("mcp__files__list").is_some());
+    }
+
+    #[tokio::test]
+    async fn register_mcp_stdio_discovers_and_binds_owner_calls() {
+        let script = "while IFS= read -r line; do case \"$line\" in *initialize*) echo '{\"id\":1,\"result\":{\"serverInfo\":{\"name\":\"demo\"}}}';; *tools/list*) echo '{\"id\":2,\"result\":{\"tools\":[{\"name\":\"echo\",\"inputSchema\":{\"type\":\"object\"}}]}}';; *tools/call*) echo '{\"id\":1,\"result\":{\"value\":7}}';; esac; done";
+        let client = crate::tools::McpStdioClient::new(
+            "sh",
+            vec!["-c".into(), script.into()],
+            std::time::Duration::from_secs(1),
+        )
+        .unwrap();
+        let mut registry = ToolRegistry::new();
+        assert_eq!(registry.register_mcp_stdio(client).await.unwrap(), 1);
+        let tool = registry.lookup("mcp__demo__echo").unwrap();
+        assert_eq!(
+            tool.execute("1", serde_json::json!({"x":1}), None, None)
+                .await
+                .unwrap()
+                .details["value"],
+            7
+        );
     }
 }
