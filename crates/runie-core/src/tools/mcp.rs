@@ -33,6 +33,58 @@ pub struct McpStdioClient {
     pub timeout: Duration,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct McpHttpClient {
+    pub endpoint: String,
+    pub bearer_token: Option<String>,
+    pub timeout: Duration,
+}
+
+impl McpHttpClient {
+    pub fn new(
+        endpoint: impl Into<String>,
+        bearer_token: Option<String>,
+        timeout: Duration,
+    ) -> Result<Self, String> {
+        let endpoint = endpoint.into();
+        if endpoint.trim().is_empty() {
+            return Err("MCP endpoint must not be empty".into());
+        }
+        if timeout.is_zero() {
+            return Err("MCP timeout must be positive".into());
+        }
+        Ok(Self {
+            endpoint,
+            bearer_token,
+            timeout,
+        })
+    }
+
+    pub async fn request(&self, request: serde_json::Value) -> Result<serde_json::Value, String> {
+        let client = reqwest::Client::builder()
+            .timeout(self.timeout)
+            .build()
+            .map_err(|error| error.to_string())?;
+        let mut call = client.post(&self.endpoint).json(&request);
+        if let Some(token) = &self.bearer_token {
+            call = call.bearer_auth(token);
+        }
+        let response = call
+            .send()
+            .await
+            .map_err(|error| format!("MCP HTTP request: {error}"))?;
+        let status = response.status();
+        let body = response
+            .text()
+            .await
+            .map_err(|error| format!("MCP HTTP body: {error}"))?;
+        if !status.is_success() {
+            return Err(format!("MCP HTTP status {status}: {body}"));
+        }
+        serde_json::from_str(&body).map_err(|error| format!("invalid MCP HTTP response: {error}"))
+    }
+}
+
 impl McpStdioClient {
     pub fn new(
         command: impl Into<String>,
@@ -326,5 +378,38 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(result["content"][0]["text"], "ok");
+    }
+
+    #[tokio::test]
+    async fn http_transport_posts_json_and_decodes_response() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let mut tasks = tokio::task::JoinSet::new();
+        tasks.spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut request = vec![0_u8; 2048];
+            let _ = tokio::io::AsyncReadExt::read(&mut socket, &mut request).await;
+            let body = r#"{"jsonrpc":"2.0","id":1,"result":{"ok":true}}"#;
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nContent-Type: application/json\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            tokio::io::AsyncWriteExt::write_all(&mut socket, response.as_bytes())
+                .await
+                .unwrap();
+        });
+        let client = McpHttpClient::new(
+            format!("http://{address}"),
+            Some("secret".into()),
+            Duration::from_secs(1),
+        )
+        .unwrap();
+        let response = client
+            .request(serde_json::json!({"jsonrpc":"2.0","id":1}))
+            .await
+            .unwrap();
+        tasks.join_next().await.unwrap().unwrap();
+        assert_eq!(response["result"]["ok"], true);
     }
 }

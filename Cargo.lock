@@ -1300,6 +1300,7 @@ dependencies = [
  "httpdate",
  "parking_lot",
  "rand 0.8.7",
+ "reqwest",
  "serde",
  "serde_json",
  "serde_yaml",

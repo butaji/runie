@@ -34,7 +34,9 @@ pub use git::{
     GitCommitPrepareRequest, GitCommitPrepareTool, GitDiffTool, GitReviewTool, GitStatusTool,
     GitWorktreeTool,
 };
-pub use mcp::{McpCallHook, McpCallRequest, McpServer, McpStdioClient, McpTool, McpToolSpec};
+pub use mcp::{
+    McpCallHook, McpCallRequest, McpHttpClient, McpServer, McpStdioClient, McpTool, McpToolSpec,
+};
 pub use policy::{decide as approval_decision, ApprovalDecision, ApprovalMode, ApprovalModeStore};
 pub use question_broker::{PendingUserQuestion, UserQuestionBroker};
 pub use registry::ToolRegistry;
