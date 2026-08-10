@@ -47,6 +47,17 @@ pub struct ApprovalTrace {
     pub decision: ApprovalDecision,
 }
 
+impl ApprovalTrace {
+    pub fn terminal_line(&self) -> String {
+        let decision = match &self.decision {
+            ApprovalDecision::Allow => "allow".to_owned(),
+            ApprovalDecision::Deny { reason } => format!("deny ({reason})"),
+            ApprovalDecision::Ask { reason } => format!("ask ({reason})"),
+        };
+        format!("approval {}: {} [{:?}]", self.tool, decision, self.mode)
+    }
+}
+
 const MAX_APPROVAL_TRACES: usize = 128;
 
 pub fn record_approval_trace(traces: &mut Vec<ApprovalTrace>, trace: ApprovalTrace) {
@@ -144,5 +155,20 @@ mod tests {
         }
         assert_eq!(traces.len(), MAX_APPROVAL_TRACES);
         assert_eq!(traces[0].tool, "tool-1");
+    }
+
+    #[test]
+    fn approval_trace_projects_decision_and_reason_for_terminal_hosts() {
+        let trace = ApprovalTrace {
+            tool: "write".into(),
+            mode: ApprovalMode::Ask,
+            decision: ApprovalDecision::Ask {
+                reason: "changes files".into(),
+            },
+        };
+        assert_eq!(
+            trace.terminal_line(),
+            "approval write: ask (changes files) [Ask]"
+        );
     }
 }
