@@ -8,4 +8,4 @@ pub mod workspace;
 pub use actor::{ToolCommand, ToolExecutorActor, ToolOutcome};
 pub use executor::{execute_parallel, execute_sequential, ToolExecContext, ToolExecHooks};
 pub use registry::ToolRegistry;
-pub use workspace::ReadFileTool;
+pub use workspace::{EditFileTool, GlobTool, GrepTool, ReadFileTool, WriteFileTool};
