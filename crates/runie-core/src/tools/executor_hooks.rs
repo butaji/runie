@@ -14,6 +14,7 @@ pub struct ToolExecHooks {
     pub background_shell: Option<BackgroundShellHook>,
     pub background_jobs: Option<BackgroundJobsHook>,
     pub background_cancel: Option<BackgroundCancelHook>,
+    pub todo_write: Option<TodoWriteHook>,
 }
 
 pub type BeforeToolCallHook = Arc<
@@ -64,6 +65,13 @@ pub type BackgroundJobsHook = Arc<
 pub type BackgroundCancelHook = Arc<
     dyn Fn(
             crate::tools::BackgroundCancelRequest,
+        ) -> Pin<Box<dyn Future<Output = Result<serde_json::Value, String>> + Send>>
+        + Send
+        + Sync,
+>;
+pub type TodoWriteHook = Arc<
+    dyn Fn(
+            crate::tools::TodoSnapshot,
         ) -> Pin<Box<dyn Future<Output = Result<serde_json::Value, String>> + Send>>
         + Send
         + Sync,

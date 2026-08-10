@@ -423,6 +423,9 @@ async fn execute_tool(
     if call.name == "background_cancel" {
         return crate::tools::background::execute_cancel(call, ctx).await;
     }
+    if call.name == "todo_write" {
+        return crate::tools::todo::execute_write(call, ctx).await;
+    }
     let settled = Arc::new(AtomicBool::new(false));
     let tool_future = tool.execute(
         &call.id,

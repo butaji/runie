@@ -9,7 +9,7 @@ evidence prove the item.
 3. `harness-03-shell-lifecycle` — **partial** — Bash now streams stdout/stderr chunks and typed `background_bash`, `background_jobs`, and `background_cancel` cover the owned job lifecycle; TUI controls/output cards remain.
 4. `harness-04-model-effort-ui` — **partial** — model metadata now supplies finite effort rows and selection, with YAML replay coverage proving unsupported levels are excluded; provider-specific wire display remains.
 5. `harness-05-context` — automatic compaction, summaries, limits, and recovery.
-6. `harness-06-plan-todos` — **partial** — replayable validated `todo_write` snapshots and plan commands exist; actor persistence and plan enforcement remain.
+6. `harness-06-plan-todos` — **partial** — replayable validated `todo_write` snapshots now reduce through an owned `TodoActor`; plan enforcement remains.
 7. `harness-07-subagents` — **partial** — typed explore/plan/code requests now execute through an owned loop hook and return messages; role-specific isolation and result replay remain.
 8. `harness-08-tool-scheduler` — **partial** — independent read/search tools remain parallel while mutations and subagents are serialized; resource-key conflict scheduling remains.
 9. `harness-09-web` — typed bounded `web_search` contract and executor hook; transport, fetch, citations, and source cards remain.

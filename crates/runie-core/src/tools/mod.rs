@@ -39,6 +39,6 @@ pub use policy::{decide as approval_decision, ApprovalDecision, ApprovalMode, Ap
 pub use question_broker::{PendingUserQuestion, UserQuestionBroker};
 pub use registry::ToolRegistry;
 pub use subagent::{SubagentRequest, SubagentRole, SubagentTool};
-pub use todo::{TodoItem, TodoSnapshot, TodoStatus, TodoWriteTool};
+pub use todo::{TodoActor, TodoItem, TodoSnapshot, TodoStatus, TodoWriteTool};
 pub use web::{WebSearchRequest, WebSearchTool};
 pub use workspace::{BashTool, EditFileTool, GlobTool, GrepTool, ReadFileTool, WriteFileTool};

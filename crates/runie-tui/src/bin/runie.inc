@@ -1239,6 +1239,7 @@ async fn build_live_app() -> App {
     let approval_mode = runie_core::tools::ApprovalModeStore::default();
     let subagent_loop = std::sync::Arc::new(tokio::sync::OnceCell::<LoopActor>::new());
     let background_actor = runie_core::background::BackgroundProcessActor::new();
+    let todo_actor = runie_core::tools::TodoActor::default();
     let state = AgentStateActor::new();
     let steering = SteeringQueueActor::new();
     let follow_up = FollowUpQueueActor::new();
@@ -1392,6 +1393,16 @@ async fn build_live_app() -> App {
                     let actor = actor.clone();
                     Box::pin(async move {
                         Ok(serde_json::json!({"job_id": request.job_id, "cancelled": actor.cancel(request.job_id).await}))
+                    })
+                })
+            }),
+            todo_write: Some({
+                let actor = todo_actor.clone();
+                std::sync::Arc::new(move |snapshot| {
+                    let actor = actor.clone();
+                    Box::pin(async move {
+                        let snapshot = actor.replace(snapshot).await?;
+                        serde_json::to_value(snapshot).map_err(|error| error.to_string())
                     })
                 })
             }),
