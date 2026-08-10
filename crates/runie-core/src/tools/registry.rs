@@ -92,17 +92,23 @@ impl ToolRegistry {
     }
 
     pub fn tools(&self) -> Vec<Arc<dyn AgentTool>> {
-        self.tools.values().cloned().collect()
+        self.ordered_tools()
     }
 
     pub fn tools_for_model(&self, model: &Model) -> Vec<Arc<dyn AgentTool>> {
-        self.tools
-            .values()
+        self.ordered_tools()
+            .into_iter()
             .filter(|tool| {
                 tool.required_input()
                     .is_none_or(|kind| model.supports_input(kind))
             })
-            .cloned()
+            .collect()
+    }
+
+    fn ordered_tools(&self) -> Vec<Arc<dyn AgentTool>> {
+        self.names()
+            .into_iter()
+            .filter_map(|name| self.tools.get(&name).cloned())
             .collect()
     }
 }
@@ -172,6 +178,35 @@ mod tests {
             Arc::new(|_| Box::pin(async { Ok(serde_json::json!({})) }));
         assert_eq!(registry.register_mcp_server(server, hook).unwrap(), 1);
         assert!(registry.lookup("mcp__files__list").is_some());
+    }
+
+    #[test]
+    fn tool_projections_are_sorted_data() {
+        let mut registry = ToolRegistry::new();
+        let server = crate::tools::McpServer {
+            name: "files".into(),
+            tools: vec![
+                crate::tools::McpToolSpec {
+                    name: "write".into(),
+                    description: "Write".into(),
+                    input_schema: serde_json::json!({"type":"object"}),
+                },
+                crate::tools::McpToolSpec {
+                    name: "inspect".into(),
+                    description: "Inspect".into(),
+                    input_schema: serde_json::json!({"type":"object"}),
+                },
+            ],
+        };
+        let hook: crate::tools::McpCallHook =
+            Arc::new(|_| Box::pin(async { Ok(serde_json::json!({})) }));
+        registry.register_mcp_server(server, hook).unwrap();
+        let names: Vec<_> = registry
+            .tools()
+            .into_iter()
+            .map(|tool| tool.name().to_owned())
+            .collect();
+        assert_eq!(names, ["mcp__files__inspect", "mcp__files__write"]);
     }
 
     #[test]
