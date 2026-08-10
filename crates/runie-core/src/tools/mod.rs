@@ -7,6 +7,7 @@ pub mod path_policy;
 pub mod policy;
 pub mod question_broker;
 pub mod registry;
+pub mod todo;
 pub mod workspace;
 
 /// Declare the runtime tool set as data at the integration boundary.
@@ -23,4 +24,5 @@ pub use executor::{execute_parallel, execute_sequential, ToolExecContext, ToolEx
 pub use policy::{decide as approval_decision, ApprovalDecision, ApprovalMode};
 pub use question_broker::{PendingUserQuestion, UserQuestionBroker};
 pub use registry::ToolRegistry;
+pub use todo::{TodoItem, TodoSnapshot, TodoStatus, TodoWriteTool};
 pub use workspace::{BashTool, EditFileTool, GlobTool, GrepTool, ReadFileTool, WriteFileTool};

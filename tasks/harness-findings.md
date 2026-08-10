@@ -9,7 +9,7 @@ evidence prove the item.
 3. `harness-03-shell-lifecycle` — **partial** — Bash now streams stdout/stderr chunks with timeout/cancellation; background task actors remain.
 4. `harness-04-model-effort-ui` — **partial** — model metadata now supplies finite effort rows and selection; replay coverage and provider-specific wire display remain.
 5. `harness-05-context` — automatic compaction, summaries, limits, and recovery.
-6. `harness-06-plan-todos` — constrained plan mode and persistent todo state.
+6. `harness-06-plan-todos` — **partial** — replayable validated `todo_write` snapshots and plan commands exist; actor persistence and plan enforcement remain.
 7. `harness-07-subagents` — isolated coder/explore/plan agents with result delivery.
 8. `harness-08-tool-scheduler` — concurrent independent tools and serialized conflicts.
 9. `harness-09-web` — optional search, fetch, source extraction, and source cards.
