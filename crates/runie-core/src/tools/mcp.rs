@@ -141,15 +141,15 @@ impl McpStdioClient {
                 serde_json::json!({"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}),
             ])
             .await?;
-        let initialize = response_result(&responses, 1);
+        let initialize = response_result_or_error(&responses, 1, "initialize")?;
         let server_name = initialize
-            .and_then(|value| value.get("serverInfo"))
+            .get("serverInfo")
             .and_then(|value| value.get("name"))
             .and_then(serde_json::Value::as_str)
             .unwrap_or(&self.command)
             .to_owned();
-        let tools = response_result(&responses, 2)
-            .and_then(|value| value.get("tools"))
+        let tools = response_result_or_error(&responses, 2, "tools/list")?
+            .get("tools")
             .cloned()
             .ok_or("MCP tools/list response has no tools")?;
         let tools = serde_json::from_value(tools)
@@ -168,14 +168,10 @@ impl McpStdioClient {
         if tool.trim().is_empty() {
             return Err("MCP tool name must not be empty".into());
         }
-        let response = self
+        let responses = self
             .request(&[serde_json::json!({"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":tool,"arguments":arguments}})])
             .await?;
-        response
-            .into_iter()
-            .next()
-            .and_then(|value| value.get("result").cloned())
-            .ok_or("MCP tools/call response has no result".into())
+        response_result_or_error(&responses, 1, "tools/call").cloned()
     }
 
     async fn exchange(
@@ -236,6 +232,35 @@ fn response_result(responses: &[serde_json::Value], id: u64) -> Option<&serde_js
         .iter()
         .find(|response| response.get("id").and_then(serde_json::Value::as_u64) == Some(id))
         .and_then(|response| response.get("result"))
+}
+
+fn response_error(responses: &[serde_json::Value], id: u64) -> Option<String> {
+    responses
+        .iter()
+        .find(|response| response.get("id").and_then(serde_json::Value::as_u64) == Some(id))
+        .and_then(|response| response.get("error"))
+        .map(|error| {
+            let code = error.get("code").and_then(serde_json::Value::as_i64);
+            let message = error
+                .get("message")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("unknown MCP error");
+            code.map_or_else(
+                || format!("MCP error: {message}"),
+                |code| format!("MCP error {code}: {message}"),
+            )
+        })
+}
+
+fn response_result_or_error<'a>(
+    responses: &'a [serde_json::Value],
+    id: u64,
+    operation: &str,
+) -> Result<&'a serde_json::Value, String> {
+    response_result(responses, id).ok_or_else(|| {
+        response_error(responses, id)
+            .unwrap_or_else(|| format!("MCP {operation} response has no result"))
+    })
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -408,6 +433,22 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(result["content"][0]["text"], "ok");
+    }
+
+    #[tokio::test]
+    async fn stdio_call_preserves_json_rpc_error_details() {
+        let script = "while IFS= read -r line; do case \"$line\" in *tools/call*) echo '{\"id\":1,\"error\":{\"code\":-32602,\"message\":\"bad arguments\"}}';; esac; done";
+        let client = McpStdioClient::new(
+            "sh",
+            vec!["-c".into(), script.into()],
+            Duration::from_secs(1),
+        )
+        .unwrap();
+        let error = client
+            .call_tool("echo", serde_json::json!({}))
+            .await
+            .unwrap_err();
+        assert_eq!(error, "MCP error -32602: bad arguments");
     }
 
     #[tokio::test]
