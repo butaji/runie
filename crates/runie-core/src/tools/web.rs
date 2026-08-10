@@ -3,6 +3,8 @@
 use crate::types::{AgentTool, AgentToolResult, ToolResultContent};
 use std::time::Duration;
 
+const MAX_WEB_SEARCH_RESPONSE_BYTES: usize = 1_048_576;
+
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct WebSearchResult {
     pub title: String,
@@ -86,10 +88,14 @@ impl WebSearchHttpClient {
             .await
             .map_err(|error| format!("web search request: {error}"))?;
         let status = response.status();
+        if let Some(length) = response.content_length() {
+            validate_response_size(length as usize)?;
+        }
         let body = response
             .text()
             .await
             .map_err(|error| format!("web search body: {error}"))?;
+        validate_response_size(body.len())?;
         if !status.is_success() {
             return Err(format!("web search HTTP status {status}: {body}"));
         }
@@ -105,6 +111,16 @@ impl WebSearchHttpClient {
             })
         })
     }
+}
+
+fn validate_response_size(bytes: usize) -> Result<(), String> {
+    if bytes > MAX_WEB_SEARCH_RESPONSE_BYTES {
+        return Err(format!(
+            "web search response exceeds {} bytes",
+            MAX_WEB_SEARCH_RESPONSE_BYTES
+        ));
+    }
+    Ok(())
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -216,6 +232,12 @@ mod tests {
         assert_eq!(cards[0].rank, 1);
         assert_eq!(cards[0].title, "https://one.test");
         assert_eq!(cards[1].rank, 3);
+    }
+
+    #[test]
+    fn response_size_boundary_rejects_unbounded_provider_data() {
+        assert!(validate_response_size(MAX_WEB_SEARCH_RESPONSE_BYTES).is_ok());
+        assert!(validate_response_size(MAX_WEB_SEARCH_RESPONSE_BYTES + 1).is_err());
     }
 
     #[tokio::test]
