@@ -13,7 +13,7 @@ evidence prove the item.
 7. `harness-07-subagents` — **partial** — typed explore/plan/code requests now execute through an owned loop hook and return messages; role-specific isolation and result replay remain.
 8. `harness-08-tool-scheduler` — **partial** — independent read/search tools remain parallel while mutations and subagents are serialized; resource-key conflict scheduling remains.
 9. `harness-09-web` — typed bounded `web_search` contract and executor hook; transport, fetch, citations, and source cards remain.
-10. `harness-10-mcp` — MCP discovery, transports, auth, registration, and cleanup.
+10. `harness-10-mcp` — **partial** — typed server/tool data, qualified dynamic tool registration, and owner-supplied call hook exist; discovery, stdio/HTTP transports, auth, and cleanup remain.
 11. `harness-11-plugins` — installable skills, commands, tools, and hooks.
 12. `harness-12-git` — status, diff, patch review, worktrees, and safe commit preparation.
 13. `harness-13-sessions` — resume, fork, rename, undo, export, and session search UX.
