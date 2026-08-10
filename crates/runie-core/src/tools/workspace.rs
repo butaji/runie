@@ -325,6 +325,8 @@ impl AgentTool for BashTool {
             serde_json::json!({
                 "stdout": result.stdout,
                 "stderr": result.stderr,
+                "stdout_summary": summarize_workspace_output(&result.stdout, false),
+                "stderr_summary": summarize_workspace_output(&result.stderr, false),
                 "exit_code": result.exit_code,
                 "timed_out": false,
                 "cancelled": false,

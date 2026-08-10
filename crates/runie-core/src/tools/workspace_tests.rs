@@ -122,6 +122,8 @@ async fn bash_returns_output_and_surfaces_failures() {
     assert_eq!(text, "onetwo");
     assert_eq!(result.details["stdout"], "one");
     assert_eq!(result.details["stderr"], "two");
+    assert_eq!(result.details["stdout_summary"]["bytes"], 3);
+    assert_eq!(result.details["stderr_summary"]["lines"], 1);
     assert_eq!(result.details["exit_code"], 0);
     assert!(updates
         .lock()
