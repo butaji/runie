@@ -119,7 +119,6 @@ pub enum ScrollbackMsg {
 /// Grouped domain events preserve producer intent while the compatibility
 /// reducer continues to consume the legacy message vocabulary.
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(dead_code, reason = "grouped compatibility bridge is adopted incrementally")]
 pub enum ScrollbackEvent {
     Lifecycle(ScrollbackLifecycleEvent),
     Tool(ScrollbackToolEvent),
@@ -127,11 +126,9 @@ pub enum ScrollbackEvent {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(dead_code, reason = "grouped compatibility bridge is adopted incrementally")]
 pub enum ScrollbackLifecycleEvent { TurnStarted, TurnEnded, AssistantStarted, AssistantEnded, Cleared }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(dead_code, reason = "grouped compatibility bridge is adopted incrementally")]
 pub enum ScrollbackToolEvent {
     Started { tool_call_id: String, header: String, activity: Option<String> },
     Updated { tool_call_id: String, header: Option<String>, output: Vec<String> },
@@ -139,7 +136,6 @@ pub enum ScrollbackToolEvent {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(dead_code, reason = "grouped compatibility bridge is adopted incrementally")]
 pub enum ScrollbackWorkflowEvent {
     Started { run_id: String, name: String, objective: String },
     Progress { run_id: String, phase: String, state: String, active_agents: u32 },
@@ -147,7 +143,6 @@ pub enum ScrollbackWorkflowEvent {
 }
 
 impl ScrollbackEvent {
-    #[allow(dead_code, reason = "grouped compatibility bridge is adopted incrementally")]
     pub fn into_messages(self) -> Vec<ScrollbackMsg> {
         let message = match self {
             Self::Lifecycle(event) => match event {

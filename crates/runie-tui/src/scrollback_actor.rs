@@ -6,17 +6,17 @@ use tokio::sync::{mpsc, oneshot, watch};
 
 use runie_core::types::AgentEvent;
 use runie_core::{
-    mailbox_ack, spawn_actor_worker, spawn_owned_worker, task_owner::TaskOwner, EventMemo,
-    SharedSnapshot,
+    mailbox_ack, spawn_owned_worker, task_owner::TaskOwner, EventMemo, SharedSnapshot,
 };
 
 use crate::widgets::{FeedSnapshot, Scrollback, ScrollbackMsg};
-use runie_tui_model::FeedState;
+use runie_tui_model::{FeedState, ScrollbackEvent};
 
 use crate::scrollback_projection::{run_bus_projection, OwnedEventProjection};
 
 pub(crate) enum Command {
     ApplyBatch(Vec<ScrollbackMsg>, oneshot::Sender<()>),
+    ApplyGrouped(ScrollbackEvent, oneshot::Sender<()>),
     ApplyEvent(Box<AgentEvent>, oneshot::Sender<()>),
 }
 
@@ -29,49 +29,52 @@ pub struct ScrollbackActor {
     _bus_owner: Option<Arc<TaskOwner>>,
 }
 
+async fn run_scrollback_worker(
+    mut rx: mpsc::Receiver<Command>,
+    snapshot_tx: watch::Sender<FeedSnapshot>,
+    shared_tx: watch::Sender<SharedSnapshot<FeedSnapshot>>,
+) {
+    let mut memo = EventMemo::new(FeedState::default());
+    let workspace = tokio::task::spawn_blocking(|| {
+        std::env::current_dir()
+            .ok()
+            .map(|path| path.to_string_lossy().into_owned())
+            .unwrap_or_default()
+    })
+    .await
+    .unwrap_or_default();
+    let mut projection = OwnedEventProjection::new(workspace);
+    while let Some(command) = rx.recv().await {
+        let (messages, reply) = match command {
+            Command::ApplyBatch(messages, reply) => (messages, reply),
+            Command::ApplyGrouped(event, reply) => (event.into_messages(), reply),
+            Command::ApplyEvent(event, reply) => (projection.messages(*event), reply),
+        };
+        for message in messages {
+            memo = memo.apply(message, |state, message| state.reduce(message.clone()));
+        }
+        let next_snapshot = memo.state().snapshot();
+        let _ = snapshot_tx.send(next_snapshot.clone());
+        let _ = shared_tx.send(SharedSnapshot::new(next_snapshot));
+        let _ = reply.send(());
+    }
+}
 impl ScrollbackActor {
     #[allow(clippy::too_many_lines)]
     pub fn new() -> Self {
         let (snapshot_tx, snapshot) = watch::channel(FeedState::default().snapshot());
-        let (shared_tx, shared_snapshot) =
+        let (shared_tx, shared) =
             watch::channel(SharedSnapshot::new(FeedState::default().snapshot()));
-        let (tx, owner) = spawn_actor_worker!(32, |mut rx: mpsc::Receiver<Command>| async move {
-            let mut memo = EventMemo::new(FeedState::default());
-            let workspace = tokio::task::spawn_blocking(|| {
-                std::env::current_dir()
-                    .ok()
-                    .map(|path| path.to_string_lossy().into_owned())
-                    .unwrap_or_default()
-            })
-            .await
-            .unwrap_or_default();
-            let mut projection = OwnedEventProjection::new(workspace);
-            while let Some(command) = rx.recv().await {
-                let (messages, reply) = match command {
-                    Command::ApplyBatch(messages, reply) => (messages, reply),
-                    Command::ApplyEvent(event, reply) => {
-                        let messages = projection.messages(*event);
-                        (messages, reply)
-                    }
-                };
-                for message in messages {
-                    memo = memo.apply(message, |state, message| state.reduce(message.clone()));
-                }
-                let next_snapshot = memo.state().snapshot();
-                let _ = snapshot_tx.send(next_snapshot.clone());
-                let _ = shared_tx.send(SharedSnapshot::new(next_snapshot));
-                let _ = reply.send(());
-            }
-        });
+        let (tx, rx) = mpsc::channel(32);
+        let owner = spawn_owned_worker!(run_scrollback_worker(rx, snapshot_tx, shared_tx));
         Self {
             tx,
             snapshot,
-            shared_snapshot,
+            shared_snapshot: shared,
             _owner: owner,
             _bus_owner: None,
         }
     }
-
     pub fn new_with_bus(bus: &runie_core::events::EventBus) -> Self {
         let mut actor = Self::new();
         let events = bus.subscribe();
@@ -79,15 +82,15 @@ impl ScrollbackActor {
         actor._bus_owner = Some(spawn_owned_worker!(run_bus_projection(events, tx)));
         actor
     }
-
     pub async fn apply(&self, message: ScrollbackMsg) {
         self.apply_batch(vec![message]).await;
     }
-
     pub async fn apply_batch(&self, messages: Vec<ScrollbackMsg>) {
         let _ = mailbox_ack!(self.tx, |reply| Command::ApplyBatch(messages, reply));
     }
-
+    pub async fn apply_grouped(&self, event: ScrollbackEvent) {
+        let _ = mailbox_ack!(self.tx, |reply| Command::ApplyGrouped(event, reply));
+    }
     /// Non-blocking render-time delivery for measurements. Rendering must not
     /// await an actor, but the measurement still crosses the same mailbox
     /// boundary instead of mutating a widget-owned model.
@@ -97,7 +100,6 @@ impl ScrollbackActor {
             .try_send(Command::ApplyBatch(vec![message], reply))
             .is_ok()
     }
-
     pub async fn apply_event(&self, event: &AgentEvent) {
         let _ = mailbox_ack!(self.tx, |reply| Command::ApplyEvent(
             Box::new(event.clone()),
@@ -127,6 +129,10 @@ impl Default for ScrollbackActor {
 include!("scrollback_shared.rs");
 
 #[cfg(test)]
+#[path = "scrollback_actor_grouped_tests.rs"]
+mod grouped_tests;
+
+#[cfg(test)]
 mod tests {
     use super::ScrollbackActor;
     use crate::widgets::{Line, LineKind, Scrollback, ScrollbackMsg};
@@ -144,7 +150,6 @@ mod tests {
             .await;
         assert_eq!(actor.snapshot().lines()[index].text, "hello");
     }
-
     #[tokio::test]
     async fn actor_publishes_renderer_independent_model_snapshot() {
         let actor = ScrollbackActor::new();
@@ -156,7 +161,6 @@ mod tests {
         assert_eq!(snapshot.lines[0].text, "hello");
         assert!(!snapshot.is_empty());
     }
-
     #[tokio::test]
     async fn bus_owned_actor_clears_on_reset() {
         let bus = runie_core::events::EventBus::new();
@@ -176,7 +180,6 @@ mod tests {
             .expect("scrollback reset projection");
         assert!(actor.snapshot().lines().is_empty());
     }
-
     #[tokio::test]
     async fn bus_owned_actor_projects_theme_changes() {
         let bus = runie_core::events::EventBus::new();
@@ -194,7 +197,6 @@ mod tests {
             runie_core::types::ThemeKind::GrokDay
         );
     }
-
     #[tokio::test]
     async fn bus_owned_actor_does_not_replay_transcript_messages() {
         let bus = runie_core::events::EventBus::new();
@@ -221,7 +223,6 @@ mod tests {
             runie_core::types::ThemeKind::GrokDay
         );
     }
-
     #[tokio::test]
     async fn bus_owned_actor_projects_background_lifecycle() {
         let bus = runie_core::events::EventBus::new();
