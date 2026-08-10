@@ -1,9 +1,11 @@
 //! Tool executor: preflight + sequential/parallel dispatch.
 
 pub mod actor;
+pub mod ask_user;
 pub mod executor;
 pub mod path_policy;
 pub mod policy;
+pub mod question_broker;
 pub mod registry;
 pub mod workspace;
 
@@ -16,7 +18,9 @@ macro_rules! register_tools {
 }
 
 pub use actor::{ToolCommand, ToolExecutorActor, ToolOutcome};
+pub use ask_user::{AskUserQuestionTool, UserQuestionOption, UserQuestionRequest};
 pub use executor::{execute_parallel, execute_sequential, ToolExecContext, ToolExecHooks};
 pub use policy::{decide as approval_decision, ApprovalDecision, ApprovalMode};
+pub use question_broker::{PendingUserQuestion, UserQuestionBroker};
 pub use registry::ToolRegistry;
 pub use workspace::{BashTool, EditFileTool, GlobTool, GrepTool, ReadFileTool, WriteFileTool};

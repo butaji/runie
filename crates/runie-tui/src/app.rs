@@ -414,6 +414,7 @@ pub struct App {
     pub model_catalog: runie_core::model_catalog::ModelCatalogActor,
     pub provider_registry: runie_core::provider_registry::ProviderRegistryActor,
     pub command_actor: runie_core::command_actor::CommandActor,
+    pub question_broker: runie_core::tools::UserQuestionBroker,
     submission_tx: SubmissionTx,
     _submission_owner: std::sync::Arc<runie_core::task_owner::TaskOwner>,
 }

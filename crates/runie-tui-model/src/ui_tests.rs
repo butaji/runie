@@ -303,3 +303,29 @@ fn every_overlay_toggle_uses_the_dialog_stack() {
     assert!(state.session_info_open);
     assert!(state.changelog_open);
 }
+
+#[test]
+fn user_question_dialog_selects_and_projects_answer() {
+    let question = runie_core::tools::PendingUserQuestion {
+        id: "q1".into(),
+        request: runie_core::tools::UserQuestionRequest {
+            question: "Continue?".into(),
+            options: vec![
+                runie_core::tools::UserQuestionOption {
+                    label: "Yes".into(),
+                    description: String::new(),
+                },
+                runie_core::tools::UserQuestionOption {
+                    label: "No".into(),
+                    description: String::new(),
+                },
+            ],
+            allow_multiple: false,
+        },
+    };
+    let state = UiState::new()
+        .update(UiMsg::OpenUserQuestion(question))
+        .update(UiMsg::UserQuestionMove(1));
+    assert_eq!(state.dialog_stack.top_id(), Some("user-question"));
+    assert_eq!(state.dialog_stack.top().unwrap().selected, 1);
+}

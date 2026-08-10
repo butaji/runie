@@ -17,6 +17,8 @@ fn is_overlay_message(msg: &UiMsg) -> bool {
             | UiMsg::PaletteParameterMove(_)
             | UiMsg::PaletteParameterPreview
             | UiMsg::PaletteParameterSubmit
+            | UiMsg::UserQuestionMove(_)
+            | UiMsg::SubmitUserQuestion
     )
 }
 

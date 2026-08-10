@@ -31,7 +31,16 @@ pub struct ToolExecHooks {
     pub approval_mode: ApprovalMode,
     pub before_tool_call: Option<BeforeToolCallHook>,
     pub after_tool_call: Option<AfterToolCallHook>,
+    pub ask_user_question: Option<AskUserQuestionHook>,
 }
+
+pub type AskUserQuestionHook = Arc<
+    dyn Fn(
+            crate::tools::UserQuestionRequest,
+        ) -> Pin<Box<dyn Future<Output = Result<serde_json::Value, String>> + Send>>
+        + Send
+        + Sync,
+>;
 
 pub type BeforeToolCallHook = Arc<
     dyn Fn(BeforeToolCallContext) -> Pin<Box<dyn Future<Output = BeforeToolCallResult> + Send>>
@@ -430,15 +439,34 @@ async fn execute_tool(
     ctx: &ToolExecContext,
     signal: tokio_util::sync::CancellationToken,
 ) -> Result<AgentToolResult, String> {
+    if call.name == "ask_user_question" {
+        return execute_question(call, ctx).await;
+    }
+    let settled = Arc::new(AtomicBool::new(false));
+    let on_update = tool_update_callback(call, ctx, settled.clone());
+    let tool_future = tool.execute(
+        &call.id,
+        call.arguments.clone(),
+        Some(signal.clone()),
+        Some(on_update),
+    );
+    let result = await_tool_result(tool_future, ctx.abort.clone(), signal.clone()).await;
+    settled.store(true, Ordering::Release);
+    result
+}
+
+fn tool_update_callback(
+    call: &ToolCall,
+    ctx: &ToolExecContext,
+    settled: Arc<AtomicBool>,
+) -> Box<dyn Fn(serde_json::Value) + Send + Sync> {
     let updates = ctx.updates.clone();
     let bus = ctx.bus.clone();
     let update_call = call.clone();
-    let settled = Arc::new(AtomicBool::new(false));
-    let callback_settled = settled.clone();
-    let on_update = Box::new(move |partial_result| {
+    Box::new(move |partial_result| {
         // Pi scopes updates to the execute promise. A callback retained by a
         // tool after it settles must become a no-op, even if it fires later.
-        if !tool_update_is_live(&callback_settled) {
+        if !tool_update_is_live(&settled) {
             return;
         }
         let event = crate::types::AgentEvent::ToolExecutionUpdate {
@@ -452,14 +480,17 @@ async fn execute_tool(
         } else if let Some(updates) = &updates {
             updates.lock().expect("tool update event lock").push(event);
         }
-    });
-    let tool_future = tool.execute(
-        &call.id,
-        call.arguments.clone(),
-        Some(signal.clone()),
-        Some(on_update),
-    );
-    let result = await_tool_result(tool_future, ctx.abort.clone(), signal.clone()).await;
-    settled.store(true, Ordering::Release);
-    result
+    })
+}
+
+async fn execute_question(
+    call: &ToolCall,
+    ctx: &ToolExecContext,
+) -> Result<AgentToolResult, String> {
+    let Some(hook) = &ctx.hooks.ask_user_question else {
+        return Err("ask_user_question requires an interactive question hook".into());
+    };
+    let request = serde_json::from_value(call.arguments.clone())
+        .map_err(|error| format!("invalid question: {error}"))?;
+    Ok(crate::tools::ask_user::answer_result(hook(request).await?))
 }

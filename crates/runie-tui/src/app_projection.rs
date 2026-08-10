@@ -25,6 +25,7 @@ pub(super) fn ui_command_for(state: &UiState, message: &UiMsg) -> Option<UiComma
         UiMsg::CopyText(text) => Some(UiCommand::CopyText(text.clone())),
         UiMsg::PaletteParameterSubmit => parameter_command(state),
         UiMsg::PaletteParameterPreview => parameter_command(state),
+        UiMsg::SubmitUserQuestion => question_command(state),
         UiMsg::ActivateCommandPalette => palette_command_for(state, message),
         UiMsg::HideWelcome
         | UiMsg::ToggleShortcuts
@@ -40,6 +41,8 @@ pub(super) fn ui_command_for(state: &UiState, message: &UiMsg) -> Option<UiComma
         | UiMsg::PaletteParameterChar(_)
         | UiMsg::PaletteParameterBackspace
         | UiMsg::PaletteParameterMove(_)
+        | UiMsg::UserQuestionMove(_)
+        | UiMsg::OpenUserQuestion(_)
         | UiMsg::ToggleModelSelector
         | UiMsg::ModelSelectorChar(_)
         | UiMsg::ModelSelectorBackspace
@@ -55,6 +58,19 @@ pub(super) fn ui_command_for(state: &UiState, message: &UiMsg) -> Option<UiComma
         | UiMsg::ToggleChangelog
         | UiMsg::Reset => None,
     }
+}
+
+fn question_command(state: &UiState) -> Option<UiCommand> {
+    let question = state.user_question.as_ref()?;
+    let selected = state
+        .dialog_stack
+        .top()
+        .map(|frame| frame.selected)
+        .unwrap_or_default();
+    Some(UiCommand::AnswerUserQuestion {
+        id: question.id.clone(),
+        answer: serde_json::json!({"answers": [question.request.options.get(selected).map(|option| option.label.clone()).unwrap_or_default()]}),
+    })
 }
 
 fn parameter_command(state: &UiState) -> Option<UiCommand> {

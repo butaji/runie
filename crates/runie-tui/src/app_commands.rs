@@ -1,6 +1,18 @@
 use super::*;
 impl App {
     pub fn new(loop_actor: LoopActor, bus: EventBus) -> Self {
+        Self::new_with_broker(
+            loop_actor,
+            bus,
+            runie_core::tools::UserQuestionBroker::default(),
+        )
+    }
+
+    pub fn new_with_broker(
+        loop_actor: LoopActor,
+        bus: EventBus,
+        question_broker: runie_core::tools::UserQuestionBroker,
+    ) -> Self {
         let ui = UiActor::new(&bus);
         let (submission_tx, submission_owner) = submission_actor(loop_actor.clone());
         Self {
@@ -21,6 +33,7 @@ impl App {
                 runie_core::provider_registry::ProviderRegistryState::default(),
             ),
             command_actor: runie_core::command_actor::CommandActor::new(),
+            question_broker,
             submission_tx,
             _submission_owner: submission_owner,
         }
@@ -45,6 +58,7 @@ impl App {
                 runie_core::provider_registry::ProviderRegistryState::default(),
             ),
             command_actor: runie_core::command_actor::CommandActor::new(),
+            question_broker: runie_core::tools::UserQuestionBroker::default(),
             submission_tx,
             _submission_owner: submission_owner,
         }

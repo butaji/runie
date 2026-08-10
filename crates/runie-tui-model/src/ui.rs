@@ -5,7 +5,7 @@ use runie_core::types::AgentEvent;
 use crate::{
     DialogSpec, DialogStack, CHANGELOG_DIALOG, COMMAND_DIALOG, COMMAND_RESULT_DIALOG,
     FILE_SELECTOR_DIALOG, MODEL_SELECTOR_DIALOG, PALETTE_PARAMETERS_DIALOG, SESSION_DIALOG,
-    SHORTCUTS_DIALOG,
+    SHORTCUTS_DIALOG, USER_QUESTION_DIALOG,
 };
 
 pub use crate::palette_meta::palette_display_rows;
@@ -129,6 +129,7 @@ pub struct UiState {
     pub dialog_stack: DialogStack,
     pub palette_parameter_action: Option<PaletteAction>,
     pub command_result: Option<String>,
+    pub user_question: Option<runie_core::tools::PendingUserQuestion>,
 }
 
 impl UiState {
@@ -171,6 +172,9 @@ impl UiState {
             | UiMsg::PaletteParameterMove(_)
             | UiMsg::PaletteParameterPreview
             | UiMsg::PaletteParameterSubmit => self.update_parameters(msg),
+            UiMsg::UserQuestionMove(_) | UiMsg::SubmitUserQuestion => {
+                self.update_user_question(msg)
+            }
             _ => None,
         }
     }
@@ -234,6 +238,10 @@ impl UiState {
 
     fn update_data(&mut self, msg: UiMsg) {
         match msg {
+            UiMsg::OpenUserQuestion(question) => {
+                self.user_question = Some(question);
+                self.dialog_stack.push(USER_QUESTION_DIALOG);
+            }
             UiMsg::OpenFileDialog => self.dialog_stack.push(FILE_SELECTOR_DIALOG),
             UiMsg::OpenPaletteParameters(action) => {
                 self.palette_parameter_action = Some(action);
@@ -259,6 +267,7 @@ impl UiState {
                 self.dialog_stack.push(COMMAND_RESULT_DIALOG);
             }
             UiMsg::Reset => *self = Self::new(),
+            UiMsg::UserQuestionMove(_) | UiMsg::SubmitUserQuestion => unreachable!(),
             UiMsg::CopyText(_) => {}
             _ => unreachable!("overlay or toggle message handled above"),
         }
@@ -350,6 +359,7 @@ impl UiState {
         self.changelog_open = false;
         self.palette_parameter_action = None;
         self.command_result = None;
+        self.user_question = None;
     }
 
     fn update_palette(mut self, msg: UiMsg) -> Option<Self> {
@@ -415,6 +425,25 @@ impl UiState {
             UiMsg::ModelSelectorEscape => self.escape_model_selector(),
             UiMsg::ModelSelectorToggleScope => self.toggle_model_scope(),
             UiMsg::ActivateModelSelector => self.activate_model_selector(),
+            _ => return None,
+        }
+        Some(self)
+    }
+
+    fn update_user_question(mut self, msg: UiMsg) -> Option<Self> {
+        let question = self.user_question.as_ref()?;
+        match msg {
+            UiMsg::UserQuestionMove(delta) => {
+                let frame = self.dialog_stack.top_mut()?;
+                frame.selected = crate::wrap_dialog_selection(
+                    frame.selected,
+                    delta,
+                    question.request.options.len(),
+                );
+            }
+            UiMsg::SubmitUserQuestion => {
+                self.dialog_stack.pop();
+            }
             _ => return None,
         }
         Some(self)

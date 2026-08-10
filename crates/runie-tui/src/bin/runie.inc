@@ -26,6 +26,7 @@ use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::Terminal;
+use ratatui::widgets::Widget;
 use runie_core::commands::{classify_builtin_command, BuiltinCommandDisposition};
 use runie_core::events::EventBus;
 use runie_core::provider::codex::CodexWebSocketAdapter;
@@ -37,7 +38,7 @@ use runie_core::state::AgentStateActor;
 use runie_core::tools::executor::ToolExecHooks;
 use runie_core::tools::ToolExecutorActor;
 use runie_core::tools::ToolRegistry;
-use runie_core::tools::{ApprovalMode, BashTool, EditFileTool, GlobTool, GrepTool, ReadFileTool, WriteFileTool};
+use runie_core::tools::{ApprovalMode, AskUserQuestionTool, BashTool, EditFileTool, GlobTool, GrepTool, ReadFileTool, WriteFileTool};
 use runie_core::types::{
     AgentContext, AgentTool, AgentToolResult, AssistantMessage, AssistantMessageEvent, Model,
     QueueMode, SimpleStreamOptions, StopReason, ThemeKind, ToolCall, ToolExecutionMode,
@@ -957,6 +958,25 @@ fn render_command_result_dialog(
     );
 }
 
+fn render_user_question(
+    area: Rect,
+    buf: &mut Buffer,
+    ui: &runie_tui::app::UiState,
+    theme: runie_core::types::ThemeKind,
+) {
+    let Some(question) = ui.user_question.as_ref() else { return };
+    let rows = std::iter::once(question.request.question.clone())
+        .chain(question.request.options.iter().map(|option| option.label.clone()))
+        .collect();
+    let selected = ui.dialog_stack.top().map(|frame| frame.selected).unwrap_or_default() + 1;
+    let frame = runie_tui_model::DialogFrame {
+        spec: runie_tui_model::USER_QUESTION_DIALOG,
+        query: String::new(),
+        selected,
+    };
+    runie_tui::widgets::DialogWidget::new(frame, rows).with_theme(theme).render(area, buf);
+}
+
 fn render_palette_parameters(
     area: Rect,
     buf: &mut Buffer,
@@ -1210,6 +1230,7 @@ fn restore_terminal(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result
 
 async fn build_live_app() -> App {
     let bus = EventBus::new();
+    let question_broker = runie_core::tools::UserQuestionBroker::default();
     let state = AgentStateActor::new();
     let steering = SteeringQueueActor::new();
     let follow_up = FollowUpQueueActor::new();
@@ -1221,7 +1242,8 @@ async fn build_live_app() -> App {
         EditFileTool,
         GrepTool,
         GlobTool,
-        BashTool
+        BashTool,
+        AskUserQuestionTool
     );
     tools.register(std::sync::Arc::new(ListDirectoryTool));
     if std::env::var("MINIMAX_ENABLE_ECHO_TOOL").is_ok_and(|value| value == "1") {
@@ -1243,7 +1265,17 @@ async fn build_live_app() -> App {
         provider,
         bus: bus.clone(),
         subscribers: runie_core::events::SubscriberRegistry::new(),
-        hooks: ToolExecHooks { approval_mode: ApprovalMode::Auto, ..ToolExecHooks::default() },
+        hooks: ToolExecHooks {
+            approval_mode: ApprovalMode::Auto,
+            ask_user_question: Some({
+                let broker = question_broker.clone();
+                std::sync::Arc::new(move |request| {
+                    let broker = broker.clone();
+                    Box::pin(async move { broker.ask(request).await })
+                })
+            }),
+            ..ToolExecHooks::default()
+        },
         turn_hooks: runie_core::hooks::TurnHooks::default(),
         transform_context: None,
         api_key_resolver: None,
@@ -1254,7 +1286,7 @@ async fn build_live_app() -> App {
         steering_mode: QueueMode::OneAtATime,
         follow_up_mode: QueueMode::OneAtATime,
     };
-    let mut app = App::new(LoopActor::new(deps), bus);
+    let mut app = App::new_with_broker(LoopActor::new(deps), bus, question_broker);
     app.provider_registry = provider_registry;
     app
 }
@@ -1368,6 +1400,7 @@ async fn run_app(
                 document.props.ui.command_result.as_deref().unwrap_or(""),
                 status.theme(),
             ),
+            Some("user-question") => render_user_question(frame.area(), frame.buffer_mut(), &document.props.ui, status.theme()),
             Some("model") => render_model_selector(
                 frame.area(),
                 frame.buffer_mut(),
@@ -1564,6 +1597,26 @@ async fn run_app(
                 app.set_theme(theme).await;
             }
             app.ui.send(runie_tui_model::UiMsg::CloseDialogs).await;
+            return Ok(ui_commands);
+        }
+        if app.ui.snapshot().dialog_stack.top_id() == Some("user-question") {
+            let question = app.ui.snapshot().user_question.clone();
+            match key.code {
+                KeyCode::Up => app.ui.send(runie_tui_model::UiMsg::UserQuestionMove(-1)).await,
+                KeyCode::Down => app.ui.send(runie_tui_model::UiMsg::UserQuestionMove(1)).await,
+                KeyCode::Enter => {
+                    app.ui.send(runie_tui_model::UiMsg::SubmitUserQuestion).await;
+                    if let Ok(UiCommand::AnswerUserQuestion { id, answer }) = ui_commands.recv().await {
+                        let _ = app.question_broker.answer(&id, answer);
+                    }
+                    app.ui.send(runie_tui_model::UiMsg::CloseDialogs).await;
+                }
+                KeyCode::Esc => {
+                    if let Some(question) = question { let _ = app.question_broker.answer(&question.id, serde_json::json!({"cancelled": true})); }
+                    app.ui.send(runie_tui_model::UiMsg::CloseDialogs).await;
+                }
+                _ => {}
+            }
             return Ok(ui_commands);
         }
         if key.code == KeyCode::Esc && !app.ui.snapshot().dialog_stack.is_empty() {
@@ -2004,6 +2057,9 @@ async fn run_app(
         color_level: runie_tui::terminal_color::ColorLevel,
         placeholder_hidden: &mut bool,
     ) -> Result<(), String> {
+        if let Some(question) = app.question_broker.try_next() {
+            app.ui.send(runie_tui_model::UiMsg::OpenUserQuestion(question)).await;
+        }
         let model = app.model_snapshot();
         let settled = matches!(model.status.state, Status::Ready) && !model.feed.is_empty();
         if settled != *placeholder_hidden {
@@ -2097,6 +2153,7 @@ async fn run_app(
                         document.props.ui.command_result.as_deref().unwrap_or(""),
                         status.theme(),
                     ),
+                    Some("user-question") => render_user_question(frame_area, buf, &document.props.ui, status.theme()),
                     Some("model") => render_model_selector(frame_area, buf, &document.props.ui, status.theme()),
                     Some("session") => {
                         let session = app.session_snapshot();

@@ -10,6 +10,7 @@ pub enum UiCommand {
         action: PaletteAction,
         value: String,
     },
+    AnswerUserQuestion { id: String, answer: serde_json::Value },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -46,4 +47,7 @@ pub enum UiMsg {
     ToggleChangelog,
     CopyText(String),
     Reset,
+    OpenUserQuestion(runie_core::tools::PendingUserQuestion),
+    UserQuestionMove(isize),
+    SubmitUserQuestion,
 }

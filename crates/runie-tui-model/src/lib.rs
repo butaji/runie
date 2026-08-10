@@ -26,7 +26,7 @@ pub use dialog::{
 pub use dialog_specs::{
     CHANGELOG_DIALOG, COMMAND_DIALOG, COMMAND_RESULT_DIALOG, FILE_SELECTOR_DIALOG,
     MODEL_SELECTOR_DIALOG, PALETTE_PARAMETERS_DIALOG, SESSION_DIALOG, SHORTCUTS_DIALOG,
-    THEME_SELECTOR_DIALOG,
+    THEME_SELECTOR_DIALOG, USER_QUESTION_DIALOG,
 };
 pub use events::{
     event_projection_scope, is_actor_feed_event, project_event, scrollback_messages_for_event,
