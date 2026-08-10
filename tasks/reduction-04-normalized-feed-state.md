@@ -42,6 +42,9 @@ Remaining work is removal of duplicated derived indexes and normalization of
 individual line/tool records.
 Tool-header and tool-line classification is now owned by `LineKind` predicates,
 so feed update, selection, error, and rendering paths share one vocabulary.
+Live-header classification (`Tool`/`ToolRunning`) is also centralized, keeping
+settled errors distinct while removing repeated matches from tool-card and
+selection projections.
 
 Acceptance: snapshot parity, replay parity, and no stale derived index after
 insert/update/remove sequences.

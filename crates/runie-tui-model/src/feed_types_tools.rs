@@ -107,7 +107,7 @@ fn tool_member_key(lines: &[Line], line_index: usize) -> (String, Option<u64>) {
         .rev()
         .find(|(_, candidate)| {
             candidate.tool_call_id.as_deref() == Some(id)
-                && matches!(candidate.kind, LineKind::Tool | LineKind::ToolRunning)
+                && candidate.kind.is_live_tool_header()
         });
     (
         id.to_owned(),
@@ -202,7 +202,7 @@ fn project_tool_card_row(
 
 fn card_row_kind(line: &Line, card_kind: ToolCardKind) -> Option<ToolCardRowKind> {
     match line.kind {
-        LineKind::Tool | LineKind::ToolRunning if !line.text.trim_end().ends_with('✗') => {
+        kind if kind.is_live_tool_header() && !line.text.trim_end().ends_with('✗') => {
             Some(ToolCardRowKind::Header)
         }
         LineKind::ToolError | LineKind::Tool => Some(ToolCardRowKind::Status),
@@ -312,10 +312,7 @@ fn project_tool_block_line(
 }
 
 fn is_tool_header_line(line: &Line) -> bool {
-    matches!(
-        line.kind,
-        LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
-    )
+    line.kind.is_tool_header()
 }
 
 fn find_tool_block(
@@ -368,7 +365,7 @@ fn update_tool_block(
     tool_modes: &HashMap<String, ToolDisplayMode>,
 ) {
     match line.kind {
-        LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError => {
+        kind if kind.is_tool_header() => {
             block.header = line.text.clone();
             let name = tool_names
                 .tool_name(&block.tool_call_id)

@@ -112,6 +112,10 @@ impl LineKind {
         matches!(self, Self::Tool | Self::ToolRunning | Self::ToolError)
     }
 
+    pub const fn is_live_tool_header(self) -> bool {
+        matches!(self, Self::Tool | Self::ToolRunning)
+    }
+
     pub const fn is_tool_line(self) -> bool {
         self.is_tool_header() || matches!(self, Self::ToolOutput | Self::ToolResult)
     }

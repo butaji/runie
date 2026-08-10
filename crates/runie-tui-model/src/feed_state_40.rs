@@ -4,10 +4,7 @@ impl FeedState {
             line.tool_row_id.is_some()
                 && line.is_tool_row_active()
                 && line.tool_call_id.as_deref() == Some(id)
-                && matches!(
-                    line.kind,
-                    LineKind::Tool | LineKind::ToolRunning | LineKind::ToolError
-                )
+                && line.kind.is_tool_header()
         })
     }
 }

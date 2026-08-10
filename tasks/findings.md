@@ -80,6 +80,9 @@ As of 2026-08-09, the reduction work has these verified results:
 - `LineKind` now owns shared tool-header/tool-line predicates used by feed
   mutation, selection, error, and rendering paths; the model suite passes 193
   tests after the consolidation.
+- Live tool-header classification is shared by tool-card, row-selection, and
+  replacement projections, preserving the distinction between running and
+  settled error rows.
 - `component_specs!` generates the declarative component ownership table.
 - `event_trace!` reduces pure replay-test boilerplate.
 - `cargo test --workspace --quiet` passes across the current workspace.
