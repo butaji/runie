@@ -19,6 +19,8 @@ shared status projection for animation-demand reads.
 `ScrollbackActor` now publishes the same shared projection alongside its
 compatibility-owned channel, with an event-driven subscription test.
 The live renderer uses the shared feed projection for animation-demand reads.
+The prompt actor now publishes the same shared projection alongside its
+compatibility-owned channel, with focused actor coverage for shared reads.
 
 Acceptance: snapshot isolation tests, allocation-sensitive focused benchmark,
 and workspace tests.

@@ -191,6 +191,7 @@ enum PromptMsg {
 pub struct PromptActor {
     tx: mpsc::Sender<PromptMsg>,
     snapshot: watch::Receiver<PromptSnapshot>,
+    shared_snapshot: watch::Receiver<runie_core::SharedSnapshot<PromptSnapshot>>,
     _owner: std::sync::Arc<runie_core::task_owner::TaskOwner>,
     /// Atomic counter incremented for every event drained from the bus
     /// subscriber. Tests rely on this to assert that key mailbox messages
@@ -201,7 +202,9 @@ pub struct PromptActor {
 
 impl PromptActor {
     pub fn new(bus: &EventBus) -> Self {
-        let (snapshot_tx, snapshot) = watch::channel(PromptWidget::new().model_snapshot());
+        let initial = PromptWidget::new().model_snapshot();
+        let (snapshot_tx, snapshot) = watch::channel(initial.clone());
+        let (shared_tx, shared_snapshot) = watch::channel(runie_core::SharedSnapshot::new(initial));
         let events = bus.subscribe();
         let event_counter = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
         let counter_for_worker = event_counter.clone();
@@ -215,6 +218,7 @@ impl PromptActor {
                     rx,
                     events,
                     snapshot_tx,
+                    shared_tx,
                     counter_for_worker,
                     #[cfg(test)]
                     None,
@@ -224,6 +228,7 @@ impl PromptActor {
         Self {
             tx,
             snapshot,
+            shared_snapshot,
             _owner: owner,
             event_counter,
         }
@@ -294,6 +299,7 @@ async fn run_prompt_actor(
     mut rx: mpsc::Receiver<PromptMsg>,
     mut events: tokio::sync::broadcast::Receiver<AgentEvent>,
     snapshot_tx: watch::Sender<PromptSnapshot>,
+    shared_tx: watch::Sender<runie_core::SharedSnapshot<PromptSnapshot>>,
     event_counter: std::sync::Arc<std::sync::atomic::AtomicUsize>,
     #[cfg(test)] pause_hooks: Option<(
         std::sync::Arc<tokio::sync::Notify>,
@@ -309,7 +315,7 @@ async fn run_prompt_actor(
                 let Some(message) = message else { break };
                 let is_key = matches!(message, PromptMsg::Key(..));
                 handle_prompt_message(&mut prompt, message).await;
-                let _ = snapshot_tx.send(prompt.model_snapshot());
+                prompt_shared::publish_prompt_snapshot(&snapshot_tx, &shared_tx, &prompt);
                 if is_key {
                     #[cfg(test)]
                     if let Some((key_done, actor_release)) = pause_hooks.as_ref() {
@@ -321,7 +327,7 @@ async fn run_prompt_actor(
             event = events.recv() => {
                 event_counter.fetch_add(1, Ordering::SeqCst);
                 if apply_prompt_event(&mut prompt, event) {
-                    let _ = snapshot_tx.send(prompt.model_snapshot());
+                    prompt_shared::publish_prompt_snapshot(&snapshot_tx, &shared_tx, &prompt);
                 }
             }
         }
@@ -351,6 +357,8 @@ fn apply_prompt_event(
         _ => false,
     }
 }
+#[path = "prompt_shared.rs"]
+mod prompt_shared;
 
 #[allow(
     clippy::too_many_lines,

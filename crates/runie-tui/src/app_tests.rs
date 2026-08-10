@@ -26,6 +26,8 @@ fn ui_reducer_owns_welcome_and_shortcut_transitions() {
     assert_eq!(hidden.update(UiMsg::Reset), UiState::new());
 }
 
+include!("app_shared_tests.rs");
+
 #[test]
 fn view_document_preserves_declarative_composition_and_ownership() {
     let model = super::TuiSnapshot {
@@ -269,10 +271,11 @@ async fn prompt_actor_services_key_mailbox_before_draining_queued_events() {
     use std::sync::Arc;
     use tokio::sync::{mpsc, watch, Notify};
     let event_rx = queued_agent_events();
-
     let (mailbox_tx, mailbox_rx) = mpsc::channel::<super::PromptMsg>(8);
     let (snapshot_tx, snapshot_rx) = watch::channel(super::PromptWidget::new().model_snapshot());
-
+    let (shared_tx, _shared_rx) = watch::channel(runie_core::SharedSnapshot::new(
+        super::PromptWidget::new().model_snapshot(),
+    ));
     let event_counter = Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let counter_for_worker = event_counter.clone();
     let key_done = Arc::new(Notify::new());
@@ -286,13 +289,13 @@ async fn prompt_actor_services_key_mailbox_before_draining_queued_events() {
             mailbox_rx,
             event_rx,
             snapshot_tx,
+            shared_tx,
             counter_for_worker,
             Some((key_done_for_worker, actor_release_for_worker)),
         )
         .await;
     });
     let replies = enqueue_prompt_keys(&mailbox_tx, 8);
-
     finish_prompt_mailbox_test(
         key_done,
         actor_release,
