@@ -107,6 +107,8 @@ As of 2026-08-09, the reduction work has these verified results:
   the old renderer-specific action builder has no production call sites.
 - Removed the final obsolete footer span helper; styling tests assert the
   semantic paint intent directly.
+- Activity counters now project directly from normalized `FeedFacts` without
+  an extra forwarding function.
 - Transcript-selectability is now a `LineKind` predicate shared by feed
   navigation, completing the central line-classification vocabulary.
 - Five numbered feed fragments covering tool-row lifecycle and selection are

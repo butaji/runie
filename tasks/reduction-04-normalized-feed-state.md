@@ -57,6 +57,8 @@ and keeping selection/card identity on the same derived data.
 The TUI snapshot handoff now transfers the canonical `FeedFacts` aggregate in
 one value operation instead of copying synchronized fields individually; an
 event-based test pins snapshot facts to reducer navigation facts.
+The activity counter projection now reads the normalized facts tuple directly,
+removing an obsolete private forwarding layer.
 
 Acceptance: snapshot parity, replay parity, and no stale derived index after
 insert/update/remove sequences.

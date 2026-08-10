@@ -27,7 +27,7 @@ pub fn activity_counts_with_start(
     let (mut dirs, mut files, mut commands, mut subagents, failures) = if reset {
         (0, 0, 0, 0, 0)
     } else {
-        normalized_activity_counts(snapshot)
+        activity_counts(snapshot)
     };
     match classify_activity_tool(tool_name) {
         Some(ActivityKind::Dir) => dirs += 1,
@@ -124,10 +124,6 @@ fn dense_tool_group_members_by_key<T: PartialEq>(
 /// snapshot. Centralized here so the renderer and the actor share
 /// one `(dirs, files, commands, subagents, failures)` shape.
 pub fn activity_counts(snapshot: &FeedSnapshot) -> (usize, usize, usize, usize, usize) {
-    normalized_activity_counts(snapshot)
-}
-
-fn normalized_activity_counts(snapshot: &FeedSnapshot) -> (usize, usize, usize, usize, usize) {
     (
         snapshot.facts.activity_dirs,
         snapshot.facts.activity_files,
