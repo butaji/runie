@@ -1747,7 +1747,7 @@ async fn run_app(
                     app.ui.send(runie_tui_model::UiMsg::CloseDialogs).await;
                 }
                 KeyCode::Esc => {
-                    if let Some(question) = question { let _ = app.question_broker.answer(&question.id, serde_json::json!({"cancelled": true})); }
+                    if let Some(question) = question { let _ = app.question_broker.cancel(&question.id); }
                     app.ui.send(runie_tui_model::UiMsg::CloseDialogs).await;
                 }
                 _ => {}

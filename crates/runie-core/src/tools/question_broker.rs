@@ -40,12 +40,20 @@ impl UserQuestionBroker {
             .lock()
             .expect("question answers lock")
             .insert(id.clone(), answer_tx);
-        self.tx
+        if self
+            .tx
             .send(PendingUserQuestion {
                 id: id.clone(),
                 request,
             })
-            .map_err(|_| "question UI is closed".to_owned())?;
+            .is_err()
+        {
+            self.answers
+                .lock()
+                .expect("question answers lock")
+                .remove(&id);
+            return Err("question UI is closed".to_owned());
+        }
         answer_rx
             .await
             .map_err(|_| "question was cancelled".to_owned())
@@ -63,6 +71,10 @@ impl UserQuestionBroker {
             .ok_or_else(|| "question is no longer pending".to_owned())?
             .send(value)
             .map_err(|_| "question waiter is closed".to_owned())
+    }
+
+    pub fn cancel(&self, id: &str) -> Result<(), String> {
+        self.answer(id, serde_json::json!({"cancelled": true}))
     }
 }
 
@@ -96,5 +108,31 @@ mod tests {
             .answer(&pending.id, serde_json::json!({"answer": "yes"}))
             .unwrap();
         assert_eq!(waiter.await.unwrap().unwrap()["answer"], "yes");
+    }
+
+    #[tokio::test]
+    async fn broker_cancellation_is_a_typed_terminal_answer() {
+        let broker = UserQuestionBroker::default();
+        let waiter = {
+            let broker = broker.clone();
+            // OWNER: broker_cancellation_is_a_typed_terminal_answer test task is awaited below.
+            tokio::spawn(async move {
+                broker
+                    .ask(UserQuestionRequest {
+                        question: "Continue?".into(),
+                        options: vec![],
+                        allow_multiple: false,
+                    })
+                    .await
+            })
+        };
+        let pending = loop {
+            if let Some(value) = broker.try_next() {
+                break value;
+            }
+            tokio::task::yield_now().await;
+        };
+        broker.cancel(&pending.id).unwrap();
+        assert_eq!(waiter.await.unwrap().unwrap()["cancelled"], true);
     }
 }

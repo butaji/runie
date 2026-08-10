@@ -18,7 +18,7 @@ evidence prove the item.
 12. `harness-12-git` — **partial** — bounded read-only Git inspection plus typed non-mutating `git_commit_prepare` now validate a subject and return a proposed commit summary; actual approval/commit execution remains.
 13. `harness-13-sessions` — resume, fork, rename, undo, export, and session search UX.
 14. `harness-14-provider-contract` — normalized usage, finish reasons, retries, IDs, and errors.
-15. `harness-15-user-questions` — **partial** — structured validation, owned broker, live selector, multi-select answers, and a YAML request/answer replay fixture are implemented; richer cancellation/error traces remain.
+15. `harness-15-user-questions` — **partial** — structured validation, owned broker, live selector, multi-select answers, YAML replay, and explicit broker cancellation are implemented; richer error traces remain.
 16. `harness-16-media` — image/video input and capability-aware tool exposure.
 17. `harness-17-ide` — ACP or equivalent IDE protocol.
 18. `harness-18-noninteractive` — JSON/JSONL, CI behavior, approvals, and exit codes.
