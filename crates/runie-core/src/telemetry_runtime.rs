@@ -286,6 +286,10 @@ impl TelemetryActor {
         self.shared_snapshot.borrow().clone()
     }
 
+    pub fn shared_subscribe(&self) -> watch::Receiver<crate::SharedSnapshot<TelemetrySnapshot>> {
+        self.shared_snapshot.clone()
+    }
+
     /// Apply one declarative replay action through the actor mailbox.
     pub async fn apply(&self, action: TelemetryAction) -> Option<u64> {
         match action {

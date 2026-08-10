@@ -98,6 +98,20 @@ async fn shared_snapshot_tracks_owned_snapshot_without_aliasing_mutation() {
 }
 
 #[tokio::test]
+async fn shared_subscription_exposes_the_same_immutable_projection() {
+    let actor = TelemetryActor::new();
+    assert_eq!(actor.shared_subscribe().borrow().spans.len(), 0);
+
+    actor
+        .start_span(None, "request", HashMap::new())
+        .await
+        .expect("span starts");
+
+    assert_eq!(actor.shared_subscribe().borrow().spans.len(), 1);
+    assert_eq!(actor.shared_snapshot().spans.len(), 1);
+}
+
+#[tokio::test]
 #[allow(clippy::too_many_lines)]
 async fn concurrent_child_callbacks_preserve_parentage_and_end_order() {
     let actor = TelemetryActor::new();
