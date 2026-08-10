@@ -396,7 +396,16 @@ fn model_declared_effort_maps_to_provider_wire_value() {
     );
     let unmapped = SimpleStreamOptions {
         reasoning: Some(crate::types::ThinkingLevel::Low),
-        ..options
+        ..options.clone()
     };
     assert_eq!(mapped_reasoning(&model, Some(&unmapped)), None);
+    let payload = with_model_effort(
+        serde_json::json!({"model":"demo", "input": []}),
+        &model,
+        Some(&options),
+        "reasoning_effort",
+    );
+    assert_eq!(payload["reasoning_effort"], "extended");
+    let untouched = with_model_effort(serde_json::json!([]), &model, Some(&options), "effort");
+    assert!(untouched.is_array());
 }

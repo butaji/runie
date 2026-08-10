@@ -143,6 +143,23 @@ pub fn mapped_reasoning(model: &Model, options: Option<&SimpleStreamOptions>) ->
     value.clone()
 }
 
+/// Insert the model-declared effort into a provider payload at an adapter-
+/// chosen wire key. The provider owns the key spelling; this helper owns only
+/// the typed mapping and never invents a value for an unsupported level.
+pub fn with_model_effort(
+    mut payload: serde_json::Value,
+    model: &Model,
+    options: Option<&SimpleStreamOptions>,
+    wire_key: &str,
+) -> serde_json::Value {
+    if let Some(effort) = mapped_reasoning(model, options) {
+        if let Some(object) = payload.as_object_mut() {
+            object.insert(wire_key.to_owned(), serde_json::Value::String(effort));
+        }
+    }
+    payload
+}
+
 async fn execute_with_retries<A: HttpActor + ?Sized>(
     client: &A,
     request: HttpRequest,
