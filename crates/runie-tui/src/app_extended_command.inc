@@ -1,14 +1,14 @@
 impl App {
     async fn route_extended_command(&self, name: &str, args: &str) -> bool {
         if name == "sessions" {
-            let root = if args.trim().is_empty() {
-                std::env::current_dir()
-                    .map(|path| path.to_string_lossy().into_owned())
-                    .unwrap_or_else(|_| ".".into())
-            } else {
-                args.trim().to_owned()
-            };
-            let result = match self.session_storage.discover_rows(root, 64, "").await {
+            let root = std::env::current_dir()
+                .map(|path| path.to_string_lossy().into_owned())
+                .unwrap_or_else(|_| ".".into());
+            let result = match self
+                .session_storage
+                .discover_rows(root, 64, args.trim())
+                .await
+            {
                 Ok(rows) if rows.is_empty() => "No stored sessions found".into(),
                 Ok(rows) => rows
                     .into_iter()

@@ -79,6 +79,17 @@ fn parser_maps_effort_without_an_argument_for_picker_reopen() {
     );
 }
 
+#[test]
+fn parser_maps_session_text_as_a_query_argument() {
+    assert_eq!(
+        parse_mappable_builtin_command("/sessions deploy"),
+        Some(MappableBuiltinCommand::Extended {
+            name: "sessions".into(),
+            args: "deploy".into()
+        })
+    );
+}
+
 fn assert_mappable_basics() {
     assert_eq!(
         parse_mappable_builtin_command(" /new "),
