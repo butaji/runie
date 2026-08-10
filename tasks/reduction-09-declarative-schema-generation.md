@@ -37,3 +37,5 @@ the macro generates both exhaustive accessors from each action row.
 Normalized feed-fact reset groups now also come from one typed field table,
 keeping activity/workflow ownership explicit while removing repeated reset
 assignments.
+`LineKind` variants and their transcript prefix glyphs now share one
+macro-backed table, while semantic classification predicates remain explicit.

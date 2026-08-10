@@ -23,3 +23,6 @@ The ordered reducer stage machine and navigation fallback are consolidated in
 The grouped lifecycle event vocabulary now uses one typed macro table to
 generate its serde enum and compatibility-message mapping, keeping producer
 intent and the legacy bridge in one inspectable declaration.
+Transcript line variants and their prefix projection now use the same
+data-shaped declaration, keeping the feed vocabulary and terminal rail in
+sync.

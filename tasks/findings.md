@@ -60,6 +60,8 @@ Normalized feed activity/workflow reset fields now use one macro-backed
 declaration, with a regression test proving each reset clears only its owned
 group. Full workspace verification and the live TUI smoke suite remain green
 (`55/55`).
+The `LineKind` vocabulary now also generates its prefix projection from one
+typed table; existing prefix tests and the same 55-case TUI smoke suite pass.
 
 As of 2026-08-09, the reduction work has these verified results:
 

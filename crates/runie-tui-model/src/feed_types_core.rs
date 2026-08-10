@@ -88,24 +88,44 @@ pub fn last_assistant_text(lines: &[Line]) -> String {
     output.join("\n")
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum LineKind {
-    User,
-    Assistant,
-    Reasoning,
-    ThinkingStatus,
-    Tool,
-    ToolRunning,
-    ToolError,
-    ToolResult,
-    ToolOutput,
-    SessionStart,
-    System,
-    Separator,
-    TurnSummary,
-    CompletedAssistant,
-    Activity,
+macro_rules! line_kinds {
+    ($($kind:ident => $prefix:literal),+ $(,)?) => {
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+        #[serde(rename_all = "snake_case")]
+        pub enum LineKind {
+            $($kind),+
+        }
+
+        impl LineKind {
+            /// Render the prefix glyphs for a transcript line. The vocabulary
+            /// and its terminal prefix stay together as inspectable data.
+            pub fn prefix(self) -> &'static str {
+                match self {
+                    $(Self::$kind => $prefix),+
+                }
+            }
+        }
+    };
+}
+
+line_kinds! {
+    // Grok reserves a three-column transcript gutter before user content.
+    User => "   ❯ ",
+    Assistant => "┃  ",
+    Reasoning => "┃  ",
+    ThinkingStatus => "┃  ",
+    Tool => "◆ ",
+    ToolRunning => "◆ ",
+    ToolError => "◆ ",
+    ToolResult => "  ↳ ",
+    // Structured tools render output below their header without a result arrow.
+    ToolOutput => "  ",
+    SessionStart => "   ",
+    System => "   * ",
+    Separator => "",
+    TurnSummary => "   ",
+    CompletedAssistant => "   ",
+    Activity => "❙  ",
 }
 
 impl LineKind {
@@ -125,32 +145,6 @@ impl LineKind {
         self.is_tool_header() || matches!(self, Self::ToolOutput | Self::ToolResult)
     }
 
-    /// Render the prefix glyphs for a transcript line. Centralized
-    /// here so the actor-owned transcript projection and the
-    /// renderer share one vocabulary.
-    pub fn prefix(self) -> &'static str {
-        match self {
-            // Grok reserves a three-column transcript gutter before user
-            // content: the cursor is at column 5 in the 80-column frame.
-            LineKind::User => "   ❯ ",
-            LineKind::Assistant => "┃  ",
-            LineKind::Reasoning => "┃  ",
-            LineKind::ThinkingStatus => "┃  ",
-            LineKind::Tool => "◆ ",
-            LineKind::ToolRunning => "◆ ",
-            LineKind::ToolError => "◆ ",
-            LineKind::ToolResult => "  ↳ ",
-            // Structured Grok tools render terminal output directly below the
-            // tool header, with a two-column indentation and no result arrow.
-            LineKind::ToolOutput => "  ",
-            LineKind::SessionStart => "   ",
-            LineKind::System => "   * ",
-            LineKind::Separator => "",
-            LineKind::TurnSummary => "   ",
-            LineKind::CompletedAssistant => "   ",
-            LineKind::Activity => "❙  ",
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
