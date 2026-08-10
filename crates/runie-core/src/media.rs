@@ -33,6 +33,19 @@ pub fn encode_user_content(
     }
 }
 
+/// Encode an entire user turn as an ordered provider payload. Keeping the
+/// sequence intact lets adapters handle mixed text and media without
+/// reconstructing content blocks themselves.
+pub fn encode_user_contents(
+    contents: &[UserContent],
+    format: MediaWireFormat,
+) -> Result<Vec<serde_json::Value>, String> {
+    contents
+        .iter()
+        .map(|content| encode_user_content(content, format))
+        .collect()
+}
+
 impl ImageContent {
     pub fn new(mime_type: impl Into<String>, data: impl Into<String>) -> Result<Self, String> {
         let mime_type = mime_type.into();
@@ -105,6 +118,22 @@ mod tests {
             encode_user_content(&content, MediaWireFormat::Pi).unwrap()["type"],
             "video"
         );
+    }
+
+    #[test]
+    fn mixed_user_turn_encoding_preserves_content_order() {
+        let contents = vec![
+            UserContent::Text {
+                text: "look".into(),
+            },
+            UserContent::Image {
+                data: "aGVsbG8=".into(),
+                mime_type: "image/png".into(),
+            },
+        ];
+        let encoded = encode_user_contents(&contents, MediaWireFormat::OpenAiResponses).unwrap();
+        assert_eq!(encoded[0]["type"], "text");
+        assert_eq!(encoded[1]["type"], "input_image");
     }
 
     #[test]
