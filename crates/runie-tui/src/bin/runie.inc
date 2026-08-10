@@ -111,6 +111,43 @@ fn parse_theme_name(value: &str) -> Option<ThemeKind> {
 /// process access.
 struct MinimaxEchoTool;
 
+struct ListDirectoryTool;
+
+#[async_trait::async_trait]
+impl AgentTool for ListDirectoryTool {
+    fn name(&self) -> &str { "list_dir" }
+    fn label(&self) -> &str { "List directory" }
+    fn description(&self) -> &str {
+        "List files and directories. The path is relative to the TUI working directory."
+    }
+    fn parameters(&self) -> Option<serde_json::Value> {
+        Some(serde_json::json!({
+            "type": "object",
+            "properties": { "path": { "type": "string", "description": "Directory path, default ." } }
+        }))
+    }
+    async fn execute(
+        &self,
+        _tool_call_id: &str,
+        args: serde_json::Value,
+        _signal: Option<tokio_util::sync::CancellationToken>,
+        _on_update: Option<Box<dyn Fn(serde_json::Value) + Send + Sync>>,
+    ) -> Result<AgentToolResult, String> {
+        let path = args.get("path").and_then(serde_json::Value::as_str).unwrap_or(".");
+        let mut entries = tokio::fs::read_dir(path).await.map_err(|error| format!("list_dir {path:?}: {error}"))?;
+        let mut names = Vec::new();
+        while let Some(entry) = entries.next_entry().await.map_err(|error| format!("list_dir {path:?}: {error}"))? {
+            let kind = if entry.file_type().await.map_err(|error| error.to_string())?.is_dir() { "/" } else { "" };
+            names.push(format!("{}{kind}", entry.file_name().to_string_lossy()));
+        }
+        names.sort_unstable();
+        Ok(AgentToolResult {
+            content: vec![ToolResultContent::Text { text: names.join("\n") }],
+            ..AgentToolResult::default()
+        })
+    }
+}
+
 #[async_trait::async_trait]
 impl AgentTool for MinimaxEchoTool {
     fn name(&self) -> &str {
@@ -1176,6 +1213,7 @@ async fn build_live_app() -> App {
     let steering = SteeringQueueActor::new();
     let follow_up = FollowUpQueueActor::new();
     let mut tools = ToolRegistry::new();
+    tools.register(std::sync::Arc::new(ListDirectoryTool));
     if std::env::var("MINIMAX_ENABLE_ECHO_TOOL").is_ok_and(|value| value == "1") {
         tools.register(std::sync::Arc::new(MinimaxEchoTool));
     }
