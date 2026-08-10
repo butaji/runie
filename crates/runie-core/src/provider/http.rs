@@ -4,7 +4,7 @@ use std::path::Path;
 
 use super::stream_fn::StreamError;
 use crate::types::{
-    CacheRetention, Model, ProviderResponse, ProviderTransport, SimpleStreamOptions, ThinkingLevel,
+    CacheRetention, Model, ProviderResponse, ProviderTransport, SimpleStreamOptions,
 };
 
 const DEFAULT_MAX_RETRY_DELAY_MS: u64 = 60_000;
@@ -154,16 +154,7 @@ async fn apply_payload_hook(
 pub fn mapped_reasoning(model: &Model, options: Option<&SimpleStreamOptions>) -> Option<String> {
     let level = options.and_then(|options| options.reasoning)?;
     let map = model.thinking_level_map.as_ref()?;
-    let value = match level {
-        ThinkingLevel::Off => &map.off,
-        ThinkingLevel::Minimal => &map.minimal,
-        ThinkingLevel::Low => &map.low,
-        ThinkingLevel::Medium => &map.medium,
-        ThinkingLevel::High => &map.high,
-        ThinkingLevel::XHigh => &map.xhigh,
-        ThinkingLevel::Max => &map.max,
-    };
-    value.clone()
+    map.value(level).map(str::to_owned)
 }
 
 /// Insert the model-declared effort into a provider payload at an adapter-

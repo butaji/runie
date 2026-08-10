@@ -1,4 +1,5 @@
 use super::*;
+use crate::types::ThinkingLevel;
 use futures::FutureExt;
 use std::sync::{Arc, Mutex};
 
@@ -408,6 +409,47 @@ fn model_declared_effort_maps_to_provider_wire_value() {
     assert_eq!(payload["reasoning_effort"], "extended");
     let untouched = with_model_effort(serde_json::json!([]), &model, Some(&options), "effort");
     assert!(untouched.is_array());
+}
+
+#[test]
+fn every_declared_effort_level_maps_without_inventing_unsupported_values() {
+    let map = crate::types::ThinkingLevelMap {
+        off: Some("off-wire".into()),
+        minimal: Some("minimal-wire".into()),
+        low: Some("low-wire".into()),
+        medium: Some("medium-wire".into()),
+        high: Some("high-wire".into()),
+        xhigh: Some("xhigh-wire".into()),
+        max: Some("max-wire".into()),
+    };
+    let model = Model {
+        thinking_level_map: Some(map),
+        ..Default::default()
+    };
+    for (level, expected) in [
+        (ThinkingLevel::Off, "off-wire"),
+        (ThinkingLevel::Minimal, "minimal-wire"),
+        (ThinkingLevel::Low, "low-wire"),
+        (ThinkingLevel::Medium, "medium-wire"),
+        (ThinkingLevel::High, "high-wire"),
+        (ThinkingLevel::XHigh, "xhigh-wire"),
+        (ThinkingLevel::Max, "max-wire"),
+    ] {
+        let options = SimpleStreamOptions {
+            reasoning: Some(level),
+            ..Default::default()
+        };
+        assert_eq!(
+            mapped_reasoning(&model, Some(&options)).as_deref(),
+            Some(expected)
+        );
+    }
+    let unsupported = Model::default();
+    let options = SimpleStreamOptions {
+        reasoning: Some(ThinkingLevel::Max),
+        ..Default::default()
+    };
+    assert_eq!(mapped_reasoning(&unsupported, Some(&options)), None);
 }
 
 #[test]
