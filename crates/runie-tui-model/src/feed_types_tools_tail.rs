@@ -1,3 +1,33 @@
+/// Bounded, renderer-neutral output facts for one logical tool card.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ToolCardSummary {
+    pub tool_call_id: String,
+    pub member_index: usize,
+    pub output_lines: usize,
+    pub output_bytes: usize,
+    pub truncated: bool,
+}
+
+pub fn tool_card_summaries(lines: &[Line], tool_names: &dyn ToolNameLookup) -> Vec<ToolCardSummary> {
+    let rows = project_tool_card_rows(lines, tool_names, &HashMap::new());
+    let mut summaries = Vec::new();
+    for row in rows.into_iter().filter(|row| row.row_kind == ToolCardRowKind::Content) {
+        let summary = match summaries.iter_mut().find(|summary: &&mut ToolCardSummary| {
+            summary.tool_call_id == row.tool_call_id && summary.member_index == row.member_index
+        }) {
+            Some(summary) => summary,
+            None => {
+                summaries.push(ToolCardSummary { tool_call_id: row.tool_call_id.clone(), member_index: row.member_index, output_lines: 0, output_bytes: 0, truncated: false });
+                summaries.last_mut().expect("just inserted tool summary")
+            }
+        };
+        summary.output_lines += 1;
+        summary.output_bytes += row.text.len();
+        summary.truncated |= row.text.contains("[output truncated]");
+    }
+    summaries
+}
+
 fn workflow_trail(phases: &[(String, String)]) -> String {
     phases
         .iter()

@@ -485,7 +485,6 @@ fn web_fetch_response_fields_are_metadata_rows() {
     assert_eq!(rows[3].row_kind, ToolCardRowKind::Metadata);
     assert_eq!(rows[4].row_kind, ToolCardRowKind::Content);
 }
-
 #[test]
 fn navigation_transitions_are_pure_and_resettable() {
     let mut navigation = super::FeedNavigation::default();

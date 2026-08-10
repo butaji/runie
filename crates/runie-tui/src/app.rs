@@ -490,7 +490,6 @@ fn compaction_retained_tail(
         .map(|entry| entry.message.clone())
         .collect()
 }
-
 #[path = "app_commands.rs"]
 mod app_commands;
 #[cfg(test)]

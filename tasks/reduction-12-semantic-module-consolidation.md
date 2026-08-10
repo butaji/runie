@@ -54,3 +54,6 @@ changing its public API.
 Background job mailbox reduction now delegates start/cancel/cancel-all events
 to small owned handlers while `run_worker` retains the async completion select;
 the actor lifecycle remains unchanged.
+Tool-card summary facts now live with the semantic feed tail projection rather
+than the large tool-type fragment, reducing the structural module without
+changing the public feed API.
