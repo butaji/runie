@@ -49,12 +49,8 @@ pub enum PluginRuntimeEvent {
     Unloaded { name: String },
 }
 
-pub fn reduce_plugin_runtime(
-    registry: &PluginRegistry,
-    state: &mut PluginRuntimeState,
-    event: PluginRuntimeEvent,
-) -> Result<(), String> {
-    let (name, status, error) = match event {
+fn event_data(event: PluginRuntimeEvent) -> (String, PluginRuntimeStatus, Option<String>) {
+    match event {
         PluginRuntimeEvent::LoadStarted { name } => (name, PluginRuntimeStatus::Loading, None),
         PluginRuntimeEvent::LoadSucceeded { name } => (name, PluginRuntimeStatus::Ready, None),
         PluginRuntimeEvent::LoadFailed { name, error } => {
@@ -62,9 +58,41 @@ pub fn reduce_plugin_runtime(
         }
         PluginRuntimeEvent::UnloadStarted { name } => (name, PluginRuntimeStatus::Unloading, None),
         PluginRuntimeEvent::Unloaded { name } => (name, PluginRuntimeStatus::Unloaded, None),
-    };
+    }
+}
+
+fn allows_transition(current: Option<&PluginRuntimeStatus>, next: &PluginRuntimeStatus) -> bool {
+    match next {
+        PluginRuntimeStatus::Loading => matches!(
+            current,
+            None | Some(PluginRuntimeStatus::Failed) | Some(PluginRuntimeStatus::Unloaded)
+        ),
+        PluginRuntimeStatus::Ready | PluginRuntimeStatus::Failed => {
+            matches!(current, Some(PluginRuntimeStatus::Loading))
+        }
+        PluginRuntimeStatus::Unloading => matches!(
+            current,
+            Some(PluginRuntimeStatus::Ready) | Some(PluginRuntimeStatus::Failed)
+        ),
+        PluginRuntimeStatus::Unloaded => matches!(current, Some(PluginRuntimeStatus::Unloading)),
+    }
+}
+
+pub fn reduce_plugin_runtime(
+    registry: &PluginRegistry,
+    state: &mut PluginRuntimeState,
+    event: PluginRuntimeEvent,
+) -> Result<(), String> {
+    let (name, status, error) = event_data(event);
     if registry.get(&name).is_none() {
         return Err(format!("plugin is not registered: {name}"));
+    }
+    let current = state.status.get(&name);
+    if !allows_transition(current, &status) {
+        return Err(format!(
+            "invalid plugin runtime transition for {name}: {:?} -> {:?}",
+            current, status
+        ));
     }
     if let Some(error) = error {
         if error.trim().is_empty() {
@@ -72,7 +100,7 @@ pub fn reduce_plugin_runtime(
         }
         state.errors.insert(name.clone(), error);
     } else if matches!(
-        status,
+        &status,
         PluginRuntimeStatus::Ready | PluginRuntimeStatus::Unloaded
     ) {
         state.errors.remove(&name);
@@ -86,8 +114,7 @@ mod tests {
     use super::*;
     use crate::plugins::PluginManifest;
 
-    #[test]
-    fn runtime_failure_and_recovery_are_replayable() {
+    fn sample_registry() -> PluginRegistry {
         let mut registry = PluginRegistry::default();
         registry
             .register(PluginManifest {
@@ -98,48 +125,53 @@ mod tests {
                 hooks: vec![],
             })
             .unwrap();
+        registry
+    }
+
+    fn apply(registry: &PluginRegistry, state: &mut PluginRuntimeState, event: PluginRuntimeEvent) {
+        reduce_plugin_runtime(registry, state, event).unwrap();
+    }
+
+    #[test]
+    fn runtime_failure_and_recovery_are_replayable() {
+        let registry = sample_registry();
         let mut state = PluginRuntimeState::default();
-        reduce_plugin_runtime(
+        apply(
             &registry,
             &mut state,
             PluginRuntimeEvent::LoadStarted {
                 name: "sample-plugin".into(),
             },
-        )
-        .unwrap();
-        reduce_plugin_runtime(
+        );
+        apply(
             &registry,
             &mut state,
             PluginRuntimeEvent::LoadFailed {
                 name: "sample-plugin".into(),
                 error: "missing host".into(),
             },
-        )
-        .unwrap();
+        );
         assert_eq!(state.status["sample-plugin"], PluginRuntimeStatus::Failed);
-        reduce_plugin_runtime(
+        apply(
+            &registry,
+            &mut state,
+            PluginRuntimeEvent::LoadStarted {
+                name: "sample-plugin".into(),
+            },
+        );
+        apply(
             &registry,
             &mut state,
             PluginRuntimeEvent::LoadSucceeded {
                 name: "sample-plugin".into(),
             },
-        )
-        .unwrap();
+        );
         assert_eq!(state.status["sample-plugin"], PluginRuntimeStatus::Ready);
     }
 
     #[test]
     fn runtime_projection_replays_failure_rows_in_stable_order() {
-        let mut registry = PluginRegistry::default();
-        registry
-            .register(PluginManifest {
-                name: "sample-plugin".into(),
-                version: "1".into(),
-                commands: vec![],
-                tools: vec![],
-                hooks: vec![],
-            })
-            .unwrap();
+        let registry = sample_registry();
         let mut state = PluginRuntimeState::default();
         reduce_plugin_runtime(
             &registry,
@@ -165,5 +197,21 @@ mod tests {
                 "Plugin sample-plugin error: missing host",
             ]
         );
+    }
+
+    #[test]
+    fn runtime_rejects_out_of_order_events() {
+        let registry = sample_registry();
+        let mut state = PluginRuntimeState::default();
+        let error = reduce_plugin_runtime(
+            &registry,
+            &mut state,
+            PluginRuntimeEvent::LoadSucceeded {
+                name: "sample-plugin".into(),
+            },
+        )
+        .unwrap_err();
+        assert!(error.contains("invalid plugin runtime transition"));
+        assert!(state.status.is_empty());
     }
 }
