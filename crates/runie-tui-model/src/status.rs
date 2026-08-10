@@ -255,15 +255,14 @@ mod tests {
 
     #[test]
     fn status_yaml_trace_uses_the_shared_replay_harness() {
-        let trace = runie_core::replay_yaml(
+        let state = runie_core::replay_yaml_state(
             "- BeginTurn\n- !Set Thinking\n- AdvanceAnimation\n",
             StatusSnapshot::default(),
             |state, event: &StatusMsg| state.apply(event.clone(), Some(17)),
         )
         .expect("status YAML trace");
-        assert_eq!(trace.events().len(), 3);
-        assert_eq!(trace.state().state, Status::Thinking);
-        assert_eq!(trace.state().animation_frame, 1);
+        assert_eq!(state.state, Status::Thinking);
+        assert_eq!(state.animation_frame, 1);
     }
 
     #[test]

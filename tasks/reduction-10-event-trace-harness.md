@@ -17,6 +17,9 @@ Status projection tests now cover both explicit `EventMemo::replay` and the
 `event_trace!` shorthand, asserting identical ordered events and snapshots.
 `Status` and `StatusMsg` now have serde representations, and a YAML status
 trace exercises the shared public `replay_yaml` helper end to end.
+The public `replay_yaml_state` helper now covers final-state-only fixtures
+without duplicating memo extraction boilerplate, while `replay_yaml` remains
+available for event-log assertions.
 Paint document round-trip coverage now consumes a checked-in YAML fixture,
 extending fixture-backed declarative data into renderer-neutral paint values.
 Status renderer transitions now also replay from a checked-in YAML event trace,
