@@ -178,7 +178,8 @@ pub enum ScrollbackWorkflowEvent {
     Ended { run_id: String, status: String, elapsed_ms: Option<u64> },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ScrollbackNavigationEvent {
     ClearSelection,
     RevealLatest,

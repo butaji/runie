@@ -113,6 +113,8 @@ As of 2026-08-09, the reduction work has these verified results:
   through the public event reducer harness.
 - Workflow lifecycle events now have checked-in YAML replay coverage for
   header, progress, and terminal projection state.
+- Navigation events now replay from YAML through the feed view-state reducer,
+  covering scroll, reveal, and selection transitions.
 - Transcript-selectability is now a `LineKind` predicate shared by feed
   navigation, completing the central line-classification vocabulary.
 - Five numbered feed fragments covering tool-row lifecycle and selection are

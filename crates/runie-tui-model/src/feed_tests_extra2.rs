@@ -101,3 +101,21 @@ fn grouped_scrollback_events_bridge_to_legacy_messages() {
         }]
     );
 }
+#[test]
+fn navigation_yaml_trace_replays_through_the_view_state_projection() {
+    let state = runie_core::replay_yaml_state(
+        include_str!("../fixtures/scrollback-navigation.yaml"),
+        super::FeedState::default(),
+        |state, event: &super::ScrollbackNavigationEvent| {
+            for message in super::ScrollbackEvent::Navigation(event.clone()).into_messages() {
+                state.reduce(message);
+            }
+        },
+    )
+    .expect("valid navigation fixture");
+
+    let snapshot = state.snapshot();
+    assert_eq!(snapshot.scroll_offset, 0);
+    assert!(snapshot.autoscroll);
+    assert!(snapshot.selection_anchor.is_none());
+}
