@@ -36,7 +36,7 @@ pub struct SchedulerMetrics {
 
 impl SchedulerMetrics {
     pub fn terminal_lines(&self) -> Vec<String> {
-        vec![
+        let mut lines = vec![
             format!("queued: {}", self.queued),
             format!("running: {}", self.running),
             format!("completed: {}", self.completed),
@@ -44,7 +44,13 @@ impl SchedulerMetrics {
             format!("cancelled: {}", self.cancelled),
             format!("interactive_enqueued: {}", self.interactive_enqueued),
             format!("background_enqueued: {}", self.background_enqueued),
-        ]
+        ];
+        lines.extend(
+            self.cancelled_by_reason
+                .iter()
+                .map(|(reason, count)| format!("cancelled_{reason:?}: {count}")),
+        );
+        lines
     }
 }
 
@@ -165,7 +171,7 @@ mod tests {
                 "failed: 4",
                 "cancelled: 5",
                 "interactive_enqueued: 6",
-                "background_enqueued: 7"
+                "background_enqueued: 7",
             ]
         );
     }
@@ -186,5 +192,6 @@ mod tests {
             metrics.cancelled_by_reason[&SchedulerCancellationReason::User],
             1
         );
+        assert_eq!(metrics.terminal_lines()[7], "cancelled_User: 1");
     }
 }
