@@ -4,7 +4,7 @@ use std::path::Path;
 
 use super::stream_fn::StreamError;
 use crate::types::{
-    CacheRetention, Model, ProviderResponse, ProviderTransport, SimpleStreamOptions,
+    CacheRetention, Model, ProviderResponse, ProviderTransport, SimpleStreamOptions, ThinkingLevel,
 };
 
 const DEFAULT_MAX_RETRY_DELAY_MS: u64 = 60_000;
@@ -23,6 +23,7 @@ pub struct HttpRequest {
     pub api_key: Option<String>,
     pub temperature: Option<f64>,
     pub max_tokens: Option<u64>,
+    pub reasoning: Option<String>,
     pub sampling_params: std::collections::HashMap<String, serde_json::Value>,
     pub headers: std::collections::HashMap<String, String>,
     pub env: std::collections::HashMap<String, String>,
@@ -81,13 +82,7 @@ async fn prepare_request(
     model: &Model,
     options: Option<&SimpleStreamOptions>,
 ) -> Result<HttpRequest, StreamError> {
-    let mut payload = serde_json::from_str::<serde_json::Value>(&body)
-        .unwrap_or_else(|_| serde_json::Value::String(body.clone()));
-    if let Some(hook) = options.and_then(|options| options.on_payload.clone()) {
-        if let Some(transformed) = hook(payload.clone(), model.clone()).await {
-            payload = transformed;
-        }
-    }
+    let payload = apply_payload_hook(&body, model, options).await;
     let request_body = match payload {
         serde_json::Value::String(raw) => raw,
         value => serde_json::to_string(&value).map_err(|error| {
@@ -100,6 +95,7 @@ async fn prepare_request(
         api_key: options.and_then(|options| options.api_key.clone()),
         temperature: options.and_then(|options| options.temperature),
         max_tokens: options.and_then(|options| options.max_tokens),
+        reasoning: mapped_reasoning(model, options),
         sampling_params: merged_sampling_params(model, options),
         headers: options
             .and_then(|options| options.headers.clone())
@@ -115,6 +111,36 @@ async fn prepare_request(
         websocket_connect_timeout_ms: options
             .and_then(|options| options.websocket_connect_timeout_ms),
     })
+}
+
+async fn apply_payload_hook(
+    body: &str,
+    model: &Model,
+    options: Option<&SimpleStreamOptions>,
+) -> serde_json::Value {
+    let payload = serde_json::from_str::<serde_json::Value>(body)
+        .unwrap_or_else(|_| serde_json::Value::String(body.to_owned()));
+    match options.and_then(|options| options.on_payload.clone()) {
+        Some(hook) => hook(payload.clone(), model.clone())
+            .await
+            .unwrap_or(payload),
+        None => payload,
+    }
+}
+
+pub fn mapped_reasoning(model: &Model, options: Option<&SimpleStreamOptions>) -> Option<String> {
+    let level = options.and_then(|options| options.reasoning)?;
+    let map = model.thinking_level_map.as_ref()?;
+    let value = match level {
+        ThinkingLevel::Off => &map.off,
+        ThinkingLevel::Minimal => &map.minimal,
+        ThinkingLevel::Low => &map.low,
+        ThinkingLevel::Medium => &map.medium,
+        ThinkingLevel::High => &map.high,
+        ThinkingLevel::XHigh => &map.xhigh,
+        ThinkingLevel::Max => &map.max,
+    };
+    value.clone()
 }
 
 async fn execute_with_retries<A: HttpActor + ?Sized>(

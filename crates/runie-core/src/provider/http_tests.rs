@@ -240,6 +240,7 @@ async fn default_http_boundary_rejects_unsupported_websocket_transport() {
             api_key: None,
             temperature: None,
             max_tokens: None,
+            reasoning: None,
             sampling_params: Default::default(),
             headers: Default::default(),
             env: Default::default(),
@@ -374,4 +375,28 @@ fn exponential_retry_jitter_is_bounded_and_injectable() {
         provider_retry_delay_ms_with_jitter(&error, 0, None, Some(1.0)),
         Some(Ok(375))
     ));
+}
+
+#[test]
+fn model_declared_effort_maps_to_provider_wire_value() {
+    let model = Model {
+        thinking_level_map: Some(crate::types::ThinkingLevelMap {
+            high: Some("extended".into()),
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let options = SimpleStreamOptions {
+        reasoning: Some(crate::types::ThinkingLevel::High),
+        ..Default::default()
+    };
+    assert_eq!(
+        mapped_reasoning(&model, Some(&options)),
+        Some("extended".into())
+    );
+    let unmapped = SimpleStreamOptions {
+        reasoning: Some(crate::types::ThinkingLevel::Low),
+        ..options
+    };
+    assert_eq!(mapped_reasoning(&model, Some(&unmapped)), None);
 }
