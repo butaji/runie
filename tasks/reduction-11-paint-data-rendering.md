@@ -40,3 +40,5 @@ The remaining live footer helper now consumes the same generic hotkey paint
 projection, removing the last production dependency on the old span builder.
 The obsolete appearance-level hotkey span helper was then removed; tests now
 assert the semantic `FooterKey` intent directly.
+Dialog hint text is now projected from the renderer-neutral `DialogKind` data
+table, so the widget consumes the model contract directly.

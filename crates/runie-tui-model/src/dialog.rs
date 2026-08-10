@@ -2,13 +2,25 @@
 
 use std::fmt::Debug;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DialogKind {
-    List,
-    Selector,
-    Form,
-    Confirm,
-    TextInput,
+macro_rules! dialog_kinds {
+    ($(($kind:ident, $hint:literal)),+ $(,)?) => {
+        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+        pub enum DialogKind { $($kind),+ }
+
+        impl DialogKind {
+            pub const fn hint(self) -> &'static str {
+                match self { $(Self::$kind => $hint,)+ }
+            }
+        }
+    };
+}
+
+dialog_kinds! {
+    (List, "search: "),
+    (Selector, "Select an item"),
+    (Form, "Enter values: "),
+    (Confirm, "Confirm action"),
+    (TextInput, "Enter text"),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

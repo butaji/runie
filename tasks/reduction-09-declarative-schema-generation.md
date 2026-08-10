@@ -57,3 +57,5 @@ Operation-record kinds now also generate both wire-name encoding and
 compatibility decoding from one typed table.
 Web-search provider snippet fields now use one typed wire-format table for
 Generic, Brave, and Tavily normalization.
+Dialog kinds now generate their renderer hint strings from one model-owned
+table, removing the widget-local duplicate.

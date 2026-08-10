@@ -142,7 +142,7 @@ fn dialog_header(
 ) -> Vec<Line<'static>> {
     let mut lines = vec![Line::from("")];
     lines.push(Line::from(Span::styled(
-        format!("  {}{}", dialog_hint(frame.spec.kind), frame.query),
+        format!("  {}{}", frame.spec.kind.hint(), frame.query),
         dialog_muted_style(theme),
     )));
     let divider = if frame.spec.kind == DialogKind::List {
@@ -217,19 +217,6 @@ fn selectable_before(rows: &[String], end: usize) -> usize {
         .take(end)
         .filter(|row| !row.starts_with('§'))
         .count()
-}
-
-fn dialog_hint(kind: DialogKind) -> &'static str {
-    match kind {
-        // Runie's palette is always type-to-filter on open, matching Grok's
-        // active search bar (` search: `). `/ to search` is only Grok's
-        // unfocused vim-nav placeholder, a mode Runie does not expose.
-        DialogKind::List => "search: ",
-        DialogKind::Selector => "Select an item",
-        DialogKind::Form => "Enter values: ",
-        DialogKind::Confirm => "Confirm action",
-        DialogKind::TextInput => "Enter text",
-    }
 }
 
 fn dialog_row(
