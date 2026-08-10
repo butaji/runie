@@ -84,3 +84,20 @@ fn scrollback_domain_table_classifies_all_declared_domains() {
         super::ScrollbackDomain::Navigation
     );
 }
+
+#[test]
+fn grouped_scrollback_events_bridge_to_legacy_messages() {
+    let event = super::ScrollbackEvent::Tool(super::ScrollbackToolEvent::Updated {
+        tool_call_id: "call-1".into(),
+        header: Some("bash".into()),
+        output: vec!["ok".into()],
+    });
+    assert_eq!(
+        event.into_messages(),
+        vec![super::ScrollbackMsg::ToolUpdate {
+            tool_call_id: "call-1".into(),
+            header: Some("bash".into()),
+            output: vec!["ok".into()],
+        }]
+    );
+}

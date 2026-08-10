@@ -115,3 +115,59 @@ pub enum ScrollbackMsg {
         settled_no_tool_phase: bool,
     },
 }
+
+/// Grouped domain events preserve producer intent while the compatibility
+/// reducer continues to consume the legacy message vocabulary.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(dead_code, reason = "grouped compatibility bridge is adopted incrementally")]
+pub enum ScrollbackEvent {
+    Lifecycle(ScrollbackLifecycleEvent),
+    Tool(ScrollbackToolEvent),
+    Workflow(ScrollbackWorkflowEvent),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(dead_code, reason = "grouped compatibility bridge is adopted incrementally")]
+pub enum ScrollbackLifecycleEvent { TurnStarted, TurnEnded, AssistantStarted, AssistantEnded, Cleared }
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(dead_code, reason = "grouped compatibility bridge is adopted incrementally")]
+pub enum ScrollbackToolEvent {
+    Started { tool_call_id: String, header: String, activity: Option<String> },
+    Updated { tool_call_id: String, header: Option<String>, output: Vec<String> },
+    Ended { tool_call_id: String, header: String, activity: Option<String>, output: Vec<(LineKind, String)> },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(dead_code, reason = "grouped compatibility bridge is adopted incrementally")]
+pub enum ScrollbackWorkflowEvent {
+    Started { run_id: String, name: String, objective: String },
+    Progress { run_id: String, phase: String, state: String, active_agents: u32 },
+    Ended { run_id: String, status: String, elapsed_ms: Option<u64> },
+}
+
+impl ScrollbackEvent {
+    #[allow(dead_code, reason = "grouped compatibility bridge is adopted incrementally")]
+    pub fn into_messages(self) -> Vec<ScrollbackMsg> {
+        let message = match self {
+            Self::Lifecycle(event) => match event {
+                ScrollbackLifecycleEvent::TurnStarted => ScrollbackMsg::TurnStart,
+                ScrollbackLifecycleEvent::TurnEnded => ScrollbackMsg::TurnEnd,
+                ScrollbackLifecycleEvent::AssistantStarted => ScrollbackMsg::AssistantStreamStart,
+                ScrollbackLifecycleEvent::AssistantEnded => ScrollbackMsg::AssistantStreamEnd,
+                ScrollbackLifecycleEvent::Cleared => ScrollbackMsg::Clear,
+            },
+            Self::Tool(event) => match event {
+                ScrollbackToolEvent::Started { tool_call_id, header, activity } => ScrollbackMsg::ToolStart { tool_call_id, header, activity },
+                ScrollbackToolEvent::Updated { tool_call_id, header, output } => ScrollbackMsg::ToolUpdate { tool_call_id, header, output },
+                ScrollbackToolEvent::Ended { tool_call_id, header, activity, output } => ScrollbackMsg::ToolEnd { tool_call_id, header, activity, output },
+            },
+            Self::Workflow(event) => match event {
+                ScrollbackWorkflowEvent::Started { run_id, name, objective } => ScrollbackMsg::WorkflowStart { run_id, name, objective },
+                ScrollbackWorkflowEvent::Progress { run_id, phase, state, active_agents } => ScrollbackMsg::WorkflowProgress { run_id, phase, state, active_agents },
+                ScrollbackWorkflowEvent::Ended { run_id, status, elapsed_ms } => ScrollbackMsg::WorkflowEnd { run_id, status, elapsed_ms },
+            },
+        };
+        vec![message]
+    }
+}
