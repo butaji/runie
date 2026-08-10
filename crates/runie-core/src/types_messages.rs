@@ -167,12 +167,15 @@ pub struct AssistantMessage {
     pub timestamp: i64,
 }
 
-/// Provider-independent terminal data projected from an assistant message.
-/// Raw provider fields remain available for diagnostics while consumers can
-/// reduce on the closed `StopReason` vocabulary.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProviderOutcome {
+    #[serde(default)]
+    pub model: String,
+    #[serde(default)]
+    pub api: String,
+    #[serde(default)]
+    pub provider: String,
     pub finish_reason: Option<StopReason>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub raw_finish_reason: Option<String>,
@@ -180,12 +183,11 @@ pub struct ProviderOutcome {
     pub response_id: Option<String>,
     pub response_model: Option<String>,
     pub usage: Usage,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub raw_response: Option<serde_json::Value>,
 }
 
 impl AssistantMessage {
-    /// Build the minimal assistant partial used by Pi's tool-call stream
-    /// events. The provider partial is a complete assistant message, even
-    /// when it currently contains only one tool-call content block.
     pub fn with_tool_call(call: ToolCall) -> Self {
         Self {
             content: vec![AssistantContent::ToolCall(call)],
@@ -209,11 +211,15 @@ impl AssistantMessage {
 
     pub fn provider_outcome(&self) -> ProviderOutcome {
         ProviderOutcome {
+            model: self.model.clone(),
+            api: self.api.clone(),
+            provider: self.provider.clone(),
             finish_reason: self.stop_reason,
             raw_finish_reason: self.raw_stop_reason.clone(),
             response_id: self.response_id.clone(),
             response_model: self.response_model.clone(),
             usage: self.usage.clone(),
+            raw_response: None,
         }
     }
 }

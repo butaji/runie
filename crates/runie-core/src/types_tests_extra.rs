@@ -340,6 +340,9 @@ mod extra {
     #[test]
     fn provider_outcome_preserves_normalized_and_raw_finish_data() {
         let message = AssistantMessage {
+            model: "requested-model".into(),
+            api: "responses".into(),
+            provider: "openai".into(),
             stop_reason: Some(StopReason::MaxTokens),
             raw_stop_reason: Some("max_output_tokens".into()),
             response_id: Some("response-1".into()),
@@ -350,16 +353,31 @@ mod extra {
             },
             ..AssistantMessage::default()
         };
-        let outcome = message.provider_outcome();
-        assert_eq!(outcome.finish_reason, Some(StopReason::MaxTokens));
+        let outcome = ProviderOutcome {
+            raw_response: Some(serde_json::json!({"finish_reason": "max_output_tokens"})),
+            ..message.provider_outcome()
+        };
+        assert_eq!(outcome.model, "requested-model");
+        assert_eq!(outcome.api, "responses");
+        assert_eq!(outcome.provider, "openai");
         assert_eq!(
-            outcome.raw_finish_reason.as_deref(),
-            Some("max_output_tokens")
+            outcome.raw_response.as_ref().unwrap()["finish_reason"],
+            "max_output_tokens"
         );
-        assert_eq!(outcome.usage.total_tokens, 12);
         let round_trip: ProviderOutcome =
-            serde_json::from_value(serde_json::to_value(outcome).unwrap()).unwrap();
-        assert_eq!(round_trip, message.provider_outcome());
+            serde_json::from_value(serde_json::to_value(&outcome).unwrap()).unwrap();
+        assert_eq!(round_trip, outcome);
+    }
+
+    #[test]
+    fn provider_outcome_defaults_new_envelope_fields_for_old_replays() {
+        let outcome: ProviderOutcome = serde_json::from_value(serde_json::json!({
+            "finishReason": "stop",
+            "usage": {}
+        }))
+        .unwrap();
+        assert!(outcome.model.is_empty());
+        assert!(outcome.raw_response.is_none());
     }
 
     #[test]
