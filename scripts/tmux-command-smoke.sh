@@ -82,6 +82,11 @@ for label in "${labels[@]}"; do
     done
     tmux -L "$socket" send-keys -t smoke Enter
     sleep 0.5
+    if [[ "$label" == "Background Jobs" ]] && ! wait_for 'Background job smoke not found'; then
+      echo "FAIL $label: expected-query-result"
+      ((failed += 1))
+      continue
+    fi
   fi
   if capture | rg -qi 'panic|thread .* panicked|unknown command|fatal error'; then
     echo "FAIL $label: runtime-error"; ((failed += 1))
