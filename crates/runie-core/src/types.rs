@@ -180,6 +180,8 @@ pub struct Model {
     pub compat: Option<serde_json::Value>,
 }
 
+#[path = "media.rs"]
+mod media;
 #[path = "model_capabilities.rs"]
 mod model_capabilities;
 

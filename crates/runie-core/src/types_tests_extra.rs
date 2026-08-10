@@ -372,4 +372,11 @@ mod extra {
         assert!(model.supports_images());
         assert!(!Model::default().supports_images());
     }
+
+    #[test]
+    fn image_content_constructor_validates_media_data() {
+        assert!(ImageContent::new("image/png", "aGVsbG8=").is_ok());
+        assert!(ImageContent::new("text/plain", "aGVsbG8=").is_err());
+        assert!(ImageContent::new("image/png", "not base64!").is_err());
+    }
 }
