@@ -1236,6 +1236,7 @@ fn restore_terminal(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result
 async fn build_live_app() -> App {
     let bus = EventBus::new();
     let question_broker = runie_core::tools::UserQuestionBroker::default();
+    let approval_mode = runie_core::tools::ApprovalModeStore::default();
     let subagent_loop = std::sync::Arc::new(tokio::sync::OnceCell::<LoopActor>::new());
     let state = AgentStateActor::new();
     let steering = SteeringQueueActor::new();
@@ -1278,12 +1279,14 @@ async fn build_live_app() -> App {
             approval_mode: ApprovalMode::Ask,
             before_tool_call: Some({
                 let broker = question_broker.clone();
+                let approval_mode = approval_mode.clone();
                 std::sync::Arc::new(move |input| {
                     let broker = broker.clone();
+                    let approval_mode = approval_mode.clone();
                     Box::pin(async move {
                         if matches!(
                             runie_core::tools::approval_decision(
-                                ApprovalMode::Ask,
+                                approval_mode.current(),
                                 &input.tool_call.name,
                             ),
                             runie_core::tools::ApprovalDecision::Allow
@@ -1366,7 +1369,7 @@ async fn build_live_app() -> App {
     };
     let loop_actor = LoopActor::new(deps);
     let _ = subagent_loop.set(loop_actor.clone());
-    let mut app = App::new_with_broker(loop_actor, bus, question_broker);
+    let mut app = App::new_with_broker_and_approval(loop_actor, bus, question_broker, approval_mode);
     app.provider_registry = provider_registry;
     app
 }

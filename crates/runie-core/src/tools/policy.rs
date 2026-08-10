@@ -9,6 +9,28 @@ pub enum ApprovalMode {
     Yolo,
 }
 
+#[derive(Clone)]
+pub struct ApprovalModeStore {
+    tx: tokio::sync::watch::Sender<ApprovalMode>,
+    rx: tokio::sync::watch::Receiver<ApprovalMode>,
+}
+
+impl Default for ApprovalModeStore {
+    fn default() -> Self {
+        let (tx, rx) = tokio::sync::watch::channel(ApprovalMode::Ask);
+        Self { tx, rx }
+    }
+}
+
+impl ApprovalModeStore {
+    pub fn current(&self) -> ApprovalMode {
+        *self.rx.borrow()
+    }
+    pub fn set(&self, mode: ApprovalMode) {
+        let _ = self.tx.send(mode);
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ApprovalDecision {
     Allow,
@@ -51,5 +73,16 @@ mod tests {
             assert_eq!(decide(mode, "write"), ApprovalDecision::Allow);
             assert_eq!(decide(mode, "bash"), ApprovalDecision::Allow);
         }
+    }
+
+    #[test]
+    fn mode_store_projects_changes_without_shared_mutation() {
+        let store = ApprovalModeStore::default();
+        let reader = store.clone();
+        assert_eq!(reader.current(), ApprovalMode::Ask);
+        store.set(ApprovalMode::Auto);
+        assert_eq!(reader.current(), ApprovalMode::Auto);
+        store.set(ApprovalMode::Yolo);
+        assert_eq!(reader.current(), ApprovalMode::Yolo);
     }
 }

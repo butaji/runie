@@ -23,7 +23,7 @@ macro_rules! register_tools {
 pub use actor::{ToolCommand, ToolExecutorActor, ToolOutcome};
 pub use ask_user::{AskUserQuestionTool, UserQuestionOption, UserQuestionRequest};
 pub use executor::{execute_parallel, execute_sequential, ToolExecContext, ToolExecHooks};
-pub use policy::{decide as approval_decision, ApprovalDecision, ApprovalMode};
+pub use policy::{decide as approval_decision, ApprovalDecision, ApprovalMode, ApprovalModeStore};
 pub use question_broker::{PendingUserQuestion, UserQuestionBroker};
 pub use registry::ToolRegistry;
 pub use subagent::{SubagentRequest, SubagentRole, SubagentTool};

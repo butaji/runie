@@ -1,6 +1,13 @@
 impl App {
     async fn route_extended_command(&self, name: &str, args: &str) -> bool {
         let state = self.command_actor.invoke(name, args).await;
+        if matches!(name, "always-approve" | "auto") {
+            self.approval_mode.set(match state.approval {
+                runie_core::command_actor::ApprovalMode::Always => runie_core::tools::ApprovalMode::Yolo,
+                runie_core::command_actor::ApprovalMode::Auto => runie_core::tools::ApprovalMode::Auto,
+                runie_core::command_actor::ApprovalMode::Ask => runie_core::tools::ApprovalMode::Ask,
+            });
+        }
         match name {
         "help" => {
                 self.ui.send(UiMsg::ToggleCommandPalette).await;

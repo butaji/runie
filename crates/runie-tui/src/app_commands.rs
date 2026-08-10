@@ -13,6 +13,15 @@ impl App {
         bus: EventBus,
         question_broker: runie_core::tools::UserQuestionBroker,
     ) -> Self {
+        Self::new_with_broker_and_approval(loop_actor, bus, question_broker, Default::default())
+    }
+
+    pub fn new_with_broker_and_approval(
+        loop_actor: LoopActor,
+        bus: EventBus,
+        question_broker: runie_core::tools::UserQuestionBroker,
+        approval_mode: runie_core::tools::ApprovalModeStore,
+    ) -> Self {
         let ui = UiActor::new(&bus);
         let (submission_tx, submission_owner) = submission_actor(loop_actor.clone());
         Self {
@@ -34,6 +43,7 @@ impl App {
             ),
             command_actor: runie_core::command_actor::CommandActor::new(),
             question_broker,
+            approval_mode,
             submission_tx,
             _submission_owner: submission_owner,
         }
@@ -59,6 +69,7 @@ impl App {
             ),
             command_actor: runie_core::command_actor::CommandActor::new(),
             question_broker: runie_core::tools::UserQuestionBroker::default(),
+            approval_mode: Default::default(),
             submission_tx,
             _submission_owner: submission_owner,
         }
