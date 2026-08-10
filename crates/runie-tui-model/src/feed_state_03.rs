@@ -18,7 +18,6 @@ impl FeedState {
         snapshot.selected_member_index = self.selected_member_index();
         snapshot.theme = self.navigation.theme;
         snapshot.animation_frame = self.navigation.animation_frame;
-        snapshot.tool_modes = self.navigation.tool_modes.clone();
         snapshot.measured_content_rows = self.navigation.measured_content_rows;
         snapshot.measured_viewport_rows = self.navigation.measured_viewport_rows;
         snapshot.measured_anchor_row = self.navigation.measured_anchor_row;

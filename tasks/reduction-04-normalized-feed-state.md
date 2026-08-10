@@ -36,6 +36,8 @@ longer duplicate record construction and argument clearing semantics.
 
 The live scrollback event projection now stores one normalized `ToolRecord`
 per call ID for name and arguments instead of parallel name/argument maps.
+`FeedSnapshot` no longer copies the navigation-owned tool-mode map; tool display
+mode now has one canonical owner and tool-card projection reads it directly.
 Remaining work is removal of duplicated derived indexes and normalization of
 individual line/tool records.
 

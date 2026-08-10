@@ -178,7 +178,6 @@ pub struct FeedSnapshot {
     pub copy_selection: Option<CellSelection>,
     pub theme: ThemeKind,
     pub animation_frame: usize,
-    pub tool_modes: HashMap<String, ToolDisplayMode>,
     /// Last renderer measurement delivered through `LayoutMeasured`.
     pub measured_content_rows: usize,
     pub measured_viewport_rows: usize,

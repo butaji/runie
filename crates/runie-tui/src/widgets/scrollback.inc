@@ -106,6 +106,11 @@ impl Scrollback {
     /// across the model-to-widget boundary.
     pub fn from_model_snapshot(snapshot: FeedSnapshot) -> Self {
         let mut scrollback = Self::new();
+        scrollback.navigation.tool_modes = snapshot
+            .tool_blocks
+            .iter()
+            .map(|block| (block.tool_call_id.clone(), block.mode))
+            .collect();
         scrollback.lines = snapshot.lines;
         scrollback.navigation.scroll_offset = snapshot.scroll_offset;
         scrollback.navigation.autoscroll = snapshot.autoscroll;
@@ -122,7 +127,6 @@ impl Scrollback {
         scrollback.navigation.selection_head = snapshot.selection_head;
         scrollback.navigation.cell_selection = snapshot.cell_selection;
         scrollback.navigation.copy_selection = snapshot.copy_selection;
-        scrollback.navigation.tool_modes = snapshot.tool_modes;
         scrollback.navigation.revealed_dense_groups = snapshot.revealed_dense_groups;
         scrollback.navigation.center_revealed_entry = snapshot.center_revealed_entry;
         scrollback.navigation.facts.workflow_headers = snapshot.facts.workflow_headers;
@@ -1731,7 +1735,6 @@ fn populate_snapshot_layout(snapshot: &mut FeedSnapshot, navigation: &FeedNaviga
     snapshot.copy_selection = navigation.copy_selection;
     snapshot.theme = navigation.theme;
     snapshot.animation_frame = navigation.animation_frame;
-    snapshot.tool_modes = navigation.tool_modes.clone();
     snapshot.revealed_dense_groups = navigation.revealed_dense_groups.clone();
     snapshot.center_revealed_entry = navigation.center_revealed_entry;
     snapshot.measured_content_rows = navigation.measured_content_rows;
@@ -2505,7 +2508,6 @@ mod tests {
         let snapshot = source.model_snapshot();
         let adapted = Scrollback::from_model_snapshot(snapshot.clone());
         assert_eq!(adapted.model_snapshot().lines, snapshot.lines);
-        assert_eq!(adapted.model_snapshot().tool_modes, snapshot.tool_modes);
         assert_eq!(adapted.lines()[0].tool_row_id, Some(0));
     }
 
