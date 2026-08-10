@@ -268,8 +268,6 @@ impl PaletteAction {
     }
 }
 
-#[allow(unused_macros)]
-
 const THEME_LABELS: &[&str] = &[
     "ayu-dark",
     "ayu-light",
