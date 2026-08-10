@@ -1275,7 +1275,53 @@ async fn build_live_app() -> App {
         bus: bus.clone(),
         subscribers: runie_core::events::SubscriberRegistry::new(),
         hooks: ToolExecHooks {
-            approval_mode: ApprovalMode::Auto,
+            approval_mode: ApprovalMode::Ask,
+            before_tool_call: Some({
+                let broker = question_broker.clone();
+                std::sync::Arc::new(move |input| {
+                    let broker = broker.clone();
+                    Box::pin(async move {
+                        if matches!(
+                            runie_core::tools::approval_decision(
+                                ApprovalMode::Ask,
+                                &input.tool_call.name,
+                            ),
+                            runie_core::tools::ApprovalDecision::Allow
+                        ) {
+                            return runie_core::types::BeforeToolCallResult::default();
+                        }
+                        let request = runie_core::tools::UserQuestionRequest {
+                            question: format!("Allow tool '{}' to run?", input.tool_call.name),
+                            options: vec![
+                                runie_core::tools::UserQuestionOption {
+                                    label: "Allow".into(),
+                                    description: "Run this tool once.".into(),
+                                },
+                                runie_core::tools::UserQuestionOption {
+                                    label: "Reject".into(),
+                                    description: "Block this tool call.".into(),
+                                },
+                            ],
+                            allow_multiple: false,
+                        };
+                        let Ok(answer) = broker.ask(request).await else {
+                            return runie_core::types::BeforeToolCallResult {
+                                block: true,
+                                reason: Some("Approval UI was closed".into()),
+                            };
+                        };
+                        let allowed = answer["answers"]
+                            .as_array()
+                            .and_then(|answers| answers.first())
+                            .and_then(serde_json::Value::as_str)
+                            == Some("Allow");
+                        runie_core::types::BeforeToolCallResult {
+                            block: !allowed,
+                            reason: (!allowed).then(|| "Tool call rejected by user".into()),
+                        }
+                    })
+                })
+            }),
             ask_user_question: Some({
                 let broker = question_broker.clone();
                 std::sync::Arc::new(move |request| {
