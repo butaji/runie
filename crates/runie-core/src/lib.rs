@@ -42,6 +42,7 @@ pub mod provider;
 pub mod provider_registry;
 pub mod queues;
 pub mod session;
+pub mod session_search;
 pub mod state;
 pub mod tools;
 
