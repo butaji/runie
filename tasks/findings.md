@@ -66,7 +66,7 @@ As of 2026-08-09, the reduction work has these verified results:
 - `runie_core::replay_yaml` parses ordered YAML event sequences into the same
   memoized reducer path, with malformed-input coverage.
 - `ReducerActor` and `declare_reducer_actor!` are implemented; `StatusActor`
-  uses the generated runtime handle.
+  and `CommandActor` use the generated runtime handles.
 - `EventProjection` is consumed by status and UI actors.
 - `FeedSnapshot` now has a sole `FeedFacts` facts boundary; reducer and
   scrollback consumers no longer use flattened fact fields.

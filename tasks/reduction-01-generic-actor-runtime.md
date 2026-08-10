@@ -22,8 +22,8 @@ incrementally while retaining domain-specific command adapters.
 actor has no additional command semantics; it does not hide the reducer or
 task lifecycle.
 
-`StatusActor` is the first production actor migrated to the macro-backed
-runtime. Its event-bus bridge remains explicit, while mailbox, acknowledgement,
+`StatusActor` and `CommandActor` now use the macro-backed runtime. Their
+event-bus and command adapters remain explicit, while mailbox, acknowledgement,
 snapshot, and worker boilerplate are removed.
 
 ## Target

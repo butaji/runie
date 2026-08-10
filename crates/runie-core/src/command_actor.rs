@@ -3,10 +3,9 @@
 //! Command parsing lives in `commands`; this actor owns the mutable effects
 //! of commands which are not part of the Pi session journal itself.
 
-use crate::task_owner::{spawn_actor_worker, TaskOwner};
+use crate::declare_reducer_actor;
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, sync::Arc};
-use tokio::sync::{mpsc, oneshot, watch};
+use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum ApprovalMode {
@@ -75,60 +74,33 @@ pub struct CommandState {
     pub diagnostic_report: Option<DiagnosticReport>,
 }
 
-enum CommandMessage {
-    Invoke {
-        name: String,
-        args: String,
-        reply: oneshot::Sender<CommandState>,
-    },
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CommandEvent {
+    name: String,
+    args: String,
 }
 
-#[derive(Clone)]
-pub struct CommandActor {
-    tx: mpsc::Sender<CommandMessage>,
-    snapshot: watch::Receiver<CommandState>,
-    _owner: Arc<TaskOwner>,
-}
+declare_reducer_actor!(CommandActor, CommandState, CommandEvent);
 
 impl CommandActor {
     pub fn new() -> Self {
-        let (snapshot_tx, snapshot) = watch::channel(CommandState::default());
-        let (tx, owner) = spawn_actor_worker!(128, move |mut rx: mpsc::Receiver<
-            CommandMessage,
-        >| async move {
-            let mut state = CommandState::default();
-            while let Some(CommandMessage::Invoke { name, args, reply }) = rx.recv().await {
-                reduce(&mut state, &name, &args);
-                let _ = snapshot_tx.send(state.clone());
-                let _ = reply.send(state.clone());
-            }
-        });
-        Self {
-            tx,
-            snapshot,
-            _owner: owner,
-        }
+        Self::new_with_capacity(128)
+    }
+
+    fn new_with_capacity(capacity: usize) -> Self {
+        Self::with_capacity(capacity, CommandState::default(), |state, event| {
+            reduce(state, &event.name, &event.args);
+        })
     }
 
     pub async fn invoke(&self, name: impl Into<String>, args: impl Into<String>) -> CommandState {
-        let (reply, result) = oneshot::channel();
-        if self
-            .tx
-            .send(CommandMessage::Invoke {
+        let _ = self
+            .apply(CommandEvent {
                 name: name.into(),
                 args: args.into(),
-                reply,
             })
-            .await
-            .is_err()
-        {
-            return self.snapshot();
-        }
-        result.await.unwrap_or_else(|_| self.snapshot())
-    }
-
-    pub fn snapshot(&self) -> CommandState {
-        self.snapshot.borrow().clone()
+            .await;
+        self.snapshot()
     }
 }
 

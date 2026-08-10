@@ -87,7 +87,7 @@ macro_rules! declare_reducer_actor {
         pub struct $name($crate::task_owner::ReducerActor<$state, $event>);
 
         impl $name {
-            pub fn new(
+            pub fn with_capacity(
                 capacity: usize,
                 initial: $state,
                 reduce: impl Fn(&mut $state, $event) + Send + 'static,
@@ -95,6 +95,14 @@ macro_rules! declare_reducer_actor {
                 Self($crate::task_owner::ReducerActor::new(
                     capacity, initial, reduce,
                 ))
+            }
+
+            pub fn from_parts(
+                capacity: usize,
+                initial: $state,
+                reduce: impl Fn(&mut $state, $event) + Send + 'static,
+            ) -> Self {
+                Self::with_capacity(capacity, initial, reduce)
             }
 
             pub async fn apply(&self, event: $event) -> bool {
@@ -288,7 +296,7 @@ mod tests {
 
     #[tokio::test]
     async fn reducer_actor_macro_keeps_domain_handle_mechanical() {
-        let actor = TestReducerActor::new(2, 4, |state, event| *state *= event);
+        let actor = TestReducerActor::from_parts(2, 4, |state, event| *state *= event);
         assert!(actor.apply(3).await);
         assert_eq!(actor.snapshot(), 12);
         assert_eq!(*actor.borrow(), 12);

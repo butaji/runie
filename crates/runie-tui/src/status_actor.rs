@@ -23,7 +23,7 @@ impl StatusActor {
             ..StatusSnapshot::default()
         };
         let elapsed_seed = crate::clock::parity_elapsed_ticks();
-        let reducer = StatusReducer::new(16, initial, move |state, message| {
+        let reducer = StatusReducer::from_parts(16, initial, move |state, message| {
             state.apply(message, elapsed_seed)
         });
         Self {
