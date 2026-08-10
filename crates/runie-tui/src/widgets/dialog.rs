@@ -162,7 +162,7 @@ fn dialog_footer(
     theme: runie_core::types::ThemeKind,
     inner_width: u16,
 ) -> [Line<'static>; 2] {
-    let actions = dialog_actions(frame, theme);
+    let actions = crate::paint::inline_spans(&crate::paint::dialog_footer_paint(frame), theme);
     let action_width = actions
         .iter()
         .map(|span| span.content.chars().count())
@@ -316,18 +316,6 @@ fn narrow_dialog_row(
         format!("{text}{}", " ".repeat(padding)),
         style,
     ))
-}
-
-fn dialog_actions(frame: &DialogFrame, theme: runie_core::types::ThemeKind) -> Vec<Span<'static>> {
-    appearance::footer_hotkey_actions(
-        theme,
-        frame
-            .spec
-            .actions
-            .iter()
-            .filter(|action| action.enabled.evaluate(frame))
-            .filter_map(|action| action.hotkey.map(|key| (key, action.label))),
-    )
 }
 
 fn dialog_block(frame: &DialogFrame, theme: runie_core::types::ThemeKind) -> Block<'static> {

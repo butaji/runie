@@ -16,7 +16,7 @@ use ratatui::{
 };
 use runie_core::types::ThemeKind;
 use runie_tui_model::{
-    InputMode, PromptSnapshot, StatusSnapshot, ToolCardPaintIntent, ToolCardRow,
+    DialogFrame, InputMode, PromptSnapshot, StatusSnapshot, ToolCardPaintIntent, ToolCardRow,
 };
 
 impl From<ToolCardPaintIntent> for PaintIntent {
@@ -139,18 +139,7 @@ pub fn render_paint_document(
         })
         .collect::<Vec<_>>();
     if !document.inline.is_empty() {
-        let spans = document
-            .inline
-            .iter()
-            .map(|span| {
-                let mut style = appearance::style_for_intent(theme, span.intent);
-                if span.bold {
-                    style = style.add_modifier(ratatui::style::Modifier::BOLD);
-                }
-                Span::styled(span.text.clone(), style)
-            })
-            .collect::<Vec<_>>();
-        lines.push(Line::from(spans));
+        lines.push(Line::from(inline_spans(document, theme)));
     }
     Paragraph::new(lines).render(area, buffer);
 }
@@ -218,6 +207,42 @@ pub fn status_footer_paint(snapshot: &StatusSnapshot) -> PaintDocument {
         ),
         state => document.span(state.label(), PaintIntent::Muted, false),
     }
+}
+
+pub fn dialog_footer_paint(frame: &DialogFrame) -> PaintDocument {
+    let mut document = PaintDocument::default();
+    for (index, action) in frame
+        .spec
+        .actions
+        .iter()
+        .filter(|action| action.enabled.evaluate(frame))
+        .filter_map(|action| action.hotkey.map(|key| (key, action.label)))
+        .enumerate()
+    {
+        if index > 0 {
+            document = document.span("  │  ", PaintIntent::Muted, false);
+        }
+        document = document.span(action.0, PaintIntent::FooterKey, true).span(
+            format!(":{}", action.1),
+            PaintIntent::Muted,
+            false,
+        );
+    }
+    document
+}
+
+pub(crate) fn inline_spans(document: &PaintDocument, theme: ThemeKind) -> Vec<Span<'static>> {
+    document
+        .inline
+        .iter()
+        .map(|span| {
+            let mut style = appearance::style_for_intent(theme, span.intent);
+            if span.bold {
+                style = style.add_modifier(ratatui::style::Modifier::BOLD);
+            }
+            Span::styled(span.text.clone(), style)
+        })
+        .collect()
 }
 
 fn footer_spans<const N: usize>(
@@ -302,6 +327,27 @@ mod tests {
         );
         assert!(document.inline[0].bold);
         assert_eq!(document.inline[0].intent, PaintIntent::FooterKey);
+    }
+
+    #[test]
+    fn dialog_footer_paint_uses_enabled_action_data() {
+        let frame = runie_tui_model::DialogFrame {
+            spec: runie_tui_model::COMMAND_DIALOG,
+            query: "query".into(),
+            selected: 0,
+        };
+        let document = dialog_footer_paint(&frame);
+        let rendered = document
+            .inline
+            .iter()
+            .map(|span| span.text.as_str())
+            .collect::<String>();
+
+        assert!(rendered.contains("Enter:select"));
+        assert!(document
+            .inline
+            .iter()
+            .any(|span| span.intent == PaintIntent::FooterKey && span.bold));
     }
 
     #[test]
