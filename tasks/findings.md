@@ -87,6 +87,9 @@ As of 2026-08-09, the reduction work has these verified results:
   classifier as a data declaration while preserving all existing aliases.
 - Transcript-selectability is now a `LineKind` predicate shared by feed
   navigation, completing the central line-classification vocabulary.
+- Five numbered feed fragments covering tool-row lifecycle and selection are
+  consolidated into `feed_state_tool_rows.rs`; behavior remains covered by
+  the 193-test model suite.
 - `component_specs!` generates the declarative component ownership table.
 - `event_trace!` reduces pure replay-test boilerplate.
 - `cargo test --workspace --quiet` passes across the current workspace.

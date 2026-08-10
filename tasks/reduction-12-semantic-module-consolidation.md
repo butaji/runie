@@ -24,3 +24,6 @@ The command-surface ownership boundary is now clean as well: command tests
 were moved to `commands_tests.rs`, UI messages to `ui_messages.rs`, and the
 extended app command route to `app_extended_command.inc`. `lint-check` is now
 clean across the workspace.
+Tool-row lifecycle and transcript-selection fragments are now consolidated in
+the semantic `feed_state_tool_rows.rs` module, with the same private methods
+and include boundary.
