@@ -21,7 +21,7 @@ evidence prove the item.
 15. `harness-15-user-questions` — **partial** — structured validation, owned broker, live selector, multi-select answers, YAML replay, explicit broker cancellation, broker-side option validation, and bounded resolution traces for answered/cancelled/rejected requests are implemented; rejected traces now retain the attempted structured answer, while durable session export remains.
 16. `harness-16-media` — **partial** — model-declared input modalities now expose capability-aware `supports_input`/`supports_images` predicates, `ToolRegistry::tools_for_model` filters tools by required modality, and `ImageContent::new` validates image MIME/base64 data; video and provider-specific media encoding remain.
 17. `harness-17-ide` — ACP or equivalent IDE protocol.
-18. `harness-18-noninteractive` — **partial** — typed JSONL event encoding/decoding and deterministic completed/aborted/failed exit codes now exist in `runie-core`; CLI stdin/stdout wiring and approval policy remain.
+18. `harness-18-noninteractive` — **partial** — typed JSONL event encoding/decoding, deterministic completed/aborted/failed exit codes, and pure `--jsonl`/explicit approval argument parsing now exist in `runie-core`; CLI stdin/stdout wiring remains.
 19. `harness-19-diagnostics` — **partial** — actor-owned `/doctor` now projects a serializable report with explicit checks and fix intent, telemetry exposes a serializable usage summary over ended provider spans, and `DiagnosticBundle` exports/replays the combined data with renderer-neutral metric rows; terminal visualization remains.
 20. `harness-20-tui-polish` — searchable selectors, approvals, tasks, tool cards, and keyboard UX.
 

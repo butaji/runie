@@ -31,6 +31,42 @@ pub enum RunOutcome {
     Failed,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct NonInteractiveConfig {
+    pub jsonl: bool,
+    pub auto_approve: bool,
+    pub prompt: Option<String>,
+}
+
+impl NonInteractiveConfig {
+    pub fn parse(args: &[String]) -> Result<Self, String> {
+        let mut config = Self::default();
+        let mut index = 0;
+        while index < args.len() {
+            match args[index].as_str() {
+                "--jsonl" => config.jsonl = true,
+                "--yes" | "--auto-approve" => config.auto_approve = true,
+                "--prompt" => {
+                    index += 1;
+                    config.prompt =
+                        Some(args.get(index).ok_or("--prompt requires a value")?.clone());
+                }
+                value if value.starts_with('-') => {
+                    return Err(format!("unknown runie option: {value}"));
+                }
+                value => {
+                    if config.prompt.is_some() {
+                        return Err("prompt was provided more than once".into());
+                    }
+                    config.prompt = Some(value.into());
+                }
+            }
+            index += 1;
+        }
+        Ok(config)
+    }
+}
+
 impl RunOutcome {
     pub const fn exit_code(self) -> u8 {
         match self {
@@ -79,5 +115,22 @@ mod tests {
         assert_eq!(RunOutcome::Completed.exit_code(), 0);
         assert_eq!(RunOutcome::Aborted.exit_code(), 130);
         assert_eq!(RunOutcome::Failed.exit_code(), 1);
+    }
+
+    #[test]
+    fn noninteractive_args_are_typed_and_approval_is_explicit() {
+        let args = ["--jsonl", "--yes", "--prompt", "inspect repo"]
+            .into_iter()
+            .map(String::from)
+            .collect::<Vec<_>>();
+        assert_eq!(
+            NonInteractiveConfig::parse(&args).unwrap(),
+            NonInteractiveConfig {
+                jsonl: true,
+                auto_approve: true,
+                prompt: Some("inspect repo".into())
+            }
+        );
+        assert!(NonInteractiveConfig::parse(&["--prompt".into()]).is_err());
     }
 }
