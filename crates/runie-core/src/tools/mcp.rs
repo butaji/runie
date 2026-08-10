@@ -101,6 +101,24 @@ impl McpStdioClient {
         })
     }
 
+    pub async fn call_tool(
+        &self,
+        tool: &str,
+        arguments: serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
+        if tool.trim().is_empty() {
+            return Err("MCP tool name must not be empty".into());
+        }
+        let response = self
+            .request(&[serde_json::json!({"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":tool,"arguments":arguments}})])
+            .await?;
+        response
+            .into_iter()
+            .next()
+            .and_then(|value| value.get("result").cloned())
+            .ok_or("MCP tools/call response has no result".into())
+    }
+
     async fn exchange(
         &self,
         child: &mut tokio::process::Child,
@@ -292,5 +310,21 @@ mod tests {
         assert_eq!(server.name, "demo");
         assert_eq!(server.tools[0].name, "echo");
         assert_eq!(server.tools[0].input_schema["type"], "object");
+    }
+
+    #[tokio::test]
+    async fn stdio_call_reduces_tools_call_result() {
+        let script = "while IFS= read -r line; do case \"$line\" in *tools/call*) echo '{\"id\":1,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"ok\"}]}}';; esac; done";
+        let client = McpStdioClient::new(
+            "sh",
+            vec!["-c".into(), script.into()],
+            Duration::from_secs(1),
+        )
+        .unwrap();
+        let result = client
+            .call_tool("echo", serde_json::json!({"value":7}))
+            .await
+            .unwrap();
+        assert_eq!(result["content"][0]["text"], "ok");
     }
 }
