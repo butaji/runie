@@ -34,6 +34,20 @@ pub struct SchedulerMetrics {
     pub cancelled_by_reason: BTreeMap<SchedulerCancellationReason, u64>,
 }
 
+impl SchedulerMetrics {
+    pub fn terminal_lines(&self) -> Vec<String> {
+        vec![
+            format!("queued: {}", self.queued),
+            format!("running: {}", self.running),
+            format!("completed: {}", self.completed),
+            format!("failed: {}", self.failed),
+            format!("cancelled: {}", self.cancelled),
+            format!("interactive_enqueued: {}", self.interactive_enqueued),
+            format!("background_enqueued: {}", self.background_enqueued),
+        ]
+    }
+}
+
 /// Pure scheduler telemetry reducer. Queue ownership remains in the executor.
 pub fn reduce_scheduler_event(
     metrics: &mut SchedulerMetrics,
@@ -128,6 +142,32 @@ mod tests {
         }
         assert_eq!(metrics.running, 0);
         assert_eq!(metrics.cancelled, 1);
+    }
+
+    #[test]
+    fn terminal_lines_project_metrics_in_stable_order() {
+        let metrics = SchedulerMetrics {
+            queued: 1,
+            running: 2,
+            completed: 3,
+            failed: 4,
+            cancelled: 5,
+            interactive_enqueued: 6,
+            background_enqueued: 7,
+            cancelled_by_reason: BTreeMap::new(),
+        };
+        assert_eq!(
+            metrics.terminal_lines(),
+            vec![
+                "queued: 1",
+                "running: 2",
+                "completed: 3",
+                "failed: 4",
+                "cancelled: 5",
+                "interactive_enqueued: 6",
+                "background_enqueued: 7"
+            ]
+        );
     }
 
     #[test]
