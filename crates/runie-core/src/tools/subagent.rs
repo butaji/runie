@@ -72,6 +72,17 @@ impl SubagentRole {
         }
         Ok(())
     }
+
+    pub fn validate_output(self, output: &serde_json::Value) -> Result<(), String> {
+        let output_bytes = serde_json::to_vec(output)
+            .map_err(|error| format!("subagent output is not serializable: {error}"))?
+            .len() as u64;
+        self.validate_resource_usage(SubagentResourceUsage {
+            turns: 0,
+            output_bytes,
+            tool_calls: 0,
+        })
+    }
 }
 
 impl SubagentRole {
@@ -292,5 +303,14 @@ mod tests {
                 tool_calls: 0,
             })
             .is_err());
+    }
+
+    #[test]
+    fn output_boundary_enforces_role_isolation() {
+        assert!(SubagentRole::Explore
+            .validate_output(&serde_json::json!({"ok": true}))
+            .is_ok());
+        let output = serde_json::json!("x".repeat(32 * 1024));
+        assert!(SubagentRole::Explore.validate_output(&output).is_err());
     }
 }

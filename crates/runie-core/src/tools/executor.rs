@@ -305,8 +305,7 @@ async fn dispatch_one(
     dispatch_prepared(&prepared, ctx).await
 }
 
-/// Execute an already-prepared + validated call (pi prepareToolCall ->
-/// executePreparedToolCall -> finalizeExecutedToolCall).
+/// Execute an already-prepared and validated call.
 async fn dispatch_prepared(
     call: &ToolCall,
     ctx: &ToolExecContext,
@@ -448,6 +447,7 @@ async fn execute_subagent(
     let request: crate::tools::SubagentRequest = serde_json::from_value(call.arguments.clone())
         .map_err(|error| format!("invalid subagent request: {error}"))?;
     let output = hook(request.clone()).await?;
+    request.role.clone().validate_output(&output)?;
     Ok(crate::tools::subagent::result(&request, output))
 }
 fn tool_update_callback(
