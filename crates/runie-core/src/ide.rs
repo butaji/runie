@@ -32,6 +32,15 @@ pub enum IdeSeverity {
     Hint,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum IdeConnectionStatus {
+    #[default]
+    Disconnected,
+    Connected,
+    Reconnecting,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum IdeEvent {
     Initialized {
@@ -46,11 +55,15 @@ pub enum IdeEvent {
     DocumentClosed {
         uri: String,
     },
+    ConnectionLost,
+    ReconnectStarted,
+    ConnectionRestored,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct IdeSnapshot {
     pub workspace: Option<String>,
+    pub connection: IdeConnectionStatus,
     pub documents: BTreeMap<String, IdeDocument>,
     pub diagnostics: BTreeMap<String, Vec<IdeDiagnostic>>,
 }
@@ -152,6 +165,7 @@ pub fn reduce_ide_event(snapshot: &mut IdeSnapshot, event: IdeEvent) -> Result<(
                 return Err("IDE workspace must not be empty".into());
             }
             snapshot.workspace = Some(workspace);
+            snapshot.connection = IdeConnectionStatus::Connected;
         }
         IdeEvent::DocumentOpened(document) | IdeEvent::DocumentChanged(document) => {
             validate_document(&document)?;
@@ -166,6 +180,14 @@ pub fn reduce_ide_event(snapshot: &mut IdeSnapshot, event: IdeEvent) -> Result<(
         IdeEvent::DocumentClosed { uri } => {
             snapshot.documents.remove(&uri);
             snapshot.diagnostics.remove(&uri);
+        }
+        IdeEvent::ConnectionLost => snapshot.connection = IdeConnectionStatus::Disconnected,
+        IdeEvent::ReconnectStarted => snapshot.connection = IdeConnectionStatus::Reconnecting,
+        IdeEvent::ConnectionRestored => {
+            if snapshot.workspace.is_none() {
+                return Err("IDE connection cannot restore before initialization".into());
+            }
+            snapshot.connection = IdeConnectionStatus::Connected;
         }
     }
     Ok(())
@@ -227,6 +249,25 @@ mod tests {
         )
         .is_err());
         assert!(snapshot.workspace.is_none());
+        assert_eq!(snapshot.connection, IdeConnectionStatus::Disconnected);
+    }
+
+    #[test]
+    fn ide_connection_lifecycle_is_replayable_data() {
+        let mut snapshot = IdeSnapshot::default();
+        reduce_ide_event(
+            &mut snapshot,
+            IdeEvent::Initialized {
+                workspace: "/workspace".into(),
+            },
+        )
+        .unwrap();
+        reduce_ide_event(&mut snapshot, IdeEvent::ConnectionLost).unwrap();
+        assert_eq!(snapshot.connection, IdeConnectionStatus::Disconnected);
+        reduce_ide_event(&mut snapshot, IdeEvent::ReconnectStarted).unwrap();
+        assert_eq!(snapshot.connection, IdeConnectionStatus::Reconnecting);
+        reduce_ide_event(&mut snapshot, IdeEvent::ConnectionRestored).unwrap();
+        assert_eq!(snapshot.connection, IdeConnectionStatus::Connected);
     }
 
     #[test]
