@@ -98,71 +98,23 @@ pub fn palette_display_rows(query: &str, skills: &[String]) -> Vec<String> {
         .collect()
 }
 
-fn palette_section(action: PaletteAction) -> &'static str {
-    if is_context_action(&action) {
-        "Context"
-    } else if is_session_action(&action) {
-        "Session"
-    } else if is_information_action(&action) {
-        "Information"
-    } else if is_extension_action(&action) {
-        "Extensions"
-    } else if is_automation_action(&action) {
-        "Automation"
-    } else {
-        "Model & Input"
-    }
+macro_rules! palette_sections {
+    ($(($section:literal => [$($action:ident),+ $(,)?])),+ $(,)?) => {
+        fn palette_section(action: PaletteAction) -> &'static str {
+            match action {
+                $( $(PaletteAction::$action)|+ => $section, )+
+                _ => "Model & Input",
+            }
+        }
+    };
 }
 
-const fn is_context_action(action: &PaletteAction) -> bool {
-    matches!(
-        action,
-        PaletteAction::CopyLastResponse | PaletteAction::SessionInfo
-    )
-}
-
-const fn is_session_action(action: &PaletteAction) -> bool {
-    matches!(
-        action,
-        PaletteAction::NewSession
-            | PaletteAction::KeyboardShortcuts
-            | PaletteAction::Quit
-            | PaletteAction::Changelog
-            | PaletteAction::ShareSession
-    )
-}
-
-const fn is_information_action(action: &PaletteAction) -> bool {
-    matches!(
-        action,
-        PaletteAction::Help
-            | PaletteAction::ContextInfo
-            | PaletteAction::Doctor
-            | PaletteAction::Feedback
-            | PaletteAction::Usage
-    )
-}
-
-const fn is_extension_action(action: &PaletteAction) -> bool {
-    matches!(
-        action,
-        PaletteAction::Skills
-            | PaletteAction::Hooks
-            | PaletteAction::Plugins
-            | PaletteAction::Mcps
-            | PaletteAction::Memory
-    )
-}
-
-const fn is_automation_action(action: &PaletteAction) -> bool {
-    matches!(
-        action,
-        PaletteAction::Goal
-            | PaletteAction::Workflow
-            | PaletteAction::Workflows
-            | PaletteAction::Loop
-            | PaletteAction::DeepResearch
-    )
+palette_sections! {
+    ("Context" => [CopyLastResponse, SessionInfo]),
+    ("Session" => [NewSession, KeyboardShortcuts, Quit, Changelog, ShareSession]),
+    ("Information" => [Help, ContextInfo, Doctor, Feedback, Usage]),
+    ("Extensions" => [Skills, Hooks, Plugins, Mcps, Memory]),
+    ("Automation" => [Goal, Workflow, Workflows, Loop, DeepResearch]),
 }
 
 fn palette_row(label: &str) -> String {

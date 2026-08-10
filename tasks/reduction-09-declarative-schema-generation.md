@@ -39,3 +39,5 @@ keeping activity/workflow ownership explicit while removing repeated reset
 assignments.
 `LineKind` variants and their transcript prefix glyphs now share one
 macro-backed table, while semantic classification predicates remain explicit.
+Palette section membership now uses one macro-backed classification table,
+removing the split helper predicates while retaining an explicit fallback.
