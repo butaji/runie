@@ -92,9 +92,10 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    add richer renderer-neutral output cards and owned lifecycle controls,
    with failure/cancellation replay traces.
 3. Model-aware context policy — `harness-05` (live usage boundary implemented).
-   Recovery and `/context` now use the active model’s declared window;
-   remaining work is richer compaction controls and threshold/recovery replay
-   coverage for those controls.
+   Recovery and `/context` now use the active model’s declared window, and
+   `/context` projects the typed threshold decision; remaining work is richer
+   compaction controls and threshold/recovery replay coverage for those
+   controls.
 4. Scheduler cancellation controls — `harness-08` (actor-owned metrics and `/jobs` projection implemented; richer controls remain).
    Extend the existing mailbox/replay state machine with user-visible queued,
    running, and cancelled control projections.

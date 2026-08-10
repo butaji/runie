@@ -400,6 +400,10 @@
                 threshold_tokens: 900
             }
         );
+        assert_eq!(
+            compaction_decision(900, 1_000, settings).terminal_lines(),
+            ["compaction_policy: within_budget available_tokens=0"]
+        );
     }
 
     #[test]

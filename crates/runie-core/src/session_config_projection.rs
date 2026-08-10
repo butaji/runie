@@ -69,6 +69,21 @@ impl CompactionDecision {
     pub const fn required(self) -> bool {
         matches!(self, Self::Required { .. })
     }
+
+    pub fn terminal_lines(self) -> Vec<String> {
+        match self {
+            Self::Disabled => vec!["compaction_policy: disabled".into()],
+            Self::WithinBudget { available_tokens } => vec![format!(
+                "compaction_policy: within_budget available_tokens={available_tokens}"
+            )],
+            Self::Required {
+                context_tokens,
+                threshold_tokens,
+            } => vec![format!(
+                "compaction_policy: required context_tokens={context_tokens} threshold_tokens={threshold_tokens}"
+            )],
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

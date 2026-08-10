@@ -184,6 +184,20 @@ impl App {
                         model.as_ref().map(|model| model.context_window).unwrap_or(0)
                     ),
                 ];
+                let context_window = model.as_ref().map(|model| model.context_window).unwrap_or(0);
+                let settings = runie_core::session::CompactionSettings {
+                    enabled: true,
+                    reserve_tokens: 20_000,
+                    keep_recent_tokens: 20,
+                };
+                lines.extend(
+                    runie_core::session::compaction_decision(
+                        estimate.tokens,
+                        context_window,
+                        settings,
+                    )
+                    .terminal_lines(),
+                );
                 if let Some(projection) = snapshot.compaction_context_projection() {
                     lines.extend(projection.terminal_lines());
                 } else {
