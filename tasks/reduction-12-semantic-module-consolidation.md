@@ -32,3 +32,5 @@ Tool start/finish and display-mode fragments are consolidated in
 repeating the two map writes.
 Activity facts and transcript presentation transitions are consolidated in
 `feed_activity.rs`, keeping activity ownership and spacing behavior together.
+Workflow start/progress/end and transcript replacement are consolidated in
+`feed_workflow.rs`, preserving the same lifecycle transitions.

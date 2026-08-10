@@ -99,6 +99,8 @@ As of 2026-08-09, the reduction work has these verified results:
 - Content, tool, and workflow routing fragments are consolidated into
   `feed_reducers.rs`, preserving the event reducer API while removing three
   numbered dispatch modules.
+- Workflow start/progress/end and transcript replacement are consolidated in
+  `feed_workflow.rs`, keeping the workflow state machine in one module.
 - `component_specs!` generates the declarative component ownership table.
 - `event_trace!` reduces pure replay-test boilerplate.
 - `cargo test --workspace --quiet` passes across the current workspace.
