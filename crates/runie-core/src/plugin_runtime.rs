@@ -6,6 +6,7 @@ use std::collections::BTreeMap;
 pub enum PluginRuntimeStatus {
     Loading,
     Ready,
+    Executing,
     Failed,
     Unloading,
     Unloaded,
@@ -15,6 +16,16 @@ pub enum PluginRuntimeStatus {
 pub struct PluginRuntimeState {
     pub status: BTreeMap<String, PluginRuntimeStatus>,
     pub errors: BTreeMap<String, String>,
+    #[serde(default)]
+    pub executions: BTreeMap<String, PluginExecutionSummary>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct PluginExecutionSummary {
+    pub status: Option<i32>,
+    pub stdout: String,
+    pub stderr: String,
+    pub truncated: bool,
 }
 
 impl PluginRuntimeState {
@@ -36,17 +47,43 @@ impl Default for PluginRuntimeState {
         Self {
             status: BTreeMap::new(),
             errors: BTreeMap::new(),
+            executions: BTreeMap::new(),
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum PluginRuntimeEvent {
-    LoadStarted { name: String },
-    LoadSucceeded { name: String },
-    LoadFailed { name: String, error: String },
-    UnloadStarted { name: String },
-    Unloaded { name: String },
+    LoadStarted {
+        name: String,
+    },
+    LoadSucceeded {
+        name: String,
+    },
+    LoadFailed {
+        name: String,
+        error: String,
+    },
+    UnloadStarted {
+        name: String,
+    },
+    Unloaded {
+        name: String,
+    },
+    ExecuteStarted {
+        name: String,
+    },
+    ExecuteFinished {
+        name: String,
+        status: Option<i32>,
+        stdout: String,
+        stderr: String,
+        truncated: bool,
+    },
+    ExecuteFailed {
+        name: String,
+        error: String,
+    },
 }
 
 fn event_data(event: PluginRuntimeEvent) -> (String, PluginRuntimeStatus, Option<String>) {
@@ -58,6 +95,11 @@ fn event_data(event: PluginRuntimeEvent) -> (String, PluginRuntimeStatus, Option
         }
         PluginRuntimeEvent::UnloadStarted { name } => (name, PluginRuntimeStatus::Unloading, None),
         PluginRuntimeEvent::Unloaded { name } => (name, PluginRuntimeStatus::Unloaded, None),
+        PluginRuntimeEvent::ExecuteStarted { .. }
+        | PluginRuntimeEvent::ExecuteFinished { .. }
+        | PluginRuntimeEvent::ExecuteFailed { .. } => {
+            unreachable!("execution events are handled by the runtime reducer")
+        }
     }
 }
 
@@ -70,6 +112,7 @@ fn allows_transition(current: Option<&PluginRuntimeStatus>, next: &PluginRuntime
         PluginRuntimeStatus::Ready | PluginRuntimeStatus::Failed => {
             matches!(current, Some(PluginRuntimeStatus::Loading))
         }
+        PluginRuntimeStatus::Executing => matches!(current, Some(PluginRuntimeStatus::Ready)),
         PluginRuntimeStatus::Unloading => matches!(
             current,
             Some(PluginRuntimeStatus::Ready) | Some(PluginRuntimeStatus::Failed)
@@ -83,10 +126,16 @@ pub fn reduce_plugin_runtime(
     state: &mut PluginRuntimeState,
     event: PluginRuntimeEvent,
 ) -> Result<(), String> {
-    let (name, status, error) = event_data(event);
-    if registry.get(&name).is_none() {
-        return Err(format!("plugin is not registered: {name}"));
+    if matches!(
+        event,
+        PluginRuntimeEvent::ExecuteStarted { .. }
+            | PluginRuntimeEvent::ExecuteFinished { .. }
+            | PluginRuntimeEvent::ExecuteFailed { .. }
+    ) {
+        return reduce_execution_event(registry, state, event);
     }
+    let (name, status, error) = event_data(event);
+    ensure_registered(registry, &name)?;
     let current = state.status.get(&name);
     if !allows_transition(current, &status) {
         return Err(format!(
@@ -107,6 +156,100 @@ pub fn reduce_plugin_runtime(
     }
     state.status.insert(name, status);
     Ok(())
+}
+
+fn reduce_execution_event(
+    registry: &PluginRegistry,
+    state: &mut PluginRuntimeState,
+    event: PluginRuntimeEvent,
+) -> Result<(), String> {
+    match event {
+        PluginRuntimeEvent::ExecuteStarted { name } => start_execution(registry, state, name)?,
+        PluginRuntimeEvent::ExecuteFinished {
+            name,
+            status,
+            stdout,
+            stderr,
+            truncated,
+        } => finish_execution(registry, state, name, status, stdout, stderr, truncated)?,
+        PluginRuntimeEvent::ExecuteFailed { name, error } => {
+            fail_execution(registry, state, name, error)?
+        }
+        _ => unreachable!("non-execution event passed to execution reducer"),
+    }
+    Ok(())
+}
+
+fn start_execution(
+    registry: &PluginRegistry,
+    state: &mut PluginRuntimeState,
+    name: String,
+) -> Result<(), String> {
+    ensure_registered(registry, &name)?;
+    if !matches!(state.status.get(&name), Some(PluginRuntimeStatus::Ready)) {
+        return Err(format!("plugin is not ready to execute: {name}"));
+    }
+    state.status.insert(name, PluginRuntimeStatus::Executing);
+    Ok(())
+}
+
+fn finish_execution(
+    registry: &PluginRegistry,
+    state: &mut PluginRuntimeState,
+    name: String,
+    status: Option<i32>,
+    stdout: String,
+    stderr: String,
+    truncated: bool,
+) -> Result<(), String> {
+    ensure_registered(registry, &name)?;
+    require_executing(state, &name)?;
+    state
+        .status
+        .insert(name.clone(), PluginRuntimeStatus::Ready);
+    state.executions.insert(
+        name,
+        PluginExecutionSummary {
+            status,
+            stdout,
+            stderr,
+            truncated,
+        },
+    );
+    Ok(())
+}
+
+fn fail_execution(
+    registry: &PluginRegistry,
+    state: &mut PluginRuntimeState,
+    name: String,
+    error: String,
+) -> Result<(), String> {
+    ensure_registered(registry, &name)?;
+    require_executing(state, &name)?;
+    if error.trim().is_empty() {
+        return Err("plugin execution error must not be empty".into());
+    }
+    state
+        .status
+        .insert(name.clone(), PluginRuntimeStatus::Ready);
+    state.errors.insert(name, error);
+    Ok(())
+}
+
+fn require_executing(state: &PluginRuntimeState, name: &str) -> Result<(), String> {
+    if matches!(state.status.get(name), Some(PluginRuntimeStatus::Executing)) {
+        Ok(())
+    } else {
+        Err(format!("plugin is not executing: {name}"))
+    }
+}
+
+fn ensure_registered(registry: &PluginRegistry, name: &str) -> Result<(), String> {
+    registry
+        .get(name)
+        .map(|_| ())
+        .ok_or_else(|| format!("plugin is not registered: {name}"))
 }
 
 #[cfg(test)]
@@ -167,6 +310,46 @@ mod tests {
             },
         );
         assert_eq!(state.status["sample-plugin"], PluginRuntimeStatus::Ready);
+    }
+
+    #[test]
+    fn execution_events_replay_bounded_result_data() {
+        let registry = sample_registry();
+        let mut state = PluginRuntimeState::default();
+        apply(
+            &registry,
+            &mut state,
+            PluginRuntimeEvent::LoadStarted {
+                name: "sample-plugin".into(),
+            },
+        );
+        apply(
+            &registry,
+            &mut state,
+            PluginRuntimeEvent::LoadSucceeded {
+                name: "sample-plugin".into(),
+            },
+        );
+        apply(
+            &registry,
+            &mut state,
+            PluginRuntimeEvent::ExecuteStarted {
+                name: "sample-plugin".into(),
+            },
+        );
+        apply(
+            &registry,
+            &mut state,
+            PluginRuntimeEvent::ExecuteFinished {
+                name: "sample-plugin".into(),
+                status: Some(0),
+                stdout: "ok".into(),
+                stderr: String::new(),
+                truncated: false,
+            },
+        );
+        assert_eq!(state.status["sample-plugin"], PluginRuntimeStatus::Ready);
+        assert_eq!(state.executions["sample-plugin"].status, Some(0));
     }
 
     #[test]

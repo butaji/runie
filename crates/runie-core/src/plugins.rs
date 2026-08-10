@@ -56,7 +56,6 @@ pub use entrypoint::{
     execute_plugin, validate_execution_request, PluginExecutionRequest, PluginExecutionResult,
     DEFAULT_PLUGIN_TIMEOUT_MS, MAX_PLUGIN_ARGUMENTS, MAX_PLUGIN_OUTPUT_BYTES,
 };
-
 pub fn load_manifest(path: impl AsRef<Path>) -> Result<PluginManifest, String> {
     let path = path.as_ref();
     let input = std::fs::read_to_string(path)
@@ -134,7 +133,8 @@ pub struct PluginRuntimeSnapshot {
 #[path = "plugin_runtime.rs"]
 mod runtime;
 pub use runtime::{
-    reduce_plugin_runtime, PluginRuntimeEvent, PluginRuntimeState, PluginRuntimeStatus,
+    reduce_plugin_runtime, PluginExecutionSummary, PluginRuntimeEvent, PluginRuntimeState,
+    PluginRuntimeStatus,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
