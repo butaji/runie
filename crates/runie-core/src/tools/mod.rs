@@ -30,7 +30,9 @@ pub use background::{
     BackgroundCancelRequest, BackgroundCancelTool, BackgroundJobsTool, BackgroundShellRequest,
     BackgroundShellTool,
 };
-pub use executor::{execute_parallel, execute_sequential, ToolExecContext, ToolExecHooks};
+pub use executor::{
+    execute_parallel, execute_sequential, SchedulerMetrics, ToolExecContext, ToolExecHooks,
+};
 pub use git::{
     begin_conflict_recovery, classify_conflicts, reduce_conflict_recovery, GitCommitPrepareRequest,
     GitCommitPrepareTool, GitCommitTool, GitConflictRecoveryEvent, GitConflictRecoveryPlan,

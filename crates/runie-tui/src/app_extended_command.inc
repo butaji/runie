@@ -74,12 +74,20 @@ impl App {
                 self.ui.send(UiMsg::ShowCommandResult(result)).await;
                 return true;
             }
-            let result = self
+            let mut result = self
                 .background_actor
                 .snapshot()
                 .into_iter()
                 .map(|job| job.terminal_line())
                 .collect::<Vec<_>>();
+            result.extend(
+                self.loop_actor
+                    .scheduler_metrics()
+                    .await
+                    .terminal_lines()
+                    .into_iter()
+                    .map(|line| format!("scheduler {line}")),
+            );
             self.ui
                 .send(UiMsg::ShowCommandResult(if result.is_empty() {
                     "No background jobs".into()

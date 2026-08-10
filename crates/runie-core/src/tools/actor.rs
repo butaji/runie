@@ -55,6 +55,9 @@ pub enum ToolCommand {
         hooks: super::executor::ToolExecHooks,
         reply: oneshot::Sender<ToolOutcome>,
     },
+    Metrics {
+        reply: oneshot::Sender<SchedulerMetrics>,
+    },
 }
 
 #[derive(Clone)]
@@ -101,6 +104,15 @@ impl ToolExecutorActor {
 
     pub fn tools(&self) -> Vec<Arc<dyn crate::types::AgentTool>> {
         self.registry.tools()
+    }
+
+    /// Read the actor-owned scheduler projection without sharing mutable state.
+    pub async fn scheduler_metrics(&self) -> SchedulerMetrics {
+        let (reply, response) = oneshot::channel();
+        if self.tx.send(ToolCommand::Metrics { reply }).await.is_err() {
+            return SchedulerMetrics::default();
+        }
+        response.await.unwrap_or_default()
     }
 
     #[allow(
@@ -213,6 +225,10 @@ async fn run_tool_worker(
 ) {
     let mut scheduler = SchedulerMetrics::default();
     while let Some(cmd) = next_prioritized_command(&mut rx).await {
+        if let ToolCommand::Metrics { reply } = cmd {
+            let _ = reply.send(scheduler.clone());
+            continue;
+        }
         let interactive = matches!(
             &cmd,
             ToolCommand::Execute {
@@ -266,7 +282,10 @@ async fn run_tool_command(
         priority: _,
         hooks,
         reply,
-    } = command;
+    } = command
+    else {
+        unreachable!("metrics commands are handled by the actor worker");
+    };
     let effective_mode = effective_tool_mode(registry, &calls, mode);
     let ctx = tool_exec_context(
         assistant_message,
@@ -303,6 +322,7 @@ async fn next_prioritized_command(rx: &mut mpsc::Receiver<ToolCommand>) -> Optio
         .enumerate()
         .max_by_key(|(_, command)| match command {
             ToolCommand::Execute { priority, .. } => *priority,
+            ToolCommand::Metrics { .. } => ToolPriority::Background,
         })
         .map(|(index, _)| index)
         .expect("pending command is non-empty");
@@ -383,6 +403,9 @@ mod tests {
             }
             ToolOutcome::Aborted { .. } => panic!("expected completed"),
         }
+        let snapshot = actor.scheduler_metrics().await;
+        assert_eq!(snapshot.completed, 1);
+        assert_eq!(snapshot.running, 0);
     }
 
     #[test]

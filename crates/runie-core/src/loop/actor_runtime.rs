@@ -1,5 +1,9 @@
 use super::*;
 impl LoopActor {
+    pub async fn scheduler_metrics(&self) -> crate::tools::SchedulerMetrics {
+        self.inner.deps.tool_executor.scheduler_metrics().await
+    }
+
     /// Project the next context-recovery operation without mutating any
     /// actor. Callers can route `Prepare` through the session owner and keep
     /// summarization in the provider owner.
