@@ -211,6 +211,14 @@ pub fn parse_background_job_command(args: &str) -> Option<&str> {
         .then(|| args.split_whitespace().nth(1).unwrap())
 }
 
+/// Parse an optional single background-job ID used by the inspection view.
+/// Control verbs such as `cancel` stay owned by their dedicated parser.
+pub fn parse_background_job_query(args: &str) -> Option<&str> {
+    let mut parts = args.split_whitespace();
+    let id = parts.next()?;
+    (id != "cancel" && parts.next().is_none()).then_some(id)
+}
+
 #[allow(clippy::too_many_lines)]
 fn parse_parameterized_command(value: &str) -> Option<MappableBuiltinCommand> {
     if let Some(command) = parse_compact_command(value) {

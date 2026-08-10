@@ -63,6 +63,17 @@ impl App {
                     .await;
                 return true;
             }
+            if let Some(id) = runie_core::commands::parse_background_job_query(args) {
+                let result = self
+                    .background_actor
+                    .snapshot()
+                    .into_iter()
+                    .find(|job| job.id == id)
+                    .map(|job| job.terminal_line())
+                    .unwrap_or_else(|| format!("Background job {id} not found"));
+                self.ui.send(UiMsg::ShowCommandResult(result)).await;
+                return true;
+            }
             let result = self
                 .background_actor
                 .snapshot()

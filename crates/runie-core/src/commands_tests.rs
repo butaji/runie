@@ -144,6 +144,9 @@ fn background_job_command_accepts_only_cancel_and_one_id() {
     assert_eq!(parse_background_job_command("cancel 7"), Some("7"));
     assert_eq!(parse_background_job_command("cancel 7 extra"), None);
     assert_eq!(parse_background_job_command("list 7"), None);
+    assert_eq!(parse_background_job_query("7"), Some("7"));
+    assert_eq!(parse_background_job_query("cancel 7"), None);
+    assert_eq!(parse_background_job_query("7 extra"), None);
 }
 
 #[test]
