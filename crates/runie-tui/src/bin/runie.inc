@@ -1247,11 +1247,15 @@ async fn run_noninteractive(config: NonInteractiveConfig) -> RunOutcome {
     )];
     let outcome = match app
         .loop_actor
-        .prompt(messages, AgentContext::default())
+        .prompt_with_events(messages, AgentContext::default())
         .await
     {
-        Ok(messages) => {
+        Ok((messages, provider_events)) => {
             events.extend(jsonl_events_for_messages(&messages));
+            match runie_core::noninteractive::forward_provider_events(&provider_events) {
+                Ok(provider_events) => events.extend(provider_events),
+                Err(message) => events.push(JsonlEvent::Error { message }),
+            }
             RunOutcome::Completed
         }
         Err(error) => {

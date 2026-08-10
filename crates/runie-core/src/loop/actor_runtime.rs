@@ -41,11 +41,21 @@ impl LoopActor {
         prompts: Vec<AgentMessage>,
         context: AgentContext,
     ) -> Result<Vec<AgentMessage>, LoopError> {
+        self.prompt_with_events(prompts, context)
+            .await
+            .map(|(messages, _)| messages)
+    }
+
+    pub async fn prompt_with_events(
+        &self,
+        prompts: Vec<AgentMessage>,
+        context: AgentContext,
+    ) -> Result<(Vec<AgentMessage>, Vec<crate::types::AssistantMessageEvent>), LoopError> {
         // Busy guard: ownership of the single permit spans the complete run
         // (pi agent.ts:340), so no mutable boolean is shared across callers.
         let _run_permit = self.acquire_run().await?;
         self.reduce_control(LoopControlEvent::RunStarted).await;
-        let result = self.run_inner(prompts, context, false).await;
+        let result = self.run_inner_with_events(prompts, context, false).await;
         self.reduce_control(LoopControlEvent::RunFinished).await;
         result
     }
@@ -56,6 +66,17 @@ impl LoopActor {
         context: AgentContext,
         skip_initial_steering_poll: bool,
     ) -> Result<Vec<AgentMessage>, LoopError> {
+        self.run_inner_with_events(prompts, context, skip_initial_steering_poll)
+            .await
+            .map(|(messages, _)| messages)
+    }
+
+    async fn run_inner_with_events(
+        &self,
+        prompts: Vec<AgentMessage>,
+        context: AgentContext,
+        skip_initial_steering_poll: bool,
+    ) -> Result<(Vec<AgentMessage>, Vec<crate::types::AssistantMessageEvent>), LoopError> {
         self.sync_context_to_state(&context).await;
         let run_id = format!(
             "run-{}",
@@ -66,7 +87,7 @@ impl LoopActor {
         deps.steering_mode = control.steering_mode;
         deps.follow_up_mode = control.follow_up_mode;
         let outcome = run_loop(prompts, context, deps, skip_initial_steering_poll).await;
-        Ok(outcome.new_messages)
+        Ok((outcome.new_messages, outcome.provider_events))
     }
 
     async fn sync_context_to_state(&self, context: &AgentContext) {

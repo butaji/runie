@@ -131,6 +131,7 @@ impl LoopDeps {
             tool_execution_mode: self.tool_execution_mode,
             steering_mode: self.steering_mode,
             follow_up_mode: self.follow_up_mode,
+            provider_events: std::sync::Arc::new(tokio::sync::Mutex::new(Vec::new())),
         }
     }
 }

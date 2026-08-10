@@ -132,6 +132,7 @@ pub(super) async fn process_stream_event(
 ) -> bool {
     apply_event(assistant, event.clone());
     let event = enrich_assistant_partial(event, assistant);
+    deps.provider_events.lock().await.push(event.clone());
     if is_delta_event(&event) {
         let update = PiAgentEvent::MessageUpdate {
             message: assistant_message(assistant),

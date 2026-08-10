@@ -80,11 +80,13 @@ pub struct RunLoopDeps {
     pub tool_execution_mode: ToolExecutionMode,
     pub steering_mode: QueueMode,
     pub follow_up_mode: QueueMode,
+    pub provider_events: Arc<tokio::sync::Mutex<Vec<AssistantMessageEvent>>>,
 }
 
 #[derive(Debug, Default)]
 pub struct RunLoopOutcome {
     pub new_messages: Vec<AgentMessage>,
+    pub provider_events: Vec<AssistantMessageEvent>,
 }
 
 fn publish_operation_record(
@@ -212,6 +214,7 @@ async fn end_run(all_new: Vec<AgentMessage>, deps: &RunLoopDeps) -> RunLoopOutco
     .await;
     RunLoopOutcome {
         new_messages: all_new,
+        provider_events: deps.provider_events.lock().await.clone(),
     }
 }
 
