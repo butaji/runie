@@ -1,4 +1,7 @@
-use super::{BashTool, EditFileTool, GlobTool, GrepTool, ReadFileTool, WriteFileTool};
+use super::{
+    BashTool, EditFileTool, GlobTool, GrepTool, ReadFileTool, WriteFileTool, BASH_MAX_OUTPUT_BYTES,
+};
+const LARGE_BASH_OUTPUT: usize = 110_000;
 use crate::types::{AgentTool, ToolResultContent};
 #[tokio::test]
 async fn read_returns_requested_line_range() {
@@ -140,4 +143,22 @@ async fn bash_returns_output_and_surfaces_failures() {
         .await
         .unwrap_err();
     assert!(error.contains("exited"));
+}
+
+#[tokio::test]
+async fn bash_bounds_each_stream_while_draining_the_process() {
+    let result = BashTool
+        .execute(
+            "b",
+            serde_json::json!({"command": format!("head -c {LARGE_BASH_OUTPUT} /dev/zero")}),
+            None,
+            None,
+        )
+        .await
+        .expect("bounded bash");
+    assert_eq!(
+        result.details["stdout"].as_str().unwrap().len(),
+        BASH_MAX_OUTPUT_BYTES
+    );
+    assert_eq!(result.details["stdout_summary"]["truncated"], true);
 }

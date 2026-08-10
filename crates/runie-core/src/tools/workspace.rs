@@ -7,6 +7,7 @@ use tokio::io::AsyncReadExt;
 
 pub const READ_MAX_LINES: usize = 1_000;
 pub const READ_MAX_BYTES: usize = 100 * 1024;
+pub const BASH_MAX_OUTPUT_BYTES: usize = 100 * 1024;
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct WorkspaceOutputSummary {
@@ -325,8 +326,8 @@ impl AgentTool for BashTool {
             serde_json::json!({
                 "stdout": result.stdout,
                 "stderr": result.stderr,
-                "stdout_summary": summarize_workspace_output(&result.stdout, false),
-                "stderr_summary": summarize_workspace_output(&result.stderr, false),
+                "stdout_summary": summarize_workspace_output(&result.stdout, result.stdout_truncated),
+                "stderr_summary": summarize_workspace_output(&result.stderr, result.stderr_truncated),
                 "exit_code": result.exit_code,
                 "timed_out": false,
                 "cancelled": false,
@@ -339,6 +340,8 @@ struct ShellResult {
     text: String,
     stdout: String,
     stderr: String,
+    stdout_truncated: bool,
+    stderr_truncated: bool,
     exit_code: i32,
 }
 
@@ -357,7 +360,7 @@ async fn run_shell(
         .stderr
         .take()
         .ok_or_else(|| "stderr pipe unavailable".to_owned())?;
-    let (out, err) = {
+    let (out, err, stdout_truncated, stderr_truncated) = {
         let output = read_output(&mut stdout, &mut stderr, update.as_deref());
         tokio::pin!(output);
         tokio::select! {
@@ -367,11 +370,7 @@ async fn run_shell(
         }
     };
     let status = child.wait().await.map_err(|error| error.to_string())?;
-    let mut text = String::from_utf8_lossy(&out).into_owned();
-    text.push_str(&String::from_utf8_lossy(&err));
-    if let Some(update) = update {
-        update(serde_json::json!({"text": text, "complete": true}));
-    }
+    let text = complete_shell_text(&out, &err, update);
     if !status.success() {
         return Err(format!("command exited {status}: {text}"));
     }
@@ -379,9 +378,13 @@ async fn run_shell(
         text: text.trim_end().into(),
         stdout: String::from_utf8_lossy(&out).into_owned(),
         stderr: String::from_utf8_lossy(&err).into_owned(),
+        stdout_truncated,
+        stderr_truncated,
         exit_code: status.code().unwrap_or_default(),
     })
 }
+
+include!("workspace_shell_helpers.inc");
 
 fn spawn_shell(command: &str) -> Result<tokio::process::Child, String> {
     tokio::process::Command::new("sh")
@@ -397,21 +400,22 @@ async fn read_output(
     stdout: &mut (impl tokio::io::AsyncRead + Unpin),
     stderr: &mut (impl tokio::io::AsyncRead + Unpin),
     update: Option<&(dyn Fn(serde_json::Value) + Send + Sync)>,
-) -> Result<(Vec<u8>, Vec<u8>), String> {
+) -> Result<(Vec<u8>, Vec<u8>, bool, bool), String> {
     let (out, err) = tokio::join!(
         read_stream(stdout, update, "stdout"),
         read_stream(stderr, update, "stderr")
     );
     let (out, err) = (out?, err?);
-    Ok((out, err))
+    Ok((out.0, err.0, out.1, err.1))
 }
 
 async fn read_stream(
     stream: &mut (impl tokio::io::AsyncRead + Unpin),
     update: Option<&(dyn Fn(serde_json::Value) + Send + Sync)>,
     name: &str,
-) -> Result<Vec<u8>, String> {
+) -> Result<(Vec<u8>, bool), String> {
     let mut all = Vec::new();
+    let mut truncated = false;
     let mut chunk = [0_u8; 4096];
     loop {
         let read = stream
@@ -421,14 +425,17 @@ async fn read_stream(
         if read == 0 {
             break;
         }
-        all.extend_from_slice(&chunk[..read]);
+        let remaining = BASH_MAX_OUTPUT_BYTES.saturating_sub(all.len());
+        let kept = remaining.min(read);
+        all.extend_from_slice(&chunk[..kept]);
+        truncated |= kept < read;
         if let Some(update) = update {
             update(
                 serde_json::json!({"text": String::from_utf8_lossy(&chunk[..read]), "stream": name, "complete": false}),
             );
         }
     }
-    Ok(all)
+    Ok((all, truncated))
 }
 
 async fn cancellation(signal: Option<tokio_util::sync::CancellationToken>) {
