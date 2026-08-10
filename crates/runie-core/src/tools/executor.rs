@@ -132,9 +132,12 @@ fn tool_result_message(
 }
 
 pub async fn execute_parallel(calls: Vec<ToolCall>, ctx: ToolExecContext) -> DispatchOutcome {
-    // Preflight: valid calls (after prepare_arguments + validation) proceed to
-    // concurrent execution; invalid calls produce an immediate error result
-    // (pi prepareToolCall -> createErrorToolResult).
+    if calls
+        .iter()
+        .any(|call| requires_serial_execution(&call.name))
+    {
+        return execute_sequential(calls, ctx).await;
+    }
     let (preflighted, mut outcome, had_invalid) = preflight_calls(calls, &ctx);
 
     if preflighted.is_empty() {
@@ -163,10 +166,15 @@ pub async fn execute_parallel(calls: Vec<ToolCall>, ctx: ToolExecContext) -> Dis
         }
     }
 
-    // An invalid (preflight-rejected) call means the batch is not fully
-    // terminated.
     outcome.all_terminated = !had_invalid && all_terminated;
     outcome
+}
+
+fn requires_serial_execution(tool: &str) -> bool {
+    matches!(
+        tool,
+        "write" | "edit" | "bash" | "shell" | "exec" | "run" | "subagent"
+    )
 }
 
 async fn run_parallel_calls(

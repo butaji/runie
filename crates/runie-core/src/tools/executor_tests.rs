@@ -94,6 +94,14 @@ fn empty_sequential_produces_no_results() {
 }
 
 #[test]
+fn scheduler_serializes_mutations_but_allows_read_tools_to_batch() {
+    assert!(super::requires_serial_execution("write"));
+    assert!(super::requires_serial_execution("subagent"));
+    assert!(!super::requires_serial_execution("read"));
+    assert!(!super::requires_serial_execution("grep"));
+}
+
+#[test]
 fn settled_tool_update_callbacks_are_ignored() {
     let settled = AtomicBool::new(false);
     assert!(tool_update_is_live(&settled));

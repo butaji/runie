@@ -11,7 +11,7 @@ evidence prove the item.
 5. `harness-05-context` — automatic compaction, summaries, limits, and recovery.
 6. `harness-06-plan-todos` — **partial** — replayable validated `todo_write` snapshots and plan commands exist; actor persistence and plan enforcement remain.
 7. `harness-07-subagents` — **partial** — typed explore/plan/code requests now execute through an owned loop hook and return messages; role-specific isolation and result replay remain.
-8. `harness-08-tool-scheduler` — concurrent independent tools and serialized conflicts.
+8. `harness-08-tool-scheduler` — **partial** — independent read/search tools remain parallel while mutations and subagents are serialized; resource-key conflict scheduling remains.
 9. `harness-09-web` — optional search, fetch, source extraction, and source cards.
 10. `harness-10-mcp` — MCP discovery, transports, auth, registration, and cleanup.
 11. `harness-11-plugins` — installable skills, commands, tools, and hooks.
