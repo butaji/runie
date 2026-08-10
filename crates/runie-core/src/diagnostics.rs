@@ -32,6 +32,38 @@ pub struct DiagnosticSeries {
     pub points: Vec<DiagnosticPoint>,
 }
 
+impl DiagnosticSeries {
+    /// Project the newest points into a deterministic terminal sparkline.
+    /// Rendering owns colors and layout; this method only produces data.
+    pub fn sparkline(&self, width: usize) -> String {
+        const BARS: &[char] = &['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
+        if width == 0 || self.points.is_empty() {
+            return String::new();
+        }
+        let points = self.points.iter().rev().take(width).collect::<Vec<_>>();
+        let min = points
+            .iter()
+            .map(|point| point.value)
+            .fold(f64::INFINITY, f64::min);
+        let max = points
+            .iter()
+            .map(|point| point.value)
+            .fold(f64::NEG_INFINITY, f64::max);
+        points
+            .into_iter()
+            .rev()
+            .map(|point| {
+                let level = if (max - min).abs() < f64::EPSILON {
+                    BARS.len() - 1
+                } else {
+                    (((point.value - min) / (max - min)) * (BARS.len() - 1) as f64).round() as usize
+                };
+                BARS[level.min(BARS.len() - 1)]
+            })
+            .collect()
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct DiagnosticPoint {
     pub sequence: u64,
@@ -220,5 +252,29 @@ mod tests {
                 .collect::<Vec<_>>(),
             [1, 2, 3]
         );
+    }
+
+    #[test]
+    fn series_sparkline_is_bounded_and_normalized() {
+        let series = DiagnosticSeries {
+            label: "tokens".into(),
+            points: vec![
+                DiagnosticPoint {
+                    sequence: 1,
+                    value: 1.0,
+                },
+                DiagnosticPoint {
+                    sequence: 2,
+                    value: 2.0,
+                },
+                DiagnosticPoint {
+                    sequence: 3,
+                    value: 3.0,
+                },
+            ],
+        };
+        assert_eq!(series.sparkline(2).chars().count(), 2);
+        assert_eq!(series.sparkline(2), "▁█");
+        assert!(series.sparkline(0).is_empty());
     }
 }
