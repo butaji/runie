@@ -91,11 +91,12 @@ impl App {
         }
         if name == "questions" {
             let query = runie_core::tools::parse_question_history_query(args);
-            let rows = runie_core::tools::question_history_rows(
+            let rows = runie_core::tools::question_history_rows_page(
                 &self.question_broker.traces(),
                 &query.text,
                 query.outcome.as_deref(),
-                32,
+                query.offset,
+                query.limit,
             );
             let result = rows
                 .into_iter()

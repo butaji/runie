@@ -38,19 +38,29 @@ impl From<UserQuestionTrace> for UserQuestionHistoryRow {
         }
     }
 }
-
 pub fn question_history_rows(
     traces: &[UserQuestionTrace],
     text: &str,
     outcome: Option<&str>,
     limit: usize,
 ) -> Vec<UserQuestionHistoryRow> {
-    query_question_history(traces, text, outcome, limit)
+    query_question_history_page(traces, text, outcome, 0, limit)
         .into_iter()
         .map(Into::into)
         .collect()
 }
-
+pub fn question_history_rows_page(
+    traces: &[UserQuestionTrace],
+    text: &str,
+    outcome: Option<&str>,
+    offset: usize,
+    limit: usize,
+) -> Vec<UserQuestionHistoryRow> {
+    query_question_history_page(traces, text, outcome, offset, limit)
+        .into_iter()
+        .map(Into::into)
+        .collect()
+}
 /// Encode question resolutions as a bounded, append-friendly session stream.
 pub fn encode_question_traces(traces: &[UserQuestionTrace]) -> Result<String, serde_json::Error> {
     traces
@@ -59,7 +69,6 @@ pub fn encode_question_traces(traces: &[UserQuestionTrace]) -> Result<String, se
         .collect::<Result<Vec<_>, _>>()
         .map(|lines| format!("{}\n", lines.join("\n")))
 }
-
 /// Decode question resolutions without attaching them to a UI or actor.
 pub fn decode_question_traces(input: &str) -> Result<Vec<UserQuestionTrace>, serde_json::Error> {
     input
@@ -68,7 +77,6 @@ pub fn decode_question_traces(input: &str) -> Result<Vec<UserQuestionTrace>, ser
         .map(serde_json::from_str)
         .collect()
 }
-
 const MAX_QUESTION_TRACES: usize = 128;
 
 /// Query persisted question history without coupling it to a dialog widget.
@@ -78,12 +86,22 @@ pub fn query_question_history(
     outcome: Option<&str>,
     limit: usize,
 ) -> Vec<UserQuestionTrace> {
+    query_question_history_page(traces, text, outcome, 0, limit)
+}
+pub fn query_question_history_page(
+    traces: &[UserQuestionTrace],
+    text: &str,
+    outcome: Option<&str>,
+    offset: usize,
+    limit: usize,
+) -> Vec<UserQuestionTrace> {
     let text = text.trim().to_ascii_lowercase();
     traces
         .iter()
         .rev()
         .filter(|trace| outcome.is_none_or(|value| trace.outcome == value))
         .filter(|trace| text.is_empty() || trace.question.to_ascii_lowercase().contains(&text))
+        .skip(offset.min(MAX_QUESTION_TRACES))
         .take(limit.min(MAX_QUESTION_TRACES))
         .cloned()
         .collect()
@@ -112,7 +130,6 @@ impl Default for UserQuestionBroker {
         }
     }
 }
-
 impl UserQuestionBroker {
     pub async fn ask(&self, request: UserQuestionRequest) -> Result<serde_json::Value, String> {
         let id = self
@@ -154,15 +171,12 @@ impl UserQuestionBroker {
     pub fn try_next(&self) -> Option<PendingUserQuestion> {
         self.rx.lock().expect("question queue lock").try_recv().ok()
     }
-
     pub fn traces(&self) -> Vec<UserQuestionTrace> {
         self.traces.lock().expect("question traces lock").clone()
     }
-
     pub fn export_traces_jsonl(&self) -> Result<String, serde_json::Error> {
         encode_question_traces(&self.traces())
     }
-
     pub fn restore_traces_jsonl(&self, input: &str) -> Result<(), serde_json::Error> {
         let traces = decode_question_traces(input)?;
         let mut owned = self.traces.lock().expect("question traces lock");
@@ -173,7 +187,6 @@ impl UserQuestionBroker {
         }
         Ok(())
     }
-
     pub fn answer(&self, id: &str, value: serde_json::Value) -> Result<(), String> {
         let request = self
             .requests
@@ -478,6 +491,10 @@ mod tests {
         assert_eq!(
             serde_json::to_value(&rows[0]).unwrap()["outcome"],
             "answered"
+        );
+        assert_eq!(
+            query_question_history_page(&traces, "deploy", None, 1, 1)[0].id,
+            "1"
         );
     }
 }
