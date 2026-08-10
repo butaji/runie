@@ -204,6 +204,13 @@ pub struct SubagentResult {
     pub output: serde_json::Value,
 }
 
+/// Output and cumulative resource usage returned by the owning host loop.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct SubagentExecution {
+    pub output: serde_json::Value,
+    pub usage: SubagentResourceUsage,
+}
+
 #[derive(Default)]
 pub struct SubagentTool;
 

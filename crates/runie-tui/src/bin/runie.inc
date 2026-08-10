@@ -1532,7 +1532,9 @@ async fn build_live_app() -> App {
                             )
                             .await
                             .map_err(|error| error.to_string())?;
-                        Ok(serde_json::json!({"messages": messages}))
+                        let output = serde_json::json!({"messages": messages});
+                        let usage = request.role.clone().usage_for_output(&output)?;
+                        Ok(runie_core::tools::SubagentExecution { output, usage })
                     })
                 })
             }),

@@ -133,7 +133,6 @@ pub async fn execute_parallel(calls: Vec<ToolCall>, ctx: ToolExecContext) -> Dis
     }
     execute_parallel_batch(batches.into_iter().next().unwrap_or_default(), &ctx).await
 }
-
 async fn execute_parallel_batch(calls: Vec<ToolCall>, ctx: &ToolExecContext) -> DispatchOutcome {
     let (preflighted, mut outcome, had_invalid) = preflight_calls(calls, &ctx);
 
@@ -166,7 +165,6 @@ async fn execute_parallel_batch(calls: Vec<ToolCall>, ctx: &ToolExecContext) -> 
     outcome.all_terminated = !had_invalid && all_terminated;
     outcome
 }
-
 async fn run_parallel_calls(
     calls: &[ToolCall],
     ctx: &ToolExecContext,
@@ -193,7 +191,6 @@ async fn run_parallel_calls(
     }
     (events, by_id)
 }
-
 fn preflight_calls(
     calls: Vec<ToolCall>,
     ctx: &ToolExecContext,
@@ -212,7 +209,6 @@ fn preflight_calls(
     }
     (valid, outcome, had_invalid)
 }
-
 fn append_failed_call(
     outcome: &mut DispatchOutcome,
     call: &ToolCall,
@@ -226,14 +222,12 @@ fn append_failed_call(
         .tool_results
         .push(tool_result_message(call, &result, true, timestamp));
 }
-
 async fn dispatch_result(call: &ToolCall, ctx: &ToolExecContext) -> (AgentToolResult, bool) {
     match dispatch_prepared(call, ctx).await {
         Ok(result) => result,
         Err(message) => (synthetic_error_result(&message), true),
     }
 }
-
 fn tool_result_message_named(
     call: &ToolCall,
     name: String,
@@ -245,7 +239,6 @@ fn tool_result_message_named(
     message.tool_name = name;
     message
 }
-
 /// Apply `prepareArguments` (pi agent-loop.ts:586) and validate. Returns the
 /// prepared call (args possibly replaced) or a pi-formatted validation error.
 fn prepare_and_validate(call: &ToolCall, ctx: &ToolExecContext) -> Result<ToolCall, String> {
@@ -446,9 +439,17 @@ async fn execute_subagent(
     };
     let request: crate::tools::SubagentRequest = serde_json::from_value(call.arguments.clone())
         .map_err(|error| format!("invalid subagent request: {error}"))?;
-    let output = hook(request.clone()).await?;
-    let usage = request.role.clone().validate_output_usage(&output)?;
-    Ok(crate::tools::subagent::result(&request, output, usage))
+    let execution = hook(request.clone()).await?;
+    request
+        .role
+        .clone()
+        .validate_resource_usage(execution.usage)?;
+    request.role.clone().validate_output(&execution.output)?;
+    Ok(crate::tools::subagent::result(
+        &request,
+        execution.output,
+        execution.usage,
+    ))
 }
 fn tool_update_callback(
     call: &ToolCall,
@@ -475,7 +476,6 @@ fn tool_update_callback(
         }
     })
 }
-
 async fn execute_question(
     call: &ToolCall,
     ctx: &ToolExecContext,

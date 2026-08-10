@@ -39,7 +39,8 @@ pub type AskUserQuestionHook = Arc<
 pub type SubagentHook = Arc<
     dyn Fn(
             crate::tools::SubagentRequest,
-        ) -> Pin<Box<dyn Future<Output = Result<serde_json::Value, String>> + Send>>
+        )
+            -> Pin<Box<dyn Future<Output = Result<crate::tools::SubagentExecution, String>> + Send>>
         + Send
         + Sync,
 >;
