@@ -52,6 +52,10 @@ pub struct PluginPackage {
 #[path = "plugin_entrypoint.rs"]
 mod entrypoint;
 pub use entrypoint::resolve_plugin_entrypoint;
+pub use entrypoint::{
+    execute_plugin, validate_execution_request, PluginExecutionRequest, PluginExecutionResult,
+    DEFAULT_PLUGIN_TIMEOUT_MS, MAX_PLUGIN_ARGUMENTS, MAX_PLUGIN_OUTPUT_BYTES,
+};
 
 pub fn load_manifest(path: impl AsRef<Path>) -> Result<PluginManifest, String> {
     let path = path.as_ref();
