@@ -2,6 +2,11 @@
 //! the caller boundary; ranking is just data in, data out.
 
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
+use std::sync::Arc;
+use tokio::sync::{mpsc, oneshot};
+
+use crate::task_owner::{spawn_actor_worker, TaskOwner};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SessionSearchDocument {
@@ -15,6 +20,81 @@ pub struct SessionSearchResult {
     pub id: String,
     pub name: Option<String>,
     pub score: u8,
+}
+
+enum SearchMessage {
+    Upsert(SessionSearchDocument),
+    Remove(String),
+    Search {
+        query: String,
+        reply: oneshot::Sender<Vec<SessionSearchResult>>,
+    },
+}
+
+#[derive(Clone)]
+pub struct SessionSearchIndex {
+    tx: mpsc::Sender<SearchMessage>,
+    _owner: Arc<TaskOwner>,
+}
+
+impl SessionSearchIndex {
+    pub fn new() -> Self {
+        let (task_tx, task_owner) = spawn_actor_worker!(128, move |mut input: mpsc::Receiver<
+            SearchMessage,
+        >| async move {
+            let mut documents = BTreeMap::new();
+            while let Some(message) = input.recv().await {
+                match message {
+                    SearchMessage::Upsert(document) => {
+                        documents.insert(document.id.clone(), document);
+                    }
+                    SearchMessage::Remove(id) => {
+                        documents.remove(&id);
+                    }
+                    SearchMessage::Search { query, reply } => {
+                        let _ = reply.send(search_sessions(
+                            &documents.values().cloned().collect::<Vec<_>>(),
+                            &query,
+                        ));
+                    }
+                }
+            }
+        });
+        Self {
+            tx: task_tx,
+            _owner: task_owner,
+        }
+    }
+
+    pub async fn upsert(&self, document: SessionSearchDocument) {
+        let _ = self.tx.send(SearchMessage::Upsert(document)).await;
+    }
+
+    pub async fn remove(&self, id: impl Into<String>) {
+        let _ = self.tx.send(SearchMessage::Remove(id.into())).await;
+    }
+
+    pub async fn search(&self, query: impl Into<String>) -> Vec<SessionSearchResult> {
+        let (reply, result) = oneshot::channel();
+        if self
+            .tx
+            .send(SearchMessage::Search {
+                query: query.into(),
+                reply,
+            })
+            .await
+            .is_err()
+        {
+            return Vec::new();
+        }
+        result.await.unwrap_or_default()
+    }
+}
+
+impl Default for SessionSearchIndex {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 pub fn search_sessions(
@@ -79,5 +159,20 @@ mod tests {
         assert_eq!(results[1].id, "b");
         assert_eq!(results[1].score, 1);
         assert!(search_sessions(&documents, " ").is_empty());
+    }
+
+    #[tokio::test]
+    async fn index_reduces_upsert_remove_and_search_events() {
+        let index = SessionSearchIndex::new();
+        index
+            .upsert(SessionSearchDocument {
+                id: "one".into(),
+                name: Some("First".into()),
+                preview: "hello".into(),
+            })
+            .await;
+        assert_eq!(index.search("first").await[0].id, "one");
+        index.remove("one").await;
+        assert!(index.search("first").await.is_empty());
     }
 }
