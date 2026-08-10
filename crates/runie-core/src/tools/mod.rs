@@ -40,7 +40,9 @@ pub use mcp::{
 pub use policy::{decide as approval_decision, ApprovalDecision, ApprovalMode, ApprovalModeStore};
 pub use question_broker::{PendingUserQuestion, UserQuestionBroker, UserQuestionTrace};
 pub use registry::ToolRegistry;
-pub use subagent::{SubagentCapability, SubagentRequest, SubagentRole, SubagentTool};
+pub use subagent::{
+    SubagentCapability, SubagentRequest, SubagentResult, SubagentRole, SubagentTool,
+};
 pub use todo::{TodoActor, TodoItem, TodoSnapshot, TodoStatus, TodoWriteTool};
 pub use web::{
     WebSearchHttpClient, WebSearchRequest, WebSearchResponse, WebSearchResult, WebSearchTool,

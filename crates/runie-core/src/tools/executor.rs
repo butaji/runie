@@ -445,9 +445,10 @@ async fn execute_subagent(
     let Some(hook) = &ctx.hooks.subagent else {
         return Err("subagent requires an owning subagent hook".into());
     };
-    let request = serde_json::from_value(call.arguments.clone())
+    let request: crate::tools::SubagentRequest = serde_json::from_value(call.arguments.clone())
         .map_err(|error| format!("invalid subagent request: {error}"))?;
-    Ok(crate::tools::subagent::result(hook(request).await?))
+    let output = hook(request.clone()).await?;
+    Ok(crate::tools::subagent::result(&request, output))
 }
 fn tool_update_callback(
     call: &ToolCall,

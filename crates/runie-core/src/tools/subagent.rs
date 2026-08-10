@@ -50,6 +50,13 @@ pub struct SubagentRequest {
     pub context: String,
 }
 
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct SubagentResult {
+    pub role: SubagentRole,
+    pub capabilities: Vec<SubagentCapability>,
+    pub output: serde_json::Value,
+}
+
 #[derive(Default)]
 pub struct SubagentTool;
 
@@ -97,12 +104,18 @@ impl AgentTool for SubagentTool {
     }
 }
 
-pub(crate) fn result(value: serde_json::Value) -> AgentToolResult {
+pub(crate) fn result(request: &SubagentRequest, value: serde_json::Value) -> AgentToolResult {
+    let result = SubagentResult {
+        role: request.role.clone(),
+        capabilities: request.role.clone().capabilities().to_vec(),
+        output: value,
+    };
+    let details = serde_json::to_value(result).expect("subagent result is serializable");
     AgentToolResult {
         content: vec![ToolResultContent::Text {
-            text: value.to_string(),
+            text: details.to_string(),
         }],
-        details: value,
+        details,
         ..AgentToolResult::default()
     }
 }
@@ -155,5 +168,21 @@ mod tests {
         assert!(!SubagentRole::Explore
             .capabilities()
             .contains(&SubagentCapability::WriteWorkspace));
+    }
+
+    #[test]
+    fn result_keeps_role_capabilities_and_output_as_data() {
+        let request = SubagentRequest {
+            role: SubagentRole::Plan,
+            task: "outline the change".into(),
+            context: String::new(),
+        };
+        let result = result(&request, serde_json::json!({"steps": ["test"]}));
+        let decoded: SubagentResult = serde_json::from_value(result.details).unwrap();
+        assert_eq!(decoded.role, SubagentRole::Plan);
+        assert_eq!(decoded.output["steps"][0], "test");
+        assert!(decoded
+            .capabilities
+            .contains(&SubagentCapability::ProducePlan));
     }
 }
