@@ -106,7 +106,7 @@ async fn bash_returns_output_and_surfaces_failures() {
     let result = BashTool
         .execute(
             "b",
-            serde_json::json!({"command": "printf one; printf two"}),
+            serde_json::json!({"command": "printf one; printf two >&2"}),
             None,
             Some(Box::new(move |value| {
                 updates_seen.lock().unwrap().push(value)
@@ -118,6 +118,9 @@ async fn bash_returns_output_and_surfaces_failures() {
         panic!("expected text")
     };
     assert_eq!(text, "onetwo");
+    assert_eq!(result.details["stdout"], "one");
+    assert_eq!(result.details["stderr"], "two");
+    assert_eq!(result.details["exit_code"], 0);
     assert!(updates
         .lock()
         .unwrap()

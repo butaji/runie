@@ -293,8 +293,25 @@ impl AgentTool for BashTool {
             .get("timeout_ms")
             .and_then(serde_json::Value::as_u64)
             .unwrap_or(120_000);
-        text_result(&run_shell(command, timeout, signal, update).await?)
+        let result = run_shell(command, timeout, signal, update).await?;
+        text_result_with_details(
+            result.text.clone(),
+            serde_json::json!({
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "exit_code": result.exit_code,
+                "timed_out": false,
+                "cancelled": false,
+            }),
+        )
     }
+}
+
+struct ShellResult {
+    text: String,
+    stdout: String,
+    stderr: String,
+    exit_code: i32,
 }
 
 async fn run_shell(
@@ -302,7 +319,7 @@ async fn run_shell(
     timeout: u64,
     signal: Option<tokio_util::sync::CancellationToken>,
     update: Option<Box<dyn Fn(serde_json::Value) + Send + Sync>>,
-) -> Result<String, String> {
+) -> Result<ShellResult, String> {
     let mut child = spawn_shell(command)?;
     let mut stdout = child
         .stdout
@@ -330,7 +347,12 @@ async fn run_shell(
     if !status.success() {
         return Err(format!("command exited {status}: {text}"));
     }
-    Ok(text.trim_end().into())
+    Ok(ShellResult {
+        text: text.trim_end().into(),
+        stdout: String::from_utf8_lossy(&out).into_owned(),
+        stderr: String::from_utf8_lossy(&err).into_owned(),
+        exit_code: status.code().unwrap_or_default(),
+    })
 }
 
 fn spawn_shell(command: &str) -> Result<tokio::process::Child, String> {
@@ -397,13 +419,6 @@ fn required_string<'a>(
     args.get(key)
         .and_then(serde_json::Value::as_str)
         .ok_or_else(|| format!("{tool} requires string `{key}`"))
-}
-
-fn text_result(text: &str) -> Result<AgentToolResult, String> {
-    Ok(AgentToolResult {
-        content: vec![ToolResultContent::Text { text: text.into() }],
-        ..AgentToolResult::default()
-    })
 }
 
 fn text_result_with_details(
