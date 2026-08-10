@@ -1,6 +1,6 @@
 # Runie current plan
 
-Updated: 2026-08-09
+Updated: 2026-08-10
 
 ## Product direction
 
@@ -73,3 +73,34 @@ cargo check --workspace --quiet
 No task is complete from a green unit test alone; the relevant runtime,
 replay, or capture evidence must also be recorded in `findings.md` or the
 component documentation.
+
+## Ranked remaining implementation queue
+
+The reduction backlog is now backed by declarative tables for the major closed
+vocabularies, so the next work is functional parity. Each item remains open
+until its source change, event/replay tests, and live TUI evidence are recorded.
+
+1. Provider-specific request adapters — `harness-04` and `harness-14`.
+   Complete the finite provider payload/finish-reason conformance matrix,
+   including unsupported-effort behavior and normalized failures.
+2. Tool output and background lifecycle UX — `harness-01` and `harness-03`.
+   Add renderer-neutral bounded output cards and owned lifecycle controls,
+   with failure/cancellation replay traces.
+3. Model-aware context policy — `harness-05`.
+   Replace generic context assumptions with model-declared windows and replay
+   compaction decisions at threshold, boundary, and recovery states.
+4. Scheduler cancellation controls — `harness-08`.
+   Extend the existing mailbox/replay state machine with user-visible queued,
+   running, and cancelled control projections.
+5. MCP lifecycle ownership — `harness-10`.
+   Connect the tested transport/notification state machine to an owned runtime
+   lifecycle without leaking tasks or sessions across actors.
+6. Session and Git interactive UX — `harness-12` and `harness-13`.
+   Complete picker/history/conflict interactions over the existing actor-owned
+   projections and inverse-safe event boundaries.
+7. IDE and noninteractive live boundaries — `harness-17` and `harness-18`.
+   Add owned socket/editor and terminal metadata adapters over the typed event
+   protocols, with deterministic abort/error replay.
+8. Diagnostics and media completeness — `harness-16` and `harness-19`.
+   Add remaining provider media formats and interactive diagnostic controls
+   only after their renderer-neutral data contracts are covered.
