@@ -180,6 +180,9 @@ pub struct Model {
     pub compat: Option<serde_json::Value>,
 }
 
+#[path = "model_capabilities.rs"]
+mod model_capabilities;
+
 /// Response metadata exposed to pi-compatible provider response hooks.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(

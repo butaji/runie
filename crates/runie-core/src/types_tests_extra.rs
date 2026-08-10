@@ -361,4 +361,15 @@ mod extra {
             serde_json::from_value(serde_json::to_value(outcome).unwrap()).unwrap();
         assert_eq!(round_trip, message.provider_outcome());
     }
+
+    #[test]
+    fn model_input_capabilities_are_data_queries() {
+        let model = Model {
+            input: vec![InputKind::Text, InputKind::Image],
+            ..Model::default()
+        };
+        assert!(model.supports_input(InputKind::Text));
+        assert!(model.supports_images());
+        assert!(!Model::default().supports_images());
+    }
 }
