@@ -93,6 +93,8 @@ As of 2026-08-09, the reduction work has these verified results:
   fixture through the public reducer harness.
 - Telemetry now exposes the shared immutable snapshot subscription alongside
   its direct projection accessor, completing the watch-backed actor contract.
+- Grouped scrollback lifecycle events now use one macro-backed declaration for
+  their serde vocabulary and compatibility mapping.
 - Transcript-selectability is now a `LineKind` predicate shared by feed
   navigation, completing the central line-classification vocabulary.
 - Five numbered feed fragments covering tool-row lifecycle and selection are

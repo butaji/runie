@@ -127,9 +127,29 @@ pub enum ScrollbackEvent {
     Navigation(ScrollbackNavigationEvent),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ScrollbackLifecycleEvent { TurnStarted, TurnEnded, AssistantStarted, AssistantEnded, Cleared }
+macro_rules! declare_lifecycle_events {
+    ($($variant:ident => $message:ident),+ $(,)?) => {
+        #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+        #[serde(rename_all = "snake_case")]
+        pub enum ScrollbackLifecycleEvent { $($variant),+ }
+
+        impl From<ScrollbackLifecycleEvent> for ScrollbackMsg {
+            fn from(event: ScrollbackLifecycleEvent) -> Self {
+                match event {
+                    $(ScrollbackLifecycleEvent::$variant => ScrollbackMsg::$message,)+
+                }
+            }
+        }
+    };
+}
+
+declare_lifecycle_events! {
+    TurnStarted => TurnStart,
+    TurnEnded => TurnEnd,
+    AssistantStarted => AssistantStreamStart,
+    AssistantEnded => AssistantStreamEnd,
+    Cleared => Clear,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ScrollbackContentEvent {
@@ -166,13 +186,7 @@ pub enum ScrollbackNavigationEvent {
 impl ScrollbackEvent {
     pub fn into_messages(self) -> Vec<ScrollbackMsg> {
         vec![match self {
-            Self::Lifecycle(event) => match event {
-                ScrollbackLifecycleEvent::TurnStarted => ScrollbackMsg::TurnStart,
-                ScrollbackLifecycleEvent::TurnEnded => ScrollbackMsg::TurnEnd,
-                ScrollbackLifecycleEvent::AssistantStarted => ScrollbackMsg::AssistantStreamStart,
-                ScrollbackLifecycleEvent::AssistantEnded => ScrollbackMsg::AssistantStreamEnd,
-                ScrollbackLifecycleEvent::Cleared => ScrollbackMsg::Clear,
-            },
+            Self::Lifecycle(event) => event.into(),
             Self::Content(event) => match event {
                 ScrollbackContentEvent::Append(line) => ScrollbackMsg::Append(line),
                 ScrollbackContentEvent::FinalizeAssistant {

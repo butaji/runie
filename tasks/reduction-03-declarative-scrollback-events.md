@@ -20,3 +20,6 @@ Content, tool, and workflow compatibility routing now share the semantic
 `feed_reducers.rs` module while retaining the same typed reducer boundaries.
 The ordered reducer stage machine and navigation fallback are consolidated in
 `feed_reducer_boundary.rs`.
+The grouped lifecycle event vocabulary now uses one typed macro table to
+generate its serde enum and compatibility-message mapping, keeping producer
+intent and the legacy bridge in one inspectable declaration.
