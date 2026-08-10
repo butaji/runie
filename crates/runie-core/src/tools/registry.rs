@@ -132,6 +132,28 @@ impl ToolRegistry {
         self.mcp_http.iter().map(|owner| owner.status()).collect()
     }
 
+    pub fn mcp_status_rows(&self) -> Vec<crate::tools::McpStatusRow> {
+        self.mcp_stdio_statuses()
+            .into_iter()
+            .enumerate()
+            .map(|(index, status)| crate::tools::McpStatusRow {
+                transport: "stdio".into(),
+                index,
+                status: format!("{status:?}"),
+            })
+            .chain(
+                self.mcp_http_statuses()
+                    .into_iter()
+                    .enumerate()
+                    .map(|(index, status)| crate::tools::McpStatusRow {
+                        transport: "http".into(),
+                        index,
+                        status: format!("{status:?}"),
+                    }),
+            )
+            .collect()
+    }
+
     pub fn lookup(&self, name: &str) -> Option<Arc<dyn AgentTool>> {
         self.tools.get(name).cloned()
     }
@@ -365,6 +387,14 @@ mod tests {
         assert_eq!(
             registry.mcp_http_statuses(),
             vec![crate::tools::McpHttpStatus::Ready]
+        );
+        assert_eq!(
+            registry.mcp_status_rows(),
+            vec![crate::tools::McpStatusRow {
+                transport: "http".into(),
+                index: 0,
+                status: "Ready".into(),
+            }]
         );
         let tool = registry.lookup("mcp__demo-http__echo").unwrap();
         assert_eq!(

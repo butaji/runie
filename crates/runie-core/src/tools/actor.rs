@@ -124,6 +124,10 @@ impl ToolExecutorActor {
         self.registry.mcp_http_statuses()
     }
 
+    pub fn mcp_status_rows(&self) -> Vec<crate::tools::McpStatusRow> {
+        self.registry.mcp_status_rows()
+    }
+
     #[allow(
         clippy::too_many_arguments,
         reason = "actor command mirrors the explicit async tool execution contract"

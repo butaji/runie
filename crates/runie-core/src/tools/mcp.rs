@@ -9,6 +9,13 @@ pub const MCP_HTTP_MAX_RESPONSE_BYTES: usize = 1_048_576;
 pub const MCP_MAX_STREAM_EVENTS: usize = 4_096;
 pub(crate) const MCP_SESSION_HEADER: &str = "mcp-session-id";
 
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct McpStatusRow {
+    pub transport: String,
+    pub index: usize,
+    pub status: String,
+}
+
 #[path = "mcp_http_session.rs"]
 mod http_session;
 pub use http_session::{McpHttpActor, McpHttpSession, McpHttpStatus};

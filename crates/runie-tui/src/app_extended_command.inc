@@ -1,14 +1,13 @@
 impl App {
     async fn route_extended_command(&self, name: &str, args: &str) -> bool {
         if name == "mcps" {
-            let statuses = self.loop_actor.mcp_stdio_statuses();
+            let statuses = self.loop_actor.mcp_status_rows();
             let result = if statuses.is_empty() {
                 "No MCP stdio servers".into()
             } else {
                 statuses
                     .into_iter()
-                    .enumerate()
-                    .map(|(index, status)| format!("stdio[{index}] status={status:?}"))
+                    .map(|row| format!("{}[{}] status={}", row.transport, row.index, row.status))
                     .collect::<Vec<_>>()
                     .join("\n")
             };
