@@ -26,6 +26,30 @@ impl ToolRegistry {
         self.tools.insert(tool.name().to_string(), tool);
     }
 
+    pub fn register_mcp_server(
+        &mut self,
+        server: crate::tools::McpServer,
+        call: crate::tools::McpCallHook,
+    ) -> Result<usize, String> {
+        let crate::tools::McpServer { name, tools: specs } = server;
+        let tools: Result<Vec<_>, _> = specs
+            .into_iter()
+            .map(|spec| crate::tools::McpTool::new(&name, spec, call.clone()))
+            .collect();
+        let tools = tools?;
+        if tools
+            .iter()
+            .any(|tool| self.tools.contains_key(tool.name()))
+        {
+            return Err("an MCP tool with that qualified name is already registered".into());
+        }
+        let count = tools.len();
+        for tool in tools {
+            self.register(Arc::new(tool));
+        }
+        Ok(count)
+    }
+
     pub fn lookup(&self, name: &str) -> Option<Arc<dyn AgentTool>> {
         self.tools.get(name).cloned()
     }
@@ -94,5 +118,22 @@ mod tests {
         assert!(r.lookup("echo").is_some());
         assert_eq!(r.len(), 1);
         assert_eq!(r.execution_mode("echo"), None);
+    }
+
+    #[test]
+    fn register_mcp_server_adds_qualified_tools_atomically() {
+        let mut registry = ToolRegistry::new();
+        let server = crate::tools::McpServer {
+            name: "files".into(),
+            tools: vec![crate::tools::McpToolSpec {
+                name: "list".into(),
+                description: "List".into(),
+                input_schema: serde_json::json!({"type":"object"}),
+            }],
+        };
+        let hook: crate::tools::McpCallHook =
+            Arc::new(|_| Box::pin(async { Ok(serde_json::json!({})) }));
+        assert_eq!(registry.register_mcp_server(server, hook).unwrap(), 1);
+        assert!(registry.lookup("mcp__files__list").is_some());
     }
 }
