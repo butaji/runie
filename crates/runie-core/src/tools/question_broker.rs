@@ -40,6 +40,24 @@ pub fn decode_question_traces(input: &str) -> Result<Vec<UserQuestionTrace>, ser
 
 const MAX_QUESTION_TRACES: usize = 128;
 
+/// Query persisted question history without coupling it to a dialog widget.
+pub fn query_question_history(
+    traces: &[UserQuestionTrace],
+    text: &str,
+    outcome: Option<&str>,
+    limit: usize,
+) -> Vec<UserQuestionTrace> {
+    let text = text.trim().to_ascii_lowercase();
+    traces
+        .iter()
+        .rev()
+        .filter(|trace| outcome.is_none_or(|value| trace.outcome == value))
+        .filter(|trace| text.is_empty() || trace.question.to_ascii_lowercase().contains(&text))
+        .take(limit.min(MAX_QUESTION_TRACES))
+        .cloned()
+        .collect()
+}
+
 #[derive(Clone)]
 pub struct UserQuestionBroker {
     tx: mpsc::UnboundedSender<PendingUserQuestion>,
@@ -396,5 +414,33 @@ mod tests {
         let restored = broker.traces();
         assert_eq!(restored.len(), MAX_QUESTION_TRACES);
         assert_eq!(restored[0].id, "1");
+    }
+
+    #[test]
+    fn question_history_queries_newest_filtered_traces() {
+        let traces = vec![
+            UserQuestionTrace {
+                id: "1".into(),
+                question: "Deploy now?".into(),
+                outcome: "cancelled".into(),
+                attempted_answer: None,
+                error: None,
+            },
+            UserQuestionTrace {
+                id: "2".into(),
+                question: "Continue deploy?".into(),
+                outcome: "answered".into(),
+                attempted_answer: None,
+                error: None,
+            },
+        ];
+        let history = query_question_history(&traces, "deploy", Some("answered"), 8);
+        assert_eq!(
+            history
+                .iter()
+                .map(|trace| trace.id.as_str())
+                .collect::<Vec<_>>(),
+            ["2"]
+        );
     }
 }
