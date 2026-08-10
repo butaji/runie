@@ -1,5 +1,20 @@
 impl App {
     async fn route_extended_command(&self, name: &str, args: &str) -> bool {
+        if name == "mcps" {
+            let statuses = self.loop_actor.mcp_stdio_statuses();
+            let result = if statuses.is_empty() {
+                "No MCP stdio servers".into()
+            } else {
+                statuses
+                    .into_iter()
+                    .enumerate()
+                    .map(|(index, status)| format!("stdio[{index}] status={status:?}"))
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            };
+            self.ui.send(UiMsg::ShowCommandResult(result)).await;
+            return true;
+        }
         if name == "sessions" {
             let root = std::env::current_dir()
                 .map(|path| path.to_string_lossy().into_owned())

@@ -4,6 +4,10 @@ impl LoopActor {
         self.inner.deps.tool_executor.scheduler_metrics().await
     }
 
+    pub fn mcp_stdio_statuses(&self) -> Vec<crate::tools::McpStdioStatus> {
+        self.inner.deps.tool_executor.mcp_stdio_statuses()
+    }
+
     /// Project the next context-recovery operation without mutating any
     /// actor. Callers can route `Prepare` through the session owner and keep
     /// summarization in the provider owner.

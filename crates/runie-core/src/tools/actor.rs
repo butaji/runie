@@ -116,6 +116,10 @@ impl ToolExecutorActor {
         response.await.unwrap_or_default()
     }
 
+    pub fn mcp_stdio_statuses(&self) -> Vec<crate::tools::McpStdioStatus> {
+        self.registry.mcp_stdio_statuses()
+    }
+
     #[allow(
         clippy::too_many_arguments,
         reason = "actor command mirrors the explicit async tool execution contract"
