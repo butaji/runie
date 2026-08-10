@@ -18,9 +18,7 @@ fn unix_timestamp_millis() -> i64 {
         .unwrap_or_default()
 }
 
-use super::executor::{
-    execute_parallel, execute_sequential, DispatchOutcome, ToolExecContext, ToolExecHooks,
-};
+use super::executor::{execute_parallel, execute_sequential, ToolExecContext, ToolExecHooks};
 use super::registry::ToolRegistry;
 
 #[derive(Debug)]
@@ -35,6 +33,12 @@ pub enum ToolOutcome {
     Aborted { reason: String },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum ToolPriority {
+    Background,
+    Interactive,
+}
+
 pub enum ToolCommand {
     Execute {
         assistant_message: AssistantMessage,
@@ -43,6 +47,7 @@ pub enum ToolCommand {
         bus: Option<EventBus>,
         calls: Vec<ToolCall>,
         mode: ToolExecutionMode,
+        priority: ToolPriority,
         hooks: super::executor::ToolExecHooks,
         reply: oneshot::Sender<ToolOutcome>,
     },
@@ -108,6 +113,34 @@ impl ToolExecutorActor {
         mode: ToolExecutionMode,
         hooks: super::executor::ToolExecHooks,
     ) -> ToolOutcome {
+        self.execute_with_priority(
+            assistant_message,
+            context,
+            abort,
+            bus,
+            calls,
+            mode,
+            ToolPriority::Interactive,
+            hooks,
+        )
+        .await
+    }
+
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "priority is an explicit part of the queued execution contract"
+    )]
+    pub async fn execute_with_priority(
+        &self,
+        assistant_message: AssistantMessage,
+        context: AgentContext,
+        abort: Option<tokio::sync::watch::Receiver<bool>>,
+        bus: Option<EventBus>,
+        calls: Vec<ToolCall>,
+        mode: ToolExecutionMode,
+        priority: ToolPriority,
+        hooks: super::executor::ToolExecHooks,
+    ) -> ToolOutcome {
         let fallback_calls = calls.clone();
         let (reply_tx, reply_rx) = oneshot::channel();
         let _ = self
@@ -119,6 +152,7 @@ impl ToolExecutorActor {
                 bus,
                 calls,
                 mode,
+                priority,
                 hooks,
                 reply: reply_tx,
             })
@@ -172,40 +206,63 @@ async fn run_tool_worker(
     registry: Arc<ToolRegistry>,
     tool_result_timestamp: Option<i64>,
 ) {
-    while let Some(cmd) = rx.recv().await {
-        let ToolCommand::Execute {
-            assistant_message,
-            context,
-            abort,
-            bus,
-            calls,
-            mode,
-            hooks,
-            reply,
-        } = cmd;
-
-        let effective_mode = effective_tool_mode(&registry, &calls, mode);
-        let ctx = tool_exec_context(
-            assistant_message,
-            context,
-            abort,
-            bus,
-            hooks,
-            registry.clone(),
-            tool_result_timestamp,
-        );
-
-        let outcome: DispatchOutcome = match effective_mode {
-            ToolExecutionMode::Sequential => execute_sequential(calls, ctx).await,
-            ToolExecutionMode::Parallel => execute_parallel(calls, ctx).await,
-        };
-
-        let _ = reply.send(ToolOutcome::Completed {
-            tool_results: outcome.tool_results,
-            all_terminated: outcome.all_terminated,
-            events: outcome.events,
-        });
+    while let Some(cmd) = next_prioritized_command(&mut rx).await {
+        run_tool_command(cmd, &registry, tool_result_timestamp).await;
     }
+}
+
+async fn run_tool_command(
+    command: ToolCommand,
+    registry: &Arc<ToolRegistry>,
+    tool_result_timestamp: Option<i64>,
+) {
+    let ToolCommand::Execute {
+        assistant_message,
+        context,
+        abort,
+        bus,
+        calls,
+        mode,
+        priority: _,
+        hooks,
+        reply,
+    } = command;
+    let effective_mode = effective_tool_mode(registry, &calls, mode);
+    let ctx = tool_exec_context(
+        assistant_message,
+        context,
+        abort,
+        bus,
+        hooks,
+        registry.clone(),
+        tool_result_timestamp,
+    );
+    let outcome = match effective_mode {
+        ToolExecutionMode::Sequential => execute_sequential(calls, ctx).await,
+        ToolExecutionMode::Parallel => execute_parallel(calls, ctx).await,
+    };
+    let _ = reply.send(ToolOutcome::Completed {
+        tool_results: outcome.tool_results,
+        all_terminated: outcome.all_terminated,
+        events: outcome.events,
+    });
+}
+
+async fn next_prioritized_command(rx: &mut mpsc::Receiver<ToolCommand>) -> Option<ToolCommand> {
+    let first = rx.recv().await?;
+    let mut pending = vec![first];
+    while let Ok(command) = rx.try_recv() {
+        pending.push(command);
+    }
+    let selected = pending
+        .iter()
+        .enumerate()
+        .max_by_key(|(_, command)| match command {
+            ToolCommand::Execute { priority, .. } => *priority,
+        })
+        .map(|(index, _)| index)
+        .expect("pending command is non-empty");
+    Some(pending.swap_remove(selected))
 }
 
 fn effective_tool_mode(
@@ -297,6 +354,35 @@ mod tests {
         assert!(matches!(
             events[1],
             AgentEvent::ToolExecutionEnd { is_error: true, .. }
+        ));
+    }
+
+    #[tokio::test]
+    async fn queued_command_selection_prefers_interactive_work() {
+        let (tx, mut rx) = mpsc::channel(4);
+        for priority in [ToolPriority::Background, ToolPriority::Interactive] {
+            let (reply, _) = oneshot::channel();
+            tx.send(ToolCommand::Execute {
+                assistant_message: AssistantMessage::default(),
+                context: AgentContext::default(),
+                abort: None,
+                bus: None,
+                calls: vec![],
+                mode: ToolExecutionMode::Parallel,
+                priority,
+                hooks: ToolExecHooks::default(),
+                reply,
+            })
+            .await
+            .unwrap();
+        }
+        let selected = next_prioritized_command(&mut rx).await.unwrap();
+        assert!(matches!(
+            selected,
+            ToolCommand::Execute {
+                priority: ToolPriority::Interactive,
+                ..
+            }
         ));
     }
 }

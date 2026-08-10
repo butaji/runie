@@ -23,7 +23,7 @@ macro_rules! register_tools {
     }};
 }
 
-pub use actor::{ToolCommand, ToolExecutorActor, ToolOutcome};
+pub use actor::{ToolCommand, ToolExecutorActor, ToolOutcome, ToolPriority};
 pub use ask_user::{AskUserQuestionTool, UserQuestionOption, UserQuestionRequest};
 pub use background::{
     BackgroundCancelRequest, BackgroundCancelTool, BackgroundJobsTool, BackgroundShellRequest,
