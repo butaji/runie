@@ -38,6 +38,11 @@ Transcript and dense-tool navigation are consolidated in `feed_navigation.rs`,
 keeping selection transitions and group identity in one semantic module.
 Tool display-mode transitions and identity projection are consolidated in
 `feed_tool_display.rs`.
+
+Provider effort mapping now lives in semantic `types_thinking.rs`, the
+provider effort matrix has its own fixture module, and MCP HTTP registration
+is split into discovery/request/call-hook helpers. Older actor, MCP, and feed
+modules remain queued for consolidation.
 Logical range and terminal-cell selection transitions are consolidated in
 `feed_selection.rs`.
 Local transcript line mutations are consolidated in `feed_line_ops.rs`.

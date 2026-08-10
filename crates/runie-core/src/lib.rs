@@ -34,6 +34,8 @@ pub mod ide;
 pub mod model_catalog;
 pub mod noninteractive;
 pub mod types;
+#[path = "types_thinking.rs"]
+mod types_thinking;
 
 pub mod events;
 pub mod r#loop;

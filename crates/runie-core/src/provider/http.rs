@@ -413,5 +413,8 @@ fn header_value<'a>(
 }
 
 #[cfg(test)]
+#[path = "http_tests_effort.rs"]
+mod effort_tests;
+#[cfg(test)]
 #[path = "http_tests.rs"]
 mod tests;

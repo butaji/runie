@@ -5,6 +5,8 @@ use std::sync::Arc;
 
 use crate::types::{AgentTool, Model, ToolExecutionMode};
 
+const MCP_PROTOCOL_VERSION: &str = "2025-03-26";
+
 pub struct ToolRegistry {
     tools: HashMap<String, Arc<dyn AgentTool>>,
     mcp_stdio: Vec<Arc<crate::tools::McpStdioActor>>,
@@ -74,47 +76,8 @@ impl ToolRegistry {
         client: crate::tools::McpHttpClient,
     ) -> Result<usize, String> {
         let owner = Arc::new(crate::tools::McpHttpActor::new(client));
-        let initialize = owner
-            .request(serde_json::json!({
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "initialize",
-                "params": {"protocolVersion": "2025-03-26", "capabilities": {}, "clientInfo": {"name": "runie", "version": "0"}}
-            }))
-            .await?;
-        let name = initialize["result"]["serverInfo"]["name"]
-            .as_str()
-            .filter(|name| !name.trim().is_empty())
-            .unwrap_or("http")
-            .to_owned();
-        let listed = owner
-            .request(serde_json::json!({
-                "jsonrpc": "2.0",
-                "id": 2,
-                "method": "tools/list",
-                "params": {}
-            }))
-            .await?;
-        let specs = listed["result"]["tools"].clone();
-        let tools: Vec<crate::tools::McpToolSpec> = serde_json::from_value(specs)
-            .map_err(|error| format!("MCP HTTP tools/list: {error}"))?;
-        let owner_for_call = owner.clone();
-        let next_id = Arc::new(std::sync::atomic::AtomicU64::new(3));
-        let call: crate::tools::McpCallHook = Arc::new(move |request| {
-            let owner = owner_for_call.clone();
-            let next_id = next_id.clone();
-            Box::pin(async move {
-                let id = next_id.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-                owner
-                    .request(serde_json::json!({
-                        "jsonrpc": "2.0",
-                        "id": id,
-                        "method": "tools/call",
-                        "params": {"name": request.tool, "arguments": request.arguments}
-                    }))
-                    .await
-            })
-        });
+        let (name, tools) = discover_http_tools(&owner).await?;
+        let call = http_call_hook(owner.clone());
         let result = self.register_mcp_server(crate::tools::McpServer { name, tools }, call);
         if result.is_ok() {
             self.mcp_http.push(owner);
@@ -202,6 +165,57 @@ impl ToolRegistry {
             .filter_map(|name| self.tools.get(&name).cloned())
             .collect()
     }
+}
+
+async fn discover_http_tools(
+    owner: &crate::tools::McpHttpActor,
+) -> Result<(String, Vec<crate::tools::McpToolSpec>), String> {
+    let initialize = owner
+        .request(http_request(
+            1,
+            "initialize",
+            serde_json::json!({
+            "protocolVersion": MCP_PROTOCOL_VERSION,
+                    "capabilities": {},
+                    "clientInfo": {"name": "runie", "version": "0"}
+                }),
+        ))
+        .await?;
+    let name = initialize["result"]["serverInfo"]["name"]
+        .as_str()
+        .filter(|name| !name.trim().is_empty())
+        .unwrap_or("http")
+        .to_owned();
+    let listed = owner
+        .request(http_request(2, "tools/list", serde_json::json!({})))
+        .await?;
+    let tools = serde_json::from_value(listed["result"]["tools"].clone())
+        .map_err(|error| format!("MCP HTTP tools/list: {error}"))?;
+    Ok((name, tools))
+}
+
+fn http_request(id: u64, method: &str, params: serde_json::Value) -> serde_json::Value {
+    serde_json::json!({"jsonrpc": "2.0", "id": id, "method": method, "params": params})
+}
+
+fn http_call_hook(owner: Arc<crate::tools::McpHttpActor>) -> crate::tools::McpCallHook {
+    let next_id = Arc::new(std::sync::atomic::AtomicU64::new(3));
+    Arc::new(move |request| {
+        let owner = owner.clone();
+        let next_id = next_id.clone();
+        Box::pin(async move {
+            let id = next_id.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            owner
+                .request(http_request(
+                    id,
+                    "tools/call",
+                    serde_json::json!({
+                        "name": request.tool, "arguments": request.arguments
+                    }),
+                ))
+                .await
+        })
+    })
 }
 
 #[cfg(test)]
@@ -351,31 +365,8 @@ mod tests {
     async fn register_mcp_http_discovers_and_reuses_owned_session() {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let address = listener.local_addr().unwrap();
-        let task = tokio::spawn(async move {
-            for _ in 0..3 {
-                let (mut socket, _) = listener.accept().await.unwrap();
-                let mut request = vec![0_u8; 4096];
-                let size = tokio::io::AsyncReadExt::read(&mut socket, &mut request)
-                    .await
-                    .unwrap();
-                let request = String::from_utf8_lossy(&request[..size]);
-                let body = if request.contains("initialize") {
-                    r#"{"jsonrpc":"2.0","id":1,"result":{"serverInfo":{"name":"demo-http"}}}"#
-                } else if request.contains("tools/list") {
-                    r#"{"jsonrpc":"2.0","id":2,"result":{"tools":[{"name":"echo","inputSchema":{"type":"object"}}]}}"#
-                } else {
-                    r#"{"jsonrpc":"2.0","id":3,"result":{"value":7}}"#
-                };
-                let response = format!(
-                    "HTTP/1.1 200 OK\r\nMcp-Session-Id: http-session\r\nContent-Length: {}\r\nContent-Type: application/json\r\n\r\n{}",
-                    body.len(),
-                    body
-                );
-                tokio::io::AsyncWriteExt::write_all(&mut socket, response.as_bytes())
-                    .await
-                    .unwrap();
-            }
-        });
+        // OWNER: registry integration test joins this server task below.
+        let task = tokio::spawn(http_registry_fixture(listener));
         let client = crate::tools::McpHttpClient::new(
             format!("http://{address}"),
             None,
@@ -405,5 +396,30 @@ mod tests {
             7
         );
         task.await.unwrap();
+    }
+
+    async fn http_registry_fixture(listener: tokio::net::TcpListener) {
+        for _ in 0..3 {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut request = vec![0_u8; 4096];
+            let size = tokio::io::AsyncReadExt::read(&mut socket, &mut request)
+                .await
+                .unwrap();
+            let request = String::from_utf8_lossy(&request[..size]);
+            let body = if request.contains("initialize") {
+                r#"{"jsonrpc":"2.0","id":1,"result":{"serverInfo":{"name":"demo-http"}}}"#
+            } else if request.contains("tools/list") {
+                r#"{"jsonrpc":"2.0","id":2,"result":{"tools":[{"name":"echo","inputSchema":{"type":"object"}}]}}"#
+            } else {
+                r#"{"jsonrpc":"2.0","id":3,"result":{"value":7}}"#
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nMcp-Session-Id: http-session\r\nContent-Length: {}\r\nContent-Type: application/json\r\n\r\n{}",
+                body.len(), body
+            );
+            tokio::io::AsyncWriteExt::write_all(&mut socket, response.as_bytes())
+                .await
+                .unwrap();
+        }
     }
 }
