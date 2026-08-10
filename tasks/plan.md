@@ -100,10 +100,10 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    Extend the existing mailbox/replay state machine with user-visible queued,
    running, and cancelled control projections.
 5. MCP lifecycle ownership — `harness-10`.
-   The stdio actor now publishes ready/busy/failed/closed lifecycle state and
-   `/mcps` projects it through the loop-owned executor; connect the tested
-   transport/notification state machine to a persistent owned runtime lifecycle
-   without leaking tasks or sessions across actors.
+   The stdio actor now publishes ready/busy/failed/closed lifecycle state,
+   `/mcps` projects it through the loop-owned executor, and registry-backed
+   stdio calls reuse an actor-owned persistent session; persistent HTTP session
+   integration remains.
 6. Session and Git interactive UX — `harness-12` and `harness-13`.
    Complete picker/history/conflict interactions over the existing actor-owned
    projections and inverse-safe event boundaries.

@@ -57,7 +57,7 @@ impl ToolRegistry {
         client: crate::tools::McpStdioClient,
     ) -> Result<usize, String> {
         let server = client.discover().await?;
-        let owner = Arc::new(crate::tools::McpStdioActor::new(client));
+        let owner = Arc::new(crate::tools::McpStdioActor::new_persistent(client));
         let owner_for_call = owner.clone();
         let call: crate::tools::McpCallHook = Arc::new(move |request| {
             let owner = owner_for_call.clone();
@@ -237,7 +237,7 @@ mod tests {
 
     #[tokio::test]
     async fn register_mcp_stdio_discovers_and_binds_owner_calls() {
-        let script = "while IFS= read -r line; do case \"$line\" in *initialize*) echo '{\"id\":1,\"result\":{\"serverInfo\":{\"name\":\"demo\"}}}';; *tools/list*) echo '{\"id\":2,\"result\":{\"tools\":[{\"name\":\"echo\",\"inputSchema\":{\"type\":\"object\"}}]}}';; *tools/call*) echo '{\"id\":1,\"result\":{\"value\":7}}';; esac; done";
+        let script = "while IFS= read -r line; do case \"$line\" in *initialize*) echo '{\"id\":1,\"result\":{\"serverInfo\":{\"name\":\"demo\"}}}';; *tools/list*) echo '{\"id\":2,\"result\":{\"tools\":[{\"name\":\"echo\",\"inputSchema\":{\"type\":\"object\"}}]}}';; *tools/call*) echo '{\"id\":3,\"result\":{\"value\":7}}';; esac; done";
         let client = crate::tools::McpStdioClient::new(
             "sh",
             vec!["-c".into(), script.into()],
