@@ -42,3 +42,6 @@ Logical range and terminal-cell selection transitions are consolidated in
 `feed_selection.rs`.
 Local transcript line mutations are consolidated in `feed_line_ops.rs`.
 Assistant-turn settlement is consolidated in `feed_assistant.rs`.
+Obsolete legacy palette metadata declarations were removed from the semantic
+palette module after call-site audit, reducing dead indirection without
+changing its public API.
