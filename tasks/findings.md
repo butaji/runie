@@ -103,6 +103,8 @@ As of 2026-08-09, the reduction work has these verified results:
   renderer-neutral projection for hotkeys, separators, and actions.
 - Dialog footer actions now share the inline paint projection without changing
   modal geometry.
+- The live ready-footer adapter now shares the generic hotkey paint projection;
+  the old renderer-specific action builder has no production call sites.
 - Transcript-selectability is now a `LineKind` predicate shared by feed
   navigation, completing the central line-classification vocabulary.
 - Five numbered feed fragments covering tool-row lifecycle and selection are

@@ -1162,13 +1162,14 @@ fn render_header(area: Rect, buf: &mut Buffer, meter: &str, theme: runie_core::t
 fn render_live_ready_footer(area: Rect, buf: &mut Buffer, theme: runie_core::types::ThemeKind) {
     use ratatui::widgets::{Paragraph, Widget};
 
-    let muted_style = runie_tui::appearance::muted_style_for(theme);
-    let spans = runie_tui::appearance::footer_hotkey_actions(
+    let spans = runie_tui::paint::inline_spans(
+        &runie_tui::paint::hotkey_footer_paint([
+            ("Shift+Tab", "mode"),
+            ("Ctrl+x", "shortcuts"),
+        ]),
         theme,
-        [("Shift+Tab", "mode"), ("Ctrl+x", "shortcuts")],
     );
     Paragraph::new(ratatui::text::Line::from(spans))
-        .style(muted_style)
         .render(area, buf);
 }
 

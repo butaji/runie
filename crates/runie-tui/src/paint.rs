@@ -210,28 +210,37 @@ pub fn status_footer_paint(snapshot: &StatusSnapshot) -> PaintDocument {
 }
 
 pub fn dialog_footer_paint(frame: &DialogFrame) -> PaintDocument {
-    let mut document = PaintDocument::default();
-    for (index, action) in frame
-        .spec
-        .actions
-        .iter()
-        .filter(|action| action.enabled.evaluate(frame))
-        .filter_map(|action| action.hotkey.map(|key| (key, action.label)))
-        .enumerate()
-    {
-        if index > 0 {
-            document = document.span("  │  ", PaintIntent::Muted, false);
-        }
-        document = document.span(action.0, PaintIntent::FooterKey, true).span(
-            format!(":{}", action.1),
-            PaintIntent::Muted,
-            false,
-        );
-    }
-    document
+    hotkey_footer_paint(
+        frame
+            .spec
+            .actions
+            .iter()
+            .filter(|action| action.enabled.evaluate(frame))
+            .filter_map(|action| action.hotkey.map(|key| (key, action.label))),
+    )
 }
 
-pub(crate) fn inline_spans(document: &PaintDocument, theme: ThemeKind) -> Vec<Span<'static>> {
+pub fn hotkey_footer_paint(
+    actions: impl IntoIterator<Item = (&'static str, &'static str)>,
+) -> PaintDocument {
+    actions
+        .into_iter()
+        .enumerate()
+        .fold(PaintDocument::default(), |document, (index, action)| {
+            let document = if index > 0 {
+                document.span("  │  ", PaintIntent::Muted, false)
+            } else {
+                document
+            };
+            document.span(action.0, PaintIntent::FooterKey, true).span(
+                format!(":{}", action.1),
+                PaintIntent::Muted,
+                false,
+            )
+        })
+}
+
+pub fn inline_spans(document: &PaintDocument, theme: ThemeKind) -> Vec<Span<'static>> {
     document
         .inline
         .iter()

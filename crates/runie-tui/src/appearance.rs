@@ -294,29 +294,6 @@ pub fn footer_hotkey_span(theme: ThemeKind, label: impl Into<String>) -> Span<'s
     )
 }
 
-/// Shared non-key text paired with [`footer_hotkey_span`].
-pub fn footer_text_span(theme: ThemeKind, label: impl Into<String>) -> Span<'static> {
-    Span::styled(label.into(), muted_style_for(theme))
-}
-
-/// Complete footer hotkey/action component shared by the app footer and all
-/// dialog footers. This owns punctuation and separators as well as styles so
-/// the two surfaces render identically.
-pub fn footer_hotkey_actions(
-    theme: ThemeKind,
-    actions: impl IntoIterator<Item = (&'static str, &'static str)>,
-) -> Vec<Span<'static>> {
-    let mut spans = Vec::new();
-    for (index, (key, action)) in actions.into_iter().enumerate() {
-        if index > 0 {
-            spans.push(footer_text_span(theme, "  │  "));
-        }
-        spans.push(footer_hotkey_span(theme, key));
-        spans.push(footer_text_span(theme, format!(":{action}")));
-    }
-    spans
-}
-
 pub fn assistant_body_style_for(theme: ThemeKind) -> Style {
     base_style_for(theme).fg(token_color(theme, ThemeToken::TextAssistant))
 }
