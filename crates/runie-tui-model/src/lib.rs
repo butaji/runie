@@ -4,19 +4,33 @@
 //! dependency. Actors reduce events into these immutable values; renderers
 //! only consume them.
 
+mod dialog;
+mod dialog_specs;
 mod events;
 mod feed;
 mod memory;
+mod palette_meta;
+pub use palette_meta::theme_labels;
 mod prompt;
 mod scroll;
+mod scroll_flush;
 mod status;
 mod sticky;
 mod theme;
 mod ui;
 
+pub use dialog::{
+    wrap_dialog_selection, DialogAction, DialogFrame, DialogKind, DialogPredicate, DialogResult,
+    DialogSpec, DialogStack,
+};
+pub use dialog_specs::{
+    CHANGELOG_DIALOG, COMMAND_DIALOG, COMMAND_RESULT_DIALOG, FILE_SELECTOR_DIALOG,
+    MODEL_SELECTOR_DIALOG, PALETTE_PARAMETERS_DIALOG, SESSION_DIALOG, SHORTCUTS_DIALOG,
+    THEME_SELECTOR_DIALOG,
+};
 pub use events::{
-    event_projection_scope, is_actor_feed_event, scrollback_messages_for_event,
-    status_messages_for_event, EventProjectionScope,
+    event_projection_scope, is_actor_feed_event, project_event, scrollback_messages_for_event,
+    status_messages_for_event, EventProjection, EventProjectionScope,
 };
 pub use feed::{
     active_tool_count, activity_counts, activity_counts_with_start,
@@ -34,11 +48,11 @@ pub use feed::{
     structured_update_text, table_bottom_border, thinking_summary, tool_header, tool_mode_for_line,
     tool_mode_override_for_line, tool_result_text, tool_update_header_text, version_badge,
     web_search_site_count, web_search_sources_line, welcome_modal_lines, workflow_text,
-    ActivityKind, CellPosition, CellSelection, FeedNavigation, FeedSnapshot, FeedState, Line,
-    LineKind, ScrollbackMsg, ToolBlock, ToolCardKind, ToolCardPaintIntent, ToolCardRow,
-    ToolCardRowKind, VersionBadgeVariant, DEFAULT_THINKING_ELAPSED_MS, GROK_AUTO_COMPACT_MAX_ROWS,
-    GROK_SMALL_SCREEN_TIP_MAX_ROWS, PROMPT_TIMESTAMP_LIVE_THRESHOLD, RUNNING_BULLETS,
-    USER_PREFIX_INDENT,
+    ActivityKind, CellPosition, CellSelection, FeedFacts, FeedNavigation, FeedSnapshot, FeedState,
+    Line, LineKind, ScrollbackDomain, ScrollbackMsg, ToolBlock, ToolCardKind, ToolCardPaintIntent,
+    ToolCardRow, ToolCardRowKind, ToolNameLookup, ToolRecord, VersionBadgeVariant,
+    DEFAULT_THINKING_ELAPSED_MS, GROK_AUTO_COMPACT_MAX_ROWS, GROK_SMALL_SCREEN_TIP_MAX_ROWS,
+    PROMPT_TIMESTAMP_LIVE_THRESHOLD, RUNNING_BULLETS, USER_PREFIX_INDENT,
 };
 pub use memory::{memory_display_lines, parse_memory_results, MemoryResult};
 pub use prompt::{cycle_input_mode, InputMode, PromptOutcome, PromptSnapshot};
@@ -55,7 +69,10 @@ pub use sticky::{
     compute_sticky_layout, PromptDescriptor, RenderedPrompt, StickyHeaderLayout, MIN_PINNED_HEIGHT,
 };
 pub use theme::ThemeToken;
-pub use ui::{ui_messages_for_event, PaletteAction, UiCommand, UiMsg, UiState};
+pub use ui::{
+    palette_display_rows, palette_labels, ui_messages_for_event, PaletteAction, UiCommand, UiMsg,
+    UiState,
+};
 
 /// Immutable aggregate of actor-owned TUI projections for a single view pass.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -206,9 +223,11 @@ mod tests {
             .update(UiMsg::CommandPaletteEscape);
         assert!(state.command_palette_open);
         assert!(state.command_palette_query.is_empty());
+        assert_eq!(state.dialog_stack.depth(), 1);
 
         let state = state.update(UiMsg::CommandPaletteEscape);
         assert!(!state.command_palette_open);
+        assert!(state.dialog_stack.is_empty());
     }
 
     #[test]
@@ -253,44 +272,10 @@ mod tests {
 
     fn empty_feed() -> FeedSnapshot {
         FeedSnapshot {
-            lines: Vec::new(),
-            tool_blocks: Vec::new(),
-            tool_names: std::collections::HashMap::new(),
-            tool_args: std::collections::HashMap::new(),
-            activity_dirs: 0,
-            activity_files: 0,
-            activity_commands: 0,
-            activity_subagents: 0,
-            activity_failures: 0,
             autoscroll: true,
-            scroll_offset: 0,
-            reasoning_expanded: false,
-            activity_expanded: false,
-            prompt_timestamp: None,
             follow_latest_user: true,
-            selected_tool_id: None,
-            selected_tool_row_id: None,
-            selected_entry: None,
-            selection_anchor: None,
-            selection_head: None,
-            cell_selection: None,
-            copy_selection: None,
-            selected_member_index: None,
             theme: ThemeKind::GrokNight,
-            animation_frame: 0,
-            tool_modes: std::collections::HashMap::new(),
-            revealed_dense_groups: std::collections::HashSet::new(),
-            center_revealed_entry: false,
-            workflow_headers: std::collections::HashMap::new(),
-            workflow_phases: std::collections::HashMap::new(),
-            settled_no_tool_phase: false,
-            live_grok_layout: false,
-            next_tool_row_id: 0,
-            turn_started: false,
-            assistant_stream_open: false,
-            measured_content_rows: 0,
-            measured_viewport_rows: 0,
-            measured_anchor_row: None,
+            ..FeedSnapshot::default()
         }
     }
 }

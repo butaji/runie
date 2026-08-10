@@ -16,13 +16,14 @@ pub struct SlashCommand {
 
 macro_rules! pi_slash_commands {
     ($($name:literal => $description:literal $(, $hint:literal)?);+ $(;)?) => {
-        pub const PI_BUILTIN_SLASH_COMMANDS: &[SlashCommand] = &[
+pub const PI_BUILTIN_SLASH_COMMANDS: &[SlashCommand] = &[
             $(SlashCommand {
                 name: $name,
                 description: $description,
                 argument_hint: pi_slash_commands!(@hint $($hint)?),
             }),+
-        ];
+];
+
     };
     (@hint $hint:literal) => { Some($hint) };
     (@hint) => { None };
@@ -81,17 +82,42 @@ pub enum MappableBuiltinCommand {
     Hotkeys,
     Copy,
     Quit,
-    Model { reference: String },
+    Model {
+        reference: String,
+    },
     ScopedModels,
     SessionInfo,
-    Name { name: String },
-    Compact { instructions: Option<String> },
-    Fork { target_id: String },
-    Tree { target_id: String },
-    Export { path: String },
-    Import { path: String },
-    Clone { path: String },
-    Resume { path: String },
+    Name {
+        name: String,
+    },
+    Compact {
+        instructions: Option<String>,
+    },
+    Fork {
+        target_id: String,
+    },
+    Tree {
+        target_id: String,
+    },
+    Export {
+        path: String,
+    },
+    Import {
+        path: String,
+    },
+    Clone {
+        path: String,
+    },
+    Resume {
+        path: String,
+    },
+    /// A Runie/Grok command whose execution is delegated through the normal
+    /// prompt actor until a dedicated owning actor exists. Keeping the
+    /// invocation typed ensures palette and pasted-input paths agree.
+    Extended {
+        name: String,
+        args: String,
+    },
 }
 
 /// A known Pi command whose provider/UI capability has no Runie owner yet.
@@ -164,11 +190,6 @@ pub enum BuiltinCommandDisposition {
 /// Parse an exact Pi built-in command that Runie can currently route through
 /// an existing actor/application boundary. Non-mappable commands return
 /// `None` and remain ordinary prompt text until their capability is built.
-#[allow(
-    clippy::too_many_lines,
-    clippy::cognitive_complexity,
-    reason = "the Pi command parser keeps the complete typed vocabulary in one pure boundary"
-)]
 pub fn parse_mappable_builtin_command(input: &str) -> Option<MappableBuiltinCommand> {
     match input.trim() {
         "/changelog" => Some(MappableBuiltinCommand::Changelog),
@@ -179,65 +200,100 @@ pub fn parse_mappable_builtin_command(input: &str) -> Option<MappableBuiltinComm
         "/scoped-models" => Some(MappableBuiltinCommand::ScopedModels),
         "/session" => Some(MappableBuiltinCommand::SessionInfo),
         "/compact" => Some(MappableBuiltinCommand::Compact { instructions: None }),
-        value if value.starts_with("/compact ") => {
-            let instructions = value[9..].trim();
-            Some(MappableBuiltinCommand::Compact {
-                instructions: (!instructions.is_empty()).then(|| instructions.to_owned()),
-            })
-        }
-        value if value.starts_with("/name ") => {
-            let name = value[6..].trim();
-            (!name.is_empty()).then(|| MappableBuiltinCommand::Name {
-                name: name.to_owned(),
-            })
-        }
-        value if value.starts_with("/model ") => {
-            let reference = value[7..].trim();
-            reference
+        value => parse_extended_no_arg(value).or_else(|| parse_parameterized_command(value)),
+    }
+}
+
+#[allow(clippy::too_many_lines)]
+fn parse_parameterized_command(value: &str) -> Option<MappableBuiltinCommand> {
+    if let Some(instructions) = value.strip_prefix("/compact ") {
+        return Some(MappableBuiltinCommand::Compact {
+            instructions: (!instructions.trim().is_empty()).then(|| instructions.trim().to_owned()),
+        });
+    }
+    let (prefix, text) = value.split_once(' ')?;
+    let text = text.trim();
+    if text.is_empty() {
+        return None;
+    }
+    match prefix {
+        "/name" => Some(MappableBuiltinCommand::Name { name: text.into() }),
+        "/model"
+            if text
                 .split_once('/')
-                .filter(|(provider, model)| !provider.is_empty() && !model.is_empty())
-                .map(|_| MappableBuiltinCommand::Model {
-                    reference: reference.to_owned(),
-                })
-        }
-        value if value.starts_with("/fork ") => {
-            let target_id = value[6..].trim();
-            (!target_id.is_empty()).then(|| MappableBuiltinCommand::Fork {
-                target_id: target_id.to_owned(),
+                .is_some_and(|(p, m)| !p.is_empty() && !m.is_empty()) =>
+        {
+            Some(MappableBuiltinCommand::Model {
+                reference: text.into(),
             })
         }
-        value if value.starts_with("/tree ") => {
-            let target_id = value[6..].trim();
-            (!target_id.is_empty()).then(|| MappableBuiltinCommand::Tree {
-                target_id: target_id.to_owned(),
-            })
-        }
-        value if value.starts_with("/export ") => {
-            let path = value[8..].trim();
-            (path.ends_with(".jsonl") && !path.is_empty()).then(|| MappableBuiltinCommand::Export {
-                path: path.to_owned(),
-            })
-        }
-        value if value.starts_with("/import ") => {
-            let path = value[8..].trim();
-            (path.ends_with(".jsonl") && !path.is_empty()).then(|| MappableBuiltinCommand::Import {
-                path: path.to_owned(),
-            })
-        }
-        value if value.starts_with("/clone ") => {
-            let path = value[7..].trim();
-            (path.ends_with(".jsonl") && !path.is_empty()).then(|| MappableBuiltinCommand::Clone {
-                path: path.to_owned(),
-            })
-        }
-        value if value.starts_with("/resume ") => {
-            let path = value[8..].trim();
-            (path.ends_with(".jsonl") && !path.is_empty()).then(|| MappableBuiltinCommand::Resume {
-                path: path.to_owned(),
-            })
-        }
+        "/fork" => Some(MappableBuiltinCommand::Fork {
+            target_id: text.into(),
+        }),
+        "/tree" => Some(MappableBuiltinCommand::Tree {
+            target_id: text.into(),
+        }),
+        "/export" => jsonl_command(text, export_command),
+        "/import" => jsonl_command(text, import_command),
+        "/clone" => jsonl_command(text, clone_command),
+        "/resume" => jsonl_command(text, resume_command),
+        "/settings" | "/share" | "/trust" | "/login" | "/logout" | "/reload" | "/help"
+        | "/doctor" | "/rewind" | "/history" | "/find" | "/jump" | "/effort"
+        | "/always-approve" | "/auto" | "/plan" | "/remember" | "/goal" | "/workflow" | "/loop"
+        | "/deep-research" | "/feedback" | "/usage" | "/memory" | "/skills" | "/hooks"
+        | "/plugins" => Some(MappableBuiltinCommand::Extended {
+            name: prefix.trim_start_matches('/').to_owned(),
+            args: text.to_owned(),
+        }),
         _ => None,
     }
+}
+
+fn jsonl_command(
+    path: &str,
+    make: fn(String) -> MappableBuiltinCommand,
+) -> Option<MappableBuiltinCommand> {
+    path.ends_with(".jsonl").then(|| make(path.to_owned()))
+}
+
+#[allow(clippy::too_many_lines)]
+fn parse_extended_no_arg(value: &str) -> Option<MappableBuiltinCommand> {
+    let name = value.strip_prefix('/')?;
+    matches!(
+        name,
+        "settings"
+            | "share"
+            | "trust"
+            | "login"
+            | "logout"
+            | "reload"
+            | "context"
+            | "recap"
+            | "view-plan"
+            | "skills"
+            | "hooks"
+            | "plugins"
+            | "mcps"
+            | "memory"
+            | "workflows"
+    )
+    .then(|| MappableBuiltinCommand::Extended {
+        name: name.to_owned(),
+        args: String::new(),
+    })
+}
+
+fn export_command(path: String) -> MappableBuiltinCommand {
+    MappableBuiltinCommand::Export { path }
+}
+fn import_command(path: String) -> MappableBuiltinCommand {
+    MappableBuiltinCommand::Import { path }
+}
+fn clone_command(path: String) -> MappableBuiltinCommand {
+    MappableBuiltinCommand::Clone { path }
+}
+fn resume_command(path: String) -> MappableBuiltinCommand {
+    MappableBuiltinCommand::Resume { path }
 }
 
 /// Classify a submitted line against Pi's complete built-in registry while
@@ -292,10 +348,10 @@ mod tests {
         assert_eq!(PI_BUILTIN_SLASH_COMMANDS.len(), 22);
         assert_eq!(PI_BUILTIN_SLASH_COMMANDS.first().unwrap().name, "settings");
         assert_eq!(PI_BUILTIN_SLASH_COMMANDS.last().unwrap().name, "quit");
-        assert_eq!(
+        assert!(matches!(
             PI_BUILTIN_SLASH_COMMANDS[1].argument_hint,
             Some("<provider/model>")
-        );
+        ));
     }
 
     #[test]
@@ -318,8 +374,23 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::cognitive_complexity)]
     fn mappable_parser_rejects_unimplemented_commands_without_swallowing_text() {
+        assert_mappable_basics();
+        assert_eq!(parse_mappable_builtin_command("/quit now"), None);
+        assert_eq!(
+            parse_mappable_builtin_command("/scoped-models"),
+            Some(MappableBuiltinCommand::ScopedModels)
+        );
+        assert_eq!(
+            parse_mappable_builtin_command("/model openai/gpt-5"),
+            Some(MappableBuiltinCommand::Model {
+                reference: "openai/gpt-5".into()
+            })
+        );
+        assert_eq!(parse_mappable_builtin_command("/model"), None);
+    }
+
+    fn assert_mappable_basics() {
         assert_eq!(
             parse_mappable_builtin_command(" /new "),
             Some(MappableBuiltinCommand::NewSession)
@@ -348,26 +419,15 @@ mod tests {
                 name: "release parity".into()
             })
         );
-        assert_eq!(parse_mappable_builtin_command("/quit now"), None);
-        assert_eq!(
-            parse_mappable_builtin_command("/scoped-models"),
-            Some(MappableBuiltinCommand::ScopedModels)
-        );
-        assert_eq!(
-            parse_mappable_builtin_command("/model openai/gpt-5"),
-            Some(MappableBuiltinCommand::Model {
-                reference: "openai/gpt-5".into()
-            })
-        );
-        assert_eq!(parse_mappable_builtin_command("/model"), None);
     }
 
     #[test]
-    #[allow(
-        clippy::too_many_lines,
-        reason = "the classifier regression keeps all supported and unsupported command examples together"
-    )]
     fn classifier_exposes_known_unsupported_capabilities() {
+        assert_classifier_mappable_paths();
+        assert_classifier_dispositions();
+    }
+
+    fn assert_classifier_mappable_paths() {
         assert_eq!(
             classify_builtin_command("/export session.jsonl"),
             BuiltinCommandDisposition::Mappable(MappableBuiltinCommand::Export {
@@ -392,10 +452,13 @@ mod tests {
                 path: "saved.jsonl".into()
             })
         );
-        assert_eq!(
+    }
+
+    fn assert_classifier_dispositions() {
+        assert!(matches!(
             classify_builtin_command("/login openai"),
-            BuiltinCommandDisposition::Unsupported(UnsupportedBuiltinCommand::Login)
-        );
+            BuiltinCommandDisposition::Mappable(MappableBuiltinCommand::Extended { .. })
+        ));
         assert!(matches!(
             classify_builtin_command("/name release"),
             BuiltinCommandDisposition::Mappable(MappableBuiltinCommand::Name { .. })
@@ -411,7 +474,7 @@ mod tests {
     }
 
     #[test]
-    fn remaining_pi_commands_are_explicitly_unsupported() {
+    fn formerly_unsupported_pi_commands_are_now_typed_and_mappable() {
         for input in [
             "/settings",
             "/share",
@@ -420,13 +483,13 @@ mod tests {
             "/logout",
             "/reload",
         ] {
-            assert!(
-                matches!(
-                    classify_builtin_command(input),
-                    BuiltinCommandDisposition::Unsupported(_)
-                ),
-                "expected unsupported classification for {input}"
-            );
+            assert!(matches!(
+                classify_builtin_command(input),
+                BuiltinCommandDisposition::Mappable(MappableBuiltinCommand::Extended {
+                    name: _,
+                    args: _
+                })
+            ));
         }
     }
 

@@ -22,9 +22,12 @@
 //! See `tasks/` for the implementation plan; the test suite is the
 //! behavioural contract.
 
+pub mod command_actor;
 pub mod commands;
 pub mod convert;
 mod event_dsl;
+pub mod event_memo;
+pub mod event_trace_yaml;
 pub mod model_catalog;
 pub mod types;
 
@@ -32,6 +35,7 @@ pub mod events;
 pub mod r#loop;
 pub mod pi_event;
 pub mod provider;
+pub mod provider_registry;
 pub mod queues;
 pub mod session;
 pub mod state;
@@ -42,7 +46,10 @@ pub mod hooks;
 pub mod task_owner;
 pub mod telemetry;
 
+pub use event_memo::{EventMemo, SharedSnapshot};
+pub use event_trace_yaml::replay_yaml;
 pub use pi_event::PiAgentEvent;
+pub use task_owner::ReducerActor;
 pub use types::{
     AfterToolCallContext, AfterToolCallResult, AgentContext, AgentEvent, AgentMessage,
     AgentMessageExt, AgentState, AgentTool, AgentToolResult, AssistantMessage,

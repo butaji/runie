@@ -2,11 +2,66 @@
 
 use runie_core::types::AgentEvent;
 
+use crate::{
+    DialogSpec, DialogStack, CHANGELOG_DIALOG, COMMAND_DIALOG, COMMAND_RESULT_DIALOG,
+    FILE_SELECTOR_DIALOG, MODEL_SELECTOR_DIALOG, PALETTE_PARAMETERS_DIALOG, SESSION_DIALOG,
+    SHORTCUTS_DIALOG,
+};
+
+pub use crate::palette_meta::palette_display_rows;
+
 runie_core::typed_action_registry! {
     pub enum PaletteAction {
         NewSession => "New Session",
         KeyboardShortcuts => "Keyboard Shortcuts",
         Quit => "Quit",
+        Changelog => "Changelog",
+        CopyLastResponse => "Copy Last Response",
+        SessionInfo => "Session Info",
+        SelectModel => "Select Model",
+        SelectTheme => "Select Theme",
+        ManageProviders => "Manage Providers",
+        ScopedModels => "Scoped Models",
+        SetSessionName => "Set Session Name",
+        CompactContext => "Compact Context",
+        ForkSession => "Fork Session",
+        SelectTreeEntry => "Select Tree Entry",
+        ExportSession => "Export Session",
+        ImportSession => "Import Session",
+        CloneSession => "Clone Session",
+        ResumeSession => "Resume Session",
+        ShareSession => "Share Session",
+        Help => "Help",
+        ContextInfo => "Context Info",
+        Settings => "Settings",
+        Doctor => "Doctor",
+        RewindSession => "Rewind Session",
+        PromptHistory => "Prompt History",
+        FindTranscript => "Find Transcript",
+        JumpTranscript => "Jump Transcript",
+        Recap => "Recap",
+        SetEffort => "Set Reasoning Effort",
+        AlwaysApprove => "Always Approve",
+        AutoApprove => "Automatic Approval",
+        PlanMode => "Plan Mode",
+        ViewPlan => "View Plan",
+        Login => "Login",
+        Logout => "Logout",
+        Reload => "Reload",
+        TrustProject => "Trust Project",
+        Skills => "Skills",
+        Hooks => "Hooks",
+        Plugins => "Plugins",
+        Mcps => "MCP Servers",
+        Memory => "Memory",
+        Remember => "Remember",
+        Goal => "Goal",
+        Workflow => "Workflow",
+        Workflows => "Workflows",
+        Loop => "Loop",
+        DeepResearch => "Deep Research",
+        Feedback => "Feedback",
+        Usage => "Usage",
     }
 }
 
@@ -14,7 +69,15 @@ runie_core::typed_action_registry! {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UiCommand {
     ActivatePaletteEntry(PaletteAction),
+    OpenPaletteParameters(PaletteAction),
+    ExecuteMappable(runie_core::commands::MappableBuiltinCommand),
+    ActivateSkill(String),
     CopyText(String),
+    SelectTheme(String),
+    ProviderAction {
+        action: PaletteAction,
+        value: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -22,10 +85,19 @@ pub enum UiMsg {
     HideWelcome,
     ToggleShortcuts,
     ToggleCommandPalette,
+    OpenFileDialog,
+    OpenPaletteParameters(PaletteAction),
+    PaletteParameterChar(char),
+    PaletteParameterBackspace,
+    PaletteParameterMove(isize),
+    PaletteParameterPreview,
+    PaletteParameterSubmit,
     CommandPaletteChar(char),
     CommandPaletteBackspace,
     CommandPaletteMove(isize),
     CommandPaletteEscape,
+    DialogEscape,
+    CloseDialogs,
     ActivateCommandPalette,
     ToggleModelSelector,
     ModelSelectorChar(char),
@@ -36,6 +108,8 @@ pub enum UiMsg {
     ActivateModelSelector,
     SetModelSelectorResultCount(usize),
     SetModelSelectorRows(Vec<String>),
+    SetSkillRows(Vec<String>),
+    ShowCommandResult(String),
     ToggleSessionInfo,
     ToggleChangelog,
     CopyText(String),
@@ -91,6 +165,8 @@ pub struct UiState {
     pub command_palette_query: String,
     pub command_palette_index: usize,
     pub last_palette_command: Option<String>,
+    pub last_skill_command: Option<String>,
+    pub skill_rows: Vec<String>,
     pub model_selector_open: bool,
     pub model_selector_query: String,
     pub model_selector_index: usize,
@@ -99,6 +175,9 @@ pub struct UiState {
     pub model_selector_rows: Vec<String>,
     pub session_info_open: bool,
     pub changelog_open: bool,
+    pub dialog_stack: DialogStack,
+    pub palette_parameter_action: Option<PaletteAction>,
+    pub command_result: Option<String>,
 }
 
 impl UiState {
@@ -113,63 +192,105 @@ impl UiState {
         }
     }
 
-    #[allow(clippy::too_many_lines)]
     pub fn update(mut self, msg: UiMsg) -> Self {
-        if matches!(
-            msg,
-            UiMsg::CommandPaletteChar(_)
-                | UiMsg::CommandPaletteBackspace
-                | UiMsg::CommandPaletteMove(_)
-                | UiMsg::CommandPaletteEscape
-                | UiMsg::ActivateCommandPalette
-                | UiMsg::ModelSelectorChar(_)
-                | UiMsg::ModelSelectorBackspace
-                | UiMsg::ModelSelectorMove(_)
-                | UiMsg::ModelSelectorEscape
-                | UiMsg::ModelSelectorToggleScope
-                | UiMsg::ActivateModelSelector
-        ) {
-            return if matches!(
-                msg,
-                UiMsg::ModelSelectorChar(_)
-                    | UiMsg::ModelSelectorBackspace
-                    | UiMsg::ModelSelectorMove(_)
-                    | UiMsg::ModelSelectorEscape
-                    | UiMsg::ModelSelectorToggleScope
-                    | UiMsg::ActivateModelSelector
-            ) {
-                self.update_model_selector(msg)
-                    .expect("selector message is handled by selector reducer")
-            } else {
-                self.update_palette(msg)
-                    .expect("palette message is handled by palette reducer")
-            };
+        if is_overlay_message(&msg) {
+            return self
+                .update_overlay(msg)
+                .expect("overlay message is handled by an overlay reducer");
         }
+        self.update_general(msg);
+        self
+    }
+
+    fn update_overlay(mut self, msg: UiMsg) -> Option<Self> {
         match msg {
-            UiMsg::HideWelcome => self.show_welcome = false,
-            UiMsg::ToggleShortcuts => self.shortcuts_open = !self.shortcuts_open,
-            UiMsg::ToggleCommandPalette => {
-                self.command_palette_open = !self.command_palette_open;
-                if !self.command_palette_open {
-                    self.command_palette_query.clear();
-                    self.command_palette_index = 0;
-                }
-            }
             UiMsg::CommandPaletteChar(_)
             | UiMsg::CommandPaletteBackspace
             | UiMsg::CommandPaletteMove(_)
             | UiMsg::CommandPaletteEscape
-            | UiMsg::ActivateCommandPalette => unreachable!("palette messages handled above"),
-            UiMsg::ToggleModelSelector => {
-                self.model_selector_open = !self.model_selector_open;
-                if !self.model_selector_open {
-                    self.model_selector_query.clear();
-                    self.model_selector_index = 0;
-                }
+            | UiMsg::ActivateCommandPalette => self.update_palette(msg),
+            UiMsg::ModelSelectorChar(_)
+            | UiMsg::ModelSelectorBackspace
+            | UiMsg::ModelSelectorMove(_)
+            | UiMsg::ModelSelectorEscape
+            | UiMsg::ModelSelectorToggleScope
+            | UiMsg::ActivateModelSelector => self.update_model_selector(msg),
+            UiMsg::PaletteParameterChar(_)
+            | UiMsg::PaletteParameterBackspace
+            | UiMsg::PaletteParameterMove(_)
+            | UiMsg::PaletteParameterPreview
+            | UiMsg::PaletteParameterSubmit => self.update_parameters(msg),
+            _ => None,
+        }
+    }
+
+    fn update_general(&mut self, msg: UiMsg) {
+        if self.update_toggle(&msg) {
+            return;
+        }
+        self.update_data(msg);
+    }
+
+    fn update_toggle(&mut self, msg: &UiMsg) -> bool {
+        match msg {
+            UiMsg::HideWelcome => self.show_welcome = false,
+            UiMsg::ToggleShortcuts => {
+                self.shortcuts_open = !self.shortcuts_open;
+                self.open_dialog_for_toggle(SHORTCUTS_DIALOG);
             }
-            UiMsg::ToggleSessionInfo => self.session_info_open = !self.session_info_open,
-            UiMsg::ToggleChangelog => self.changelog_open = !self.changelog_open,
-            UiMsg::CopyText(_) => {}
+            UiMsg::ToggleCommandPalette => {
+                self.toggle_command_palette();
+            }
+            UiMsg::ToggleModelSelector => {
+                self.toggle_model_selector();
+            }
+            UiMsg::ToggleSessionInfo => {
+                self.session_info_open = !self.session_info_open;
+                self.open_dialog_for_toggle(SESSION_DIALOG);
+            }
+            UiMsg::ToggleChangelog => {
+                self.changelog_open = !self.changelog_open;
+                self.open_dialog_for_toggle(CHANGELOG_DIALOG);
+            }
+            UiMsg::DialogEscape => self.escape_dialog(),
+            UiMsg::CloseDialogs => self.close_dialogs(),
+            _ => return false,
+        };
+        true
+    }
+
+    fn toggle_command_palette(&mut self) {
+        self.command_palette_open = !self.command_palette_open;
+        self.last_palette_command = None;
+        self.last_skill_command = None;
+        if !self.command_palette_open {
+            self.command_palette_query.clear();
+            self.command_palette_index = 0;
+            self.dialog_stack.pop();
+        } else if self.dialog_stack.is_empty() {
+            self.dialog_stack.push(COMMAND_DIALOG);
+        }
+    }
+
+    fn toggle_model_selector(&mut self) {
+        self.model_selector_open = !self.model_selector_open;
+        self.open_dialog_for_toggle(MODEL_SELECTOR_DIALOG);
+        if !self.model_selector_open {
+            self.model_selector_query.clear();
+            self.model_selector_index = 0;
+        }
+    }
+
+    fn update_data(&mut self, msg: UiMsg) {
+        match msg {
+            UiMsg::OpenFileDialog => self.dialog_stack.push(FILE_SELECTOR_DIALOG),
+            UiMsg::OpenPaletteParameters(action) => {
+                self.palette_parameter_action = Some(action);
+                if self.command_palette_open && self.dialog_stack.top_id() != Some("commands") {
+                    self.dialog_stack.push(COMMAND_DIALOG);
+                }
+                self.dialog_stack.push(PALETTE_PARAMETERS_DIALOG);
+            }
             UiMsg::SetModelSelectorResultCount(count) => {
                 self.model_selector_result_count = count;
                 self.model_selector_index = self.model_selector_index.min(count.saturating_sub(1));
@@ -181,128 +302,216 @@ impl UiState {
                     .model_selector_index
                     .min(self.model_selector_result_count.saturating_sub(1));
             }
-            UiMsg::ModelSelectorChar(_)
-            | UiMsg::ModelSelectorBackspace
-            | UiMsg::ModelSelectorMove(_)
-            | UiMsg::ModelSelectorEscape
-            | UiMsg::ModelSelectorToggleScope
-            | UiMsg::ActivateModelSelector => unreachable!("selector messages handled above"),
-            UiMsg::Reset => self = Self::new(),
+            UiMsg::SetSkillRows(rows) => self.skill_rows = rows,
+            UiMsg::ShowCommandResult(result) => {
+                self.command_result = Some(result);
+                self.dialog_stack.push(COMMAND_RESULT_DIALOG);
+            }
+            UiMsg::Reset => *self = Self::new(),
+            UiMsg::CopyText(_) => {}
+            _ => unreachable!("overlay or toggle message handled above"),
         }
-        self
     }
 
-    #[allow(
-        clippy::too_many_lines,
-        reason = "the palette reducer keeps its complete message classification explicit"
-    )]
+    fn update_parameters(&mut self, msg: UiMsg) -> Option<Self> {
+        if matches!(msg, UiMsg::PaletteParameterPreview) {
+            return Some(self.clone());
+        }
+        if matches!(msg, UiMsg::PaletteParameterSubmit) {
+            self.dialog_stack.pop();
+            self.palette_parameter_action = None;
+            if self.dialog_stack.top_id() == Some("commands") {
+                self.dialog_stack.pop();
+            }
+            self.command_palette_open = false;
+            self.command_palette_query.clear();
+            self.command_palette_index = 0;
+            return Some(self.clone());
+        }
+        let frame = self.dialog_stack.top_mut()?;
+        match msg {
+            UiMsg::PaletteParameterChar(ch) => frame.query.push(ch),
+            UiMsg::PaletteParameterBackspace => {
+                frame.query.pop();
+            }
+            UiMsg::PaletteParameterMove(delta) => {
+                let count = crate::theme_labels().len();
+                frame.selected = crate::wrap_dialog_selection(frame.selected, delta, count);
+            }
+            _ => return None,
+        }
+        Some(self.clone())
+    }
+
+    fn open_dialog_for_toggle(&mut self, spec: DialogSpec) {
+        if self.dialog_stack.top_id() == Some(spec.id) {
+            self.dialog_stack.pop();
+        } else {
+            self.dialog_stack.push(spec);
+        }
+    }
+
+    fn escape_dialog(&mut self) {
+        let Some(id) = self.dialog_stack.top_id() else {
+            return;
+        };
+        if id == "commands" && !self.command_palette_query.is_empty() {
+            self.command_palette_query.clear();
+            self.command_palette_index = 0;
+            return;
+        }
+        self.dialog_stack.pop();
+        match id {
+            "commands" => {
+                self.command_palette_open = false;
+                self.command_palette_query.clear();
+                self.command_palette_index = 0;
+            }
+            "model" => {
+                self.model_selector_open = false;
+                self.model_selector_query.clear();
+                self.model_selector_index = 0;
+            }
+            "shortcuts" => self.shortcuts_open = false,
+            "session" => self.session_info_open = false,
+            "changelog" => self.changelog_open = false,
+            "palette-parameters" => {
+                self.palette_parameter_action = None;
+                if self.dialog_stack.top_id() == Some("commands") {
+                    self.command_palette_open = true;
+                }
+            }
+            "command-result" => self.command_result = None,
+            _ => {}
+        }
+    }
+
+    fn close_dialogs(&mut self) {
+        self.dialog_stack.clear();
+        self.shortcuts_open = false;
+        self.command_palette_open = false;
+        self.command_palette_query.clear();
+        self.command_palette_index = 0;
+        self.model_selector_open = false;
+        self.model_selector_query.clear();
+        self.model_selector_index = 0;
+        self.session_info_open = false;
+        self.changelog_open = false;
+        self.palette_parameter_action = None;
+        self.command_result = None;
+    }
+
     fn update_palette(mut self, msg: UiMsg) -> Option<Self> {
         match msg {
             UiMsg::CommandPaletteChar(ch) => self.command_palette_query.push(ch),
             UiMsg::CommandPaletteBackspace => {
                 self.command_palette_query.pop();
             }
-            UiMsg::CommandPaletteMove(delta) => {
-                let count = PaletteAction::entry_count(&self.command_palette_query);
-                self.command_palette_index = if count == 0 {
-                    0
-                } else {
-                    self.command_palette_index
-                        .saturating_add_signed(delta)
-                        .min(count - 1)
-                };
-            }
-            UiMsg::CommandPaletteEscape => {
-                if self.command_palette_query.is_empty() {
-                    self.command_palette_open = false;
-                } else {
-                    self.command_palette_query.clear();
-                }
-                self.command_palette_index = 0;
-            }
-            UiMsg::ActivateCommandPalette => {
-                self.last_palette_command = PaletteAction::selected_label(
-                    &self.command_palette_query,
-                    self.command_palette_index,
-                )
-                .map(str::to_owned);
-                self.command_palette_open = false;
-                self.command_palette_query.clear();
-                self.command_palette_index = 0;
-            }
-            UiMsg::HideWelcome
-            | UiMsg::ToggleShortcuts
-            | UiMsg::ToggleCommandPalette
-            | UiMsg::ToggleModelSelector
-            | UiMsg::ModelSelectorChar(_)
-            | UiMsg::ModelSelectorBackspace
-            | UiMsg::ModelSelectorMove(_)
-            | UiMsg::ModelSelectorEscape
-            | UiMsg::ModelSelectorToggleScope
-            | UiMsg::ActivateModelSelector
-            | UiMsg::SetModelSelectorResultCount(_)
-            | UiMsg::SetModelSelectorRows(_)
-            | UiMsg::ToggleSessionInfo
-            | UiMsg::ToggleChangelog
-            | UiMsg::CopyText(_)
-            | UiMsg::Reset => return None,
+            UiMsg::CommandPaletteMove(delta) => self.move_palette(delta),
+            UiMsg::CommandPaletteEscape => self.escape_palette(),
+            UiMsg::ActivateCommandPalette => self.activate_palette(),
+            _ => return None,
         }
         Some(self)
     }
 
-    #[allow(
-        clippy::too_many_lines,
-        reason = "the selector reducer keeps its complete message classification explicit"
-    )]
+    fn move_palette(&mut self, delta: isize) {
+        let count = palette_labels(&self.command_palette_query, &self.skill_rows).len();
+        self.command_palette_index =
+            crate::wrap_dialog_selection(self.command_palette_index, delta, count);
+    }
+
+    fn escape_palette(&mut self) {
+        if self.command_palette_query.is_empty() {
+            self.command_palette_open = false;
+            self.dialog_stack.pop();
+        } else {
+            self.command_palette_query.clear();
+        }
+        self.command_palette_index = 0;
+    }
+
+    fn activate_palette(&mut self) {
+        let labels = palette_labels(&self.command_palette_query, &self.skill_rows);
+        let selected = labels.get(self.command_palette_index).cloned();
+        self.last_palette_command = selected
+            .clone()
+            .filter(|label| !label.starts_with("/skills:"));
+        self.last_skill_command = selected
+            .clone()
+            .filter(|label| label.starts_with("/skills:"));
+        let keep_palette_as_parent = selected
+            .as_deref()
+            .and_then(PaletteAction::from_label)
+            .is_some_and(|action| {
+                action.requires_parameters() || action == PaletteAction::SelectModel
+            });
+        self.command_palette_open = keep_palette_as_parent;
+        if !keep_palette_as_parent {
+            self.command_palette_query.clear();
+            self.command_palette_index = 0;
+            self.dialog_stack.pop();
+        }
+    }
+
     fn update_model_selector(mut self, msg: UiMsg) -> Option<Self> {
         match msg {
             UiMsg::ModelSelectorChar(ch) => self.model_selector_query.push(ch),
             UiMsg::ModelSelectorBackspace => {
                 self.model_selector_query.pop();
             }
-            UiMsg::ModelSelectorMove(delta) => {
-                let count = self.model_selector_result_count;
-                self.model_selector_index = if count == 0 {
-                    0
-                } else {
-                    self.model_selector_index
-                        .saturating_add_signed(delta)
-                        .min(count - 1)
-                };
-            }
-            UiMsg::ModelSelectorEscape => {
-                if self.model_selector_query.is_empty() {
-                    self.model_selector_open = false;
-                } else {
-                    self.model_selector_query.clear();
-                }
-                self.model_selector_index = 0;
-            }
-            UiMsg::ModelSelectorToggleScope => {
-                self.model_selector_scoped_only = !self.model_selector_scoped_only;
-                self.model_selector_index = 0;
-            }
-            UiMsg::ActivateModelSelector => {
-                self.model_selector_open = false;
-                self.model_selector_query.clear();
-                self.model_selector_index = 0;
-            }
-            UiMsg::HideWelcome
-            | UiMsg::ToggleShortcuts
-            | UiMsg::ToggleCommandPalette
-            | UiMsg::CommandPaletteChar(_)
-            | UiMsg::CommandPaletteBackspace
-            | UiMsg::CommandPaletteMove(_)
-            | UiMsg::CommandPaletteEscape
-            | UiMsg::ActivateCommandPalette
-            | UiMsg::ToggleModelSelector
-            | UiMsg::SetModelSelectorResultCount(_)
-            | UiMsg::SetModelSelectorRows(_)
-            | UiMsg::ToggleSessionInfo
-            | UiMsg::ToggleChangelog
-            | UiMsg::CopyText(_)
-            | UiMsg::Reset => return None,
+            UiMsg::ModelSelectorMove(delta) => self.move_model_selector(delta),
+            UiMsg::ModelSelectorEscape => self.escape_model_selector(),
+            UiMsg::ModelSelectorToggleScope => self.toggle_model_scope(),
+            UiMsg::ActivateModelSelector => self.activate_model_selector(),
+            _ => return None,
         }
         Some(self)
     }
+
+    fn move_model_selector(&mut self, delta: isize) {
+        self.model_selector_index = crate::wrap_dialog_selection(
+            self.model_selector_index,
+            delta,
+            self.model_selector_result_count,
+        );
+    }
+
+    fn escape_model_selector(&mut self) {
+        if self.model_selector_query.is_empty() {
+            self.model_selector_open = false;
+            if self.dialog_stack.top_id() == Some("model") {
+                self.dialog_stack.pop();
+            }
+        } else {
+            self.model_selector_query.clear();
+        }
+        self.model_selector_index = 0;
+    }
+
+    fn toggle_model_scope(&mut self) {
+        self.model_selector_scoped_only = !self.model_selector_scoped_only;
+        self.model_selector_index = 0;
+    }
+
+    fn activate_model_selector(&mut self) {
+        self.model_selector_open = false;
+        self.model_selector_query.clear();
+        self.model_selector_index = 0;
+        if self.dialog_stack.top_id() == Some("model") {
+            self.dialog_stack.pop();
+        }
+        if self.dialog_stack.top_id() == Some("commands") {
+            self.dialog_stack.pop();
+            self.command_palette_open = false;
+            self.command_palette_query.clear();
+            self.command_palette_index = 0;
+        }
+    }
 }
+
+include!("ui_palette.rs");
+
+#[cfg(test)]
+#[path = "ui_tests.rs"]
+mod dialog_palette_tests;
