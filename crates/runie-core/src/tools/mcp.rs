@@ -56,6 +56,9 @@ enum McpStdioCommand {
         arguments: serde_json::Value,
         reply: tokio::sync::oneshot::Sender<Result<serde_json::Value, String>>,
     },
+    Close {
+        reply: tokio::sync::oneshot::Sender<()>,
+    },
 }
 
 #[derive(Clone)]
@@ -70,14 +73,21 @@ impl McpStdioActor {
             crate::spawn_actor_worker!(32, move |mut rx: tokio::sync::mpsc::Receiver<
                 McpStdioCommand,
             >| async move {
-                while let Some(McpStdioCommand::Call {
-                    tool,
-                    arguments,
-                    reply,
-                }) = rx.recv().await
-                {
-                    let result = client.call_tool(&tool, arguments).await;
-                    let _ = reply.send(result);
+                while let Some(command) = rx.recv().await {
+                    match command {
+                        McpStdioCommand::Call {
+                            tool,
+                            arguments,
+                            reply,
+                        } => {
+                            let result = client.call_tool(&tool, arguments).await;
+                            let _ = reply.send(result);
+                        }
+                        McpStdioCommand::Close { reply } => {
+                            let _ = reply.send(());
+                            break;
+                        }
+                    }
                 }
             });
         Self { tx, _owner: owner }
@@ -100,6 +110,17 @@ impl McpStdioActor {
         response
             .await
             .map_err(|_| "MCP stdio actor response was dropped".to_owned())?
+    }
+
+    pub async fn close(self) -> Result<(), String> {
+        let (reply, response) = tokio::sync::oneshot::channel();
+        self.tx
+            .send(McpStdioCommand::Close { reply })
+            .await
+            .map_err(|_| "MCP stdio actor is closed".to_owned())?;
+        response
+            .await
+            .map_err(|_| "MCP stdio actor close response was dropped".to_owned())
     }
 }
 
@@ -480,6 +501,19 @@ mod tests {
             .unwrap();
         assert_eq!(result.details["tool"], "list");
         assert_eq!(result.details["args"]["path"], ".");
+    }
+
+    #[tokio::test]
+    async fn stdio_actor_has_an_explicit_awaited_close_boundary() {
+        let actor = McpStdioActor::new(
+            McpStdioClient::new(
+                "sh",
+                vec!["-c".into(), "exit 0".into()],
+                Duration::from_secs(1),
+            )
+            .unwrap(),
+        );
+        actor.close().await.unwrap();
     }
 
     #[tokio::test]
