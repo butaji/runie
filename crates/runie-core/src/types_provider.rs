@@ -99,7 +99,8 @@ pub enum DeferredWindow {
     OneDay,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub enum ProviderTransport {
     Sse,
     Websocket,
@@ -107,7 +108,8 @@ pub enum ProviderTransport {
     Auto,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum CacheRetention {
     None,
     Short,

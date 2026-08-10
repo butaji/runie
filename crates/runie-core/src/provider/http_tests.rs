@@ -409,3 +409,19 @@ fn model_declared_effort_maps_to_provider_wire_value() {
     let untouched = with_model_effort(serde_json::json!([]), &model, Some(&options), "effort");
     assert!(untouched.is_array());
 }
+
+#[test]
+fn provider_transport_options_are_replayable_data() {
+    for (transport, wire) in [
+        (ProviderTransport::Sse, "sse"),
+        (ProviderTransport::WebsocketCached, "websocket-cached"),
+        (ProviderTransport::Auto, "auto"),
+    ] {
+        assert_eq!(serde_json::to_value(transport).unwrap(), wire);
+        assert_eq!(
+            serde_json::from_value::<ProviderTransport>(serde_json::json!(wire)).unwrap(),
+            transport
+        );
+    }
+    assert_eq!(serde_json::to_value(CacheRetention::Long).unwrap(), "long");
+}
