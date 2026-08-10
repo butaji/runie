@@ -31,6 +31,8 @@ pub enum AppExit {
     Error(String),
 }
 
+#[path = "app_effort.rs"]
+mod app_effort;
 #[path = "app_projection.rs"]
 mod app_projection;
 use app_projection::*;

@@ -53,6 +53,7 @@ pub(super) async fn stream_options(
     let mut options = deps.stream_options.clone();
     options.api_key = api_key;
     options.signal = deps.abort.clone();
+    options.reasoning = Some(deps.state.snapshot().thinking_level);
     options.max_tokens = options
         .max_tokens
         .or((model.max_tokens > 0).then_some(model.max_tokens));

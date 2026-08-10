@@ -7,7 +7,6 @@ impl App {
             self.provider_registry.replace(state).await;
         }
     }
-
     pub async fn apply_provider_event(
         &self,
         event: runie_core::provider_registry::ProviderEvent,
@@ -178,6 +177,11 @@ impl App {
         let selected = self.model_catalog.select(model).await?;
         self.loop_actor.set_model(selected.clone()).await;
         self.ui.send(UiMsg::ActivateModelSelector).await;
+        if Self::model_has_declared_effort(&selected) {
+            self.ui
+                .send(UiMsg::OpenPaletteParameters(PaletteAction::SetEffort))
+                .await;
+        }
         Some(selected)
     }
 

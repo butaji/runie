@@ -245,6 +245,10 @@ impl LoopActor {
             .await;
     }
 
+    pub async fn set_thinking_level(&self, level: crate::types::ThinkingLevel) {
+        self.inner.deps.state.set_thinking_level(level).await;
+    }
+
     /// Ask the provider actor for a Pi-compatible compaction summary. The
     /// provider remains the owner of transport/generation; this coordinator
     /// only forwards the immutable prepared request through its mailbox.

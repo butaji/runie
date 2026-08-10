@@ -280,7 +280,7 @@ impl PaletteAction {
             Self::Doctor => "fix (optional)",
             Self::RewindSession | Self::JumpTranscript => "Entry id or query",
             Self::PromptHistory | Self::FindTranscript => "Query (optional)",
-            Self::SetEffort => "low|medium|high|xhigh",
+            Self::SetEffort => "effort declared by current model",
             Self::AlwaysApprove | Self::AutoApprove => "on|off",
             Self::PlanMode => "Description (optional)",
             Self::Login | Self::Logout => "Provider (optional)",
