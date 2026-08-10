@@ -86,9 +86,10 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
 2. Tool output and background lifecycle UX — `harness-01` and `harness-03`.
    Add renderer-neutral bounded output cards and owned lifecycle controls,
    with failure/cancellation replay traces.
-3. Model-aware context policy — `harness-05`.
-   Replace generic context assumptions with model-declared windows and replay
-   compaction decisions at threshold, boundary, and recovery states.
+3. Model-aware context policy — `harness-05` (boundary implemented).
+   Recovery now receives the active model and uses its declared window;
+   remaining work is richer compaction controls and threshold/recovery replay
+   coverage for those controls.
 4. Scheduler cancellation controls — `harness-08`.
    Extend the existing mailbox/replay state machine with user-visible queued,
    running, and cancelled control projections.
