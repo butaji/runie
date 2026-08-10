@@ -205,6 +205,24 @@ impl App {
                 self.ui.send(UiMsg::ToggleCommandPalette).await;
             }
             "context" => {
+                if let Some(instructions) = args.trim().strip_prefix("compact") {
+                    if instructions.is_empty()
+                        || instructions.starts_with(' ')
+                        || instructions.starts_with('\t')
+                    {
+                        let instructions = instructions.trim();
+                        let result = self
+                            .compact_session(
+                                None,
+                                (!instructions.is_empty()).then(|| instructions.to_owned()),
+                            )
+                            .await
+                            .map(|()| "Context compacted".to_owned())
+                            .unwrap_or_else(|error| format!("Compaction failed: {error}"));
+                        self.ui.send(UiMsg::ShowCommandResult(result)).await;
+                        return true;
+                    }
+                }
                 let snapshot = self.session_actor.snapshot();
                 let messages = snapshot.branch_context_messages();
                 let estimate = runie_core::session::estimate_context_tokens(&messages);

@@ -80,6 +80,17 @@ fn parser_maps_effort_without_an_argument_for_picker_reopen() {
 }
 
 #[test]
+fn parser_keeps_context_compaction_as_a_data_command() {
+    assert_eq!(
+        parse_mappable_builtin_command("/context compact keep the latest turn"),
+        Some(MappableBuiltinCommand::Extended {
+            name: "context".into(),
+            args: "compact keep the latest turn".into(),
+        })
+    );
+}
+
+#[test]
 fn parser_maps_session_text_as_a_query_argument() {
     assert_eq!(
         parse_mappable_builtin_command("/sessions deploy"),

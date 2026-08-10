@@ -250,7 +250,7 @@ fn parse_parameterized_command(value: &str) -> Option<MappableBuiltinCommand> {
         "/clone" => jsonl_command(text, clone_command),
         "/resume" => jsonl_command(text, resume_command),
         "/settings" | "/share" | "/trust" | "/login" | "/logout" | "/reload" | "/help"
-        | "/doctor" | "/rewind" | "/history" | "/find" | "/jump" | "/effort"
+        | "/doctor" | "/rewind" | "/history" | "/find" | "/jump" | "/context" | "/effort"
         | "/always-approve" | "/auto" | "/deny" | "/plan" | "/remember" | "/goal" | "/workflow"
         | "/jobs" | "/questions" | "/sessions" | "/loop" | "/deep-research" | "/feedback"
         | "/usage" | "/memory" | "/skills" | "/hooks" | "/plugins" => {
