@@ -50,6 +50,59 @@ pub struct McpStdioClient {
     pub timeout: Duration,
 }
 
+enum McpStdioCommand {
+    Call {
+        tool: String,
+        arguments: serde_json::Value,
+        reply: tokio::sync::oneshot::Sender<Result<serde_json::Value, String>>,
+    },
+}
+
+#[derive(Clone)]
+pub struct McpStdioActor {
+    tx: tokio::sync::mpsc::Sender<McpStdioCommand>,
+    _owner: std::sync::Arc<crate::task_owner::TaskOwner>,
+}
+
+impl McpStdioActor {
+    pub fn new(client: McpStdioClient) -> Self {
+        let (tx, owner) =
+            crate::spawn_actor_worker!(32, move |mut rx: tokio::sync::mpsc::Receiver<
+                McpStdioCommand,
+            >| async move {
+                while let Some(McpStdioCommand::Call {
+                    tool,
+                    arguments,
+                    reply,
+                }) = rx.recv().await
+                {
+                    let result = client.call_tool(&tool, arguments).await;
+                    let _ = reply.send(result);
+                }
+            });
+        Self { tx, _owner: owner }
+    }
+
+    pub async fn call_tool(
+        &self,
+        tool: impl Into<String>,
+        arguments: serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
+        let (reply, response) = tokio::sync::oneshot::channel();
+        self.tx
+            .send(McpStdioCommand::Call {
+                tool: tool.into(),
+                arguments,
+                reply,
+            })
+            .await
+            .map_err(|_| "MCP stdio actor is closed".to_owned())?;
+        response
+            .await
+            .map_err(|_| "MCP stdio actor response was dropped".to_owned())?
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct McpHttpClient {
     pub(crate) endpoint: String,

@@ -55,10 +55,10 @@ impl ToolRegistry {
         client: crate::tools::McpStdioClient,
     ) -> Result<usize, String> {
         let server = client.discover().await?;
-        let owner = Arc::new(client);
+        let owner = Arc::new(crate::tools::McpStdioActor::new(client));
         let call: crate::tools::McpCallHook = Arc::new(move |request| {
             let owner = owner.clone();
-            Box::pin(async move { owner.call_tool(&request.tool, request.arguments).await })
+            Box::pin(async move { owner.call_tool(request.tool, request.arguments).await })
         });
         self.register_mcp_server(server, call)
     }
