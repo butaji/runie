@@ -95,7 +95,15 @@ tmux -L "$socket" -f /dev/null new-session -d -s smoke -x 120 -y 36 \
 if wait_for 'Enter:send|Type your message|Shift\\+Tab'; then
   tmux -L "$socket" send-keys -t smoke -l -- '/quit'
   tmux -L "$socket" send-keys -t smoke Enter
-  if ! tmux -L "$socket" has-session -t smoke 2>/dev/null; then
+  exited=0
+  for _ in $(seq 1 60); do
+    if ! tmux -L "$socket" has-session -t smoke 2>/dev/null; then
+      exited=1
+      break
+    fi
+    sleep 0.05
+  done
+  if [[ $exited == 1 ]]; then
     echo "PASS Quit"; ((passed += 1))
   else
     echo "FAIL Quit: session-alive"; ((failed += 1))
