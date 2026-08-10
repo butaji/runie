@@ -2,6 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 
+pub const MAX_JSONL_PROVIDER_EVENTS: usize = 4_096;
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum JsonlEvent {
@@ -99,6 +101,22 @@ pub fn decode_jsonl(input: &str) -> Result<Vec<JsonlEvent>, serde_json::Error> {
         .collect()
 }
 
+pub fn forward_provider_events(
+    events: &[crate::types::AssistantMessageEvent],
+) -> Result<Vec<JsonlEvent>, String> {
+    if events.len() > MAX_JSONL_PROVIDER_EVENTS {
+        return Err(format!(
+            "provider event stream exceeds {} events",
+            MAX_JSONL_PROVIDER_EVENTS
+        ));
+    }
+    Ok(events
+        .iter()
+        .cloned()
+        .map(|event| JsonlEvent::Provider { event })
+        .collect())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -145,5 +163,18 @@ mod tests {
             }
         );
         assert!(NonInteractiveConfig::parse(&["--prompt".into()]).is_err());
+    }
+
+    #[test]
+    fn provider_forwarding_is_typed_and_bounded() {
+        let events = vec![crate::types::AssistantMessageEvent::TextDelta {
+            index: 0,
+            delta: "hello".into(),
+            partial: Default::default(),
+        }];
+        let forwarded = forward_provider_events(&events).unwrap();
+        assert!(matches!(forwarded[0], JsonlEvent::Provider { .. }));
+        let oversized = vec![events[0].clone(); MAX_JSONL_PROVIDER_EVENTS + 1];
+        assert!(forward_provider_events(&oversized).is_err());
     }
 }
