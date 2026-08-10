@@ -37,7 +37,7 @@ use runie_core::state::AgentStateActor;
 use runie_core::tools::executor::ToolExecHooks;
 use runie_core::tools::ToolExecutorActor;
 use runie_core::tools::ToolRegistry;
-use runie_core::tools::{BashTool, EditFileTool, GlobTool, GrepTool, ReadFileTool, WriteFileTool};
+use runie_core::tools::{ApprovalMode, BashTool, EditFileTool, GlobTool, GrepTool, ReadFileTool, WriteFileTool};
 use runie_core::types::{
     AgentContext, AgentTool, AgentToolResult, AssistantMessage, AssistantMessageEvent, Model,
     QueueMode, SimpleStreamOptions, StopReason, ThemeKind, ToolCall, ToolExecutionMode,
@@ -1240,7 +1240,7 @@ async fn build_live_app() -> App {
         provider,
         bus: bus.clone(),
         subscribers: runie_core::events::SubscriberRegistry::new(),
-        hooks: ToolExecHooks::default(),
+        hooks: ToolExecHooks { approval_mode: ApprovalMode::Auto, ..ToolExecHooks::default() },
         turn_hooks: runie_core::hooks::TurnHooks::default(),
         transform_context: None,
         api_key_resolver: None,
