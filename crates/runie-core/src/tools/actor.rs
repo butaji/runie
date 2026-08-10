@@ -223,7 +223,12 @@ async fn run_tool_worker(
         apply_scheduler(&mut scheduler, SchedulerEvent::Enqueued { interactive });
         apply_scheduler(&mut scheduler, SchedulerEvent::Started);
         let (reply, outcome) = run_tool_command(cmd, &registry, tool_result_timestamp).await;
-        apply_scheduler(&mut scheduler, SchedulerEvent::Finished { success: true });
+        let success = matches!(
+            &outcome,
+            ToolOutcome::Completed { tool_results, .. }
+                if tool_results.iter().all(|result| !result.is_error)
+        );
+        apply_scheduler(&mut scheduler, SchedulerEvent::Finished { success });
         let outcome = match outcome {
             ToolOutcome::Completed {
                 tool_results,
