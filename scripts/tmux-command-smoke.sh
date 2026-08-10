@@ -93,7 +93,8 @@ done
 tmux -L "$socket" -f /dev/null new-session -d -s smoke -x 120 -y 36 \
   "env -u NO_COLOR TERM=xterm-256color COLORTERM=truecolor $binary" >/dev/null 2>&1
 if wait_for 'Enter:send|Type your message|Shift\\+Tab'; then
-  tmux -L "$socket" send-keys -t smoke C-q
+  tmux -L "$socket" send-keys -t smoke -l -- '/quit'
+  tmux -L "$socket" send-keys -t smoke Enter
   if ! tmux -L "$socket" has-session -t smoke 2>/dev/null; then
     echo "PASS Quit"; ((passed += 1))
   else
