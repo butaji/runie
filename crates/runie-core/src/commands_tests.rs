@@ -68,6 +68,17 @@ fn mappable_parser_rejects_unimplemented_commands_without_swallowing_text() {
     );
 }
 
+#[test]
+fn parser_maps_effort_without_an_argument_for_picker_reopen() {
+    assert_eq!(
+        parse_mappable_builtin_command("/effort"),
+        Some(MappableBuiltinCommand::Extended {
+            name: "effort".into(),
+            args: String::new()
+        })
+    );
+}
+
 fn assert_mappable_basics() {
     assert_eq!(
         parse_mappable_builtin_command(" /new "),

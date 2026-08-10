@@ -286,6 +286,7 @@ fn parse_extended_no_arg(value: &str) -> Option<MappableBuiltinCommand> {
             | "hooks"
             | "plugins"
             | "mcps"
+            | "effort"
             | "memory"
             | "workflows"
             | "jobs"

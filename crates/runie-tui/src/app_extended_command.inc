@@ -92,6 +92,27 @@ impl App {
                 .await;
             return true;
         }
+        if name == "effort" && args.trim().is_empty() {
+            if let Some(model) = self.model_catalog.snapshot().selected {
+                if Self::model_has_declared_effort(&model) {
+                    self.open_effort_picker(&model).await;
+                } else {
+                    self.ui
+                        .send(UiMsg::ShowCommandResult(format!(
+                            "Model {} declares no reasoning effort levels",
+                            model.name
+                        )))
+                        .await;
+                }
+            } else {
+                self.ui
+                    .send(UiMsg::ShowCommandResult(
+                        "No model selected for reasoning effort".into(),
+                    ))
+                    .await;
+            }
+            return true;
+        }
         let state = self.command_actor.invoke(name, args).await;
         if matches!(name, "always-approve" | "auto" | "deny") {
             self.approval_mode.set(match state.approval {
