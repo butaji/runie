@@ -22,11 +22,9 @@ include!("feed_tool_display.rs");
 include!("feed_selection.rs");
 include!("feed_line_ops.rs");
 include!("feed_reducer_boundary.rs");
-include!("feed_state_15.rs");
 include!("feed_activity.rs");
-include!("feed_state_17.rs");
+include!("feed_assistant.rs");
 include!("feed_state_25.rs");
-include!("feed_state_26.rs");
 include!("feed_state_27.rs");
 
 include!("feed_tool_lifecycle.rs");

@@ -1,6 +1,8 @@
 // Activity facts and transcript presentation transitions.
 
 impl FeedState {
+    fn reset_activity(&mut self) { self.navigation.facts.reset_activity(); }
+
     fn finish_activity_tool(&mut self, is_error: bool) {
         if is_error { self.navigation.facts.activity_failures += 1; }
     }

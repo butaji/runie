@@ -41,3 +41,4 @@ Tool display-mode transitions and identity projection are consolidated in
 Logical range and terminal-cell selection transitions are consolidated in
 `feed_selection.rs`.
 Local transcript line mutations are consolidated in `feed_line_ops.rs`.
+Assistant-turn settlement is consolidated in `feed_assistant.rs`.
