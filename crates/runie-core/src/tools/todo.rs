@@ -59,6 +59,7 @@ impl Default for TodoActor {
 
 impl TodoActor {
     pub async fn replace(&self, snapshot: TodoSnapshot) -> Result<TodoSnapshot, String> {
+        validate_snapshot(&snapshot)?;
         let (reply, result) = oneshot::channel();
         self.tx
             .send(TodoMessage::Replace { snapshot, reply })
@@ -71,6 +72,29 @@ impl TodoActor {
     pub fn snapshot(&self) -> TodoSnapshot {
         self.snapshot.borrow().clone()
     }
+}
+
+fn validate_snapshot(snapshot: &TodoSnapshot) -> Result<(), String> {
+    if snapshot.items.len() > 100 {
+        return Err("at most 100 todo items are allowed".into());
+    }
+    if snapshot
+        .items
+        .iter()
+        .any(|item| item.id.trim().is_empty() || item.content.trim().is_empty())
+    {
+        return Err("todo ids and content must not be empty".into());
+    }
+    if snapshot
+        .items
+        .iter()
+        .filter(|item| item.status == TodoStatus::InProgress)
+        .count()
+        > 1
+    {
+        return Err("only one todo may be in progress".into());
+    }
+    Ok(())
 }
 
 #[derive(Default)]
@@ -119,26 +143,7 @@ impl AgentTool for TodoWriteTool {
     fn validate_arguments(&self, args: &serde_json::Value) -> Result<(), String> {
         let snapshot: TodoSnapshot = serde_json::from_value(args.clone())
             .map_err(|error| format!("invalid todo snapshot: {error}"))?;
-        if snapshot.items.len() > 100 {
-            return Err("at most 100 todo items are allowed".into());
-        }
-        if snapshot
-            .items
-            .iter()
-            .any(|item| item.id.trim().is_empty() || item.content.trim().is_empty())
-        {
-            return Err("todo ids and content must not be empty".into());
-        }
-        if snapshot
-            .items
-            .iter()
-            .filter(|item| item.status == TodoStatus::InProgress)
-            .count()
-            > 1
-        {
-            return Err("only one todo may be in progress".into());
-        }
-        Ok(())
+        validate_snapshot(&snapshot)
     }
     async fn execute(
         &self,
@@ -191,5 +196,22 @@ mod tests {
         };
         assert_eq!(actor.replace(snapshot.clone()).await.unwrap(), snapshot);
         assert_eq!(actor.snapshot(), snapshot);
+    }
+
+    #[tokio::test]
+    async fn todo_actor_rejects_invalid_state_before_emitting_an_event() {
+        let actor = TodoActor::default();
+        let error = actor
+            .replace(TodoSnapshot {
+                items: vec![TodoItem {
+                    id: "".into(),
+                    content: "missing id".into(),
+                    status: TodoStatus::Pending,
+                }],
+            })
+            .await
+            .unwrap_err();
+        assert!(error.contains("must not be empty"));
+        assert!(actor.snapshot().items.is_empty());
     }
 }
