@@ -40,7 +40,7 @@ macro_rules! paint {
     }};
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct PaintText {
     pub slot: Slot,
     pub component: ComponentKind,
@@ -48,7 +48,7 @@ pub struct PaintText {
     pub intent: PaintIntent,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub struct PaintDocument {
     pub text: Vec<PaintText>,
 }
@@ -177,6 +177,19 @@ mod tests {
         );
         assert_eq!(document.text[0].text, "Thinking");
         assert_eq!(document.text[0].intent, PaintIntent::Accent);
+    }
+
+    #[test]
+    fn paint_document_round_trips_as_yaml_data() {
+        let document = PaintDocument::default().text(
+            Slot::Status,
+            ComponentKind::Status,
+            "Thinking",
+            PaintIntent::Accent,
+        );
+        let yaml = serde_yaml::to_string(&document).expect("paint YAML");
+        let restored: PaintDocument = serde_yaml::from_str(&yaml).expect("paint YAML restore");
+        assert_eq!(restored, document);
     }
 
     #[test]

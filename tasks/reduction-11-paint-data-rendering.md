@@ -21,3 +21,5 @@ The semantic-to-renderer intent conversion is centralized in one
 duplicates the mapping table.
 The shared renderer now resolves each semantic intent through the selected
 theme, so paint data controls terminal styling instead of being discarded.
+The paint vocabulary and documents are now serde-backed, with YAML round-trip
+coverage so renderer-neutral projections can participate in replay fixtures.

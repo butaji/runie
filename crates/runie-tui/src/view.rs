@@ -215,7 +215,7 @@ pub enum LayoutNode<'a> {
 #[path = "view/view_macros.rs"]
 mod view_macros;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum Slot {
     Header,
     Scrollback,
@@ -231,7 +231,7 @@ pub enum Slot {
 
 /// Semantic component identity. These names are stable across terminal
 /// backends and are the vocabulary used by YAML/view assertions.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum ComponentKind {
     Header,
     Scrollback,
@@ -255,7 +255,7 @@ pub enum StateOwner {
 
 /// Semantic paint intent. It is deliberately not a Ratatui `Style`: terminal
 /// colors, modifiers, and capability quantization belong to the renderer.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum PaintIntent {
     Base,
     Panel,
