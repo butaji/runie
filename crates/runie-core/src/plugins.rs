@@ -1,7 +1,6 @@
 //! Pure plugin manifests and registry data. Loading and lifecycle ownership
 //! stay at the application boundary; this module only validates and stores
 //! declarative extension metadata.
-
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -15,7 +14,6 @@ pub struct PluginManifest {
     #[serde(default)]
     pub hooks: Vec<String>,
 }
-
 impl PluginManifest {
     pub fn validate(&self) -> Result<(), String> {
         validate_identifier("plugin name", &self.name)?;
@@ -33,7 +31,6 @@ impl PluginManifest {
         }
         Ok(())
     }
-
     pub fn from_json(input: &str) -> Result<Self, String> {
         let manifest: Self = serde_json::from_str(input)
             .map_err(|error| format!("invalid plugin manifest JSON: {error}"))?;
@@ -50,12 +47,15 @@ pub struct PluginPackage {
 mod entrypoint;
 #[path = "plugin_host.rs"]
 mod host;
+#[path = "plugin_tool.rs"]
+mod tool;
 pub use entrypoint::resolve_plugin_entrypoint;
 pub use entrypoint::{
     execute_plugin, validate_execution_request, PluginExecutionRequest, PluginExecutionResult,
     DEFAULT_PLUGIN_TIMEOUT_MS, MAX_PLUGIN_ARGUMENTS, MAX_PLUGIN_OUTPUT_BYTES,
 };
 pub use host::{capability_entrypoint, PluginCapabilityKind, PluginHost};
+pub use tool::{plugin_tool, register_plugin_tool, PluginTool};
 pub fn load_manifest(path: impl AsRef<Path>) -> Result<PluginManifest, String> {
     let path = path.as_ref();
     let input = std::fs::read_to_string(path)
