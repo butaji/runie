@@ -1859,11 +1859,15 @@ async fn run_app(
                     app.ui.send(runie_tui_model::UiMsg::SubmitUserQuestion).await;
                     if let Ok(UiCommand::AnswerUserQuestion { id, answer }) = ui_commands.recv().await {
                         let _ = app.question_broker.answer(&id, answer);
+                        persist_question_trace(app, &id).await;
                     }
                     app.ui.send(runie_tui_model::UiMsg::CloseDialogs).await;
                 }
                 KeyCode::Esc => {
-                    if let Some(question) = question { let _ = app.question_broker.cancel(&question.id); }
+                    if let Some(question) = question {
+                        let _ = app.question_broker.cancel(&question.id);
+                        persist_question_trace(app, &question.id).await;
+                    }
                     app.ui.send(runie_tui_model::UiMsg::CloseDialogs).await;
                 }
                 _ => {}
@@ -2290,7 +2294,19 @@ async fn run_app(
             app.prompt.handle_key(key).await;
         }
         Ok(ui_commands)
+}
+
+async fn persist_question_trace(app: &App, id: &str) {
+    if let Some(trace) = app
+        .question_broker
+        .traces()
+        .into_iter()
+        .rev()
+        .find(|trace| trace.id == id)
+    {
+        let _ = app.session_actor.record_user_question_trace(trace).await;
     }
+}
 
     // One terminal frame. Called from the input arm after a key is
     // dispatched and from the tick arm for animation/agent activity
