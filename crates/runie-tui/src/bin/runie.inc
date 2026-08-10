@@ -38,7 +38,7 @@ use runie_core::state::AgentStateActor;
 use runie_core::tools::executor::ToolExecHooks;
 use runie_core::tools::ToolExecutorActor;
 use runie_core::tools::ToolRegistry;
-use runie_core::tools::{ApprovalMode, AskUserQuestionTool, BackgroundCancelTool, BackgroundJobsTool, BackgroundShellTool, BashTool, EditFileTool, GitCommitPrepareTool, GitDiffTool, GitReviewTool, GitStatusTool, GitWorktreeTool, GlobTool, GrepTool, ReadFileTool, SubagentTool, TodoWriteTool, WebSearchTool, WriteFileTool};
+use runie_core::tools::{ApprovalMode, AskUserQuestionTool, BackgroundCancelTool, BackgroundJobsTool, BackgroundShellTool, BashTool, EditFileTool, GitCommitPrepareTool, GitDiffTool, GitReviewTool, GitStatusTool, GitWorktreeTool, GlobTool, GrepTool, ReadFileTool, SubagentTool, TodoWriteTool, WebSearchHttpClient, WebSearchTool, WriteFileTool};
 use runie_core::types::{
     AgentContext, AgentTool, AgentToolResult, AssistantMessage, AssistantMessageEvent, Model,
     QueueMode, SimpleStreamOptions, StopReason, ThemeKind, ToolCall, ToolExecutionMode,
@@ -1405,6 +1405,9 @@ async fn build_live_app() -> App {
                         serde_json::to_value(snapshot).map_err(|error| error.to_string())
                     })
                 })
+            }),
+            web_search: std::env::var("RUNIE_WEB_SEARCH_ENDPOINT").ok().and_then(|endpoint| {
+                WebSearchHttpClient::new(endpoint, std::env::var("RUNIE_WEB_SEARCH_TOKEN").ok(), std::time::Duration::from_secs(20)).ok().map(|client| client.hook())
             }),
             ..ToolExecHooks::default()
         },

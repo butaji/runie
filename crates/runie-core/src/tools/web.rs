@@ -66,6 +66,16 @@ impl WebSearchHttpClient {
         }
         serde_json::from_str(&body).map_err(|error| format!("invalid web search response: {error}"))
     }
+
+    pub fn hook(self) -> crate::tools::executor::WebSearchHook {
+        std::sync::Arc::new(move |request| {
+            let client = self.clone();
+            Box::pin(async move {
+                serde_json::to_value(client.search(request).await?)
+                    .map_err(|error| error.to_string())
+            })
+        })
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
