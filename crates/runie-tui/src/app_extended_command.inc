@@ -154,7 +154,16 @@ impl App {
         "help" => {
                 self.ui.send(UiMsg::ToggleCommandPalette).await;
             }
-            "context" | "recap" => {
+            "context" => {
+                let result = self
+                    .session_actor
+                    .snapshot()
+                    .compaction_context_projection()
+                    .map(|projection| projection.terminal_lines().join("\n"))
+                    .unwrap_or_else(|| "No compaction summary available".into());
+                self.ui.send(UiMsg::ShowCommandResult(result)).await;
+            }
+            "recap" => {
                 self.ui.send(UiMsg::ToggleSessionInfo).await;
             }
             "effort" if self.model_supports_effort(args.trim()) => {

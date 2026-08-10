@@ -229,6 +229,17 @@ pub struct CompactionContextProjection {
     pub message_indices: Vec<usize>,
 }
 
+impl CompactionContextProjection {
+    pub fn terminal_lines(&self) -> Vec<String> {
+        vec![
+            format!("Compaction summary: {}", self.summary),
+            format!("Tokens before: {}", self.tokens_before),
+            format!("Retained messages: {}", self.retained_tail.len()),
+            format!("Context message indices: {:?}", self.message_indices),
+        ]
+    }
+}
+
 pub fn is_provider_context_message(message: &AgentMessage) -> bool {
     !matches!(
         message,

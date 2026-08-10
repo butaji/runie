@@ -180,6 +180,15 @@
         assert_eq!(projection.tokens_before, 80);
         assert_eq!(projection.retained_tail.len(), 1);
         assert!(projection.message_indices.is_empty());
+        assert_eq!(
+            projection.terminal_lines(),
+            vec![
+                "Compaction summary: summary",
+                "Tokens before: 80",
+                "Retained messages: 1",
+                "Context message indices: []",
+            ]
+        );
     }
 
     #[test]
