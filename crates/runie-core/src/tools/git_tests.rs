@@ -152,3 +152,36 @@ fn conflict_recovery_reduces_interactive_events_and_rejects_dead_ends() {
     assert_eq!(state.status, GitConflictRecoveryStatus::Completed);
     assert!(reduce_conflict_recovery(state, GitConflictRecoveryEvent::Cancelled).is_err());
 }
+
+#[test]
+fn conflict_recovery_projection_replays_to_stable_terminal_rows() {
+    let state = begin_conflict_recovery(plan_conflict_recovery(&classify_conflicts(
+        "UU src/main.rs\nAA src/new.rs\n",
+    )));
+    let state = reduce_conflict_recovery(
+        state,
+        GitConflictRecoveryEvent::PathSelected {
+            path: "src/main.rs".into(),
+        },
+    )
+    .unwrap();
+    let state = reduce_conflict_recovery(
+        state,
+        GitConflictRecoveryEvent::ActionSelected {
+            action: GitConflictAction::Inspect,
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        state.terminal_lines(),
+        [
+            "Git recovery: Ready",
+            "Conflicted paths: 2",
+            "Conflict: src/main.rs",
+            "Conflict: src/new.rs",
+            "Selected path: src/main.rs",
+            "Selected action: Inspect",
+            "Allowed actions: 3",
+        ]
+    );
+}

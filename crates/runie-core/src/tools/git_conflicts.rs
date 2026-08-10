@@ -34,6 +34,34 @@ pub struct GitConflictRecoveryState {
     pub status: GitConflictRecoveryStatus,
 }
 
+impl GitConflictRecoveryState {
+    /// Stable, data-only rows for TUI/JSON projections.
+    pub fn terminal_lines(&self) -> Vec<String> {
+        let mut lines = vec![format!("Git recovery: {:?}", self.status)];
+        lines.push(format!("Conflicted paths: {}", self.plan.paths.len()));
+        lines.extend(
+            self.plan
+                .paths
+                .iter()
+                .map(|path| format!("Conflict: {path}")),
+        );
+        lines.push(format!(
+            "Selected path: {}",
+            self.selected_path.as_deref().unwrap_or("none")
+        ));
+        lines.push(format!(
+            "Selected action: {}",
+            self.selected_action
+                .as_ref()
+                .map(|action| format!("{action:?}"))
+                .as_deref()
+                .unwrap_or("none")
+        ));
+        lines.push(format!("Allowed actions: {}", self.plan.actions.len()));
+        lines
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case", tag = "type")]
 pub enum GitConflictRecoveryEvent {
