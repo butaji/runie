@@ -203,9 +203,7 @@ impl SessionActor {
             .map_err(|_| "session actor response was dropped".to_owned())?
     }
 
-    /// Append a Pi custom journal entry through the session owner. Custom
-    /// entries are opaque extension data: the actor journals and persists the
-    /// payload but never interprets it as an agent message.
+    /// Append an opaque Pi custom journal entry through the session owner.
     pub async fn append_custom_entry(
         &self,
         custom_type: String,
@@ -215,6 +213,17 @@ impl SessionActor {
             return Err("custom session entry type cannot be empty".to_owned());
         }
         self.record_config(SessionConfigRecord::CustomSessionEntryCreated { custom_type, data })
+            .await
+    }
+
+    /// Persist one structured user-question resolution through the session
+    /// owner; the broker remains responsible for collecting the trace.
+    pub async fn record_user_question_trace(
+        &self,
+        trace: crate::tools::UserQuestionTrace,
+    ) -> Result<(), String> {
+        let data = serde_json::to_value(trace).map_err(|error| error.to_string())?;
+        self.append_custom_entry("user_question_trace".into(), Some(data))
             .await
     }
 
@@ -488,4 +497,3 @@ impl SessionActor {
             .map_err(|_| "session actor compaction publication response was dropped".to_owned())?
     }
 }
-

@@ -46,6 +46,31 @@
     }
 
     #[tokio::test]
+    async fn user_question_trace_is_a_durable_custom_session_record() {
+        let actor = SessionActor::new();
+        actor
+            .record_user_question_trace(crate::tools::UserQuestionTrace {
+                id: "question-1".into(),
+                question: "Continue?".into(),
+                outcome: "answered".into(),
+                attempted_answer: None,
+                error: None,
+            })
+            .await
+            .expect("question trace record");
+        let jsonl = actor.snapshot().to_jsonl("session-1", 5, "/workspace");
+        assert!(jsonl.contains("user_question_trace"));
+        let (_, _, restored) = SessionSnapshot::from_jsonl(&jsonl).expect("trace restore");
+        assert!(restored.config_records.iter().any(|entry| {
+            matches!(
+                &entry.record,
+                SessionConfigRecord::CustomSessionEntryCreated { custom_type, .. }
+                    if custom_type == "user_question_trace"
+            )
+        }));
+    }
+
+    #[tokio::test]
     async fn snapshot_jsonl_round_trips_through_validated_importer() {
         let actor = SessionActor::new();
         actor.append(user("one")).await;
