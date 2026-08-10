@@ -100,6 +100,43 @@ pub struct PluginRuntimeSnapshot {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum PluginInstallationEvent {
+    Installed { name: String, root: PathBuf },
+    Uninstalled { name: String },
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct PluginInstallationSnapshot {
+    pub roots: BTreeMap<String, PathBuf>,
+}
+
+pub fn reduce_plugin_installation(
+    registry: &PluginRegistry,
+    snapshot: &mut PluginInstallationSnapshot,
+    event: PluginInstallationEvent,
+) -> Result<(), String> {
+    match event {
+        PluginInstallationEvent::Installed { name, root } => {
+            if registry.get(&name).is_none() {
+                return Err(format!("plugin is not registered: {name}"));
+            }
+            if root.as_os_str().is_empty() {
+                return Err(format!("plugin root is empty: {name}"));
+            }
+            if snapshot.roots.insert(name.clone(), root).is_some() {
+                return Err(format!("plugin is already installed: {name}"));
+            }
+        }
+        PluginInstallationEvent::Uninstalled { name } => {
+            if snapshot.roots.remove(&name).is_none() {
+                return Err(format!("plugin is not installed: {name}"));
+            }
+        }
+    }
+    Ok(())
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ActivePluginCapability {
     pub plugin: String,
     pub kind: String,
@@ -333,5 +370,39 @@ mod tests {
                 },
             ]
         );
+    }
+
+    #[test]
+    fn installation_replay_tracks_owned_roots_and_rejects_duplicates() {
+        let mut registry = PluginRegistry::default();
+        registry.register(manifest()).unwrap();
+        let mut snapshot = PluginInstallationSnapshot::default();
+        reduce_plugin_installation(
+            &registry,
+            &mut snapshot,
+            PluginInstallationEvent::Installed {
+                name: "sample-plugin".into(),
+                root: PathBuf::from("/plugins/sample"),
+            },
+        )
+        .unwrap();
+        assert!(reduce_plugin_installation(
+            &registry,
+            &mut snapshot,
+            PluginInstallationEvent::Installed {
+                name: "sample-plugin".into(),
+                root: PathBuf::from("/plugins/other"),
+            },
+        )
+        .is_err());
+        reduce_plugin_installation(
+            &registry,
+            &mut snapshot,
+            PluginInstallationEvent::Uninstalled {
+                name: "sample-plugin".into(),
+            },
+        )
+        .unwrap();
+        assert!(snapshot.roots.is_empty());
     }
 }
