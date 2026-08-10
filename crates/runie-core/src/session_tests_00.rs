@@ -27,6 +27,18 @@
             .await
     }
 
+    #[tokio::test]
+    async fn session_actor_publishes_immutable_shared_projection() {
+        let actor = SessionActor::new();
+        let _ = actor
+            .apply_event(&AgentEvent::SessionNameChanged { name: "demo".into() })
+            .await;
+        let shared = actor.shared_snapshot();
+        assert_eq!(shared.get().name().as_deref(), Some("demo"));
+        assert_eq!(shared.strong_count(), 2);
+        assert_eq!(actor.shared_subscribe().borrow().get().name().as_deref(), Some("demo"));
+    }
+
     async fn lane(
         actor: &SessionActor,
         name: &str,

@@ -41,3 +41,6 @@ consumers can avoid deep snapshot clones without an API break.
 The top-level `UiActor` now follows the same shared projection contract,
 allowing view consumers to read immutable UI state without cloning it while
 retaining the existing compatibility subscription.
+`SessionActor` now uses one publisher value to fan out every journal state
+transition to both its owned compatibility channel and immutable shared
+channel; all existing worker publication sites retain the same reducer shape.

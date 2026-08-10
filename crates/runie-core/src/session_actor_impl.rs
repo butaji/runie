@@ -1,25 +1,21 @@
 impl SessionActor {
-    #[allow(
-        clippy::too_many_lines,
-        reason = "the actor constructor keeps its complete mailbox reduction loop visible"
-    )]
     pub fn new() -> Self {
-        let (snapshot_tx, snapshot) = watch::channel(SessionSnapshot::default());
+        let initial = SessionSnapshot::default();
+        let (snapshot_tx, snapshot) = watch::channel(initial.clone());
+        let (shared_tx, shared_snapshot) =
+            watch::channel(crate::SharedSnapshot::new(initial));
         let (tx, owner) = spawn_actor_worker!(32, |rx: mpsc::Receiver<Command>| {
-            session_worker!(snapshot_tx.clone(), rx)
+            session_worker!((snapshot_tx.clone(), shared_tx.clone()), rx)
         });
         Self {
             tx,
             snapshot,
+            shared_snapshot,
             _owner: owner,
             _bus_owner: None,
         }
     }
 
-    #[allow(
-        clippy::too_many_lines,
-        reason = "the session bus bridge keeps event-to-record ownership explicit"
-    )]
     pub fn new_with_bus(bus: &EventBus) -> Self {
         let mut actor = Self::new();
         let events = bus.subscribe();

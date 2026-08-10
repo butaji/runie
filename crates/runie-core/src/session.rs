@@ -37,6 +37,7 @@ include!("session_worker.rs");
 pub struct SessionActor {
     tx: mpsc::Sender<Command>,
     snapshot: watch::Receiver<SessionSnapshot>,
+    shared_snapshot: watch::Receiver<crate::SharedSnapshot<SessionSnapshot>>,
     _owner: Arc<TaskOwner>,
     _bus_owner: Option<Arc<TaskOwner>>,
 }
@@ -46,9 +47,22 @@ impl Clone for SessionActor {
         Self {
             tx: self.tx.clone(),
             snapshot: self.snapshot.clone(),
+            shared_snapshot: self.shared_snapshot.clone(),
             _owner: self._owner.clone(),
             _bus_owner: self._bus_owner.clone(),
         }
+    }
+}
+
+#[derive(Clone)]
+struct SessionSnapshotPublisher {
+    snapshot_tx: watch::Sender<SessionSnapshot>,
+    shared_tx: watch::Sender<crate::SharedSnapshot<SessionSnapshot>>,
+}
+
+impl SessionSnapshotPublisher {
+    fn send(&self, state: SessionSnapshot) {
+        crate::publish_shared_snapshot(&self.snapshot_tx, &self.shared_tx, state);
     }
 }
 
@@ -56,6 +70,7 @@ type SessionEventReceiver = tokio::sync::broadcast::Receiver<AgentEvent>;
 type SessionMailbox = mpsc::Sender<Command>;
 
 include!("session_actor_impl.rs");
+include!("session_shared.rs");
 include!("session_navigation.rs");
 
 fn reset_session_worker(

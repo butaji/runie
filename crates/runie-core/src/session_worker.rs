@@ -1,6 +1,9 @@
 macro_rules! session_worker {
-    ($snapshot_tx:expr, $rx:expr) => {{
-        let snapshot_tx = $snapshot_tx;
+    (($snapshot_tx:expr, $shared_tx:expr), $rx:expr) => {{
+        let snapshot_tx = SessionSnapshotPublisher {
+            snapshot_tx: $snapshot_tx,
+            shared_tx: $shared_tx,
+        };
         let mut rx = $rx;
         async move {
 
