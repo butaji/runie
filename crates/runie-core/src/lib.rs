@@ -30,6 +30,7 @@ pub mod diagnostics;
 mod event_dsl;
 pub mod event_memo;
 pub mod event_trace_yaml;
+pub mod ide;
 pub mod model_catalog;
 pub mod noninteractive;
 pub mod types;
