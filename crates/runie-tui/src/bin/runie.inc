@@ -1299,6 +1299,9 @@ async fn build_live_app() -> App {
                         ) {
                             return runie_core::types::BeforeToolCallResult::default();
                         }
+                        if matches!(runie_core::tools::approval_decision(approval_mode.current(), &input.tool_call.name), runie_core::tools::ApprovalDecision::Deny { .. }) {
+                            return runie_core::types::BeforeToolCallResult { block: true, reason: Some("Tool execution denied by approval mode".into()) };
+                        }
                         let request = runie_core::tools::UserQuestionRequest {
                             question: format!("Allow tool '{}' to run?", input.tool_call.name),
                             options: vec![

@@ -3,6 +3,7 @@
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ApprovalMode {
+    Deny,
     #[default]
     Ask,
     Auto,
@@ -34,6 +35,7 @@ impl ApprovalModeStore {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ApprovalDecision {
     Allow,
+    Deny { reason: &'static str },
     Ask { reason: &'static str },
 }
 
@@ -43,6 +45,10 @@ pub fn decide(mode: ApprovalMode, tool: &str) -> ApprovalDecision {
         || !matches!(tool, "write" | "edit" | "bash" | "shell" | "exec" | "run")
     {
         ApprovalDecision::Allow
+    } else if mode == ApprovalMode::Deny {
+        ApprovalDecision::Deny {
+            reason: "Tool execution is disabled by the current approval mode",
+        }
     } else {
         ApprovalDecision::Ask {
             reason: "This tool can change files or execute a process",
@@ -73,6 +79,15 @@ mod tests {
             assert_eq!(decide(mode, "write"), ApprovalDecision::Allow);
             assert_eq!(decide(mode, "bash"), ApprovalDecision::Allow);
         }
+    }
+
+    #[test]
+    fn deny_blocks_mutations_but_keeps_reads_safe() {
+        assert_eq!(decide(ApprovalMode::Deny, "read"), ApprovalDecision::Allow);
+        assert!(matches!(
+            decide(ApprovalMode::Deny, "bash"),
+            ApprovalDecision::Deny { .. }
+        ));
     }
 
     #[test]

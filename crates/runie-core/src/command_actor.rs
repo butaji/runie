@@ -12,6 +12,7 @@ use tokio::sync::{mpsc, oneshot, watch};
 pub enum ApprovalMode {
     #[default]
     Ask,
+    Deny,
     Auto,
     Always,
 }
@@ -122,6 +123,7 @@ fn reduce_command(state: &mut CommandState, name: &str, args: &str) {
         return;
     }
     match name {
+        "deny" => state.approval = approval(args, ApprovalMode::Deny),
         "always-approve" => state.approval = approval(args, ApprovalMode::Always),
         "auto" => state.approval = approval(args, ApprovalMode::Auto),
         "plan" => state.plan = (!args.is_empty()).then(|| args.into()),

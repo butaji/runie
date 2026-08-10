@@ -1,10 +1,11 @@
 impl App {
     async fn route_extended_command(&self, name: &str, args: &str) -> bool {
         let state = self.command_actor.invoke(name, args).await;
-        if matches!(name, "always-approve" | "auto") {
+        if matches!(name, "always-approve" | "auto" | "deny") {
             self.approval_mode.set(match state.approval {
                 runie_core::command_actor::ApprovalMode::Always => runie_core::tools::ApprovalMode::Yolo,
                 runie_core::command_actor::ApprovalMode::Auto => runie_core::tools::ApprovalMode::Auto,
+                runie_core::command_actor::ApprovalMode::Deny => runie_core::tools::ApprovalMode::Deny,
                 runie_core::command_actor::ApprovalMode::Ask => runie_core::tools::ApprovalMode::Ask,
             });
         }
@@ -59,7 +60,7 @@ impl App {
                         "Reasoning effort: {}",
                         state.effort.as_deref().unwrap_or("unchanged")
                     ),
-                    "always-approve" | "auto" => format!("Approval mode: {:?}", state.approval),
+                    "always-approve" | "auto" | "deny" => format!("Approval mode: {:?}", state.approval),
                     "plan" | "view-plan" => state
                         .plan
                         .clone()

@@ -5,7 +5,7 @@ Status is `planned` until source, event tests, replay tests, and TUI smoke
 evidence prove the item.
 
 1. `harness-01-tools` — **partial** — production Read, Write, Edit, Grep, Glob, and Bash tools are registered and tested; centralized traversal/sensitive-path policy and structured read/search metadata are covered, while richer output and background lifecycle remain.
-2. `harness-02-permissions` — **partial** — pure Ask/Auto/YOLO policy now routes live mutating tools through the existing owned question dialog, and approval commands project into the live mode store; deny mode and replay fixtures remain.
+2. `harness-02-permissions` — **partial** — pure Ask/Auto/YOLO/Deny policy now routes live mutating tools through either the owned question dialog or an explicit block; approval commands project into the live mode store; replay fixtures remain.
 3. `harness-03-shell-lifecycle` — **partial** — Bash now streams stdout/stderr chunks and returns separate stdout/stderr/exit metadata; typed `background_bash` delegates to the owned actor and returns a job ID; TUI controls/output cards remain.
 4. `harness-04-model-effort-ui` — **partial** — model metadata now supplies finite effort rows and selection; replay coverage and provider-specific wire display remain.
 5. `harness-05-context` — automatic compaction, summaries, limits, and recovery.
