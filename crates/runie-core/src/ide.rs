@@ -68,6 +68,20 @@ pub struct IdeSnapshot {
     pub diagnostics: BTreeMap<String, Vec<IdeDiagnostic>>,
 }
 
+impl IdeSnapshot {
+    pub fn terminal_lines(&self) -> Vec<String> {
+        vec![
+            format!("connection: {:?}", self.connection),
+            format!("workspace: {}", self.workspace.as_deref().unwrap_or("none")),
+            format!("documents: {}", self.documents.len()),
+            format!(
+                "diagnostics: {}",
+                self.diagnostics.values().map(Vec::len).sum::<usize>()
+            ),
+        ]
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct IdeRpcRequest {
     pub jsonrpc: String,
@@ -236,6 +250,15 @@ mod tests {
         }
         assert_eq!(snapshot.documents.len(), 1);
         assert_eq!(snapshot.diagnostics["file:///main.rs"].len(), 1);
+        assert_eq!(
+            snapshot.terminal_lines(),
+            vec![
+                "connection: Connected",
+                "workspace: /workspace",
+                "documents: 1",
+                "diagnostics: 1",
+            ]
+        );
     }
 
     #[test]
