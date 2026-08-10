@@ -17,6 +17,20 @@ pub struct PluginRuntimeState {
     pub errors: BTreeMap<String, String>,
 }
 
+impl PluginRuntimeState {
+    /// Stable renderer-neutral rows for plugin lifecycle inspection.
+    pub fn terminal_lines(&self) -> Vec<String> {
+        let mut lines = Vec::with_capacity(self.status.len() + self.errors.len());
+        for (name, status) in &self.status {
+            lines.push(format!("Plugin {name}: {status:?}"));
+            if let Some(error) = self.errors.get(name) {
+                lines.push(format!("Plugin {name} error: {error}"));
+            }
+        }
+        lines
+    }
+}
+
 impl Default for PluginRuntimeState {
     fn default() -> Self {
         Self {
@@ -112,5 +126,44 @@ mod tests {
         )
         .unwrap();
         assert_eq!(state.status["sample-plugin"], PluginRuntimeStatus::Ready);
+    }
+
+    #[test]
+    fn runtime_projection_replays_failure_rows_in_stable_order() {
+        let mut registry = PluginRegistry::default();
+        registry
+            .register(PluginManifest {
+                name: "sample-plugin".into(),
+                version: "1".into(),
+                commands: vec![],
+                tools: vec![],
+                hooks: vec![],
+            })
+            .unwrap();
+        let mut state = PluginRuntimeState::default();
+        reduce_plugin_runtime(
+            &registry,
+            &mut state,
+            PluginRuntimeEvent::LoadStarted {
+                name: "sample-plugin".into(),
+            },
+        )
+        .unwrap();
+        reduce_plugin_runtime(
+            &registry,
+            &mut state,
+            PluginRuntimeEvent::LoadFailed {
+                name: "sample-plugin".into(),
+                error: "missing host".into(),
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            state.terminal_lines(),
+            [
+                "Plugin sample-plugin: Failed",
+                "Plugin sample-plugin error: missing host",
+            ]
+        );
     }
 }
