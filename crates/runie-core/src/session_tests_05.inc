@@ -125,6 +125,28 @@
         assert_eq!(found[0].cwd, "/a");
         let _ = tokio::fs::remove_dir_all(root).await;
     }
+
+    #[test]
+    fn storage_entries_project_to_serializable_picker_rows() {
+        let entry = SessionStorageEntry {
+            path: "/sessions/abc.jsonl".into(),
+            session_id: "abc".into(),
+            created_at: 42,
+            cwd: "/workspace/runie".into(),
+        };
+
+        assert_eq!(
+            entry.row(),
+            SessionStorageRow {
+                session_id: "abc".into(),
+                label: "runie".into(),
+                cwd: "/workspace/runie".into(),
+                created_at: 42,
+            }
+        );
+        assert!(serde_json::to_value(entry.row()).is_ok());
+    }
+
     #[test]
     fn navigation_validation_checks_target_and_summary_ids() {
         let mut snapshot = SessionSnapshot {

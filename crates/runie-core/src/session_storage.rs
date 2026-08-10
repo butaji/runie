@@ -26,12 +26,36 @@ enum StorageCommand {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct SessionStorageEntry {
     pub path: String,
     pub session_id: String,
     pub created_at: i64,
     pub cwd: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct SessionStorageRow {
+    pub session_id: String,
+    pub label: String,
+    pub cwd: String,
+    pub created_at: i64,
+}
+
+impl SessionStorageEntry {
+    pub fn row(&self) -> SessionStorageRow {
+        SessionStorageRow {
+            session_id: self.session_id.clone(),
+            label: self
+                .cwd
+                .rsplit(std::path::MAIN_SEPARATOR)
+                .find(|part| !part.is_empty())
+                .unwrap_or(&self.session_id)
+                .to_owned(),
+            cwd: self.cwd.clone(),
+            created_at: self.created_at,
+        }
+    }
 }
 
 /// Actor-owned atomic JSONL publication. Serialization stays outside this
