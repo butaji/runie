@@ -116,6 +116,10 @@ impl IdeActor {
             .map_err(|_| "IDE actor response was dropped".to_owned())?
     }
 
+    pub async fn apply_rpc(&self, method: &str, params: serde_json::Value) -> Result<(), String> {
+        self.apply(ide_event_from_rpc(method, params)?).await
+    }
+
     pub async fn snapshot(&self) -> Result<IdeSnapshot, String> {
         let (reply, response) = tokio::sync::oneshot::channel();
         self.tx
@@ -373,6 +377,21 @@ mod tests {
         let snapshot = actor.snapshot().await.unwrap();
         assert_eq!(snapshot.connection, IdeConnectionStatus::Connected);
         assert_eq!(snapshot.workspace.as_deref(), Some("/workspace"));
+        actor
+            .apply_rpc(
+                "textDocument/didOpen",
+                serde_json::json!({
+                    "textDocument": {
+                        "uri": "file:///main.rs",
+                        "languageId": "rust",
+                        "version": 1,
+                        "text": "fn main() {}"
+                    }
+                }),
+            )
+            .await
+            .unwrap();
+        assert_eq!(actor.snapshot().await.unwrap().documents.len(), 1);
     }
 
     #[test]
