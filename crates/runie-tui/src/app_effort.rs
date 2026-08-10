@@ -35,6 +35,7 @@ impl App {
     pub(super) fn model_has_declared_effort(model: &runie_core::types::Model) -> bool {
         model.thinking_level_map.as_ref().is_some_and(|map| {
             [
+                &map.off,
                 &map.minimal,
                 &map.low,
                 &map.medium,
@@ -86,5 +87,17 @@ mod tests {
             super::App::declared_effort_options(&model),
             vec!["low".to_owned(), "high".to_owned()]
         );
+    }
+
+    #[test]
+    fn an_off_only_model_still_requires_effort_selection() {
+        let model = runie_core::types::Model {
+            thinking_level_map: Some(runie_core::types::ThinkingLevelMap {
+                off: Some("disabled".into()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        assert_eq!(super::App::declared_effort_options(&model), vec!["off"]);
     }
 }
