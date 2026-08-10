@@ -33,6 +33,24 @@ impl SubagentRole {
         }
     }
 
+    pub fn authorize(self, requested: &[SubagentCapability]) -> Result<(), String> {
+        let allowed = self.clone().capabilities();
+        let missing = requested
+            .iter()
+            .filter(|capability| !allowed.contains(capability))
+            .map(|capability| format!("{capability:?}"))
+            .collect::<Vec<_>>();
+        if missing.is_empty() {
+            Ok(())
+        } else {
+            Err(format!(
+                "subagent role {:?} does not grant: {}",
+                self,
+                missing.join(", ")
+            ))
+        }
+    }
+
     pub fn system_prompt(self) -> &'static str {
         match self {
             Self::Explore => "You are an isolated exploration subagent. Inspect and report facts; do not edit files.",
@@ -48,6 +66,8 @@ pub struct SubagentRequest {
     pub task: String,
     #[serde(default)]
     pub context: String,
+    #[serde(default)]
+    pub capabilities: Vec<SubagentCapability>,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -91,6 +111,7 @@ impl AgentTool for SubagentTool {
         if request.task.chars().count() > 20_000 {
             return Err("subagent task is too long".into());
         }
+        request.role.authorize(&request.capabilities)?;
         Ok(())
     }
     async fn execute(
@@ -176,6 +197,7 @@ mod tests {
             role: SubagentRole::Plan,
             task: "outline the change".into(),
             context: String::new(),
+            capabilities: vec![SubagentCapability::ProducePlan],
         };
         let result = result(&request, serde_json::json!({"steps": ["test"]}));
         let decoded: SubagentResult = serde_json::from_value(result.details).unwrap();
@@ -184,5 +206,16 @@ mod tests {
         assert!(decoded
             .capabilities
             .contains(&SubagentCapability::ProducePlan));
+    }
+
+    #[test]
+    fn capability_admission_rejects_escalation() {
+        assert!(SubagentRole::Plan
+            .authorize(&[SubagentCapability::ProducePlan])
+            .is_ok());
+        assert!(SubagentRole::Explore
+            .authorize(&[SubagentCapability::WriteWorkspace])
+            .unwrap_err()
+            .contains("WriteWorkspace"));
     }
 }
