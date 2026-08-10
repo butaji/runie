@@ -53,3 +53,5 @@ unchanged.
 `BackgroundProcessActor` now uses one publisher value for owned and shared job
 snapshots, preserving the existing lifecycle reducer while removing duplicate
 publication wiring from start, cancel, and completion paths.
+`PluginHost` now exposes the `ReducerActor`'s immutable runtime projection,
+keeping plugin lifecycle state on the existing event reducer boundary.

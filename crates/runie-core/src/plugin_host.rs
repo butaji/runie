@@ -52,6 +52,16 @@ impl PluginHost {
         self.runtime.snapshot()
     }
 
+    pub fn shared_snapshot(&self) -> crate::SharedSnapshot<PluginRuntimeState> {
+        self.runtime.shared_snapshot()
+    }
+
+    pub fn shared_subscribe(
+        &self,
+    ) -> tokio::sync::watch::Receiver<crate::SharedSnapshot<PluginRuntimeState>> {
+        self.runtime.shared_subscribe()
+    }
+
     pub async fn execute(
         &self,
         plugin: &str,
@@ -139,6 +149,17 @@ mod tests {
             .await
             .unwrap_err();
         assert!(error.contains("not installed"));
+    }
+
+    #[tokio::test]
+    async fn host_exposes_immutable_runtime_projection() {
+        let host = PluginHost::new(PluginRegistry::default(), Vec::new());
+        assert_eq!(host.shared_snapshot().get(), &PluginRuntimeState::default());
+        assert_eq!(host.shared_snapshot().strong_count(), 2);
+        assert_eq!(
+            host.shared_subscribe().borrow().get(),
+            &PluginRuntimeState::default()
+        );
     }
 
     #[test]
