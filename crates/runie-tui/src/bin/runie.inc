@@ -52,6 +52,7 @@ use runie_tui::key::{is_quit_command, map_key, Action};
 use runie_tui::widgets::{PromptOutcome, PromptWidget, Scrollback, Status, StatusBar};
 use tokio::sync::{broadcast, mpsc, watch};
 use tokio::task::JoinHandle;
+use tokio::io::AsyncReadExt;
 
 fn osc52_clipboard_sequence(text: &str) -> String {
     let encoded = base64::engine::general_purpose::STANDARD.encode(text);
@@ -1218,21 +1219,22 @@ async fn main() -> Result<()> {
 }
 
 async fn run_noninteractive(config: NonInteractiveConfig) -> RunOutcome {
-    let Some(prompt) = config.prompt else {
-        let events = vec![
-            JsonlEvent::Error {
-                message: "--prompt is required in --jsonl mode".into(),
-            },
-            JsonlEvent::Finished {
-                outcome: RunOutcome::Failed,
-            },
-        ];
-        emit_jsonl(events);
-        return RunOutcome::Failed;
+    let auto_approve = config.auto_approve;
+    let prompt = match noninteractive_prompt(config.prompt).await {
+        Ok(prompt) => prompt,
+        Err(message) => {
+            emit_jsonl(vec![
+                JsonlEvent::Error { message },
+                JsonlEvent::Finished {
+                    outcome: RunOutcome::Failed,
+                },
+            ]);
+            return RunOutcome::Failed;
+        }
     };
 
     let app = build_live_app().await;
-    if config.auto_approve {
+    if auto_approve {
         app.approval_mode.set(runie_core::tools::ApprovalMode::Auto);
     }
     let run_id = format!("run-{}", std::process::id());
@@ -1262,6 +1264,23 @@ async fn run_noninteractive(config: NonInteractiveConfig) -> RunOutcome {
     events.push(JsonlEvent::Finished { outcome });
     emit_jsonl(events);
     outcome
+}
+
+async fn noninteractive_prompt(prompt: Option<String>) -> Result<String, String> {
+    if let Some(prompt) = prompt {
+        if prompt.trim().is_empty() {
+            return Err("--prompt must not be empty in --jsonl mode".into());
+        }
+        return Ok(prompt);
+    }
+    let mut input = String::new();
+    tokio::io::stdin()
+        .read_to_string(&mut input)
+        .await
+        .map_err(|error| format!("could not read stdin: {error}"))?;
+    (!input.trim().is_empty())
+        .then_some(input)
+        .ok_or_else(|| "--prompt or non-empty stdin is required in --jsonl mode".into())
 }
 
 fn jsonl_events_for_messages(messages: &[runie_core::types::AgentMessage]) -> Vec<JsonlEvent> {
