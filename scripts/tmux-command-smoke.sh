@@ -12,6 +12,7 @@ labels=(
   "Set Reasoning Effort" "Always Approve" "Automatic Approval" "Plan Mode" "View Plan"
   "Login" "Logout" "Reload" "Trust Project" "Skills" "Hooks" "Plugins" "MCP Servers"
   "Memory" "Remember" "Goal" "Workflow" "Workflows" "Loop" "Deep Research" "Feedback" "Usage"
+  "Background Jobs"
 )
 parameterized=(
   "Select Theme" "Set Session Name" "Compact Context" "Fork Session" "Select Tree Entry"
