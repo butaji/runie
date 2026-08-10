@@ -610,4 +610,23 @@ mod tests {
             .unwrap_err();
         assert_eq!(error, "MCP error -32602: bad arguments");
     }
+
+    #[tokio::test]
+    async fn stdio_actor_projects_failed_call_status() {
+        let script = "while IFS= read -r line; do case \"$line\" in *tools/call*) echo '{\"id\":1,\"error\":{\"code\":-32602,\"message\":\"bad arguments\"}}';; esac; done";
+        let actor = McpStdioActor::new(
+            McpStdioClient::new(
+                "sh",
+                vec!["-c".into(), script.into()],
+                Duration::from_secs(1),
+            )
+            .unwrap(),
+        );
+        assert!(actor
+            .call_tool("echo", serde_json::json!({}))
+            .await
+            .is_err());
+        assert_eq!(actor.status(), McpStdioStatus::Failed);
+        actor.close().await.unwrap();
+    }
 }
