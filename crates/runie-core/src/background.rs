@@ -27,6 +27,31 @@ pub struct BackgroundJob {
     pub exit_code: Option<i32>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BackgroundJobSummary {
+    pub id: String,
+    pub command: String,
+    pub status: BackgroundStatus,
+    pub exit_code: Option<i32>,
+    pub output_lines: usize,
+    pub output_bytes: usize,
+    pub truncated: bool,
+}
+
+pub fn background_job_summaries(jobs: &[BackgroundJob]) -> Vec<BackgroundJobSummary> {
+    jobs.iter()
+        .map(|job| BackgroundJobSummary {
+            id: job.id.clone(),
+            command: job.command.clone(),
+            status: job.status.clone(),
+            exit_code: job.exit_code,
+            output_lines: job.output.lines().count(),
+            output_bytes: job.output.len(),
+            truncated: job.output.contains(OUTPUT_TRUNCATION_MARKER),
+        })
+        .collect()
+}
+
 impl BackgroundJob {
     pub fn terminal_line(&self) -> String {
         let exit = self
@@ -307,6 +332,29 @@ mod tests {
         assert_eq!(
             job.terminal_line(),
             "3 · Completed · printf done exit=0 · done\\nnext"
+        );
+    }
+
+    #[test]
+    fn summary_projects_bounded_output_facts_without_rendering() {
+        let jobs = vec![BackgroundJob {
+            id: "3".into(),
+            command: "printf done".into(),
+            status: BackgroundStatus::Completed,
+            output: "done\nnext".into(),
+            exit_code: Some(0),
+        }];
+        assert_eq!(
+            background_job_summaries(&jobs),
+            vec![BackgroundJobSummary {
+                id: "3".into(),
+                command: "printf done".into(),
+                status: BackgroundStatus::Completed,
+                exit_code: Some(0),
+                output_lines: 2,
+                output_bytes: 9,
+                truncated: false,
+            }]
         );
     }
 

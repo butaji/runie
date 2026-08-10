@@ -87,21 +87,39 @@ impl App {
                 return true;
             }
             if let Some(id) = runie_core::commands::parse_background_job_query(args) {
-                let result = self
-                    .background_actor
-                    .snapshot()
+                let result = runie_core::background::background_job_summaries(
+                    &self.background_actor.snapshot(),
+                )
                     .into_iter()
                     .find(|job| job.id == id)
-                    .map(|job| job.terminal_line())
+                    .map(|job| format!(
+                        "{} · {:?} · {} exit={:?} · output={} lines/{} bytes{}",
+                        job.id,
+                        job.status,
+                        job.command,
+                        job.exit_code,
+                        job.output_lines,
+                        job.output_bytes,
+                        if job.truncated { " truncated" } else { "" },
+                    ))
                     .unwrap_or_else(|| format!("Background job {id} not found"));
                 self.ui.send(UiMsg::ShowCommandResult(result)).await;
                 return true;
             }
-            let mut result = self
-                .background_actor
-                .snapshot()
+            let mut result = runie_core::background::background_job_summaries(
+                &self.background_actor.snapshot(),
+            )
                 .into_iter()
-                .map(|job| job.terminal_line())
+                .map(|job| format!(
+                    "{} · {:?} · {} exit={:?} · output={} lines/{} bytes{}",
+                    job.id,
+                    job.status,
+                    job.command,
+                    job.exit_code,
+                    job.output_lines,
+                    job.output_bytes,
+                    if job.truncated { " truncated" } else { "" },
+                ))
                 .collect::<Vec<_>>();
             result.extend(
                 self.loop_actor
