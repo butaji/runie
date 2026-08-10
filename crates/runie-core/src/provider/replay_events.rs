@@ -3,6 +3,7 @@ use super::*;
 pub struct SseParseState {
     pub(super) finished: bool,
     pub(super) stop_reason: StopReason,
+    pub(super) raw_stop_reason: Option<String>,
     pub(super) usage: Usage,
     pub(super) tool_calls: std::collections::BTreeMap<usize, (String, String, String)>,
 }
@@ -12,6 +13,7 @@ impl Default for SseParseState {
         Self {
             finished: false,
             stop_reason: StopReason::Stop,
+            raw_stop_reason: None,
             usage: Usage::default(),
             tool_calls: Default::default(),
         }
@@ -49,7 +51,16 @@ pub(super) fn consume_sse_line(
     collect_tool_calls(&value, &mut state.tool_calls);
     if has_terminal_marker(&value) {
         state.finished = true;
-        state.stop_reason = response_stop_reason(&value);
+        // Chat tool-call traces historically finalize their typed stop state
+        // from reconstructed tool content; keep that reducer behavior while
+        // retaining the provider's raw finish value below. Responses-style
+        // incomplete markers use the typed conformance mapping directly.
+        state.stop_reason = if value.pointer("/choices/0/finish_reason").is_some() {
+            StopReason::Stop
+        } else {
+            response_finish_reason(&value).unwrap_or(StopReason::Stop)
+        };
+        state.raw_stop_reason = raw_response_finish_reason(&value).map(str::to_owned);
         state.usage = response_usage(&value);
     }
     Ok(false)
@@ -88,23 +99,24 @@ pub(super) fn http_error_message(status: u16, body: &str) -> String {
         .unwrap_or_else(|| format!("HTTP {status}"))
 }
 
-pub(super) fn response_stop_reason(value: &serde_json::Value) -> StopReason {
-    match value.get("type").and_then(|v| v.as_str()) {
-        Some("response.incomplete") => {
-            let reason = value
-                .pointer("/response/incomplete_details/reason")
-                .and_then(|v| v.as_str());
-            if reason == Some("max_output_tokens") {
-                StopReason::MaxTokens
-            } else {
-                StopReason::Error
-            }
-        }
-        // Keep the legacy chat-completions replay contract unchanged. Its
-        // tool-call completion reason is finalized by the reconstructed
-        // content path; Responses status mapping is handled above.
+pub(super) fn raw_response_finish_reason(value: &serde_json::Value) -> Option<&str> {
+    value
+        .pointer("/choices/0/finish_reason")
+        .or_else(|| value.pointer("/delta/stop_reason"))
+        .or_else(|| value.pointer("/response/incomplete_details/reason"))
+        .and_then(serde_json::Value::as_str)
+}
+
+pub(super) fn response_finish_reason(value: &serde_json::Value) -> Option<StopReason> {
+    let raw = raw_response_finish_reason(value)?;
+    Some(match raw {
+        "stop" | "end_turn" | "completed" => StopReason::Stop,
+        "length" | "max_tokens" | "max_output_tokens" => StopReason::MaxTokens,
+        "tool_calls" | "tool_use" => StopReason::ToolUse,
+        "aborted" | "cancelled" => StopReason::Aborted,
+        "error" | "content_filter" => StopReason::Error,
         _ => StopReason::Stop,
-    }
+    })
 }
 
 pub(super) fn response_usage(value: &serde_json::Value) -> Usage {
@@ -152,8 +164,10 @@ pub(super) fn finish_replay_events(
     events: &mut Vec<AssistantMessageEvent>,
     tool_calls: std::collections::BTreeMap<usize, (String, String, String)>,
     stop_reason: StopReason,
+    raw_stop_reason: Option<String>,
     usage: Usage,
 ) {
+    let has_tool_calls = !tool_calls.is_empty();
     for (_, (id, name, arguments)) in tool_calls {
         let args = serde_json::from_str(&arguments)
             .unwrap_or(serde_json::Value::Object(Default::default()));
@@ -171,7 +185,13 @@ pub(super) fn finish_replay_events(
     events.push(AssistantMessageEvent::Done {
         stop_reason,
         usage,
-        message: None,
+        message: (!has_tool_calls)
+            .then_some(raw_stop_reason)
+            .flatten()
+            .map(|raw_stop_reason| AssistantMessage {
+                raw_stop_reason: Some(raw_stop_reason),
+                ..AssistantMessage::default()
+            }),
     });
 }
 

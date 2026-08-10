@@ -82,7 +82,9 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
 
 1. Provider-specific request adapters — `harness-04` and `harness-14`.
    MiniMax effort projection is now covered by a pure request-body regression;
-   complete the finite provider payload/finish-reason conformance matrix,
+   replay finish-reason mapping now preserves raw chat values with a
+   compatibility-tested tool-call path; complete the finite provider
+   payload/finish-reason conformance matrix,
    including unsupported-effort behavior and normalized failures.
 2. Tool output and background lifecycle UX — `harness-01` and `harness-03`.
    Add renderer-neutral bounded output cards and owned lifecycle controls,

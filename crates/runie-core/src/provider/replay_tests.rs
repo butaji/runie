@@ -70,6 +70,23 @@ fn provider_usage_conformance_accepts_common_wire_shapes() {
     }
 }
 
+#[test]
+fn provider_finish_reason_conformance_preserves_chat_wire_values() {
+    let cases = [
+        ("stop", StopReason::Stop),
+        ("length", StopReason::MaxTokens),
+        ("tool_calls", StopReason::ToolUse),
+        ("content_filter", StopReason::Error),
+    ];
+    for (wire, expected) in cases {
+        let payload = serde_json::json!({
+            "choices": [{"finish_reason": wire}]
+        });
+        assert_eq!(super::response_finish_reason(&payload), Some(expected));
+        assert_eq!(super::raw_response_finish_reason(&payload), Some(wire));
+    }
+}
+
 #[tokio::test]
 async fn deferred_replay_uses_provider_scoped_event_fixture() {
     let handle = crate::types::DeferredHandle {

@@ -106,6 +106,7 @@ impl ReplayProvider {
             &mut events,
             state.tool_calls,
             state.stop_reason,
+            state.raw_stop_reason,
             state.usage,
         );
         Ok(Self {
