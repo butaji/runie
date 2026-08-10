@@ -62,3 +62,6 @@ than the large tool-type fragment, reducing the structural module without
 changing the public feed API.
 MCP stdio close handling is now a separate owned transition helper, keeping
 the worker loop below the structural function threshold.
+Replay terminal-marker reduction and compaction threshold assertions now use
+small semantic helpers, keeping event/state tests focused on data tables and
+boundaries.

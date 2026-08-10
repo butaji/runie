@@ -50,20 +50,22 @@ pub(super) fn consume_sse_line(
     state.finished |= append_text_events(&value, events);
     collect_tool_calls(&value, &mut state.tool_calls);
     if has_terminal_marker(&value) {
-        state.finished = true;
-        // Chat tool-call traces historically finalize their typed stop state
-        // from reconstructed tool content; keep that reducer behavior while
-        // retaining the provider's raw finish value below. Responses-style
-        // incomplete markers use the typed conformance mapping directly.
-        state.stop_reason = if value.pointer("/choices/0/finish_reason").is_some() {
-            StopReason::Stop
-        } else {
-            response_finish_reason(&value).unwrap_or(StopReason::Stop)
-        };
-        state.raw_stop_reason = raw_response_finish_reason(&value).map(str::to_owned);
-        state.usage = response_usage(&value);
+        apply_terminal_marker(state, &value);
     }
     Ok(false)
+}
+
+fn apply_terminal_marker(state: &mut SseParseState, value: &serde_json::Value) {
+    state.finished = true;
+    // Chat tool-call traces finalize typed state from reconstructed content;
+    // Responses traces use their mapped incomplete marker directly.
+    state.stop_reason = if value.pointer("/choices/0/finish_reason").is_some() {
+        StopReason::Stop
+    } else {
+        response_finish_reason(value).unwrap_or(StopReason::Stop)
+    };
+    state.raw_stop_reason = raw_response_finish_reason(value).map(str::to_owned);
+    state.usage = response_usage(value);
 }
 
 pub(super) fn response_error_message(value: &serde_json::Value) -> String {

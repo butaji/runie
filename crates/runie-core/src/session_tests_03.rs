@@ -368,42 +368,18 @@
             reserve_tokens: 100,
             keep_recent_tokens: 20,
         };
+        assert_compaction_boundaries(settings);
+    }
+
+    fn assert_compaction_boundaries(settings: CompactionSettings) {
         assert!(!should_compact(900, 1_000, settings));
         assert!(!should_compact(100, 1_000, settings));
         assert!(should_compact(901, 1_000, settings));
-        assert!(!should_compact(
-            901,
-            1_000,
-            CompactionSettings {
-                enabled: false,
-                ..settings
-            }
-        ));
-        assert!(should_compact(
-            u64::MAX,
-            10,
-            CompactionSettings {
-                reserve_tokens: u64::MAX,
-                ..settings
-            }
-        ));
-        assert_eq!(
-            compaction_decision(900, 1_000, settings),
-            CompactionDecision::WithinBudget {
-                available_tokens: 0
-            }
-        );
-        assert_eq!(
-            compaction_decision(901, 1_000, settings),
-            CompactionDecision::Required {
-                context_tokens: 901,
-                threshold_tokens: 900
-            }
-        );
-        assert_eq!(
-            compaction_decision(900, 1_000, settings).terminal_lines(),
-            ["compaction_policy: within_budget available_tokens=0"]
-        );
+        assert!(!should_compact(901, 1_000, CompactionSettings { enabled: false, ..settings }));
+        assert!(should_compact(u64::MAX, 10, CompactionSettings { reserve_tokens: u64::MAX, ..settings }));
+        assert_eq!(compaction_decision(900, 1_000, settings), CompactionDecision::WithinBudget { available_tokens: 0 });
+        assert_eq!(compaction_decision(901, 1_000, settings), CompactionDecision::Required { context_tokens: 901, threshold_tokens: 900 });
+        assert_eq!(compaction_decision(900, 1_000, settings).terminal_lines(), ["compaction_policy: within_budget available_tokens=0"]);
     }
 
     #[test]
