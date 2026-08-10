@@ -22,7 +22,7 @@ evidence prove the item.
 16. `harness-16-media` — **partial** — model-declared text/image/video modalities now expose capability-aware predicates, `ToolRegistry::tools_for_model` filters tools by required modality, and typed image/video constructors validate MIME/base64 data; provider-specific media encoding remains.
 17. `harness-17-ide` — ACP or equivalent IDE protocol.
 18. `harness-18-noninteractive` — **partial** — typed JSONL event encoding/decoding, deterministic completed/aborted/failed exit codes, pure `--jsonl`/explicit approval argument parsing, and the `runie --jsonl` loop boundary with prompt-or-stdin input now exist; richer provider event forwarding remains.
-19. `harness-19-diagnostics` — **partial** — actor-owned `/doctor` now projects a serializable report with explicit checks and fix intent, telemetry exposes a serializable usage summary over ended provider spans, and `DiagnosticBundle` exports/replays the combined data with renderer-neutral metric rows; terminal visualization remains.
+19. `harness-19-diagnostics` — **partial** — actor-owned `/doctor` now projects a serializable report with explicit checks and fix intent, telemetry exposes a serializable usage summary over ended provider spans, and `DiagnosticBundle` exports/replays combined data with renderer-neutral metric and terminal-row projections; interactive terminal charts remain.
 20. `harness-20-tui-polish` — searchable selectors, approvals, tasks, tool cards, and keyboard UX.
 
 Existing foundations are not duplicated here: actors/events, provider registry,

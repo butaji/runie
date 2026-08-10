@@ -39,6 +39,23 @@ impl DiagnosticVisualization {
             ],
         }
     }
+
+    /// Project diagnostic data into stable terminal rows without terminal
+    /// state, colors, or side effects. A renderer may style these rows later.
+    pub fn terminal_lines(&self, bundle: &DiagnosticBundle) -> Vec<String> {
+        let mut lines = bundle
+            .report
+            .checks
+            .iter()
+            .map(|check| format!("check: {check}"))
+            .collect::<Vec<_>>();
+        lines.extend(
+            self.metrics
+                .iter()
+                .map(|metric| format!("{}: {}", metric.label, metric.value)),
+        );
+        lines
+    }
 }
 
 fn metric(label: &str, value: f64) -> DiagnosticMetric {
@@ -84,5 +101,9 @@ mod tests {
         let visualization = DiagnosticVisualization::from_bundle(&restored);
         assert_eq!(visualization.metrics[0].label, "requests");
         assert_eq!(visualization.metrics.last().unwrap().label, "cost");
+        assert_eq!(
+            visualization.terminal_lines(&restored)[0],
+            "check: workspace"
+        );
     }
 }
