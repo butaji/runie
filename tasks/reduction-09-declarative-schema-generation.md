@@ -32,3 +32,5 @@ loader dispatch and its test inventory, eliminating the split hand-written
 match while keeping every theme mapping inspectable as data.
 Unused legacy palette metadata macros were removed after confirming no call
 sites, leaving one live declaration path for command names and descriptions.
+The live slash command and description metadata now come from one typed table;
+the macro generates both exhaustive accessors from each action row.
