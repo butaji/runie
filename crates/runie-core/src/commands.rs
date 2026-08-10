@@ -224,6 +224,13 @@ pub fn parse_background_job_query(args: &str) -> Option<&str> {
     (id != "cancel" && parts.next().is_none()).then_some(id)
 }
 
+pub fn parse_background_job_status_query(args: &str) -> Option<&str> {
+    let status = args.trim();
+    ["running", "completed", "failed", "cancelled"]
+        .contains(&status)
+        .then_some(status)
+}
+
 #[allow(clippy::too_many_lines)]
 fn parse_parameterized_command(value: &str) -> Option<MappableBuiltinCommand> {
     if let Some(command) = parse_compact_command(value) {

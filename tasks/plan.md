@@ -99,9 +99,9 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    `/context` projects the typed threshold decision and `/context compact
    [instructions]` routes manual recovery through the actor pipeline; remaining
    work is richer compaction controls and threshold/recovery replay coverage.
-4. Scheduler cancellation controls — `harness-08` (actor-owned metrics and `/jobs` projection implemented; richer controls remain).
-   Extend the existing mailbox/replay state machine with user-visible queued,
-   running, and cancelled control projections.
+4. Scheduler cancellation controls — `harness-08` (actor-owned metrics and `/jobs` projection implemented; status filters now expose running, completed, failed, and cancelled rows).
+   Extend the existing mailbox/replay state machine with richer user-visible
+   queued, running, and cancelled control projections.
 5. MCP lifecycle ownership — `harness-10`.
    The stdio actor now publishes ready/busy/failed/closed lifecycle state,
    `/mcps` projects it through the loop-owned executor, and registry-backed

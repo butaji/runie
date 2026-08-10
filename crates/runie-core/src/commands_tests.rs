@@ -160,6 +160,12 @@ fn background_job_command_accepts_only_cancel_and_one_id() {
     assert_eq!(parse_background_job_query("7 extra"), None);
     assert!(parse_background_job_cancel_all("cancel all"));
     assert!(!parse_background_job_cancel_all("cancel all extra"));
+    assert_eq!(
+        parse_background_job_status_query("running"),
+        Some("running")
+    );
+    assert_eq!(parse_background_job_status_query("failed"), Some("failed"));
+    assert_eq!(parse_background_job_status_query("queued"), None);
 }
 
 #[test]

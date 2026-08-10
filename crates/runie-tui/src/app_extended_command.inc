@@ -86,6 +86,32 @@ impl App {
                     .await;
                 return true;
             }
+            if let Some(status) = runie_core::commands::parse_background_job_status_query(args) {
+                let result = runie_core::background::background_job_summaries(
+                    &self.background_actor.snapshot(),
+                )
+                .into_iter()
+                .filter(|job| format!("{:?}", job.status).eq_ignore_ascii_case(status))
+                .map(|job| format!(
+                    "{} · {:?} · {} exit={:?} · output={} lines/{} bytes{}",
+                    job.id,
+                    job.status,
+                    job.command,
+                    job.exit_code,
+                    job.output_lines,
+                    job.output_bytes,
+                    if job.truncated { " truncated" } else { "" },
+                ))
+                .collect::<Vec<_>>();
+                self.ui
+                    .send(UiMsg::ShowCommandResult(if result.is_empty() {
+                        format!("No {status} background jobs")
+                    } else {
+                        result.join("\n")
+                    }))
+                    .await;
+                return true;
+            }
             if let Some(id) = runie_core::commands::parse_background_job_query(args) {
                 let result = runie_core::background::background_job_summaries(
                     &self.background_actor.snapshot(),
