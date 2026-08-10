@@ -38,6 +38,9 @@ enum Command {
         target_id: String,
         reply: oneshot::Sender<Result<(), String>>,
     },
+    Undo {
+        reply: oneshot::Sender<Result<(), String>>,
+    },
     Import(SessionSnapshot, oneshot::Sender<()>),
     Reset(oneshot::Sender<()>),
     Flush(oneshot::Sender<()>),

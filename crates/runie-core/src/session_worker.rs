@@ -336,6 +336,18 @@ macro_rules! session_worker {
                         let _ = snapshot_tx.send(state.clone());
                         let _ = reply.send(Ok(()));
                     }
+                    Command::Undo { reply } => {
+                        let target = match state.undo_target() {
+                            Ok(target) => target,
+                            Err(error) => {
+                                let _ = reply.send(Err(error));
+                                continue;
+                            }
+                        };
+                        state.leaf_id = Some(target);
+                        let _ = snapshot_tx.send(state.clone());
+                        let _ = reply.send(Ok(()));
+                    }
                     Command::Import(imported, reply) => {
                         import_session_worker(
                             &mut state,

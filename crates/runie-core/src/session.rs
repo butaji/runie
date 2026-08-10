@@ -44,6 +44,7 @@ type SessionEventReceiver = tokio::sync::broadcast::Receiver<AgentEvent>;
 type SessionMailbox = mpsc::Sender<Command>;
 
 include!("session_actor_impl.rs");
+include!("session_navigation.rs");
 
 fn reset_session_worker(
     state: &mut SessionSnapshot,

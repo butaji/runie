@@ -137,6 +137,25 @@ impl SessionSnapshot {
         self.fork_from_branch(target_id, self.branch_entry_ids_for_lane(lane))
     }
 
+    /// Return the parent node for an actor-owned undo navigation. Undo only
+    /// changes the selected leaf; journal entries and alternate branches stay
+    /// intact for replay and redo-like navigation.
+    pub fn undo_target(&self) -> Result<String, String> {
+        let current = self
+            .leaf_id
+            .as_deref()
+            .ok_or_else(|| "session has no selected leaf".to_owned())?;
+        let entry = self
+            .entries
+            .iter()
+            .find(|entry| entry.id == current)
+            .ok_or_else(|| format!("selected leaf does not exist: {current}"))?;
+        entry
+            .parent_id
+            .clone()
+            .ok_or_else(|| "session is already at the root".to_owned())
+    }
+
     fn fork_from_branch(&self, target_id: &str, branch: Vec<String>) -> Result<Self, String> {
         self.validate_fork_target(target_id, &branch)?;
         let retained = branch
@@ -478,4 +497,3 @@ impl SessionSnapshot {
             .collect()
     }
 }
-

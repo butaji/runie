@@ -413,3 +413,18 @@
             CompactionRecoveryAction::Continue
         );
     }
+
+    #[tokio::test]
+    async fn undo_moves_actor_leaf_to_parent_without_deleting_history() {
+        let actor = SessionActor::new();
+        actor.append(user("first")).await;
+        actor.append(user("second")).await;
+        actor.flush().await;
+        let before = actor.snapshot();
+        let leaf = before.leaf_id.clone().expect("selected leaf");
+        actor.undo().await.expect("undo");
+        let after = actor.snapshot();
+        assert_ne!(after.leaf_id.as_deref(), Some(leaf.as_str()));
+        assert_eq!(after.entries.len(), before.entries.len());
+        assert_eq!(after.leaf_id.as_deref(), Some("entry-1"));
+    }
