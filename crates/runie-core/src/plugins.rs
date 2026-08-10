@@ -83,6 +83,30 @@ pub fn discover_packages(root: impl AsRef<Path>) -> Result<Vec<PluginPackage>, S
     Ok(packages)
 }
 
+/// Install the declarative part of a plugin package into a host-owned root.
+/// Executable plugin payloads are intentionally not copied or run here.
+pub fn install_manifest_package(
+    package: &PluginPackage,
+    destination_root: impl AsRef<Path>,
+) -> Result<PathBuf, String> {
+    package.manifest.validate()?;
+    let destination = destination_root.as_ref().join(&package.manifest.name);
+    std::fs::create_dir_all(destination_root.as_ref())
+        .map_err(|error| format!("create plugin install root: {error}"))?;
+    std::fs::create_dir(&destination).map_err(|error| {
+        format!(
+            "create plugin destination {}: {error}",
+            destination.display()
+        )
+    })?;
+    std::fs::copy(
+        package.root.join("plugin.json"),
+        destination.join("plugin.json"),
+    )
+    .map_err(|error| format!("install plugin manifest: {error}"))?;
+    Ok(destination)
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct PluginRegistry {
     manifests: BTreeMap<String, PluginManifest>,
@@ -320,6 +344,32 @@ mod tests {
                 .collect::<Vec<_>>(),
             ["alpha", "zeta"]
         );
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn manifest_installation_copies_only_validated_declarative_data() {
+        let root =
+            std::env::temp_dir().join(format!("runie-plugin-install-{}", std::process::id()));
+        let source = root.join("source");
+        let destination = root.join("installed");
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&source).unwrap();
+        std::fs::write(
+            source.join("plugin.json"),
+            serde_json::to_vec(&manifest()).unwrap(),
+        )
+        .unwrap();
+        let package = PluginPackage {
+            root: source,
+            manifest: manifest(),
+        };
+        let installed = install_manifest_package(&package, &destination).unwrap();
+        assert_eq!(
+            load_manifest(installed.join("plugin.json")).unwrap(),
+            manifest()
+        );
+        assert!(install_manifest_package(&package, &destination).is_err());
         std::fs::remove_dir_all(root).unwrap();
     }
 
