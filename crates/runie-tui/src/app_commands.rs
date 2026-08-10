@@ -41,6 +41,7 @@ impl App {
             provider_registry: runie_core::provider_registry::ProviderRegistryActor::new(
                 runie_core::provider_registry::ProviderRegistryState::default(),
             ),
+            telemetry: runie_core::telemetry::TelemetryActor::new(),
             command_actor: runie_core::command_actor::CommandActor::new(),
             question_broker,
             approval_mode,
@@ -83,6 +84,7 @@ impl App {
             provider_registry: runie_core::provider_registry::ProviderRegistryActor::new(
                 runie_core::provider_registry::ProviderRegistryState::default(),
             ),
+            telemetry: runie_core::telemetry::TelemetryActor::new(),
             command_actor: runie_core::command_actor::CommandActor::new(),
             question_broker: runie_core::tools::UserQuestionBroker::default(),
             approval_mode: Default::default(),

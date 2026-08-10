@@ -225,7 +225,18 @@ impl App {
                     "rewind" => {
                         format!("Rewind request recorded ({})", state.rewind_requests.len())
                     }
-                    "usage" => format!("Usage requested ({})", state.usage_requests),
+                    "usage" => {
+                        let usage = runie_core::telemetry::usage_summary(&self.telemetry.snapshot());
+                        format!(
+                            "Usage requested ({})\nrequests: {}\ninput_tokens: {}\noutput_tokens: {}\ntotal_tokens: {}\ncost: {:.6}",
+                            state.usage_requests,
+                            usage.requests,
+                            usage.input_tokens,
+                            usage.output_tokens,
+                            usage.total_tokens,
+                            usage.cost
+                        )
+                    }
                     "effort" => format!(
                         "Reasoning effort: {}",
                         state.effort.as_deref().unwrap_or("unchanged")

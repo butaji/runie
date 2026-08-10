@@ -420,6 +420,7 @@ pub struct App {
     pub ui: UiActor,
     pub model_catalog: runie_core::model_catalog::ModelCatalogActor,
     pub provider_registry: runie_core::provider_registry::ProviderRegistryActor,
+    pub telemetry: runie_core::telemetry::TelemetryActor,
     pub command_actor: runie_core::command_actor::CommandActor,
     pub question_broker: runie_core::tools::UserQuestionBroker,
     pub approval_mode: runie_core::tools::ApprovalModeStore,

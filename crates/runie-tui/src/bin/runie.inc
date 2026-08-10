@@ -1401,6 +1401,7 @@ async fn build_live_app() -> App {
     let provider_registry = runie_core::provider_registry::ProviderRegistryActor::new(
         runie_core::provider_registry::ProviderRegistryState::default(),
     );
+    let telemetry = runie_core::telemetry::TelemetryActor::new();
     let fallback: std::sync::Arc<dyn StreamFn> =
         std::sync::Arc::new(MinimaxStream::from_environment(provider_registry.clone()));
     let websocket = std::sync::Arc::new(CodexWebSocketAdapter::production(Some(fallback.clone())));
@@ -1598,7 +1599,10 @@ async fn build_live_app() -> App {
         api_key_resolver: None,
         context_recovery,
         convert_to_llm: None,
-        stream_options: Default::default(),
+        stream_options: runie_core::types::SimpleStreamOptions {
+            telemetry: Some(telemetry.clone()),
+            ..Default::default()
+        },
         abort: None,
         tool_execution_mode: ToolExecutionMode::Parallel,
         steering_mode: QueueMode::OneAtATime,
@@ -1626,6 +1630,7 @@ async fn build_live_app() -> App {
         }
     }
     app.provider_registry = provider_registry;
+    app.telemetry = telemetry;
     app
 }
 

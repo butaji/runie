@@ -99,7 +99,7 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
 6. Session and Git interactive UX — `harness-12` and `harness-13`.
    Complete picker/history/conflict interactions over the existing actor-owned
    projections and inverse-safe event boundaries.
-7. IDE and noninteractive live boundaries — `harness-17` and `harness-18`.
+7. IDE and noninteractive live boundaries — `harness-17` and `harness-18`; telemetry is now wired as one actor-owned live projection into provider streams and `/usage`.
    Add owned socket/editor and terminal metadata adapters over the typed event
    protocols, with deterministic abort/error replay.
 8. Diagnostics and media completeness — `harness-16` and `harness-19`.
