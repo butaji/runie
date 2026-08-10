@@ -27,6 +27,9 @@ covering the TUI widget boundary through the public core replay helper.
 Prompt snapshots now have an explicit serde vocabulary and a checked-in YAML
 fixture, extending fixture-backed renderer-neutral data beyond status and paint
 documents.
+Grouped scrollback lifecycle events now have an explicit serde vocabulary and
+replay through the public YAML reducer helper in a checked-in TUI-model
+fixture, covering the actor-facing lifecycle boundary.
 
 Acceptance: representative core, feed, status, and TUI tests use the harness;
 no sleeps are introduced.

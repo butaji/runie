@@ -14,6 +14,24 @@ fn snapshot_facts_are_the_complete_navigation_facts_projection() {
 }
 
 #[test]
+fn lifecycle_yaml_trace_replays_through_the_feed_reducer() {
+    let state = runie_core::replay_yaml_state(
+        include_str!("../fixtures/scrollback-lifecycle.yaml"),
+        super::FeedState::default(),
+        |state, event: &super::ScrollbackLifecycleEvent| {
+            for message in super::ScrollbackEvent::Lifecycle(event.clone()).into_messages() {
+                state.reduce(message);
+            }
+        },
+    )
+    .expect("valid lifecycle fixture");
+
+    assert!(!state.snapshot().facts.turn_started);
+    assert!(!state.snapshot().facts.assistant_stream_open);
+    assert!(state.snapshot().lines.is_empty());
+}
+
+#[test]
 fn line_kind_prefix_pins_user_and_assistant_rails() {
     // Pin the user/assistant prefix shapes: the user gutter is
     // three columns wide, the assistant/reasoning rail is two

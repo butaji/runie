@@ -89,6 +89,8 @@ As of 2026-08-09, the reduction work has these verified results:
   test inventory, removing a split hand-written theme match.
 - Feed snapshot handoff now transfers the canonical `FeedFacts` aggregate as
   one immutable projection instead of copying synchronized fields.
+- Grouped scrollback lifecycle events now replay from a checked-in YAML
+  fixture through the public reducer harness.
 - Transcript-selectability is now a `LineKind` predicate shared by feed
   navigation, completing the central line-classification vocabulary.
 - Five numbered feed fragments covering tool-row lifecycle and selection are

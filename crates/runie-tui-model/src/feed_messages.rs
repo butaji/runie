@@ -127,7 +127,8 @@ pub enum ScrollbackEvent {
     Navigation(ScrollbackNavigationEvent),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ScrollbackLifecycleEvent { TurnStarted, TurnEnded, AssistantStarted, AssistantEnded, Cleared }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
