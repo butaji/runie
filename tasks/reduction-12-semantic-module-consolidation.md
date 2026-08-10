@@ -36,3 +36,5 @@ Workflow start/progress/end and transcript replacement are consolidated in
 `feed_workflow.rs`, preserving the same lifecycle transitions.
 Transcript and dense-tool navigation are consolidated in `feed_navigation.rs`,
 keeping selection transitions and group identity in one semantic module.
+Tool display-mode transitions and identity projection are consolidated in
+`feed_tool_display.rs`.
