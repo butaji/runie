@@ -14,7 +14,9 @@ mod executor_hooks;
 pub use executor_hooks::*;
 #[path = "scheduler_metrics.rs"]
 mod scheduler_metrics;
-pub use scheduler_metrics::{reduce_scheduler_event, SchedulerEvent, SchedulerMetrics};
+pub use scheduler_metrics::{
+    reduce_scheduler_event, SchedulerCancellationReason, SchedulerEvent, SchedulerMetrics,
+};
 
 #[derive(Clone)]
 pub struct AfterToolCallInputs {
@@ -42,6 +44,7 @@ pub struct DispatchOutcome {
     pub tool_results: Vec<ToolResultMessage>,
     pub all_terminated: bool,
     pub events: Vec<crate::types::AgentEvent>,
+    pub cancelled: bool,
 }
 pub async fn execute_sequential(calls: Vec<ToolCall>, ctx: ToolExecContext) -> DispatchOutcome {
     let mut outcome = DispatchOutcome::default();
@@ -73,7 +76,9 @@ pub async fn execute_sequential(calls: Vec<ToolCall>, ctx: ToolExecContext) -> D
                 matches!(e, crate::types::AgentEvent::ToolExecutionEnd { tool_call_id, result, .. }
                     if tool_call_id == &_tr.tool_call_id && result.get("terminate").and_then(|v| v.as_bool()).unwrap_or(false))
             })
-        });
+    });
+
+    outcome.cancelled = run_abort_requested(&ctx);
 
     outcome
 }
@@ -122,6 +127,7 @@ pub async fn execute_parallel(calls: Vec<ToolCall>, ctx: ToolExecContext) -> Dis
             combined.all_terminated &= outcome.all_terminated;
             combined.tool_results.extend(outcome.tool_results);
             combined.events.extend(outcome.events);
+            combined.cancelled |= outcome.cancelled;
         }
         return combined;
     }

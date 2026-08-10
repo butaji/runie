@@ -32,6 +32,7 @@ pub enum ToolOutcome {
         all_terminated: bool,
         events: Vec<crate::types::AgentEvent>,
         scheduler: SchedulerMetrics,
+        cancelled: bool,
     },
     /// Tool not found / preflight rejected.
     Aborted { reason: String },
@@ -215,6 +216,7 @@ fn aborted_outcome(calls: &[ToolCall], reason: &str) -> ToolOutcome {
         all_terminated: false,
         events,
         scheduler: SchedulerMetrics::default(),
+        cancelled: false,
     }
 }
 
@@ -239,23 +241,41 @@ async fn run_tool_worker(
         apply_scheduler(&mut scheduler, SchedulerEvent::Enqueued { interactive });
         apply_scheduler(&mut scheduler, SchedulerEvent::Started);
         let (reply, outcome) = run_tool_command(cmd, &registry, tool_result_timestamp).await;
-        let success = matches!(
+        let cancelled = matches!(
+            &outcome,
+            ToolOutcome::Completed {
+                cancelled: true,
+                ..
+            }
+        );
+        if cancelled {
+            apply_scheduler(
+                &mut scheduler,
+                SchedulerEvent::CancelledWithReason {
+                    reason: super::executor::SchedulerCancellationReason::Abort,
+                },
+            );
+        } else {
+            let success = matches!(
             &outcome,
             ToolOutcome::Completed { tool_results, .. }
                 if tool_results.iter().all(|result| !result.is_error)
-        );
-        apply_scheduler(&mut scheduler, SchedulerEvent::Finished { success });
+            );
+            apply_scheduler(&mut scheduler, SchedulerEvent::Finished { success });
+        }
         let outcome = match outcome {
             ToolOutcome::Completed {
                 tool_results,
                 all_terminated,
                 events,
+                cancelled: _cancelled,
                 ..
             } => ToolOutcome::Completed {
                 tool_results,
                 all_terminated,
                 events,
                 scheduler: scheduler.clone(),
+                cancelled: _cancelled,
             },
             aborted => aborted,
         };
@@ -307,6 +327,7 @@ async fn run_tool_command(
             all_terminated: outcome.all_terminated,
             events: outcome.events,
             scheduler: SchedulerMetrics::default(),
+            cancelled: outcome.cancelled,
         },
     )
 }
