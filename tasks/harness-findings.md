@@ -4,9 +4,9 @@ Ranked from the current Runie codebase and comparison with `../../kimi-code`.
 Status is `planned` until source, event tests, replay tests, and TUI smoke
 evidence prove the item.
 
-1. `harness-01-tools` — **in progress** — production Read, Write, Edit, Grep, Glob, and Bash tools.
-2. `harness-02-permissions` — actor-owned approval, path policy, auto, and YOLO modes.
-3. `harness-03-shell-lifecycle` — streamed output, cancellation, timeout, background tasks.
+1. `harness-01-tools` — **partial** — production Read, Write, Edit, Grep, Glob, and Bash tools are registered and tested; path security and richer output remain.
+2. `harness-02-permissions` — **partial** — pure Ask/Auto/YOLO policy blocks known mutating tools without an approval hook; interactive TUI approval remains.
+3. `harness-03-shell-lifecycle` — **partial** — Bash supports timeout/cancellation and captured output; streaming and background task actors remain.
 4. `harness-04-model-effort-ui` — atomic model/effort picker from model metadata.
 5. `harness-05-context` — automatic compaction, summaries, limits, and recovery.
 6. `harness-06-plan-todos` — constrained plan mode and persistent todo state.
