@@ -8,6 +8,10 @@ impl LoopActor {
         self.inner.deps.tool_executor.mcp_stdio_statuses()
     }
 
+    pub fn mcp_http_statuses(&self) -> Vec<crate::tools::McpHttpStatus> {
+        self.inner.deps.tool_executor.mcp_http_statuses()
+    }
+
     /// Project the next context-recovery operation without mutating any
     /// actor. Callers can route `Prepare` through the session owner and keep
     /// summarization in the provider owner.

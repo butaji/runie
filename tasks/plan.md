@@ -104,7 +104,8 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    `/mcps` projects it through the loop-owned executor, and registry-backed
    stdio calls reuse an actor-owned persistent session, and both stdio and HTTP
    actors expose ready/busy/failed/closed lifecycle projections; persistent HTTP
-   registry integration remains.
+   registry-backed stdio/HTTP sessions now reuse actor-owned transports; unified
+   HTTP lifecycle rows in `/mcps` remain.
 6. Session and Git interactive UX — `harness-12` and `harness-13`.
    Complete picker/history/conflict interactions over the existing actor-owned
    projections and inverse-safe event boundaries.
