@@ -42,7 +42,10 @@ pub enum ApprovalDecision {
 pub fn decide(mode: ApprovalMode, tool: &str) -> ApprovalDecision {
     if matches!(mode, ApprovalMode::Auto | ApprovalMode::Yolo)
         || matches!(tool, "read" | "grep" | "glob" | "list_dir" | "echo")
-        || !matches!(tool, "write" | "edit" | "bash" | "shell" | "exec" | "run")
+        || !matches!(
+            tool,
+            "write" | "edit" | "bash" | "shell" | "exec" | "run" | "git_commit"
+        )
     {
         ApprovalDecision::Allow
     } else if mode == ApprovalMode::Deny {

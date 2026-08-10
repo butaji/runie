@@ -10,7 +10,8 @@ git_tool_types!(
     GitDiffTool,
     GitReviewTool,
     GitWorktreeTool,
-    GitCommitPrepareTool
+    GitCommitPrepareTool,
+    GitCommitTool
 );
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -216,6 +217,59 @@ impl AgentTool for GitCommitPrepareTool {
     }
 }
 
+#[async_trait::async_trait]
+impl AgentTool for GitCommitTool {
+    fn name(&self) -> &str {
+        "git_commit"
+    }
+    fn label(&self) -> &str {
+        "Create Git commit"
+    }
+    fn description(&self) -> &str {
+        "Create a Git commit after approval allows this mutation."
+    }
+    fn parameters(&self) -> Option<serde_json::Value> {
+        Some(
+            serde_json::json!({"type":"object","properties":{"message":{"type":"string","minLength":1}},"required":["message"]}),
+        )
+    }
+    fn validate_arguments(&self, args: &serde_json::Value) -> Result<(), String> {
+        let request: GitCommitPrepareRequest = serde_json::from_value(args.clone())
+            .map_err(|error| format!("invalid Git commit: {error}"))?;
+        if request.message.trim().is_empty() {
+            return Err("commit message must not be empty".into());
+        }
+        if request
+            .message
+            .lines()
+            .next()
+            .unwrap_or_default()
+            .chars()
+            .count()
+            > 72
+        {
+            return Err("commit subject must be at most 72 characters".into());
+        }
+        Ok(())
+    }
+    async fn execute(
+        &self,
+        _: &str,
+        args: serde_json::Value,
+        signal: Option<tokio_util::sync::CancellationToken>,
+        _: Option<Box<dyn Fn(serde_json::Value) + Send + Sync>>,
+    ) -> Result<AgentToolResult, String> {
+        self.validate_arguments(&args)?;
+        let request: GitCommitPrepareRequest =
+            serde_json::from_value(args).map_err(|error| error.to_string())?;
+        let output = git_result(&["commit", "-m", &request.message], signal).await?;
+        Ok(AgentToolResult {
+            details: serde_json::json!({"message": request.message, "mutated": true, "output": output.details}),
+            ..output
+        })
+    }
+}
+
 async fn git_result(
     args: &[&str],
     signal: Option<tokio_util::sync::CancellationToken>,
@@ -312,6 +366,16 @@ mod tests {
             .is_err());
         assert!(tool
             .validate_arguments(&serde_json::json!({"message":"x".repeat(73)}))
+            .is_err());
+    }
+    #[test]
+    fn commit_tool_shares_strict_message_validation() {
+        let tool = GitCommitTool;
+        assert!(tool
+            .validate_arguments(&serde_json::json!({"message":"Ship change"}))
+            .is_ok());
+        assert!(tool
+            .validate_arguments(&serde_json::json!({"message":" "}))
             .is_err());
     }
 }

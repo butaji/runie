@@ -38,7 +38,7 @@ use runie_core::state::AgentStateActor;
 use runie_core::tools::executor::ToolExecHooks;
 use runie_core::tools::ToolExecutorActor;
 use runie_core::tools::ToolRegistry;
-use runie_core::tools::{ApprovalMode, AskUserQuestionTool, BackgroundCancelTool, BackgroundJobsTool, BackgroundShellTool, BashTool, EditFileTool, GitCommitPrepareTool, GitDiffTool, GitReviewTool, GitStatusTool, GitWorktreeTool, GlobTool, GrepTool, ReadFileTool, SubagentTool, TodoWriteTool, WebSearchHttpClient, WebSearchTool, WriteFileTool};
+use runie_core::tools::{ApprovalMode, AskUserQuestionTool, BackgroundCancelTool, BackgroundJobsTool, BackgroundShellTool, BashTool, EditFileTool, GitCommitPrepareTool, GitCommitTool, GitDiffTool, GitReviewTool, GitStatusTool, GitWorktreeTool, GlobTool, GrepTool, ReadFileTool, SubagentTool, TodoWriteTool, WebSearchHttpClient, WebSearchTool, WriteFileTool};
 use runie_core::types::{
     AgentContext, AgentTool, AgentToolResult, AssistantMessage, AssistantMessageEvent, Model,
     QueueMode, SimpleStreamOptions, StopReason, ThemeKind, ToolCall, ToolExecutionMode,
@@ -1264,6 +1264,7 @@ async fn build_live_app() -> App {
         ,GitReviewTool
         ,GitWorktreeTool
         ,GitCommitPrepareTool
+        ,GitCommitTool
     );
     tools.register(std::sync::Arc::new(ListDirectoryTool));
     if std::env::var("MINIMAX_ENABLE_ECHO_TOOL").is_ok_and(|value| value == "1") {
