@@ -45,6 +45,14 @@ impl McpNotificationQueue {
     pub fn pop(&mut self) -> Option<serde_json::Value> {
         self.pending.pop_front()
     }
+
+    pub fn terminal_lines(&self) -> Vec<String> {
+        vec![
+            format!("pending: {}", self.pending.len()),
+            format!("capacity: {}", self.capacity),
+            format!("dropped: {}", self.dropped),
+        ]
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -316,5 +324,17 @@ mod tests {
         assert_eq!(queue.pop().unwrap()["n"], 2);
         assert!(queue.pop().is_none());
         assert_eq!(serde_json::to_value(&queue).unwrap()["capacity"], 2);
+    }
+
+    #[test]
+    fn notification_queue_projects_stable_backpressure_rows() {
+        let mut queue = McpNotificationQueue::new(2);
+        queue.push(serde_json::json!({"n": 1}));
+        queue.push(serde_json::json!({"n": 2}));
+        queue.push(serde_json::json!({"n": 3}));
+        assert_eq!(
+            queue.terminal_lines(),
+            vec!["pending: 2", "capacity: 2", "dropped: 1"]
+        );
     }
 }
