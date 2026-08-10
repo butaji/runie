@@ -53,6 +53,7 @@ pub(super) fn ui_command_for(state: &UiState, message: &UiMsg) -> Option<UiComma
         | UiMsg::SetModelSelectorResultCount(_)
         | UiMsg::SetModelSelectorRows(_)
         | UiMsg::SetSkillRows(_)
+        | UiMsg::SetPaletteParameterOptions(_)
         | UiMsg::ShowCommandResult(_)
         | UiMsg::ToggleSessionInfo
         | UiMsg::ToggleChangelog
@@ -75,7 +76,8 @@ fn question_command(state: &UiState) -> Option<UiCommand> {
 
 fn parameter_command(state: &UiState) -> Option<UiCommand> {
     let action = state.palette_parameter_action.as_ref()?;
-    let query = state.dialog_stack.top()?.query.trim();
+    let frame = state.dialog_stack.top()?;
+    let query = frame.query.trim();
     if *action == PaletteAction::SelectTheme {
         let value = if query.is_empty() {
             runie_tui_model::theme_labels()
@@ -85,6 +87,14 @@ fn parameter_command(state: &UiState) -> Option<UiCommand> {
             query
         };
         return Some(UiCommand::SelectTheme(value.to_owned()));
+    }
+    if *action == PaletteAction::SetEffort && query.is_empty() {
+        return Some(UiCommand::ExecuteMappable(
+            runie_core::commands::MappableBuiltinCommand::Extended {
+                name: "effort".into(),
+                args: state.palette_parameter_options.get(frame.selected)?.clone(),
+            },
+        ));
     }
     if *action == PaletteAction::ManageProviders {
         return Some(UiCommand::ProviderAction {

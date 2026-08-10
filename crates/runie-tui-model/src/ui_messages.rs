@@ -42,6 +42,7 @@ pub enum UiMsg {
     SetModelSelectorResultCount(usize),
     SetModelSelectorRows(Vec<String>),
     SetSkillRows(Vec<String>),
+    SetPaletteParameterOptions(Vec<String>),
     ShowCommandResult(String),
     ToggleSessionInfo,
     ToggleChangelog,

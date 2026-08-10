@@ -987,6 +987,8 @@ fn render_palette_parameters(
     let Some(action) = ui.palette_parameter_action.as_ref() else { return };
     let rows = if *action == PaletteAction::SelectTheme {
         theme_rows()
+    } else if *action == PaletteAction::SetEffort {
+        ui.palette_parameter_options.clone()
     } else {
         vec![format!("{} · {}", action.slash_command(), action.parameter_hint())]
     };

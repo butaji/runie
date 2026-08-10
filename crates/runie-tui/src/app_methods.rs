@@ -178,9 +178,7 @@ impl App {
         self.loop_actor.set_model(selected.clone()).await;
         self.ui.send(UiMsg::ActivateModelSelector).await;
         if Self::model_has_declared_effort(&selected) {
-            self.ui
-                .send(UiMsg::OpenPaletteParameters(PaletteAction::SetEffort))
-                .await;
+            self.open_effort_picker(&selected).await;
         }
         Some(selected)
     }

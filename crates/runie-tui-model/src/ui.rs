@@ -128,6 +128,7 @@ pub struct UiState {
     pub changelog_open: bool,
     pub dialog_stack: DialogStack,
     pub palette_parameter_action: Option<PaletteAction>,
+    pub palette_parameter_options: Vec<String>,
     pub command_result: Option<String>,
     pub user_question: Option<runie_core::tools::PendingUserQuestion>,
 }
@@ -262,6 +263,7 @@ impl UiState {
                     .min(self.model_selector_result_count.saturating_sub(1));
             }
             UiMsg::SetSkillRows(rows) => self.skill_rows = rows,
+            UiMsg::SetPaletteParameterOptions(options) => self.palette_parameter_options = options,
             UiMsg::ShowCommandResult(result) => {
                 self.command_result = Some(result);
                 self.dialog_stack.push(COMMAND_RESULT_DIALOG);
@@ -295,7 +297,11 @@ impl UiState {
                 frame.query.pop();
             }
             UiMsg::PaletteParameterMove(delta) => {
-                let count = crate::theme_labels().len();
+                let count = if self.palette_parameter_options.is_empty() {
+                    crate::theme_labels().len()
+                } else {
+                    self.palette_parameter_options.len()
+                };
                 frame.selected = crate::wrap_dialog_selection(frame.selected, delta, count);
             }
             _ => return None,
@@ -473,7 +479,6 @@ impl UiState {
         self.model_selector_scoped_only = !self.model_selector_scoped_only;
         self.model_selector_index = 0;
     }
-
     fn activate_model_selector(&mut self) {
         self.model_selector_open = false;
         self.model_selector_query.clear();
@@ -489,9 +494,7 @@ impl UiState {
         }
     }
 }
-
 include!("ui_palette.rs");
-
 #[cfg(test)]
 #[path = "ui_tests.rs"]
 mod dialog_palette_tests;
