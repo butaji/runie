@@ -55,7 +55,7 @@ pub use entrypoint::{
     DEFAULT_PLUGIN_TIMEOUT_MS, MAX_PLUGIN_ARGUMENTS, MAX_PLUGIN_OUTPUT_BYTES,
 };
 pub use host::{capability_entrypoint, PluginCapabilityKind, PluginHost};
-pub use tool::{plugin_tool, register_plugin_tool, PluginTool};
+pub use tool::{plugin_tool, register_plugin_manifest_tools, register_plugin_tool, PluginTool};
 pub fn load_manifest(path: impl AsRef<Path>) -> Result<PluginManifest, String> {
     let path = path.as_ref();
     let input = std::fs::read_to_string(path)

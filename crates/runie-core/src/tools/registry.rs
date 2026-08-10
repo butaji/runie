@@ -86,7 +86,9 @@ impl ToolRegistry {
     }
 
     pub fn names(&self) -> Vec<String> {
-        self.tools.keys().cloned().collect()
+        let mut names: Vec<_> = self.tools.keys().cloned().collect();
+        names.sort();
+        names
     }
 
     pub fn tools(&self) -> Vec<Arc<dyn AgentTool>> {
