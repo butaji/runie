@@ -82,22 +82,26 @@ enum TodoMessage {
 pub struct TodoActor {
     tx: mpsc::Sender<TodoMessage>,
     snapshot: watch::Receiver<TodoSnapshot>,
+    shared_snapshot: watch::Receiver<crate::SharedSnapshot<TodoSnapshot>>,
     _owner: Arc<TaskOwner>,
 }
 
 impl Default for TodoActor {
     fn default() -> Self {
-        let (snapshot_tx, snapshot) = watch::channel(TodoSnapshot { items: Vec::new() });
+        let initial = TodoSnapshot { items: Vec::new() };
+        let (snapshot_tx, snapshot) = watch::channel(initial.clone());
+        let (shared_tx, shared_snapshot) = watch::channel(crate::SharedSnapshot::new(initial));
         let (tx, owner) =
             spawn_actor_worker!(32, move |mut rx: mpsc::Receiver<TodoMessage>| async move {
                 while let Some(TodoMessage::Replace { snapshot, reply }) = rx.recv().await {
-                    let _ = snapshot_tx.send(snapshot.clone());
+                    crate::publish_shared_snapshot(&snapshot_tx, &shared_tx, snapshot.clone());
                     let _ = reply.send(Ok(snapshot));
                 }
             });
         Self {
             tx,
             snapshot,
+            shared_snapshot,
             _owner: owner,
         }
     }
@@ -117,6 +121,14 @@ impl TodoActor {
     }
     pub fn snapshot(&self) -> TodoSnapshot {
         self.snapshot.borrow().clone()
+    }
+
+    pub fn shared_snapshot(&self) -> crate::SharedSnapshot<TodoSnapshot> {
+        self.shared_snapshot.borrow().clone()
+    }
+
+    pub fn shared_subscribe(&self) -> watch::Receiver<crate::SharedSnapshot<TodoSnapshot>> {
+        self.shared_snapshot.clone()
     }
 
     pub fn summary(&self) -> TodoPlanSummary {
@@ -279,6 +291,8 @@ mod tests {
         };
         assert_eq!(actor.replace(snapshot.clone()).await.unwrap(), snapshot);
         assert_eq!(actor.snapshot(), snapshot);
+        assert_eq!(actor.shared_snapshot().get(), &snapshot);
+        assert_eq!(actor.shared_snapshot().strong_count(), 2);
         assert_eq!(actor.summary().status, TodoPlanStatus::InProgress);
         assert_eq!(
             actor.snapshot().terminal_lines(),

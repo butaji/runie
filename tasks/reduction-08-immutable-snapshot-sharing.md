@@ -47,3 +47,6 @@ channel; all existing worker publication sites retain the same reducer shape.
 `AgentStateActor` now publishes the same immutable shared projection alongside
 its compatibility channel, covering the core agent-state boundary without
 duplicating event reduction logic.
+`TodoActor` now publishes an immutable shared todo projection alongside its
+owned compatibility snapshot, keeping validation and replacement reduction
+unchanged.
