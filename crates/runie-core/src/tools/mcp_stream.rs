@@ -34,6 +34,14 @@ pub struct McpNotificationQueue {
     pub dropped: usize,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum McpBackpressureStatus {
+    Clear,
+    Saturated,
+    Dropping,
+}
+
 impl McpNotificationQueue {
     pub fn new(capacity: usize) -> Self {
         Self {
@@ -55,11 +63,22 @@ impl McpNotificationQueue {
         self.pending.pop_front()
     }
 
+    pub fn backpressure(&self) -> McpBackpressureStatus {
+        if self.dropped > 0 {
+            McpBackpressureStatus::Dropping
+        } else if self.capacity > 0 && self.pending.len() >= self.capacity {
+            McpBackpressureStatus::Saturated
+        } else {
+            McpBackpressureStatus::Clear
+        }
+    }
+
     pub fn terminal_lines(&self) -> Vec<String> {
         vec![
             format!("pending: {}", self.pending.len()),
             format!("capacity: {}", self.capacity),
             format!("dropped: {}", self.dropped),
+            format!("backpressure: {:?}", self.backpressure()),
         ]
     }
 }
@@ -347,7 +366,21 @@ mod tests {
         queue.push(serde_json::json!({"n": 3}));
         assert_eq!(
             queue.terminal_lines(),
-            vec!["pending: 2", "capacity: 2", "dropped: 1"]
+            vec![
+                "pending: 2",
+                "capacity: 2",
+                "dropped: 1",
+                "backpressure: Dropping"
+            ]
         );
+    }
+
+    #[test]
+    fn notification_queue_distinguishes_saturation_before_drops() {
+        let mut queue = McpNotificationQueue::new(1);
+        queue.push(serde_json::json!({"n": 1}));
+        assert_eq!(queue.backpressure(), McpBackpressureStatus::Saturated);
+        queue.push(serde_json::json!({"n": 2}));
+        assert_eq!(queue.backpressure(), McpBackpressureStatus::Dropping);
     }
 }
