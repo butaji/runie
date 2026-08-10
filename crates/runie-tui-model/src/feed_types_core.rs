@@ -116,6 +116,10 @@ impl LineKind {
         matches!(self, Self::Tool | Self::ToolRunning)
     }
 
+    pub const fn is_selectable_transcript(self) -> bool {
+        matches!(self, Self::User | Self::Assistant | Self::Reasoning)
+    }
+
     pub const fn is_tool_line(self) -> bool {
         self.is_tool_header() || matches!(self, Self::ToolOutput | Self::ToolResult)
     }

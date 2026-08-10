@@ -10,7 +10,7 @@ impl FeedState {
                         .tool_call_id
                         .as_ref()
                         .is_none_or(|_| seen.insert(tool_member_key(&self.lines, index))),
-                    LineKind::User | LineKind::Assistant | LineKind::Reasoning => true,
+                    kind if kind.is_selectable_transcript() => true,
                     _ => false,
                 };
                 selectable.then_some(index)

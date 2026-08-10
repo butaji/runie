@@ -85,6 +85,8 @@ As of 2026-08-09, the reduction work has these verified results:
   settled error rows.
 - Activity-tool aliases now come from one grouped typed macro, keeping the
   classifier as a data declaration while preserving all existing aliases.
+- Transcript-selectability is now a `LineKind` predicate shared by feed
+  navigation, completing the central line-classification vocabulary.
 - `component_specs!` generates the declarative component ownership table.
 - `event_trace!` reduces pure replay-test boilerplate.
 - `cargo test --workspace --quiet` passes across the current workspace.

@@ -56,6 +56,9 @@ fn line_kind_tool_predicates_share_the_declared_vocabulary() {
     assert!(LineKind::Tool.is_live_tool_header());
     assert!(LineKind::ToolRunning.is_live_tool_header());
     assert!(!LineKind::ToolError.is_live_tool_header());
+    assert!(LineKind::User.is_selectable_transcript());
+    assert!(LineKind::Assistant.is_selectable_transcript());
+    assert!(!LineKind::System.is_selectable_transcript());
     assert!(!LineKind::Assistant.is_tool_line());
 }
 

@@ -45,6 +45,8 @@ so feed update, selection, error, and rendering paths share one vocabulary.
 Live-header classification (`Tool`/`ToolRunning`) is also centralized, keeping
 settled errors distinct while removing repeated matches from tool-card and
 selection projections.
+Transcript-selectability is also a `LineKind` predicate, so navigation does
+not maintain a separate classification table.
 
 Acceptance: snapshot parity, replay parity, and no stale derived index after
 insert/update/remove sequences.
