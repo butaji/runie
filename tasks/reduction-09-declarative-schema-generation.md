@@ -53,3 +53,5 @@ Semantic theme tokens and their stable Opaline names now share one typed
 macro-backed table, keeping renderer vocabulary data-shaped.
 Stop-reason telemetry and display labels now share one typed table while
 retaining their intentional `tool_use` versus `toolUse` representations.
+Operation-record kinds now also generate both wire-name encoding and
+compatibility decoding from one typed table.

@@ -324,35 +324,36 @@ pub enum OperationRecordKind {
 }
 
 impl OperationRecordKind {
-    pub const fn wire_name(self) -> &'static str {
-        match self {
-            Self::OperationStarted => "operation_started",
-            Self::AbortRequested => "abort_requested",
-            Self::OperationFinished => "operation_finished",
-            Self::StepAttempt => "step_attempt",
-            Self::ToolStarted => "tool_started",
-            Self::QueueEnqueued => "queue_enqueued",
-            Self::QueueCancelled => "queue_cancelled",
-            Self::WriteDeferred => "write_deferred",
-            Self::Usage => "usage",
-        }
-    }
-
     /// Decode a Pi wire record name at the compatibility edge. Producers and
     /// internal events should use the closed enum; unknown names remain
     /// available to the lossless legacy record path.
     pub fn from_wire_name(name: &str) -> Option<Self> {
-        match name {
-            "operation_started" => Some(Self::OperationStarted),
-            "abort_requested" => Some(Self::AbortRequested),
-            "operation_finished" => Some(Self::OperationFinished),
-            "step_attempt" => Some(Self::StepAttempt),
-            "tool_started" => Some(Self::ToolStarted),
-            "queue_enqueued" => Some(Self::QueueEnqueued),
-            "queue_cancelled" => Some(Self::QueueCancelled),
-            "write_deferred" => Some(Self::WriteDeferred),
-            "usage" => Some(Self::Usage),
-            _ => None,
-        }
+        operation_record_kind_from_wire(name)
     }
+}
+
+macro_rules! operation_record_kinds {
+    ($(($kind:ident, $wire_name:literal)),+ $(,)?) => {
+        impl OperationRecordKind {
+            pub const fn wire_name(self) -> &'static str {
+                match self { $(Self::$kind => $wire_name,)+ }
+            }
+        }
+
+        fn operation_record_kind_from_wire(name: &str) -> Option<OperationRecordKind> {
+            Some(match name { $($wire_name => OperationRecordKind::$kind,)+ _ => return None })
+        }
+    };
+}
+
+operation_record_kinds! {
+    (OperationStarted, "operation_started"),
+    (AbortRequested, "abort_requested"),
+    (OperationFinished, "operation_finished"),
+    (StepAttempt, "step_attempt"),
+    (ToolStarted, "tool_started"),
+    (QueueEnqueued, "queue_enqueued"),
+    (QueueCancelled, "queue_cancelled"),
+    (WriteDeferred, "write_deferred"),
+    (Usage, "usage"),
 }
