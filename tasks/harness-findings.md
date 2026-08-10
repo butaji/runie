@@ -6,7 +6,7 @@ evidence prove the item.
 
 1. `harness-01-tools` — **partial** — production Read, Write, Edit, Grep, Glob, and Bash tools are registered and tested; centralized traversal/sensitive-path policy and structured read/search metadata are covered, while richer output and background lifecycle remain.
 2. `harness-02-permissions` — **partial** — pure Ask/Auto/YOLO/Deny policy now routes live mutating tools through either the owned question dialog or an explicit block; approval commands project into the live mode store; a YAML decision matrix is replayed, while UI cancellation traces remain.
-3. `harness-03-shell-lifecycle` — **partial** — Bash now streams stdout/stderr chunks and typed `background_bash`, `background_jobs`, and `background_cancel` cover the owned job lifecycle; TUI controls/output cards remain.
+3. `harness-03-shell-lifecycle` — **partial** — Bash now streams stdout/stderr chunks and typed `background_bash`, `background_jobs`, and `background_cancel` cover the owned job lifecycle; background snapshots now bound combined output and preserve failure status/output; TUI controls/output cards remain.
 4. `harness-04-model-effort-ui` — **partial** — model metadata now supplies finite effort rows and selection, with YAML replay coverage proving unsupported levels are excluded; provider-specific wire display remains.
 5. `harness-05-context` — automatic compaction, summaries, limits, and recovery.
 6. `harness-06-plan-todos` — **partial** — replayable validated `todo_write` snapshots now reduce through an owned `TodoActor`; plan enforcement remains.

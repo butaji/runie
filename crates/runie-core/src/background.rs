@@ -6,6 +6,9 @@ use std::{collections::BTreeMap, sync::Arc};
 use tokio::sync::{mpsc, oneshot, watch};
 use tokio::task::JoinSet;
 
+pub const BACKGROUND_OUTPUT_MAX_BYTES: usize = 100 * 1024;
+const OUTPUT_TRUNCATION_MARKER: &str = "\n[output truncated]";
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BackgroundStatus {
     Running,
@@ -171,6 +174,7 @@ async fn run_command(id: String, command: String) -> (String, Result<String, Str
                 String::from_utf8_lossy(&output.stdout),
                 String::from_utf8_lossy(&output.stderr)
             );
+            let text = bounded_output(text);
             if output.status.success() {
                 Ok(text)
             } else {
@@ -178,6 +182,16 @@ async fn run_command(id: String, command: String) -> (String, Result<String, Str
             }
         });
     (id, result)
+}
+
+fn bounded_output(mut output: String) -> String {
+    if output.len() <= BACKGROUND_OUTPUT_MAX_BYTES {
+        return output;
+    }
+    let keep = BACKGROUND_OUTPUT_MAX_BYTES.saturating_sub(OUTPUT_TRUNCATION_MARKER.len());
+    output.truncate(keep);
+    output.push_str(OUTPUT_TRUNCATION_MARKER);
+    output
 }
 
 #[cfg(test)]
@@ -191,6 +205,28 @@ mod tests {
             if let Some(job) = actor.snapshot().into_iter().find(|job| job.id == id) {
                 if job.status == BackgroundStatus::Completed {
                     assert_eq!(job.output, "done");
+                    break;
+                }
+            }
+            tokio::task::yield_now().await;
+        }
+    }
+
+    #[test]
+    fn output_projection_is_bounded_and_marks_truncation() {
+        let output = bounded_output("x".repeat(BACKGROUND_OUTPUT_MAX_BYTES + 1));
+        assert!(output.len() <= BACKGROUND_OUTPUT_MAX_BYTES);
+        assert!(output.ends_with(OUTPUT_TRUNCATION_MARKER));
+    }
+
+    #[tokio::test]
+    async fn failed_jobs_preserve_failure_output_and_status() {
+        let actor = BackgroundProcessActor::new();
+        let id = actor.start("printf failed >&2; exit 3").await.unwrap();
+        loop {
+            if let Some(job) = actor.snapshot().into_iter().find(|job| job.id == id) {
+                if job.status == BackgroundStatus::Failed {
+                    assert_eq!(job.output, "failed");
                     break;
                 }
             }
