@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::types::{AgentTool, ToolExecutionMode};
+use crate::types::{AgentTool, Model, ToolExecutionMode};
 
 pub struct ToolRegistry {
     tools: HashMap<String, Arc<dyn AgentTool>>,
@@ -92,6 +92,17 @@ impl ToolRegistry {
     pub fn tools(&self) -> Vec<Arc<dyn AgentTool>> {
         self.tools.values().cloned().collect()
     }
+
+    pub fn tools_for_model(&self, model: &Model) -> Vec<Arc<dyn AgentTool>> {
+        self.tools
+            .values()
+            .filter(|tool| {
+                tool.required_input()
+                    .is_none_or(|kind| model.supports_input(kind))
+            })
+            .cloned()
+            .collect()
+    }
 }
 
 #[cfg(test)]
@@ -99,7 +110,9 @@ mod tests {
     use super::*;
     use crate::types::{AgentToolResult, ToolResultContent};
 
-    struct EchoTool;
+    struct EchoTool {
+        required: Option<crate::types::InputKind>,
+    }
     #[async_trait::async_trait]
     impl AgentTool for EchoTool {
         fn name(&self) -> &str {
@@ -110,6 +123,9 @@ mod tests {
         }
         fn description(&self) -> &str {
             "Echoes input."
+        }
+        fn required_input(&self) -> Option<crate::types::InputKind> {
+            self.required
         }
         async fn execute(
             &self,
@@ -133,7 +149,7 @@ mod tests {
     #[test]
     fn register_and_lookup() {
         let mut r = ToolRegistry::new();
-        r.register(Arc::new(EchoTool));
+        r.register(Arc::new(EchoTool { required: None }));
         assert!(r.lookup("echo").is_some());
         assert_eq!(r.len(), 1);
         assert_eq!(r.execution_mode("echo"), None);
@@ -154,6 +170,24 @@ mod tests {
             Arc::new(|_| Box::pin(async { Ok(serde_json::json!({})) }));
         assert_eq!(registry.register_mcp_server(server, hook).unwrap(), 1);
         assert!(registry.lookup("mcp__files__list").is_some());
+    }
+
+    #[test]
+    fn model_tool_projection_filters_required_modalities() {
+        let mut registry = ToolRegistry::new();
+        registry.register(Arc::new(EchoTool {
+            required: Some(crate::types::InputKind::Image),
+        }));
+        let text_model = Model::default();
+        let image_model = Model {
+            input: vec![
+                crate::types::InputKind::Text,
+                crate::types::InputKind::Image,
+            ],
+            ..Model::default()
+        };
+        assert!(registry.tools_for_model(&text_model).is_empty());
+        assert_eq!(registry.tools_for_model(&image_model).len(), 1);
     }
 
     #[tokio::test]

@@ -207,6 +207,10 @@ pub trait AgentTool: Send + Sync + 'static {
     fn resource_key(&self, _args: &serde_json::Value) -> Option<String> {
         None
     }
+    /// Optional input modality required before exposing this tool to a model.
+    fn required_input(&self) -> Option<crate::types::InputKind> {
+        None
+    }
     /// Execute the tool. Throw on failure (return Err); the agent surfaces
     /// errors as `is_error: true` toolResult messages.
     async fn execute(
