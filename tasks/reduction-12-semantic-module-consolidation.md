@@ -43,6 +43,9 @@ Provider effort mapping now lives in semantic `types_thinking.rs`, the
 provider effort matrix has its own fixture module, and MCP HTTP registration
 is split into discovery/request/call-hook helpers. Older actor, MCP, and feed
 modules remain queued for consolidation.
+The persistent stdio MCP actor now delegates its mailbox lifecycle to an
+owned worker function and a small call reducer, keeping construction separate
+from async transport state transitions.
 Logical range and terminal-cell selection transitions are consolidated in
 `feed_selection.rs`.
 Local transcript line mutations are consolidated in `feed_line_ops.rs`.

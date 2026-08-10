@@ -226,54 +226,10 @@ impl McpStdioActor {
     fn new_with_persistence(client: McpStdioClient, persistent: bool) -> Self {
         let (status_tx, status) = tokio::sync::watch::channel(McpStdioStatus::Ready);
         let (tx, owner) =
-            crate::spawn_actor_worker!(32, move |mut rx: tokio::sync::mpsc::Receiver<
+            crate::spawn_actor_worker!(32, move |rx: tokio::sync::mpsc::Receiver<
                 McpStdioCommand,
             >| async move {
-                let mut session = None;
-                while let Some(command) = rx.recv().await {
-                    match command {
-                        McpStdioCommand::Call {
-                            tool,
-                            arguments,
-                            reply,
-                        } => {
-                            let _ = status_tx.send(McpStdioStatus::Busy);
-                            let result = if persistent {
-                                if session.is_none() {
-                                    match McpStdioSession::connect(&client).await {
-                                        Ok(value) => session = Some(value),
-                                        Err(error) => {
-                                            let _ = status_tx.send(McpStdioStatus::Failed);
-                                            let _ = reply.send(Err(error));
-                                            continue;
-                                        }
-                                    }
-                                }
-                                session
-                                    .as_mut()
-                                    .expect("persistent MCP session")
-                                    .call_tool(&tool, arguments)
-                                    .await
-                            } else {
-                                client.call_tool(&tool, arguments).await
-                            };
-                            let _ = status_tx.send(if result.is_ok() {
-                                McpStdioStatus::Ready
-                            } else {
-                                McpStdioStatus::Failed
-                            });
-                            let _ = reply.send(result);
-                        }
-                        McpStdioCommand::Close { reply } => {
-                            let _ = status_tx.send(McpStdioStatus::Closed);
-                            let _ = reply.send(());
-                            if let Some(session) = session.take() {
-                                let _ = session.close().await;
-                            }
-                            break;
-                        }
-                    }
-                }
+                run_stdio_worker(rx, client, persistent, status_tx).await
             });
         Self {
             tx,
@@ -319,6 +275,76 @@ impl McpStdioActor {
             .await
             .map_err(|_| "MCP stdio actor close response was dropped".to_owned())
     }
+}
+
+async fn run_stdio_worker(
+    mut rx: tokio::sync::mpsc::Receiver<McpStdioCommand>,
+    client: McpStdioClient,
+    persistent: bool,
+    status_tx: tokio::sync::watch::Sender<McpStdioStatus>,
+) {
+    let mut session = None;
+    while let Some(command) = rx.recv().await {
+        match command {
+            McpStdioCommand::Call {
+                tool,
+                arguments,
+                reply,
+            } => {
+                let _ = status_tx.send(McpStdioStatus::Busy);
+                let result = call_stdio(
+                    &client,
+                    &mut session,
+                    persistent,
+                    &tool,
+                    arguments,
+                    &status_tx,
+                )
+                .await;
+                let _ = status_tx.send(if result.is_ok() {
+                    McpStdioStatus::Ready
+                } else {
+                    McpStdioStatus::Failed
+                });
+                let _ = reply.send(result);
+            }
+            McpStdioCommand::Close { reply } => {
+                let _ = status_tx.send(McpStdioStatus::Closed);
+                let _ = reply.send(());
+                if let Some(session) = session.take() {
+                    let _ = session.close().await;
+                }
+                break;
+            }
+        }
+    }
+}
+
+async fn call_stdio(
+    client: &McpStdioClient,
+    session: &mut Option<McpStdioSession>,
+    persistent: bool,
+    tool: &str,
+    arguments: serde_json::Value,
+    status_tx: &tokio::sync::watch::Sender<McpStdioStatus>,
+) -> Result<serde_json::Value, String> {
+    if !persistent {
+        return client.call_tool(tool, arguments).await;
+    }
+    if session.is_none() {
+        match McpStdioSession::connect(client).await {
+            Ok(value) => *session = Some(value),
+            Err(error) => {
+                let _ = status_tx.send(McpStdioStatus::Failed);
+                return Err(error);
+            }
+        }
+    }
+    session
+        .as_mut()
+        .expect("persistent MCP session")
+        .call_tool(tool, arguments)
+        .await
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
