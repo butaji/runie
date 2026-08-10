@@ -61,5 +61,19 @@
       ]
     }
   ],
-  "historicalTasksConsolidated": true
+  "historicalTasksConsolidated": true,
+  "harnessBacklog": {
+    "document": "tasks/harness-findings.md",
+    "status": "in_progress",
+    "tddRule": "Add event/replay tests before production behavior; finish with workspace and TUI smoke verification.",
+    "items": [
+      "harness-01-tools", "harness-02-permissions", "harness-03-shell-lifecycle",
+      "harness-04-model-effort-ui", "harness-05-context", "harness-06-plan-todos",
+      "harness-07-subagents", "harness-08-tool-scheduler", "harness-09-web",
+      "harness-10-mcp", "harness-11-plugins", "harness-12-git",
+      "harness-13-sessions", "harness-14-provider-contract", "harness-15-user-questions",
+      "harness-16-media", "harness-17-ide", "harness-18-noninteractive",
+      "harness-19-diagnostics", "harness-20-tui-polish"
+    ]
+  }
 }

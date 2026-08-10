@@ -37,6 +37,7 @@ use runie_core::state::AgentStateActor;
 use runie_core::tools::executor::ToolExecHooks;
 use runie_core::tools::ToolExecutorActor;
 use runie_core::tools::ToolRegistry;
+use runie_core::tools::ReadFileTool;
 use runie_core::types::{
     AgentContext, AgentTool, AgentToolResult, AssistantMessage, AssistantMessageEvent, Model,
     QueueMode, SimpleStreamOptions, StopReason, ThemeKind, ToolCall, ToolExecutionMode,
@@ -1213,6 +1214,7 @@ async fn build_live_app() -> App {
     let steering = SteeringQueueActor::new();
     let follow_up = FollowUpQueueActor::new();
     let mut tools = ToolRegistry::new();
+    tools.register(std::sync::Arc::new(ReadFileTool));
     tools.register(std::sync::Arc::new(ListDirectoryTool));
     if std::env::var("MINIMAX_ENABLE_ECHO_TOOL").is_ok_and(|value| value == "1") {
         tools.register(std::sync::Arc::new(MinimaxEchoTool));

@@ -124,3 +124,10 @@ The reduction implementation is intentionally still open: normalized feed
 records, shared snapshot allocation measurement, YAML trace integration, full
 paint-adapter migration, and final semantic consolidation remain tracked as
 partial work in their individual task files.
+
+## Coding harness backlog
+
+The complete coding-agent feature comparison is tracked in
+[`tasks/harness-findings.md`](harness-findings.md). It deliberately separates
+existing Runie foundations from missing production capabilities and ranks the
+work by user impact.
