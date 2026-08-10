@@ -99,6 +99,39 @@ pub struct PluginRuntimeSnapshot {
     pub active: BTreeSet<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct ActivePluginCapability {
+    pub plugin: String,
+    pub kind: String,
+    pub name: String,
+}
+
+/// Materialize active manifest declarations for hosts and renderers.
+/// Capability execution stays outside this pure projection boundary.
+pub fn active_plugin_capabilities(
+    registry: &PluginRegistry,
+    snapshot: &PluginRuntimeSnapshot,
+) -> Result<Vec<ActivePluginCapability>, String> {
+    let mut capabilities = Vec::new();
+    for plugin in &snapshot.active {
+        let manifest = registry
+            .get(plugin)
+            .ok_or_else(|| format!("plugin is not registered: {plugin}"))?;
+        for (kind, names) in [
+            ("command", &manifest.commands),
+            ("tool", &manifest.tools),
+            ("hook", &manifest.hooks),
+        ] {
+            capabilities.extend(names.iter().map(|name| ActivePluginCapability {
+                plugin: plugin.clone(),
+                kind: kind.to_owned(),
+                name: name.clone(),
+            }));
+        }
+    }
+    Ok(capabilities)
+}
+
 /// Pure plugin lifecycle reducer. Loading, hook execution, and unloading are
 /// host concerns; this projection makes activation state replayable and
 /// rejects events for unknown or already-settled plugins.
@@ -264,5 +297,41 @@ mod tests {
         )
         .unwrap();
         assert!(state.active.is_empty());
+    }
+
+    #[test]
+    fn active_capabilities_are_sorted_and_data_only() {
+        let mut registry = PluginRegistry::default();
+        registry.register(manifest()).unwrap();
+        let mut state = PluginRuntimeSnapshot::default();
+        reduce_plugin_lifecycle(
+            &registry,
+            &mut state,
+            PluginLifecycleEvent::Activated {
+                name: "sample-plugin".into(),
+            },
+        )
+        .unwrap();
+
+        assert_eq!(
+            active_plugin_capabilities(&registry, &state).unwrap(),
+            vec![
+                ActivePluginCapability {
+                    plugin: "sample-plugin".into(),
+                    kind: "command".into(),
+                    name: "format".into(),
+                },
+                ActivePluginCapability {
+                    plugin: "sample-plugin".into(),
+                    kind: "tool".into(),
+                    name: "inspect".into(),
+                },
+                ActivePluginCapability {
+                    plugin: "sample-plugin".into(),
+                    kind: "hook".into(),
+                    name: "after_turn".into(),
+                },
+            ]
+        );
     }
 }
