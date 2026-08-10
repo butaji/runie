@@ -54,6 +54,7 @@ macro_rules! palette_slash_command {
             Self::Feedback => "/feedback",
             Self::Usage => "/usage",
             Self::Jobs => "/jobs",
+            Self::Questions => "/questions",
         }
     };
 }
@@ -112,6 +113,7 @@ macro_rules! palette_description {
             Self::Feedback => "Submit feedback",
             Self::Usage => "Show usage or billing information",
             Self::Jobs => "Inspect owned background jobs",
+            Self::Questions => "Browse user-question history",
         }
     };
 }
@@ -259,6 +261,7 @@ impl PaletteAction {
                 | Self::Feedback
                 | Self::Usage
                 | Self::Jobs
+                | Self::Questions
         )
     }
 
@@ -294,6 +297,7 @@ impl PaletteAction {
             Self::Loop => "Interval and prompt",
             Self::DeepResearch => "Query",
             Self::Usage => "manage (optional)",
+            Self::Questions => "Query (optional)",
             _ => "Value",
         }
     }

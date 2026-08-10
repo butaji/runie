@@ -63,6 +63,7 @@ runie_core::typed_action_registry! {
         Feedback => "Feedback",
         Usage => "Usage",
         Jobs => "Background Jobs",
+        Questions => "User Questions",
     }
 }
 

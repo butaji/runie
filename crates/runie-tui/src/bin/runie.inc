@@ -2564,6 +2564,7 @@ fn extended_palette_command_name(action: &PaletteAction) -> Option<&'static str>
         PaletteAction::Hooks => "hooks",
         PaletteAction::Plugins => "plugins",
         PaletteAction::Mcps => "mcps",
+        PaletteAction::Questions => "questions",
         PaletteAction::Memory => "memory",
         PaletteAction::Workflows => "workflows",
         _ => return None,

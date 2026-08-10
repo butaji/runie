@@ -11,7 +11,7 @@ labels=(
   "Doctor" "Rewind Session" "Prompt History" "Find Transcript" "Jump Transcript" "Recap"
   "Set Reasoning Effort" "Always Approve" "Automatic Approval" "Plan Mode" "View Plan"
   "Login" "Logout" "Reload" "Trust Project" "Skills" "Hooks" "Plugins" "MCP Servers"
-  "Memory" "Remember" "Goal" "Workflow" "Workflows" "Sessions" "Loop" "Deep Research" "Feedback" "Usage"
+  "Memory" "Remember" "Goal" "Workflow" "Workflows" "Sessions" "Questions" "Loop" "Deep Research" "Feedback" "Usage"
   "Background Jobs"
 )
 parameterized=(

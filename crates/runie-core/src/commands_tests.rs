@@ -59,6 +59,13 @@ fn mappable_parser_rejects_unimplemented_commands_without_swallowing_text() {
             args: String::new()
         })
     );
+    assert_eq!(
+        parse_mappable_builtin_command("/questions deploy"),
+        Some(MappableBuiltinCommand::Extended {
+            name: "questions".into(),
+            args: "deploy".into()
+        })
+    );
 }
 
 fn assert_mappable_basics() {

@@ -62,6 +62,36 @@ impl App {
                 .await;
             return true;
         }
+        if name == "questions" {
+            let rows = runie_core::tools::question_history_rows(
+                &self.question_broker.traces(),
+                args,
+                None,
+                32,
+            );
+            let result = rows
+                .into_iter()
+                .map(|row| {
+                    format!(
+                        "{} · {} · {}{}",
+                        row.id,
+                        row.outcome,
+                        row.question,
+                        row.detail
+                            .map(|detail| format!(" · {detail}"))
+                            .unwrap_or_default()
+                    )
+                })
+                .collect::<Vec<_>>();
+            self.ui
+                .send(UiMsg::ShowCommandResult(if result.is_empty() {
+                    "No matching user questions".into()
+                } else {
+                    result.join("\n")
+                }))
+                .await;
+            return true;
+        }
         let state = self.command_actor.invoke(name, args).await;
         if matches!(name, "always-approve" | "auto" | "deny") {
             self.approval_mode.set(match state.approval {
