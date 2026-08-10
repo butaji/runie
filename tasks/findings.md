@@ -111,6 +111,8 @@ As of 2026-08-09, the reduction work has these verified results:
   `feed_line_ops.rs`.
 - Ordered lifecycle/content/navigation reducer dispatch is consolidated in
   `feed_reducer_boundary.rs`, preserving the stage machine and final fallback.
+- Feed snapshot assembly, content projection, navigation projection, and
+  selected-member derivation are consolidated in `feed_snapshot_state.rs`.
 - `component_specs!` generates the declarative component ownership table.
 - `event_trace!` reduces pure replay-test boilerplate.
 - `cargo test --workspace --quiet` passes across the current workspace.

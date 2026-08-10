@@ -33,3 +33,5 @@ Verification note: the workspace suite is green, and
 `shared_snapshot_alloc.rs` measures repeated shared versus deep projection
 clones with a test-local counting allocator. Runtime consumers remain
 incremental, so this task remains partial.
+Feed snapshot assembly now has one semantic projection module, including its
+macro-backed navigation field schema and derived selection projection.
