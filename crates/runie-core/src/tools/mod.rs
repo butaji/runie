@@ -43,7 +43,7 @@ pub use git::{
 pub use mcp::{
     McpCallHook, McpCallRequest, McpConnectionStatus, McpHttpActor, McpHttpClient, McpHttpSession,
     McpReconnectDecision, McpReconnectPolicy, McpReconnectState, McpServer, McpStdioActor,
-    McpStdioClient, McpTool, McpToolSpec,
+    McpStdioClient, McpStdioStatus, McpTool, McpToolSpec,
 };
 pub use policy::{
     decide as approval_decision, decide_registered, record_approval_trace, reduce_approval_mode,

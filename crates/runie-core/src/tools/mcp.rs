@@ -50,6 +50,15 @@ pub struct McpStdioClient {
     pub timeout: Duration,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum McpStdioStatus {
+    Ready,
+    Busy,
+    Failed,
+    Closed,
+}
+
 enum McpStdioCommand {
     Call {
         tool: String,
@@ -64,11 +73,13 @@ enum McpStdioCommand {
 #[derive(Clone)]
 pub struct McpStdioActor {
     tx: tokio::sync::mpsc::Sender<McpStdioCommand>,
+    status: tokio::sync::watch::Receiver<McpStdioStatus>,
     _owner: std::sync::Arc<crate::task_owner::TaskOwner>,
 }
 
 impl McpStdioActor {
     pub fn new(client: McpStdioClient) -> Self {
+        let (status_tx, status) = tokio::sync::watch::channel(McpStdioStatus::Ready);
         let (tx, owner) =
             crate::spawn_actor_worker!(32, move |mut rx: tokio::sync::mpsc::Receiver<
                 McpStdioCommand,
@@ -80,17 +91,36 @@ impl McpStdioActor {
                             arguments,
                             reply,
                         } => {
+                            let _ = status_tx.send(McpStdioStatus::Busy);
                             let result = client.call_tool(&tool, arguments).await;
+                            let _ = status_tx.send(if result.is_ok() {
+                                McpStdioStatus::Ready
+                            } else {
+                                McpStdioStatus::Failed
+                            });
                             let _ = reply.send(result);
                         }
                         McpStdioCommand::Close { reply } => {
+                            let _ = status_tx.send(McpStdioStatus::Closed);
                             let _ = reply.send(());
                             break;
                         }
                     }
                 }
             });
-        Self { tx, _owner: owner }
+        Self {
+            tx,
+            status,
+            _owner: owner,
+        }
+    }
+
+    pub fn status(&self) -> McpStdioStatus {
+        *self.status.borrow()
+    }
+
+    pub fn subscribe_status(&self) -> tokio::sync::watch::Receiver<McpStdioStatus> {
+        self.status.clone()
     }
 
     pub async fn call_tool(
@@ -513,7 +543,9 @@ mod tests {
             )
             .unwrap(),
         );
-        actor.close().await.unwrap();
+        assert_eq!(actor.status(), McpStdioStatus::Ready);
+        actor.clone().close().await.unwrap();
+        assert_eq!(actor.status(), McpStdioStatus::Closed);
     }
 
     #[tokio::test]
