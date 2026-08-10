@@ -1214,12 +1214,15 @@ async fn build_live_app() -> App {
     let steering = SteeringQueueActor::new();
     let follow_up = FollowUpQueueActor::new();
     let mut tools = ToolRegistry::new();
-    tools.register(std::sync::Arc::new(ReadFileTool));
-    tools.register(std::sync::Arc::new(WriteFileTool));
-    tools.register(std::sync::Arc::new(EditFileTool));
-    tools.register(std::sync::Arc::new(GrepTool));
-    tools.register(std::sync::Arc::new(GlobTool));
-    tools.register(std::sync::Arc::new(BashTool));
+    runie_core::register_tools!(
+        tools;
+        ReadFileTool,
+        WriteFileTool,
+        EditFileTool,
+        GrepTool,
+        GlobTool,
+        BashTool
+    );
     tools.register(std::sync::Arc::new(ListDirectoryTool));
     if std::env::var("MINIMAX_ENABLE_ECHO_TOOL").is_ok_and(|value| value == "1") {
         tools.register(std::sync::Arc::new(MinimaxEchoTool));

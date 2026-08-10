@@ -1,18 +1,14 @@
 //! Bounded, read-only workspace tools.
 
-use std::path::Path;
 use crate::types::{AgentTool, AgentToolResult, ToolResultContent};
+use std::path::Path;
 use tokio::io::AsyncReadExt;
 
 pub const READ_MAX_LINES: usize = 1_000;
 pub const READ_MAX_BYTES: usize = 100 * 1024;
 
-pub struct ReadFileTool;
-pub struct WriteFileTool;
-pub struct EditFileTool;
-pub struct GrepTool;
-pub struct GlobTool;
-pub struct BashTool;
+macro_rules! workspace_types { ($($name:ident),+ $(,)?) => { $(#[derive(Default)] pub struct $name;)+ }; }
+workspace_types!(ReadFileTool, WriteFileTool, EditFileTool, GrepTool, GlobTool, BashTool);
 
 macro_rules! workspace_tool {
     ($name:literal, $label:literal, $description:literal, $schema:expr) => {
