@@ -181,8 +181,9 @@ impl App {
                     "plugins" => "Plugins loaded".into(),
                     "mcps" => "MCP servers loaded".into(),
                     "doctor" => state
-                        .last_diagnostic
-                        .clone()
+                        .diagnostic_report
+                        .as_ref()
+                        .map(|report| report.terminal_lines().join("\n"))
                         .unwrap_or_else(|| "Diagnostic complete".into()),
                     _ => format!(
                         "/{name} accepted{}",

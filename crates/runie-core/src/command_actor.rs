@@ -35,6 +35,12 @@ impl DiagnosticReport {
             self.checks.len()
         )
     }
+
+    pub fn terminal_lines(&self) -> Vec<String> {
+        let mut lines = vec![self.summary()];
+        lines.extend(self.checks.iter().map(|check| format!("check: {check}")));
+        lines
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -291,6 +297,15 @@ mod tests {
         assert_eq!(
             state.last_diagnostic.as_deref(),
             Some("fix requested (3 checks)")
+        );
+        assert_eq!(
+            report.terminal_lines(),
+            vec![
+                "fix requested (3 checks)",
+                "check: workspace",
+                "check: provider",
+                "check: session"
+            ]
         );
     }
 }
