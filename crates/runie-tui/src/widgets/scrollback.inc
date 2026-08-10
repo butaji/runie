@@ -730,14 +730,7 @@ impl Scrollback {
                 })
                 .count();
             if let Some(intent) = self.tool_paint_intent(*kind, text, occurrence, &tool_card_rows) {
-                let paint = match intent {
-                    ToolCardPaintIntent::Header => PaintIntent::Base,
-                    ToolCardPaintIntent::Running => PaintIntent::Accent,
-                    ToolCardPaintIntent::Content => PaintIntent::Base,
-                    ToolCardPaintIntent::Success => PaintIntent::Success,
-                    ToolCardPaintIntent::Error => PaintIntent::Error,
-                    ToolCardPaintIntent::Muted => PaintIntent::Muted,
-                };
+                let paint = PaintIntent::from(intent);
                 // Structured metadata already carries source-backed span
                 // roles (muted key, primary value, muted location/score).
                 // Do not flatten those spans with the row-level muted intent.
