@@ -1,5 +1,7 @@
 use super::{ImageContent, UserContent, VideoContent};
 
+const MAX_MEDIA_BASE64_BYTES: usize = 16 * 1024 * 1024;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MediaWireFormat {
     Pi,
@@ -56,6 +58,11 @@ fn validate_media(kind: &str, mime_type: &str, data: &str) -> Result<(), String>
     if !is_base64_payload(data) {
         return Err(format!("{kind} data must be non-empty base64"));
     }
+    if data.len() > MAX_MEDIA_BASE64_BYTES {
+        return Err(format!(
+            "{kind} data exceeds {MAX_MEDIA_BASE64_BYTES} encoded bytes"
+        ));
+    }
     Ok(())
 }
 
@@ -98,5 +105,11 @@ mod tests {
             encode_user_content(&content, MediaWireFormat::Pi).unwrap()["type"],
             "video"
         );
+    }
+
+    #[test]
+    fn media_constructor_rejects_unbounded_payloads() {
+        let data = "A".repeat(MAX_MEDIA_BASE64_BYTES + 4);
+        assert!(ImageContent::new("image/png", data).is_err());
     }
 }
