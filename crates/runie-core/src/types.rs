@@ -184,9 +184,9 @@ pub struct Model {
 
 #[path = "media.rs"]
 mod media;
+pub use media::{encode_user_content, MediaWireFormat};
 #[path = "model_capabilities.rs"]
 mod model_capabilities;
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(
     tag = "type",
