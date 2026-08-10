@@ -5,7 +5,18 @@ use crate::types::{AgentTool, AgentToolResult, ToolResultContent};
 const GIT_OUTPUT_MAX_BYTES: usize = 100 * 1024;
 
 macro_rules! git_tool_types { ($($name:ident),+ $(,)?) => { $(#[derive(Default)] pub struct $name;)+ }; }
-git_tool_types!(GitStatusTool, GitDiffTool, GitReviewTool, GitWorktreeTool);
+git_tool_types!(
+    GitStatusTool,
+    GitDiffTool,
+    GitReviewTool,
+    GitWorktreeTool,
+    GitCommitPrepareTool
+);
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct GitCommitPrepareRequest {
+    pub message: String,
+}
 
 #[async_trait::async_trait]
 impl AgentTool for GitStatusTool {
@@ -134,6 +145,77 @@ impl AgentTool for GitWorktreeTool {
     }
 }
 
+#[async_trait::async_trait]
+impl AgentTool for GitCommitPrepareTool {
+    fn name(&self) -> &str {
+        "git_commit_prepare"
+    }
+    fn label(&self) -> &str {
+        "Prepare Git commit"
+    }
+    fn description(&self) -> &str {
+        "Validate a commit message and summarize a proposed commit without mutating Git."
+    }
+    fn parameters(&self) -> Option<serde_json::Value> {
+        Some(
+            serde_json::json!({"type":"object","properties":{"message":{"type":"string","minLength":1}},"required":["message"]}),
+        )
+    }
+    fn validate_arguments(&self, args: &serde_json::Value) -> Result<(), String> {
+        let request: GitCommitPrepareRequest = serde_json::from_value(args.clone())
+            .map_err(|error| format!("invalid commit preparation: {error}"))?;
+        if request.message.trim().is_empty() {
+            return Err("commit message must not be empty".into());
+        }
+        if request
+            .message
+            .lines()
+            .next()
+            .unwrap_or_default()
+            .chars()
+            .count()
+            > 72
+        {
+            return Err("commit subject must be at most 72 characters".into());
+        }
+        Ok(())
+    }
+    async fn execute(
+        &self,
+        _: &str,
+        args: serde_json::Value,
+        signal: Option<tokio_util::sync::CancellationToken>,
+        _: Option<Box<dyn Fn(serde_json::Value) + Send + Sync>>,
+    ) -> Result<AgentToolResult, String> {
+        self.validate_arguments(&args)?;
+        let request: GitCommitPrepareRequest =
+            serde_json::from_value(args).map_err(|error| error.to_string())?;
+        let status = git_capture(&["status", "--short"], signal.clone()).await?;
+        let diff = git_capture(&["diff", "--stat"], signal).await?;
+        if !status.status.success() || !diff.status.success() {
+            return Err("unable to inspect Git changes".into());
+        }
+        let status_text = String::from_utf8_lossy(&status.stdout).into_owned();
+        let stat_text = String::from_utf8_lossy(&diff.stdout).into_owned();
+        let changed = !status_text.trim().is_empty();
+        Ok(AgentToolResult {
+            content: vec![ToolResultContent::Text {
+                text: format!(
+                    "Commit proposal: {}\n{}",
+                    request.message,
+                    if changed {
+                        stat_text.clone()
+                    } else {
+                        "No changed files".into()
+                    }
+                ),
+            }],
+            details: serde_json::json!({"message": request.message, "changed": changed, "status": status_text, "stat": stat_text, "mutated": false}),
+            ..Default::default()
+        })
+    }
+}
+
 async fn git_result(
     args: &[&str],
     signal: Option<tokio_util::sync::CancellationToken>,
@@ -218,5 +300,18 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(result.details["command"][0], "worktree");
+    }
+    #[test]
+    fn commit_preparation_validates_subjects_without_mutation() {
+        let tool = GitCommitPrepareTool;
+        assert!(tool
+            .validate_arguments(&serde_json::json!({"message":"Add tool"}))
+            .is_ok());
+        assert!(tool
+            .validate_arguments(&serde_json::json!({"message":" "}))
+            .is_err());
+        assert!(tool
+            .validate_arguments(&serde_json::json!({"message":"x".repeat(73)}))
+            .is_err());
     }
 }

@@ -27,7 +27,10 @@ pub use actor::{ToolCommand, ToolExecutorActor, ToolOutcome};
 pub use ask_user::{AskUserQuestionTool, UserQuestionOption, UserQuestionRequest};
 pub use background::{BackgroundShellRequest, BackgroundShellTool};
 pub use executor::{execute_parallel, execute_sequential, ToolExecContext, ToolExecHooks};
-pub use git::{GitDiffTool, GitReviewTool, GitStatusTool, GitWorktreeTool};
+pub use git::{
+    GitCommitPrepareRequest, GitCommitPrepareTool, GitDiffTool, GitReviewTool, GitStatusTool,
+    GitWorktreeTool,
+};
 pub use mcp::{McpCallHook, McpCallRequest, McpServer, McpTool, McpToolSpec};
 pub use policy::{decide as approval_decision, ApprovalDecision, ApprovalMode, ApprovalModeStore};
 pub use question_broker::{PendingUserQuestion, UserQuestionBroker};
