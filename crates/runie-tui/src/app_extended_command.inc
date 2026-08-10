@@ -195,14 +195,17 @@ impl App {
                         .plan
                         .clone()
                         .unwrap_or_else(|| {
+                            let snapshot = self.todo_actor.snapshot();
                             let summary = self.todo_actor.summary();
-                            format!(
+                            let mut lines = snapshot.terminal_lines();
+                            lines.push(format!(
                                 "Todo plan: {:?} · completed={} pending={} in_progress={}",
                                 summary.status,
                                 summary.completed,
                                 summary.pending,
                                 summary.in_progress
-                            )
+                            ));
+                            lines.join("\n")
                         }),
                     "memory" | "remember" => format!(
                         "Memory: {} ({} notes)",

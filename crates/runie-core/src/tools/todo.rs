@@ -124,6 +124,15 @@ impl TodoActor {
     }
 }
 
+impl TodoSnapshot {
+    pub fn terminal_lines(&self) -> Vec<String> {
+        self.items
+            .iter()
+            .map(|item| format!("{} · {:?} · {}", item.id, item.status, item.content))
+            .collect()
+    }
+}
+
 fn validate_snapshot(snapshot: &TodoSnapshot) -> Result<(), String> {
     if snapshot.items.len() > 100 {
         return Err("at most 100 todo items are allowed".into());
@@ -271,6 +280,10 @@ mod tests {
         assert_eq!(actor.replace(snapshot.clone()).await.unwrap(), snapshot);
         assert_eq!(actor.snapshot(), snapshot);
         assert_eq!(actor.summary().status, TodoPlanStatus::InProgress);
+        assert_eq!(
+            actor.snapshot().terminal_lines(),
+            vec!["a · InProgress · ship"]
+        );
     }
 
     #[tokio::test]
