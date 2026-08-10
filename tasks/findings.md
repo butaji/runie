@@ -67,6 +67,8 @@ the palette suite; the full 55-case TUI smoke suite remains green.
 Plugin capability kinds and package directories now use one macro-backed
 declaration; plugin tests, workspace verification, and the 55-case TUI smoke
 suite remain green.
+Session journal record-type names now use a declarative table with session
+tests covering the projection; the full 55-case TUI smoke suite remains green.
 
 As of 2026-08-09, the reduction work has these verified results:
 

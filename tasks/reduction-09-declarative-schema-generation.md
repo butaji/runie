@@ -43,3 +43,5 @@ Palette section membership now uses one macro-backed classification table,
 removing the split helper predicates while retaining an explicit fallback.
 Plugin capability kinds and their package directories now share one
 macro-backed declaration, keeping plugin entrypoint routing data-shaped.
+Session journal record types now use one macro-backed wire-name table,
+including the typed/generic operation aliases.

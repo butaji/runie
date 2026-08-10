@@ -173,20 +173,25 @@ impl SessionEntryRecord {
     pub fn record_type(&self) -> &'static str {
         match self {
             Self::Message(_) => "message",
-            Self::Config(entry) => match &entry.record {
-                SessionConfigRecord::ModelChanged { .. } => "model_change",
-                SessionConfigRecord::ThinkingLevelChanged { .. } => "thinking_level_change",
-                SessionConfigRecord::ActiveToolsChanged { .. } => "active_tools_change",
-                SessionConfigRecord::LabelChanged { .. } => "label",
-                SessionConfigRecord::NameChanged { .. } => "session_name",
-                SessionConfigRecord::BranchSummaryCreated { .. } => "branch_summary",
-                SessionConfigRecord::CustomSessionEntryCreated { .. } => "custom",
-                SessionConfigRecord::CompactionCreated { .. } => "compaction",
-                SessionConfigRecord::OperationRecordCreated { .. }
-                | SessionConfigRecord::TypedOperation(_) => "record",
-            },
+            Self::Config(entry) => session_record_type(&entry.record),
         }
     }
+}
+
+macro_rules! session_record_types {
+    ($(($pattern:pat => $wire_name:literal)),+ $(,)?) => {
+        fn session_record_type(record: &SessionConfigRecord) -> &'static str {
+            match record { $($pattern => $wire_name,)+ }
+        }
+    };
+}
+
+session_record_types! {
+    (SessionConfigRecord::ModelChanged { .. } => "model_change"), (SessionConfigRecord::ThinkingLevelChanged { .. } => "thinking_level_change"),
+    (SessionConfigRecord::ActiveToolsChanged { .. } => "active_tools_change"), (SessionConfigRecord::LabelChanged { .. } => "label"),
+    (SessionConfigRecord::NameChanged { .. } => "session_name"), (SessionConfigRecord::BranchSummaryCreated { .. } => "branch_summary"),
+    (SessionConfigRecord::CustomSessionEntryCreated { .. } => "custom"), (SessionConfigRecord::CompactionCreated { .. } => "compaction"),
+    (SessionConfigRecord::OperationRecordCreated { .. } => "record"), (SessionConfigRecord::TypedOperation(_) => "record"),
 }
 
 /// Declarative equivalent of Pi's `EntryQuery`.
