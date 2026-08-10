@@ -83,6 +83,8 @@ As of 2026-08-09, the reduction work has these verified results:
 - Live tool-header classification is shared by tool-card, row-selection, and
   replacement projections, preserving the distinction between running and
   settled error rows.
+- Activity-tool aliases now come from one grouped typed macro, keeping the
+  classifier as a data declaration while preserving all existing aliases.
 - `component_specs!` generates the declarative component ownership table.
 - `event_trace!` reduces pure replay-test boilerplate.
 - `cargo test --workspace --quiet` passes across the current workspace.

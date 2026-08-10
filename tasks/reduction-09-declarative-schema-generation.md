@@ -25,3 +25,5 @@ renderer and pure paint projection, removing a duplicate dispatch table.
 Feed navigation-to-snapshot projection now uses one typed field declaration
 macro, including explicit clone fields and the derived selected-member field,
 so the projection schema is data-shaped instead of repeated assignments.
+Activity-tool aliases now use a typed grouped alias macro, keeping the
+classifier vocabulary declarative and exhaustively mapped to `ActivityKind`.

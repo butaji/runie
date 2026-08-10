@@ -7,21 +7,28 @@ pub enum ActivityKind {
     Subagent,
 }
 
+macro_rules! activity_tool_groups {
+    ($name:expr => {
+        $( $kind:ident: [$($alias:literal),+ $(,)?] ),+ $(,)?
+    }) => {
+        match $name {
+            $( $($alias)|+ => Some(ActivityKind::$kind), )+
+            _ => None,
+        }
+    };
+}
+
 /// Classify a tool name for grouped activity presentation.
 pub fn classify_activity_tool(tool_name: &str) -> Option<ActivityKind> {
-    match tool_name {
-        "list_dir" | "list_files" | "ls" => Some(ActivityKind::Dir),
-        "read" | "read_file" => Some(ActivityKind::File),
-        "bash"
-        | "shell"
-        | "exec"
-        | "run"
-        | "execute"
-        | "run_terminal_command"
-        | "run_terminal_cmd" => Some(ActivityKind::Command),
-        "subagent" | "agent" | "task" => Some(ActivityKind::Subagent),
-        _ => None,
-    }
+    activity_tool_groups!(tool_name => {
+        Dir: ["list_dir", "list_files", "ls"],
+        File: ["read", "read_file"],
+        Command: [
+            "bash", "shell", "exec", "run", "execute",
+            "run_terminal_command", "run_terminal_cmd"
+        ],
+        Subagent: ["subagent", "agent", "task"],
+    })
 }
 
 /// Return `true` when a tool's result should be projected as the
