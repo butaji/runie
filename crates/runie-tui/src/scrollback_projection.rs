@@ -47,8 +47,7 @@ pub(crate) struct OwnedEventProjection {
     workspace: String,
     active_tools: HashSet<String>,
     tool_headers: HashMap<String, String>,
-    tool_args: HashMap<String, serde_json::Value>,
-    tool_names: HashMap<String, String>,
+    tool_records: HashMap<String, runie_tui_model::ToolRecord>,
     active_tool_count: usize,
     activity_failures: usize,
     activity_dirs: usize,
@@ -93,9 +92,9 @@ impl OwnedEventProjection {
             tool_call_id.clone(),
             runie_tui_model::tool_header(tool_name, args, &self.workspace),
         );
-        self.tool_args.insert(tool_call_id.clone(), args.clone());
-        self.tool_names
-            .insert(tool_call_id.clone(), tool_name.clone());
+        let mut record = runie_tui_model::ToolRecord::named(tool_name.clone());
+        record.set_args(args.clone());
+        self.tool_records.insert(tool_call_id.clone(), record);
         match runie_tui_model::classify_activity_tool(tool_name) {
             Some(runie_tui_model::ActivityKind::Dir) => self.activity_dirs += 1,
             Some(runie_tui_model::ActivityKind::File) => self.activity_files += 1,
@@ -178,11 +177,9 @@ fn tool_end_details(
 ) -> (String, Option<String>, Vec<(LineKind, String)>) {
     state.active_tool_count = state.active_tool_count.saturating_sub(1);
     let pending = state.tool_headers.remove(tool_call_id).unwrap_or_default();
-    let args = state.tool_args.remove(tool_call_id).unwrap_or_default();
-    let name = state
-        .tool_names
-        .remove(tool_call_id)
-        .unwrap_or_else(|| tool_name.to_owned());
+    let record = state.tool_records.remove(tool_call_id).unwrap_or_default();
+    let name = record.name.unwrap_or_else(|| tool_name.to_owned());
+    let args = record.args.unwrap_or_default();
     let header = if is_error {
         state.activity_failures += 1;
         pending

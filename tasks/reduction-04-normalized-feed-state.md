@@ -34,6 +34,8 @@ feed reducer's clear path responsible only for transcript and navigation data.
 `ToolRecord` now owns name/argument mutation operations, so reducer stages no
 longer duplicate record construction and argument clearing semantics.
 
+The live scrollback event projection now stores one normalized `ToolRecord`
+per call ID for name and arguments instead of parallel name/argument maps.
 Remaining work is removal of duplicated derived indexes and normalization of
 individual line/tool records.
 
