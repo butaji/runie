@@ -18,3 +18,5 @@ Acceptance: existing feed event-sequence tests remain green and new grouped
 event tests cover lifecycle, content, tool, workflow, and navigation paths.
 Content, tool, and workflow compatibility routing now share the semantic
 `feed_reducers.rs` module while retaining the same typed reducer boundaries.
+The ordered reducer stage machine and navigation fallback are consolidated in
+`feed_reducer_boundary.rs`.
