@@ -90,6 +90,9 @@ As of 2026-08-09, the reduction work has these verified results:
 - Five numbered feed fragments covering tool-row lifecycle and selection are
   consolidated into `feed_state_tool_rows.rs`; behavior remains covered by
   the 193-test model suite.
+- Five tool lifecycle fragments are consolidated into
+  `feed_tool_lifecycle.rs`, including shared mode settlement over both row and
+  compatibility IDs.
 - `component_specs!` generates the declarative component ownership table.
 - `event_trace!` reduces pure replay-test boilerplate.
 - `cargo test --workspace --quiet` passes across the current workspace.

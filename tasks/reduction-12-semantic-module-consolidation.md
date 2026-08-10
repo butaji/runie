@@ -27,3 +27,6 @@ clean across the workspace.
 Tool-row lifecycle and transcript-selection fragments are now consolidated in
 the semantic `feed_state_tool_rows.rs` module, with the same private methods
 and include boundary.
+Tool start/finish and display-mode fragments are consolidated in
+`feed_tool_lifecycle.rs`; mode settlement now uses one key fold instead of
+repeating the two map writes.
