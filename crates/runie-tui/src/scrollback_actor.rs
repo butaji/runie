@@ -54,8 +54,7 @@ async fn run_scrollback_worker(
             memo = memo.apply(message, |state, message| state.reduce(message.clone()));
         }
         let next_snapshot = memo.state().snapshot();
-        let _ = snapshot_tx.send(next_snapshot.clone());
-        let _ = shared_tx.send(SharedSnapshot::new(next_snapshot));
+        runie_core::publish_shared_snapshot(&snapshot_tx, &shared_tx, next_snapshot);
         let _ = reply.send(());
     }
 }

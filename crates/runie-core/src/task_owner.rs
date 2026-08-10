@@ -163,8 +163,7 @@ where
             let mut state = initial;
             while let Some((event, reply)) = rx.recv().await {
                 reduce(&mut state, event);
-                let _ = snapshot_tx.send(state.clone());
-                let _ = shared_tx.send(crate::SharedSnapshot::new(state.clone()));
+                crate::publish_shared_snapshot(&snapshot_tx, &shared_tx, state.clone());
                 let _ = reply.send(());
             }
         });

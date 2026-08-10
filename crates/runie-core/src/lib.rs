@@ -53,7 +53,7 @@ pub mod hooks;
 pub mod task_owner;
 pub mod telemetry;
 
-pub use event_memo::{EventMemo, SharedSnapshot};
+pub use event_memo::{publish_shared_snapshot, EventMemo, SharedSnapshot};
 pub use event_trace_yaml::{replay_yaml, replay_yaml_state};
 pub use pi_event::PiAgentEvent;
 pub use task_owner::ReducerActor;

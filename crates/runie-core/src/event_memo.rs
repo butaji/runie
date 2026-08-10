@@ -24,6 +24,16 @@ impl<S> SharedSnapshot<S> {
     }
 }
 
+/// Publish one immutable state version to both compatibility and shared views.
+pub fn publish_shared_snapshot<S: Clone>(
+    snapshot_tx: &tokio::sync::watch::Sender<S>,
+    shared_tx: &tokio::sync::watch::Sender<SharedSnapshot<S>>,
+    state: S,
+) {
+    let _ = snapshot_tx.send(state.clone());
+    let _ = shared_tx.send(SharedSnapshot::new(state));
+}
+
 impl<S> std::ops::Deref for SharedSnapshot<S> {
     type Target = S;
 
@@ -109,7 +119,7 @@ impl<E, S> EventMemo<E, S> {
 
 #[cfg(test)]
 mod tests {
-    use super::{EventMemo, SharedSnapshot};
+    use super::{publish_shared_snapshot, EventMemo, SharedSnapshot};
     use std::sync::Arc;
 
     fn add(state: &mut i32, event: &i32) {
@@ -140,5 +150,14 @@ mod tests {
         assert_eq!(snapshot.get(), "state");
         assert_eq!(snapshot.strong_count(), 2);
         assert!(Arc::ptr_eq(&snapshot.0, &clone.0));
+    }
+
+    #[test]
+    fn shared_publication_keeps_owned_and_shared_views_in_sync() {
+        let (owned_tx, owned_rx) = tokio::sync::watch::channel(0);
+        let (shared_tx, shared_rx) = tokio::sync::watch::channel(SharedSnapshot::new(0));
+        publish_shared_snapshot(&owned_tx, &shared_tx, 7);
+        assert_eq!(*owned_rx.borrow(), 7);
+        assert_eq!(**shared_rx.borrow(), 7);
     }
 }

@@ -17,6 +17,5 @@ pub(super) fn publish_prompt_snapshot(
     prompt: &PromptWidget,
 ) {
     let snapshot = prompt.model_snapshot();
-    let _ = snapshot_tx.send(snapshot.clone());
-    let _ = shared_tx.send(runie_core::SharedSnapshot::new(snapshot));
+    runie_core::publish_shared_snapshot(snapshot_tx, shared_tx, snapshot);
 }
