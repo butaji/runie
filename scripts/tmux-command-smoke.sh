@@ -87,6 +87,11 @@ for label in "${labels[@]}"; do
       ((failed += 1))
       continue
     fi
+    if [[ "$label" == "MCP Servers" ]] && ! wait_for 'No MCP stdio servers'; then
+      echo "FAIL $label: expected-empty-status"
+      ((failed += 1))
+      continue
+    fi
   fi
   if capture | rg -qi 'panic|thread .* panicked|unknown command|fatal error'; then
     echo "FAIL $label: runtime-error"; ((failed += 1))
