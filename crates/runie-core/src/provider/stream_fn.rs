@@ -169,11 +169,7 @@ pub fn classify_failure(error: &StreamError) -> ProviderFailure {
             ProviderFailureKind::Provider,
             message.clone(),
             *status,
-            headers
-                .iter()
-                .find(|(key, _)| key.eq_ignore_ascii_case("x-should-retry"))
-                .map(|(_, value)| value)
-                .is_some_and(|value| value.eq_ignore_ascii_case("true")),
+            provider_failure_retryable(*status, headers),
         ),
         StreamError::Aborted => (ProviderFailureKind::Aborted, "aborted".into(), None, false),
         StreamError::Invalid(message) => {
@@ -186,6 +182,20 @@ pub fn classify_failure(error: &StreamError) -> ProviderFailure {
         status,
         retryable,
     }
+}
+
+fn provider_failure_retryable(
+    status: Option<u16>,
+    headers: &std::collections::HashMap<String, String>,
+) -> bool {
+    if let Some(value) = headers
+        .iter()
+        .find(|(key, _)| key.eq_ignore_ascii_case("x-should-retry"))
+        .map(|(_, value)| value)
+    {
+        return value.eq_ignore_ascii_case("true");
+    }
+    matches!(status, Some(408 | 409 | 425 | 429 | 500..=599))
 }
 
 #[async_trait::async_trait]
@@ -320,5 +330,24 @@ mod tests {
             failure.terminal_line(),
             "Provider status=503 retryable=true · busy"
         );
+    }
+
+    #[test]
+    fn provider_failure_infers_transient_status_and_honors_explicit_false() {
+        let transient = StreamError::Provider {
+            message: "busy".into(),
+            status: Some(503),
+            headers: Default::default(),
+        };
+        assert!(classify_failure(&transient).retryable);
+
+        let explicit_no_retry = StreamError::Provider {
+            message: "invalid request".into(),
+            status: Some(503),
+            headers: [("X-Should-Retry".into(), "false".into())]
+                .into_iter()
+                .collect(),
+        };
+        assert!(!classify_failure(&explicit_no_retry).retryable);
     }
 }
