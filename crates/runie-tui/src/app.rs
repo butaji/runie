@@ -38,43 +38,37 @@ mod app_projection;
 use app_projection::*;
 
 type UiMailbox = (UiMsg, tokio::sync::oneshot::Sender<()>);
-
 #[derive(Clone)]
 pub struct UiActor {
     tx: mpsc::Sender<UiMailbox>,
     snapshot: watch::Receiver<UiState>,
+    shared_snapshot: watch::Receiver<runie_core::SharedSnapshot<UiState>>,
     commands: broadcast::Sender<UiCommand>,
     _owner: std::sync::Arc<runie_core::task_owner::TaskOwner>,
-    /// Atomic counter incremented for every event drained from the bus
-    /// subscriber. Tests rely on this to assert that queued `UiMsg`
-    /// mailbox messages are serviced before a flood of broadcast events.
     #[allow(dead_code, reason = "read by tests via the actor's worker")]
     event_counter: std::sync::Arc<std::sync::atomic::AtomicUsize>,
 }
-
 impl UiActor {
     pub fn new(bus: &EventBus) -> Self {
         Self::new_with_welcome(bus, false)
     }
-
     pub fn new_with_welcome(bus: &EventBus, show_welcome: bool) -> Self {
         let initial = initial_ui_state(show_welcome);
         let (snapshot_tx, snapshot) = watch::channel(initial.clone());
+        let (shared_tx, shared_snapshot) =
+            watch::channel(runie_core::SharedSnapshot::new(initial.clone()));
         let (commands, _) = broadcast::channel(32);
         let command_tx = commands.clone();
         let events = bus.subscribe();
         let event_counter = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
         let counter_for_worker = event_counter.clone();
-        // The pause hook is `None` for production-owned actors so the
-        // post-message branch in `run_ui_actor` compiles out; only the
-        // direct regression test wires up a real `(Notify, Notify)` pair
-        // to park the actor at the observation point.
         let (tx, owner) =
             runie_core::spawn_actor_worker!(32, |rx: mpsc::Receiver<UiMailbox>| async move {
                 run_ui_actor(
                     rx,
                     events,
                     snapshot_tx,
+                    shared_tx,
                     command_tx,
                     initial,
                     counter_for_worker,
@@ -86,12 +80,12 @@ impl UiActor {
         Self {
             tx,
             snapshot,
+            shared_snapshot,
             commands,
             _owner: owner,
             event_counter,
         }
     }
-
     pub async fn send(&self, message: UiMsg) {
         let _ = runie_core::mailbox_ack!(self.tx, |reply| (message, reply));
     }
@@ -100,19 +94,24 @@ impl UiActor {
         self.snapshot.borrow().clone()
     }
 
+    pub fn shared_snapshot(&self) -> runie_core::SharedSnapshot<UiState> {
+        self.shared_snapshot.borrow().clone()
+    }
+
+    pub fn shared_subscribe(&self) -> watch::Receiver<runie_core::SharedSnapshot<UiState>> {
+        self.shared_snapshot.clone()
+    }
+
     pub fn subscribe_commands(&self) -> broadcast::Receiver<UiCommand> {
         self.commands.subscribe()
     }
 }
 
-#[allow(
-    clippy::too_many_lines,
-    reason = "ui actor keeps the mailbox and event reductions explicit and adds a test-only pause hook"
-)]
 async fn run_ui_actor(
     mut rx: mpsc::Receiver<UiMailbox>,
     mut events: broadcast::Receiver<AgentEvent>,
     snapshot_tx: watch::Sender<UiState>,
+    shared_tx: watch::Sender<runie_core::SharedSnapshot<UiState>>,
     command_tx: broadcast::Sender<UiCommand>,
     initial: UiState,
     event_counter: std::sync::Arc<std::sync::atomic::AtomicUsize>,
@@ -132,7 +131,7 @@ async fn run_ui_actor(
             biased;
             message = rx.recv() => {
                 let Some((message, applied)) = message else { break };
-                apply_ui_message(&mut state, &snapshot_tx, &command_tx, message, applied,
+                apply_ui_message(&mut state, &snapshot_tx, &shared_tx, &command_tx, message, applied,
                     #[cfg(test)] pause_hooks.as_ref()).await;
             }
             event = events.recv() => {
@@ -141,7 +140,7 @@ async fn run_ui_actor(
                     for message in project_event(&event).ui {
                         state = state.update(message);
                     }
-                    let _ = snapshot_tx.send(state.clone());
+                    runie_core::publish_shared_snapshot(&snapshot_tx, &shared_tx, state.clone());
                 }
             }
         }
@@ -151,6 +150,7 @@ async fn run_ui_actor(
 async fn apply_ui_message(
     state: &mut UiState,
     snapshot_tx: &watch::Sender<UiState>,
+    shared_tx: &watch::Sender<runie_core::SharedSnapshot<UiState>>,
     command_tx: &broadcast::Sender<UiCommand>,
     message: UiMsg,
     applied: tokio::sync::oneshot::Sender<()>,
@@ -164,7 +164,7 @@ async fn apply_ui_message(
     if let Some(command) = command {
         let _ = command_tx.send(command);
     }
-    let _ = snapshot_tx.send(state.clone());
+    runie_core::publish_shared_snapshot(snapshot_tx, shared_tx, state.clone());
     let _ = applied.send(());
     #[cfg(test)]
     if let Some((message_done, actor_release)) = pause_hooks {

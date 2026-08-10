@@ -38,3 +38,6 @@ macro-backed navigation field schema and derived selection projection.
 Model catalog and provider registry actors now publish immutable shared
 projections alongside their compatibility-owned watch channels, so registry
 consumers can avoid deep snapshot clones without an API break.
+The top-level `UiActor` now follows the same shared projection contract,
+allowing view consumers to read immutable UI state without cloning it while
+retaining the existing compatibility subscription.

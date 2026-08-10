@@ -64,6 +64,17 @@ async fn ui_actor_keeps_welcome_disabled_after_reset() {
 }
 
 #[tokio::test]
+async fn ui_actor_publishes_immutable_shared_projection() {
+    let bus = EventBus::new();
+    let actor = UiActor::new(&bus);
+    actor.send(UiMsg::ToggleCommandPalette).await;
+    let shared = actor.shared_snapshot();
+    assert!(shared.get().command_palette_open);
+    assert_eq!(shared.strong_count(), 2);
+    assert!(actor.shared_subscribe().borrow().get().command_palette_open);
+}
+
+#[tokio::test]
 async fn ui_actor_publishes_palette_activation_command() {
     let bus = EventBus::new();
     let actor = UiActor::new(&bus);
@@ -366,16 +377,7 @@ fn queued_agent_events() -> tokio::sync::broadcast::Receiver<AgentEvent> {
     event_rx
 }
 
-/// Regression test for the `biased;` select! in `run_ui_actor`: when a
-/// `UiMsg` is already queued in the mailbox and a flood of broadcast
-/// events is also ready, the actor must reduce the UI message before
-/// draining the event queue. We drive `run_ui_actor` directly so we can
-/// observe the drained-event counter from outside the actor task, and we
-/// use a `Notify` pause to read it deterministically rather than racing
-/// the wake-up against the actor's event drain loop. A single message
-/// would only catch the unbiased select! about 60% of the time (the
-/// random branch order picks the mailbox first half the time), so the
-/// test observes `MESSAGES` consecutive pause points instead.
+/// Mailbox priority must win over already-ready broadcast events.
 #[tokio::test(flavor = "current_thread")]
 #[allow(
     clippy::too_many_lines,
@@ -389,27 +391,25 @@ async fn ui_actor_services_mailbox_before_draining_queued_events() {
     const MESSAGES: usize = 8;
     let (mailbox_tx, mailbox_rx) = mpsc::channel::<super::UiMailbox>(MESSAGES);
     let (snapshot_tx, snapshot_rx) = watch::channel(UiState::new());
+    let (shared_tx, _shared_rx) = watch::channel(runie_core::SharedSnapshot::new(UiState::new()));
     let (command_tx, _command_rx) = broadcast::channel::<super::UiCommand>(32);
-
     let event_counter = Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let counter_for_worker = event_counter.clone();
     let message_done = Arc::new(Notify::new());
     let actor_release = Arc::new(Notify::new());
     let message_done_for_worker = message_done.clone();
     let actor_release_for_worker = actor_release.clone();
-
     let actor_task = spawn_ui_test_actor(
         mailbox_rx,
         event_rx,
         snapshot_tx,
+        shared_tx,
         command_tx,
         counter_for_worker,
         message_done_for_worker,
         actor_release_for_worker,
     );
-
     let replies = enqueue_ui_messages(&mailbox_tx, MESSAGES);
-
     finish_ui_mailbox_test(
         message_done,
         actor_release,
@@ -477,6 +477,7 @@ fn spawn_ui_test_actor(
     mailbox_rx: tokio::sync::mpsc::Receiver<super::UiMailbox>,
     event_rx: tokio::sync::broadcast::Receiver<AgentEvent>,
     snapshot_tx: tokio::sync::watch::Sender<UiState>,
+    shared_tx: tokio::sync::watch::Sender<runie_core::SharedSnapshot<UiState>>,
     command_tx: tokio::sync::broadcast::Sender<super::UiCommand>,
     counter: std::sync::Arc<std::sync::atomic::AtomicUsize>,
     done: std::sync::Arc<tokio::sync::Notify>,
@@ -488,6 +489,7 @@ fn spawn_ui_test_actor(
             mailbox_rx,
             event_rx,
             snapshot_tx,
+            shared_tx,
             command_tx,
             UiState::new(),
             counter,
