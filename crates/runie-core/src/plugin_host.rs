@@ -5,21 +5,27 @@ use crate::plugins::{
 use crate::ReducerActor;
 use std::collections::BTreeMap;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum PluginCapabilityKind {
-    Command,
-    Tool,
-    Hook,
+macro_rules! plugin_capabilities {
+    ($(($kind:ident, $directory:literal)),+ $(,)?) => {
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+        #[serde(rename_all = "snake_case")]
+        pub enum PluginCapabilityKind {
+            $($kind),+
+        }
+
+        pub fn capability_entrypoint(kind: PluginCapabilityKind, name: &str) -> std::path::PathBuf {
+            let directory = match kind {
+                $(PluginCapabilityKind::$kind => $directory,)+
+            };
+            std::path::PathBuf::from(directory).join(name)
+        }
+    };
 }
 
-pub fn capability_entrypoint(kind: PluginCapabilityKind, name: &str) -> std::path::PathBuf {
-    let directory = match kind {
-        PluginCapabilityKind::Command => "commands",
-        PluginCapabilityKind::Tool => "tools",
-        PluginCapabilityKind::Hook => "hooks",
-    };
-    std::path::PathBuf::from(directory).join(name)
+plugin_capabilities! {
+    (Command, "commands"),
+    (Tool, "tools"),
+    (Hook, "hooks"),
 }
 
 /// Actor-owned bridge between installed plugin packages and replayable runtime

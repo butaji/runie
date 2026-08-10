@@ -41,3 +41,5 @@ assignments.
 macro-backed table, while semantic classification predicates remain explicit.
 Palette section membership now uses one macro-backed classification table,
 removing the split helper predicates while retaining an explicit fallback.
+Plugin capability kinds and their package directories now share one
+macro-backed declaration, keeping plugin entrypoint routing data-shaped.
