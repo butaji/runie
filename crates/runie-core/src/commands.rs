@@ -282,6 +282,7 @@ fn parse_extended_no_arg(value: &str) -> Option<MappableBuiltinCommand> {
             | "memory"
             | "workflows"
             | "jobs"
+            | "undo"
     )
     .then(|| MappableBuiltinCommand::Extended {
         name: name.to_owned(),

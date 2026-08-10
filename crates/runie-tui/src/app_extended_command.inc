@@ -1,5 +1,20 @@
 impl App {
     async fn route_extended_command(&self, name: &str, args: &str) -> bool {
+        if name == "undo" {
+            let result = self.session_actor.undo().await;
+            if let Err(error) = &result {
+                self.bus.publish(AgentEvent::Error {
+                    message: error.clone(),
+                });
+            }
+            self.ui
+                .send(UiMsg::ShowCommandResult(match result {
+                    Ok(()) => "Session undone".into(),
+                    Err(error) => format!("Undo unavailable: {error}"),
+                }))
+                .await;
+            return true;
+        }
         let state = self.command_actor.invoke(name, args).await;
         if matches!(name, "always-approve" | "auto" | "deny") {
             self.approval_mode.set(match state.approval {

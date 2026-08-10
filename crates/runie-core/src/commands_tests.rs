@@ -78,6 +78,13 @@ fn assert_mappable_basics() {
         Some(MappableBuiltinCommand::Copy)
     );
     assert_eq!(
+        parse_mappable_builtin_command("/undo"),
+        Some(MappableBuiltinCommand::Extended {
+            name: "undo".into(),
+            args: String::new()
+        })
+    );
+    assert_eq!(
         parse_mappable_builtin_command("/name release parity"),
         Some(MappableBuiltinCommand::Name {
             name: "release parity".into()
