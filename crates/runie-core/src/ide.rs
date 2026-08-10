@@ -4,6 +4,8 @@
 
 use std::collections::BTreeMap;
 
+pub const IDE_INVALID_REQUEST_CODE: i64 = -32_600;
+
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct IdeDocument {
     pub uri: String,
@@ -51,6 +53,47 @@ pub struct IdeSnapshot {
     pub workspace: Option<String>,
     pub documents: BTreeMap<String, IdeDocument>,
     pub diagnostics: BTreeMap<String, Vec<IdeDiagnostic>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct IdeRpcRequest {
+    pub jsonrpc: String,
+    pub id: u64,
+    pub method: String,
+    #[serde(default)]
+    pub params: serde_json::Value,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct IdeRpcError {
+    pub code: i64,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct IdeRpcResponse {
+    pub jsonrpc: String,
+    pub id: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub result: Option<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<IdeRpcError>,
+}
+
+pub fn decode_ide_request(input: &str) -> Result<IdeRpcRequest, String> {
+    let request: IdeRpcRequest = serde_json::from_str(input)
+        .map_err(|error| format!("invalid IDE JSON-RPC request: {error}"))?;
+    if request.jsonrpc != "2.0" || request.method.trim().is_empty() {
+        return Err("IDE request must use JSON-RPC 2.0 and a method".into());
+    }
+    Ok(request)
+}
+
+pub fn encode_ide_response(response: &IdeRpcResponse) -> Result<String, String> {
+    if response.result.is_some() == response.error.is_some() {
+        return Err("IDE response must contain exactly one result or error".into());
+    }
+    serde_json::to_string(response).map_err(|error| format!("encode IDE response: {error}"))
 }
 
 pub fn reduce_ide_event(snapshot: &mut IdeSnapshot, event: IdeEvent) -> Result<(), String> {
@@ -135,5 +178,25 @@ mod tests {
         )
         .is_err());
         assert!(snapshot.workspace.is_none());
+    }
+
+    #[test]
+    fn ide_json_rpc_codec_is_typed_and_lossless() {
+        let request = decode_ide_request(
+            r#"{"jsonrpc":"2.0","id":7,"method":"textDocument/didOpen","params":{"uri":"file:///a"}}"#,
+        )
+        .expect("request");
+        assert_eq!(request.id, 7);
+        let encoded = encode_ide_response(&IdeRpcResponse {
+            jsonrpc: "2.0".into(),
+            id: request.id,
+            result: None,
+            error: Some(IdeRpcError {
+                code: IDE_INVALID_REQUEST_CODE,
+                message: "invalid request".into(),
+            }),
+        })
+        .expect("response");
+        assert!(encoded.contains(&IDE_INVALID_REQUEST_CODE.to_string()));
     }
 }
