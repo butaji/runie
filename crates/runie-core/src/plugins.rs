@@ -169,6 +169,19 @@ pub fn active_plugin_capabilities(
     Ok(capabilities)
 }
 
+pub fn active_installed_plugin_capabilities(
+    registry: &PluginRegistry,
+    installation: &PluginInstallationSnapshot,
+    runtime: &PluginRuntimeSnapshot,
+) -> Result<Vec<ActivePluginCapability>, String> {
+    for name in &runtime.active {
+        if !installation.roots.contains_key(name) {
+            return Err(format!("active plugin is not installed: {name}"));
+        }
+    }
+    active_plugin_capabilities(registry, runtime)
+}
+
 /// Pure plugin lifecycle reducer. Loading, hook execution, and unloading are
 /// host concerns; this projection makes activation state replayable and
 /// rejects events for unknown or already-settled plugins.
@@ -404,5 +417,20 @@ mod tests {
         )
         .unwrap();
         assert!(snapshot.roots.is_empty());
+    }
+
+    #[test]
+    fn active_capabilities_require_an_installed_plugin_root() {
+        let mut registry = PluginRegistry::default();
+        registry.register(manifest()).unwrap();
+        let runtime = PluginRuntimeSnapshot {
+            active: ["sample-plugin".into()].into_iter().collect(),
+        };
+        assert!(active_installed_plugin_capabilities(
+            &registry,
+            &PluginInstallationSnapshot::default(),
+            &runtime
+        )
+        .is_err());
     }
 }
