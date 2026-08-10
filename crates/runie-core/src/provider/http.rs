@@ -33,6 +33,24 @@ pub struct HttpRequest {
     pub websocket_connect_timeout_ms: Option<u64>,
 }
 
+/// Provider-owned spelling for a model-declared reasoning level. Keeping the
+/// finite adapter vocabulary typed prevents call sites from inventing wire
+/// keys while retaining a single data-driven mapping function.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EffortWireField {
+    ReasoningEffort,
+    Reasoning,
+}
+
+impl EffortWireField {
+    pub const fn key(self) -> &'static str {
+        match self {
+            Self::ReasoningEffort => "reasoning_effort",
+            Self::Reasoning => "reasoning",
+        }
+    }
+}
+
 #[async_trait::async_trait]
 pub trait HttpActor: Send + Sync + 'static {
     async fn post(&self, body: String) -> Result<HttpResponse, StreamError>;
@@ -158,6 +176,16 @@ pub fn with_model_effort(
         }
     }
     payload
+}
+
+/// Apply the selected provider adapter's typed effort field.
+pub fn with_provider_effort(
+    payload: serde_json::Value,
+    model: &Model,
+    options: Option<&SimpleStreamOptions>,
+    field: EffortWireField,
+) -> serde_json::Value {
+    with_model_effort(payload, model, options, field.key())
 }
 
 async fn execute_with_retries<A: HttpActor + ?Sized>(

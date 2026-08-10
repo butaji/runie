@@ -411,6 +411,39 @@ fn model_declared_effort_maps_to_provider_wire_value() {
 }
 
 #[test]
+fn typed_provider_effort_fields_preserve_adapter_wire_keys() {
+    let model = Model {
+        thinking_level_map: Some(crate::types::ThinkingLevelMap {
+            high: Some("extended".into()),
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let options = SimpleStreamOptions {
+        reasoning: Some(crate::types::ThinkingLevel::High),
+        ..Default::default()
+    };
+
+    let responses = with_provider_effort(
+        serde_json::json!({}),
+        &model,
+        Some(&options),
+        EffortWireField::ReasoningEffort,
+    );
+    let chat = with_provider_effort(
+        serde_json::json!({}),
+        &model,
+        Some(&options),
+        EffortWireField::Reasoning,
+    );
+    assert_eq!(
+        responses,
+        serde_json::json!({"reasoning_effort": "extended"})
+    );
+    assert_eq!(chat, serde_json::json!({"reasoning": "extended"}));
+}
+
+#[test]
 fn provider_transport_options_are_replayable_data() {
     for (transport, wire) in [
         (ProviderTransport::Sse, "sse"),
