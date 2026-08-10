@@ -288,18 +288,17 @@ enum ProviderCommand {
     Event(ProviderEvent, tokio::sync::mpsc::Sender<()>),
     Replace(ProviderRegistryState, tokio::sync::mpsc::Sender<()>),
 }
-
-/// SSOT actor for configured providers and their active model selection.
 #[derive(Clone)]
 pub struct ProviderRegistryActor {
     tx: mpsc::Sender<ProviderCommand>,
     snapshot: watch::Receiver<ProviderRegistryState>,
+    shared_snapshot: watch::Receiver<crate::SharedSnapshot<ProviderRegistryState>>,
     _worker: Arc<TaskOwner>,
 }
-
 impl ProviderRegistryActor {
     pub fn new(initial: ProviderRegistryState) -> Self {
-        let (snapshot_tx, snapshot) = watch::channel(initial);
+        let (snapshot_tx, snapshot) = watch::channel(initial.clone());
+        let (shared_tx, shared_snapshot) = watch::channel(crate::SharedSnapshot::new(initial));
         let (tx, worker) = spawn_actor_worker!(64, move |mut rx: mpsc::Receiver<
             ProviderCommand,
         >| async move {
@@ -311,21 +310,28 @@ impl ProviderRegistryActor {
                     ),
                     ProviderCommand::Replace(state, reply) => (state, reply),
                 };
-                let _ = snapshot_tx.send(next);
+                crate::publish_shared_snapshot(&snapshot_tx, &shared_tx, next);
                 let _ = reply.send(()).await;
             }
         });
         Self {
             tx,
             snapshot,
+            shared_snapshot,
             _worker: worker,
         }
     }
-
     pub fn snapshot(&self) -> ProviderRegistryState {
         self.snapshot.borrow().clone()
     }
-
+    pub fn shared_snapshot(&self) -> crate::SharedSnapshot<ProviderRegistryState> {
+        self.shared_snapshot.borrow().clone()
+    }
+    pub fn shared_subscribe(
+        &self,
+    ) -> watch::Receiver<crate::SharedSnapshot<ProviderRegistryState>> {
+        self.shared_snapshot.clone()
+    }
     pub async fn apply(&self, event: ProviderEvent) {
         mailbox_call!(self.tx, |reply| ProviderCommand::Event(event, reply), ());
     }
@@ -334,7 +340,6 @@ impl ProviderRegistryActor {
         mailbox_call!(self.tx, |reply| ProviderCommand::Replace(state, reply), ());
     }
 }
-
 pub fn reduce_provider_event(
     mut state: ProviderRegistryState,
     event: ProviderEvent,
@@ -462,6 +467,17 @@ mod tests {
         );
         assert!(!state.providers[0].connected);
         assert!(state.active_provider.is_none());
+    }
+
+    #[tokio::test]
+    async fn actor_shares_immutable_provider_projection() {
+        let actor = ProviderRegistryActor::new(ProviderRegistryState::default());
+        actor.apply(ProviderEvent::Connected(provider())).await;
+
+        let shared = actor.shared_snapshot();
+        assert_eq!(shared.get().active_provider.as_deref(), Some("minimax"));
+        assert_eq!(shared.strong_count(), 2);
+        assert_eq!(actor.shared_subscribe().borrow().get().providers.len(), 1);
     }
 
     #[test]

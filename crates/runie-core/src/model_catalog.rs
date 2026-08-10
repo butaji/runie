@@ -7,6 +7,9 @@ use crate::types::Model;
 use std::sync::Arc;
 use tokio::sync::{mpsc, watch};
 
+#[path = "model_catalog_actor.rs"]
+mod model_catalog_actor;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CycleDirection {
     Forward,
@@ -76,96 +79,20 @@ enum ModelCatalogCommand {
 pub struct ModelCatalogActor {
     tx: mpsc::Sender<ModelCatalogCommand>,
     snapshot: watch::Receiver<ModelCatalogSnapshot>,
+    shared_snapshot: watch::Receiver<crate::SharedSnapshot<ModelCatalogSnapshot>>,
     _worker: Arc<TaskOwner>,
-}
-
-impl ModelCatalogActor {
-    pub fn new() -> Self {
-        let (snapshot_tx, snapshot) = watch::channel(ModelCatalogSnapshot::default());
-        let (tx, worker) = spawn_actor_worker!(256, move |rx| async move {
-            run_model_catalog_worker(rx, snapshot_tx).await;
-        });
-        Self {
-            tx,
-            snapshot,
-            _worker: worker,
-        }
-    }
-
-    pub async fn load(&self, models: Vec<Model>) {
-        mailbox_call!(
-            self.tx,
-            |reply| ModelCatalogCommand::Load(models, reply),
-            ()
-        );
-    }
-
-    /// Admit an already-resolved provider refresh result. The provider task
-    /// owns I/O; this actor owns admission and failure immutability.
-    pub async fn refresh(&self, result: Result<Vec<Model>, String>) {
-        mailbox_call!(
-            self.tx,
-            |reply| ModelCatalogCommand::Refresh(result, reply),
-            ()
-        );
-    }
-
-    pub async fn set_scope(&self, models: Vec<ScopedModel>) {
-        mailbox_call!(
-            self.tx,
-            |reply| ModelCatalogCommand::SetScope(models, reply),
-            ()
-        );
-    }
-
-    pub async fn search(&self, query: String, scoped_only: bool) {
-        mailbox_call!(
-            self.tx,
-            |reply| ModelCatalogCommand::Search(query, scoped_only, reply),
-            ()
-        );
-    }
-
-    pub async fn cycle(&self, direction: CycleDirection) -> Option<Model> {
-        mailbox_call!(
-            self.tx,
-            |reply| ModelCatalogCommand::Cycle(direction, reply),
-            None
-        )
-    }
-
-    pub async fn select(&self, model: Model) -> Option<Model> {
-        mailbox_call!(
-            self.tx,
-            |reply| ModelCatalogCommand::Select(model, reply),
-            None
-        )
-    }
-
-    pub fn snapshot(&self) -> ModelCatalogSnapshot {
-        self.snapshot.borrow().clone()
-    }
-
-    pub fn subscribe(&self) -> watch::Receiver<ModelCatalogSnapshot> {
-        self.snapshot.clone()
-    }
-}
-
-impl Default for ModelCatalogActor {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 async fn run_model_catalog_worker(
     mut rx: mpsc::Receiver<ModelCatalogCommand>,
     snapshot_tx: watch::Sender<ModelCatalogSnapshot>,
+    shared_tx: watch::Sender<crate::SharedSnapshot<ModelCatalogSnapshot>>,
 ) {
     let mut snapshot = ModelCatalogSnapshot::default();
     while let Some(command) = rx.recv().await {
         let (event, reply) = reduce_catalog_command(&mut snapshot, command);
         snapshot.last_event = Some(event);
-        let _ = snapshot_tx.send(snapshot.clone());
+        crate::publish_shared_snapshot(&snapshot_tx, &shared_tx, snapshot.clone());
         match reply {
             Either::Unit(reply) => {
                 let _ = reply.send(()).await;
@@ -479,6 +406,26 @@ mod tests {
         assert_eq!(
             actor.snapshot().last_event,
             Some(ModelCatalogEvent::SelectionChanged { model: Some(grok) })
+        );
+    }
+
+    #[tokio::test]
+    async fn actor_shares_immutable_catalog_projection() {
+        let actor = ModelCatalogActor::new();
+        actor.load(vec![model("xai", "grok", "Grok")]).await;
+
+        let shared = actor.shared_snapshot();
+        assert_eq!(shared.get().catalog.available.len(), 1);
+        assert_eq!(shared.strong_count(), 2);
+        assert_eq!(
+            actor
+                .shared_subscribe()
+                .borrow()
+                .get()
+                .catalog
+                .available
+                .len(),
+            1
         );
     }
 

@@ -35,3 +35,6 @@ clones with a test-local counting allocator. Runtime consumers remain
 incremental, so this task remains partial.
 Feed snapshot assembly now has one semantic projection module, including its
 macro-backed navigation field schema and derived selection projection.
+Model catalog and provider registry actors now publish immutable shared
+projections alongside their compatibility-owned watch channels, so registry
+consumers can avoid deep snapshot clones without an API break.
