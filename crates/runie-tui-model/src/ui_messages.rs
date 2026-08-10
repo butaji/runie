@@ -50,5 +50,6 @@ pub enum UiMsg {
     Reset,
     OpenUserQuestion(runie_core::tools::PendingUserQuestion),
     UserQuestionMove(isize),
+    ToggleUserQuestionSelection,
     SubmitUserQuestion,
 }

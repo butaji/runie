@@ -329,3 +329,30 @@ fn user_question_dialog_selects_and_projects_answer() {
     assert_eq!(state.dialog_stack.top_id(), Some("user-question"));
     assert_eq!(state.dialog_stack.top().unwrap().selected, 1);
 }
+
+#[test]
+fn multi_select_question_toggles_selected_options() {
+    let question = runie_core::tools::PendingUserQuestion {
+        id: "q2".into(),
+        request: runie_core::tools::UserQuestionRequest {
+            question: "Which?".into(),
+            options: vec![
+                runie_core::tools::UserQuestionOption {
+                    label: "A".into(),
+                    description: String::new(),
+                },
+                runie_core::tools::UserQuestionOption {
+                    label: "B".into(),
+                    description: String::new(),
+                },
+            ],
+            allow_multiple: true,
+        },
+    };
+    let state = UiState::new()
+        .update(UiMsg::OpenUserQuestion(question))
+        .update(UiMsg::ToggleUserQuestionSelection)
+        .update(UiMsg::UserQuestionMove(1))
+        .update(UiMsg::ToggleUserQuestionSelection);
+    assert_eq!(state.user_question_selected, vec![0, 1]);
+}

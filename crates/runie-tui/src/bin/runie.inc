@@ -966,7 +966,10 @@ fn render_user_question(
 ) {
     let Some(question) = ui.user_question.as_ref() else { return };
     let rows = std::iter::once(question.request.question.clone())
-        .chain(question.request.options.iter().map(|option| option.label.clone()))
+        .chain(question.request.options.iter().enumerate().map(|(index, option)| {
+            let mark = if ui.user_question_selected.contains(&index) { '✓' } else { ' ' };
+            format!("[{mark}] {}", option.label)
+        }))
         .collect();
     let selected = ui.dialog_stack.top().map(|frame| frame.selected).unwrap_or_default() + 1;
     let frame = runie_tui_model::DialogFrame {
@@ -1606,6 +1609,7 @@ async fn run_app(
             match key.code {
                 KeyCode::Up => app.ui.send(runie_tui_model::UiMsg::UserQuestionMove(-1)).await,
                 KeyCode::Down => app.ui.send(runie_tui_model::UiMsg::UserQuestionMove(1)).await,
+                KeyCode::Char(' ') => app.ui.send(runie_tui_model::UiMsg::ToggleUserQuestionSelection).await,
                 KeyCode::Enter => {
                     app.ui.send(runie_tui_model::UiMsg::SubmitUserQuestion).await;
                     if let Ok(UiCommand::AnswerUserQuestion { id, answer }) = ui_commands.recv().await {

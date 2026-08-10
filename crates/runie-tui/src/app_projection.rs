@@ -19,7 +19,6 @@ pub(super) fn palette_command_for(state: &UiState, message: &UiMsg) -> Option<Ui
             }
         })
 }
-
 pub(super) fn ui_command_for(state: &UiState, message: &UiMsg) -> Option<UiCommand> {
     match message {
         UiMsg::CopyText(text) => Some(UiCommand::CopyText(text.clone())),
@@ -27,37 +26,7 @@ pub(super) fn ui_command_for(state: &UiState, message: &UiMsg) -> Option<UiComma
         UiMsg::PaletteParameterPreview => parameter_command(state),
         UiMsg::SubmitUserQuestion => question_command(state),
         UiMsg::ActivateCommandPalette => palette_command_for(state, message),
-        UiMsg::HideWelcome
-        | UiMsg::ToggleShortcuts
-        | UiMsg::ToggleCommandPalette
-        | UiMsg::CommandPaletteChar(_)
-        | UiMsg::CommandPaletteBackspace
-        | UiMsg::CommandPaletteMove(_)
-        | UiMsg::CommandPaletteEscape
-        | UiMsg::DialogEscape
-        | UiMsg::CloseDialogs
-        | UiMsg::OpenFileDialog
-        | UiMsg::OpenPaletteParameters(_)
-        | UiMsg::PaletteParameterChar(_)
-        | UiMsg::PaletteParameterBackspace
-        | UiMsg::PaletteParameterMove(_)
-        | UiMsg::UserQuestionMove(_)
-        | UiMsg::OpenUserQuestion(_)
-        | UiMsg::ToggleModelSelector
-        | UiMsg::ModelSelectorChar(_)
-        | UiMsg::ModelSelectorBackspace
-        | UiMsg::ModelSelectorMove(_)
-        | UiMsg::ModelSelectorEscape
-        | UiMsg::ModelSelectorToggleScope
-        | UiMsg::ActivateModelSelector
-        | UiMsg::SetModelSelectorResultCount(_)
-        | UiMsg::SetModelSelectorRows(_)
-        | UiMsg::SetSkillRows(_)
-        | UiMsg::SetPaletteParameterOptions(_)
-        | UiMsg::ShowCommandResult(_)
-        | UiMsg::ToggleSessionInfo
-        | UiMsg::ToggleChangelog
-        | UiMsg::Reset => None,
+        _ => None,
     }
 }
 
@@ -68,9 +37,14 @@ fn question_command(state: &UiState) -> Option<UiCommand> {
         .top()
         .map(|frame| frame.selected)
         .unwrap_or_default();
+    let selected = if question.request.allow_multiple && !state.user_question_selected.is_empty() {
+        state.user_question_selected.clone()
+    } else {
+        vec![selected]
+    };
     Some(UiCommand::AnswerUserQuestion {
         id: question.id.clone(),
-        answer: serde_json::json!({"answers": [question.request.options.get(selected).map(|option| option.label.clone()).unwrap_or_default()]}),
+        answer: serde_json::json!({"answers": selected.into_iter().filter_map(|index| question.request.options.get(index).map(|option| option.label.clone())).collect::<Vec<_>>() }),
     })
 }
 
