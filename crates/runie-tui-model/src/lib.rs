@@ -49,11 +49,12 @@ pub use feed::{
     tool_mode_override_for_line, tool_result_text, tool_update_header_text, version_badge,
     web_search_site_count, web_search_sources_line, welcome_modal_lines, workflow_text,
     ActivityKind, CellPosition, CellSelection, FeedFacts, FeedNavigation, FeedSnapshot, FeedState,
-    Line, LineKind, ScrollbackDomain, ScrollbackEvent, ScrollbackLifecycleEvent, ScrollbackMsg,
-    ScrollbackToolEvent, ScrollbackWorkflowEvent, ToolBlock, ToolCardKind, ToolCardPaintIntent,
-    ToolCardRow, ToolCardRowKind, ToolNameLookup, ToolRecord, VersionBadgeVariant,
-    DEFAULT_THINKING_ELAPSED_MS, GROK_AUTO_COMPACT_MAX_ROWS, GROK_SMALL_SCREEN_TIP_MAX_ROWS,
-    PROMPT_TIMESTAMP_LIVE_THRESHOLD, RUNNING_BULLETS, USER_PREFIX_INDENT,
+    Line, LineKind, ScrollbackContentEvent, ScrollbackDomain, ScrollbackEvent,
+    ScrollbackLifecycleEvent, ScrollbackMsg, ScrollbackNavigationEvent, ScrollbackToolEvent,
+    ScrollbackWorkflowEvent, ToolBlock, ToolCardKind, ToolCardPaintIntent, ToolCardRow,
+    ToolCardRowKind, ToolNameLookup, ToolRecord, VersionBadgeVariant, DEFAULT_THINKING_ELAPSED_MS,
+    GROK_AUTO_COMPACT_MAX_ROWS, GROK_SMALL_SCREEN_TIP_MAX_ROWS, PROMPT_TIMESTAMP_LIVE_THRESHOLD,
+    RUNNING_BULLETS, USER_PREFIX_INDENT,
 };
 pub use memory::{memory_display_lines, parse_memory_results, MemoryResult};
 pub use prompt::{cycle_input_mode, InputMode, PromptOutcome, PromptSnapshot};

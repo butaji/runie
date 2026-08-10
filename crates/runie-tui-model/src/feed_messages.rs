@@ -121,12 +121,25 @@ pub enum ScrollbackMsg {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ScrollbackEvent {
     Lifecycle(ScrollbackLifecycleEvent),
+    Content(ScrollbackContentEvent),
     Tool(ScrollbackToolEvent),
     Workflow(ScrollbackWorkflowEvent),
+    Navigation(ScrollbackNavigationEvent),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ScrollbackLifecycleEvent { TurnStarted, TurnEnded, AssistantStarted, AssistantEnded, Cleared }
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ScrollbackContentEvent {
+    Append(Line),
+    FinalizeAssistant {
+        has_reasoning: bool,
+        reasoning_expanded: bool,
+        summary: String,
+        settled_no_tool_phase: bool,
+    },
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ScrollbackToolEvent {
@@ -142,15 +155,36 @@ pub enum ScrollbackWorkflowEvent {
     Ended { run_id: String, status: String, elapsed_ms: Option<u64> },
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ScrollbackNavigationEvent {
+    ClearSelection,
+    RevealLatest,
+    ScrollBy(i32),
+}
+
 impl ScrollbackEvent {
     pub fn into_messages(self) -> Vec<ScrollbackMsg> {
-        let message = match self {
+        vec![match self {
             Self::Lifecycle(event) => match event {
                 ScrollbackLifecycleEvent::TurnStarted => ScrollbackMsg::TurnStart,
                 ScrollbackLifecycleEvent::TurnEnded => ScrollbackMsg::TurnEnd,
                 ScrollbackLifecycleEvent::AssistantStarted => ScrollbackMsg::AssistantStreamStart,
                 ScrollbackLifecycleEvent::AssistantEnded => ScrollbackMsg::AssistantStreamEnd,
                 ScrollbackLifecycleEvent::Cleared => ScrollbackMsg::Clear,
+            },
+            Self::Content(event) => match event {
+                ScrollbackContentEvent::Append(line) => ScrollbackMsg::Append(line),
+                ScrollbackContentEvent::FinalizeAssistant {
+                    has_reasoning,
+                    reasoning_expanded,
+                    summary,
+                    settled_no_tool_phase,
+                } => ScrollbackMsg::FinalizeAssistant {
+                    has_reasoning,
+                    reasoning_expanded,
+                    summary,
+                    settled_no_tool_phase,
+                },
             },
             Self::Tool(event) => match event {
                 ScrollbackToolEvent::Started { tool_call_id, header, activity } => ScrollbackMsg::ToolStart { tool_call_id, header, activity },
@@ -162,7 +196,11 @@ impl ScrollbackEvent {
                 ScrollbackWorkflowEvent::Progress { run_id, phase, state, active_agents } => ScrollbackMsg::WorkflowProgress { run_id, phase, state, active_agents },
                 ScrollbackWorkflowEvent::Ended { run_id, status, elapsed_ms } => ScrollbackMsg::WorkflowEnd { run_id, status, elapsed_ms },
             },
-        };
-        vec![message]
+            Self::Navigation(event) => match event {
+                ScrollbackNavigationEvent::ClearSelection => ScrollbackMsg::ClearSelection,
+                ScrollbackNavigationEvent::RevealLatest => ScrollbackMsg::RevealLatest,
+                ScrollbackNavigationEvent::ScrollBy(delta) => ScrollbackMsg::ScrollBy(delta),
+            },
+        }]
     }
 }
