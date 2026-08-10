@@ -721,11 +721,11 @@ impl StreamFn for MinimaxStream {
 
     async fn stream(
         &self,
-        _model: &Model,
+        model: &Model,
         context: &AgentContext,
         options: Option<SimpleStreamOptions>,
     ) -> Result<AssistantMessageEventStream, StreamError> {
-        let (response, status, is_sse) = fetch_minimax_response(self, context, options).await?;
+        let (response, status, is_sse) = fetch_minimax_response(self, model, context, options).await?;
         if Self::streaming_enabled() && status.is_success() && is_sse {
             return Ok(minimax_sse_stream(response));
         }
@@ -744,6 +744,7 @@ impl StreamFn for MinimaxStream {
 #[allow(clippy::too_many_lines)]
 async fn fetch_minimax_response(
     stream: &MinimaxStream,
+    model: &Model,
     context: &AgentContext,
     options: Option<SimpleStreamOptions>,
 ) -> Result<(reqwest::Response, reqwest::StatusCode, bool), StreamError> {
@@ -764,18 +765,11 @@ async fn fetch_minimax_response(
         .map(|provider| provider.base_url.as_str())
         .filter(|base_url| !base_url.is_empty())
         .unwrap_or(&stream.base_url);
-    let model = configured
+    let selected_model = configured
         .as_ref()
         .and_then(|provider| provider.selected_model.as_deref())
         .unwrap_or(&stream.model);
-    let mut body = serde_json::json!({
-        "model": model,
-        "messages": minimax_messages(context)?,
-            "stream": MinimaxStream::streaming_enabled(),
-    });
-    if let Some(tools) = minimax_tool_definitions(context) {
-        body["tools"] = serde_json::Value::Array(tools);
-    }
+    let body = minimax_request_body(model, context, options.as_ref(), selected_model)?;
     let response = stream
         .client
         .post(endpoint)
@@ -791,6 +785,28 @@ async fn fetch_minimax_response(
         .and_then(|value| value.to_str().ok())
         .is_some_and(|value| value.starts_with("text/event-stream"));
     Ok((response, status, is_sse))
+}
+
+fn minimax_request_body(
+    model: &Model,
+    context: &AgentContext,
+    options: Option<&SimpleStreamOptions>,
+    model_name: &str,
+) -> Result<serde_json::Value, StreamError> {
+    let mut body = serde_json::json!({
+        "model": model_name,
+        "messages": minimax_messages(context)?,
+        "stream": MinimaxStream::streaming_enabled(),
+    });
+    if let Some(tools) = minimax_tool_definitions(context) {
+        body["tools"] = serde_json::Value::Array(tools);
+    }
+    Ok(runie_core::provider::with_provider_effort(
+        body,
+        model,
+        options,
+        runie_core::provider::EffortWireField::ReasoningEffort,
+    ))
 }
 
 enum InputEvent {
@@ -2705,6 +2721,34 @@ mod tests {
         assert_eq!(usage.input, 12);
         assert_eq!(usage.output, 8);
         assert_eq!(usage.total_tokens, 20);
+    }
+
+    #[test]
+    fn minimax_request_body_preserves_declared_reasoning_effort() {
+        let model = runie_core::types::Model {
+            thinking_level_map: Some(runie_core::types::ThinkingLevelMap {
+                off: None,
+                minimal: Some("minimal".into()),
+                low: Some("low".into()),
+                medium: Some("medium".into()),
+                high: Some("high".into()),
+                xhigh: Some("xhigh".into()),
+                max: Some("max".into()),
+            }),
+            ..runie_core::types::Model::default()
+        };
+        let options = runie_core::types::SimpleStreamOptions {
+            reasoning: Some(runie_core::types::ThinkingLevel::High),
+            ..Default::default()
+        };
+        let body = super::minimax_request_body(
+            &model,
+            &runie_core::types::AgentContext::default(),
+            Some(&options),
+            "MiniMax-M3",
+        )
+        .expect("MiniMax request body");
+        assert_eq!(body["reasoning_effort"], "high");
     }
 
     #[test]

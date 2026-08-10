@@ -81,7 +81,8 @@ vocabularies, so the next work is functional parity. Each item remains open
 until its source change, event/replay tests, and live TUI evidence are recorded.
 
 1. Provider-specific request adapters — `harness-04` and `harness-14`.
-   Complete the finite provider payload/finish-reason conformance matrix,
+   MiniMax effort projection is now covered by a pure request-body regression;
+   complete the finite provider payload/finish-reason conformance matrix,
    including unsupported-effort behavior and normalized failures.
 2. Tool output and background lifecycle UX — `harness-01` and `harness-03`.
    Add renderer-neutral bounded output cards and owned lifecycle controls,
