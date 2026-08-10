@@ -31,6 +31,7 @@ mod event_dsl;
 pub mod event_memo;
 pub mod event_trace_yaml;
 pub mod model_catalog;
+pub mod noninteractive;
 pub mod types;
 
 pub mod events;
