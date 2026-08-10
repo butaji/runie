@@ -20,6 +20,24 @@ pub struct CompactionSettings {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CompactionDecision {
+    Disabled,
+    WithinBudget {
+        available_tokens: u64,
+    },
+    Required {
+        context_tokens: u64,
+        threshold_tokens: u64,
+    },
+}
+
+impl CompactionDecision {
+    pub const fn required(self) -> bool {
+        matches!(self, Self::Required { .. })
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ContextUsageEstimate {
     pub tokens: u64,
     pub usage_tokens: u64,
@@ -133,7 +151,31 @@ pub fn should_compact(
     context_window: u64,
     settings: CompactionSettings,
 ) -> bool {
-    settings.enabled && context_tokens > context_window.saturating_sub(settings.reserve_tokens)
+    matches!(
+        compaction_decision(context_tokens, context_window, settings),
+        CompactionDecision::Required { .. }
+    )
+}
+
+pub fn compaction_decision(
+    context_tokens: u64,
+    context_window: u64,
+    settings: CompactionSettings,
+) -> CompactionDecision {
+    if !settings.enabled {
+        return CompactionDecision::Disabled;
+    }
+    let threshold_tokens = context_window.saturating_sub(settings.reserve_tokens);
+    if context_tokens > threshold_tokens {
+        CompactionDecision::Required {
+            context_tokens,
+            threshold_tokens,
+        }
+    } else {
+        CompactionDecision::WithinBudget {
+            available_tokens: threshold_tokens.saturating_sub(context_tokens),
+        }
+    }
 }
 
 /// Pure provider-context boundary after the newest Pi compaction record.

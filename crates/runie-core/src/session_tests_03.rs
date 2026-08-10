@@ -374,4 +374,17 @@
                 ..settings
             }
         ));
+        assert_eq!(
+            compaction_decision(900, 1_000, settings),
+            CompactionDecision::WithinBudget {
+                available_tokens: 0
+            }
+        );
+        assert_eq!(
+            compaction_decision(901, 1_000, settings),
+            CompactionDecision::Required {
+                context_tokens: 901,
+                threshold_tokens: 900
+            }
+        );
     }
