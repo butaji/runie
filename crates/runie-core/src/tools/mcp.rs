@@ -17,6 +17,8 @@ mod stream;
 pub use stream::{
     parse_mcp_event_stream, reduce_mcp_stream_event, McpStreamEvent, McpStreamSnapshot,
 };
+#[path = "mcp_http_stream.rs"]
+mod http_stream;
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct McpToolSpec {
