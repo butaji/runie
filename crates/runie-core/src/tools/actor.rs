@@ -406,6 +406,32 @@ mod tests {
         let snapshot = actor.scheduler_metrics().await;
         assert_eq!(snapshot.completed, 1);
         assert_eq!(snapshot.running, 0);
+
+        let _ = actor
+            .execute(
+                crate::types::AssistantMessage {
+                    content: vec![],
+                    stop_reason: None,
+                    model: "test".into(),
+                    timestamp: 0,
+                    ..Default::default()
+                },
+                crate::types::AgentContext::default(),
+                None,
+                None,
+                vec![ToolCall {
+                    id: "missing".into(),
+                    name: "missing_tool".into(),
+                    arguments: serde_json::json!({}),
+                    thought_signature: None,
+                }],
+                ToolExecutionMode::Sequential,
+                super::super::executor::ToolExecHooks::default(),
+            )
+            .await;
+        let snapshot = actor.scheduler_metrics().await;
+        assert_eq!(snapshot.completed, 1);
+        assert_eq!(snapshot.failed, 1);
     }
 
     #[test]
