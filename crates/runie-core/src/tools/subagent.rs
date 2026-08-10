@@ -18,6 +18,62 @@ pub enum SubagentCapability {
     WriteWorkspace,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct SubagentResourceLimits {
+    pub max_turns: u32,
+    pub max_output_bytes: u64,
+    pub max_tool_calls: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SubagentResourceUsage {
+    pub turns: u32,
+    pub output_bytes: u64,
+    pub tool_calls: u32,
+}
+
+impl SubagentRole {
+    pub const fn resource_limits(self) -> SubagentResourceLimits {
+        match self {
+            Self::Explore => SubagentResourceLimits {
+                max_turns: 4,
+                max_output_bytes: 32 * 1024,
+                max_tool_calls: 16,
+            },
+            Self::Plan => SubagentResourceLimits {
+                max_turns: 6,
+                max_output_bytes: 48 * 1024,
+                max_tool_calls: 24,
+            },
+            Self::Code => SubagentResourceLimits {
+                max_turns: 12,
+                max_output_bytes: 128 * 1024,
+                max_tool_calls: 64,
+            },
+        }
+    }
+
+    pub fn validate_resource_usage(self, usage: SubagentResourceUsage) -> Result<(), String> {
+        let limits = self.resource_limits();
+        if usage.turns > limits.max_turns {
+            return Err(format!("subagent exceeded {} turns", limits.max_turns));
+        }
+        if usage.output_bytes > limits.max_output_bytes {
+            return Err(format!(
+                "subagent exceeded {} output bytes",
+                limits.max_output_bytes
+            ));
+        }
+        if usage.tool_calls > limits.max_tool_calls {
+            return Err(format!(
+                "subagent exceeded {} tool calls",
+                limits.max_tool_calls
+            ));
+        }
+        Ok(())
+    }
+}
+
 impl SubagentRole {
     pub const fn capabilities(self) -> &'static [SubagentCapability] {
         match self {
@@ -217,5 +273,24 @@ mod tests {
             .authorize(&[SubagentCapability::WriteWorkspace])
             .unwrap_err()
             .contains("WriteWorkspace"));
+    }
+
+    #[test]
+    fn role_limits_are_typed_and_reject_resource_escalation() {
+        let limits = SubagentRole::Explore.resource_limits();
+        assert!(SubagentRole::Explore
+            .validate_resource_usage(SubagentResourceUsage {
+                turns: limits.max_turns,
+                output_bytes: limits.max_output_bytes,
+                tool_calls: limits.max_tool_calls,
+            })
+            .is_ok());
+        assert!(SubagentRole::Explore
+            .validate_resource_usage(SubagentResourceUsage {
+                turns: limits.max_turns + 1,
+                output_bytes: 0,
+                tool_calls: 0,
+            })
+            .is_err());
     }
 }
