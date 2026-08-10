@@ -1,6 +1,6 @@
 # Runie findings ledger
 
-Updated: 2026-08-09
+Updated: 2026-08-10
 
 ## Architecture
 
@@ -79,16 +79,15 @@ As of 2026-08-09, the reduction work has these verified results:
 - `cargo test --workspace --quiet` passes across the current workspace.
 - `cargo test -p runie-tui-model --quiet`: 189 tests pass after moving the
   domain-classifier test out of the oversized test fragment.
-- `scripts/tmux-command-smoke.sh` passed all 49 non-quit palette commands at
+- `scripts/tmux-command-smoke.sh` passed all 52 palette commands at
   120x36 in disposable tmux sessions; parameterized commands were submitted
   with a safe `smoke` value and expected picker/dialog transitions were
   observed.
 - A separate tmux smoke pass verified `Quit` terminates its session.
-- After the live tool-policy registration change, the refreshed tmux matrix
-  passed all 49 palette cases at 120x36; the unconditional Ctrl+Q Quit case
-  also passed, for 50/50 TUI-only cases. The provider-backed coding prompt
-  path remains unverified because `MINIMAX_API_KEY` is absent from the
-  environment.
+- The refreshed matrix also passes the direct stored-session resume-picker
+  case and the unconditional Quit lifecycle, for 54/54 TUI-only cases. The
+  provider-backed coding prompt path remains unverified because
+  `MINIMAX_API_KEY` is absent from the environment.
 
 The active backlog is intentionally not marked complete: normalized feed
 records, paint-data rendering, generic YAML traces, and semantic module
