@@ -19,6 +19,8 @@ Status projection tests now cover both explicit `EventMemo::replay` and the
 trace exercises the shared public `replay_yaml` helper end to end.
 Paint document round-trip coverage now consumes a checked-in YAML fixture,
 extending fixture-backed declarative data into renderer-neutral paint values.
+Status renderer transitions now also replay from a checked-in YAML event trace,
+covering the TUI widget boundary through the public core replay helper.
 
 Acceptance: representative core, feed, status, and TUI tests use the harness;
 no sleeps are introduced.

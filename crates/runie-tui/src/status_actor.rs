@@ -110,7 +110,7 @@ impl Default for StatusActor {
 #[cfg(test)]
 mod tests {
     use super::StatusActor;
-    use crate::widgets::{Status, StatusMsg};
+    use crate::widgets::{Status, StatusBar, StatusMsg};
     use runie_core::types::AgentEvent;
 
     #[tokio::test]
@@ -131,6 +131,22 @@ mod tests {
         let second = actor.shared_model_snapshot();
         assert_eq!(first, second);
         assert_eq!(first.strong_count(), 3);
+    }
+
+    #[test]
+    fn status_renderer_replays_yaml_event_trace() {
+        const TRACE_ELAPSED_MS: u64 = 1_250;
+        let trace = runie_core::replay_yaml(
+            include_str!("fixtures/status-render-trace.yaml"),
+            StatusBar::new(),
+            |state: &mut StatusBar, message: &StatusMsg| state.apply(message.clone()),
+        )
+        .expect("status renderer fixture is an ordered event trace");
+        let snapshot = trace.state().model_snapshot();
+        assert_eq!(trace.events().len(), 3);
+        assert_eq!(snapshot.state, Status::Thinking);
+        assert_eq!(snapshot.animation_frame, 1);
+        assert_eq!(snapshot.thinking_elapsed_ms, Some(TRACE_ELAPSED_MS));
     }
 
     #[tokio::test]
