@@ -11,6 +11,16 @@ pub enum ApprovalMode {
     Yolo,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum ApprovalModeEvent {
+    Set(ApprovalMode),
+}
+
+pub fn reduce_approval_mode(mode: &mut ApprovalMode, event: ApprovalModeEvent) {
+    let ApprovalModeEvent::Set(next) = event;
+    *mode = next;
+}
+
 const READ_ONLY_TOOLS: &[&str] = &["read", "grep", "glob", "list_dir", "echo"];
 const MUTATING_TOOLS: &[&str] = &[
     "write",
@@ -59,7 +69,13 @@ impl ApprovalModeStore {
         *self.rx.borrow()
     }
     pub fn set(&self, mode: ApprovalMode) {
-        let _ = self.tx.send(mode);
+        let _ = self.apply(ApprovalModeEvent::Set(mode));
+    }
+
+    pub fn apply(&self, event: ApprovalModeEvent) -> bool {
+        let mut mode = self.current();
+        reduce_approval_mode(&mut mode, event);
+        self.tx.send(mode).is_ok()
     }
 }
 
@@ -191,6 +207,18 @@ mod tests {
         assert_eq!(reader.current(), ApprovalMode::Auto);
         store.set(ApprovalMode::Yolo);
         assert_eq!(reader.current(), ApprovalMode::Yolo);
+    }
+
+    #[test]
+    fn approval_mode_events_replay_as_pure_state_data() {
+        let mut mode = ApprovalMode::Ask;
+        for event in [
+            ApprovalModeEvent::Set(ApprovalMode::Auto),
+            ApprovalModeEvent::Set(ApprovalMode::Yolo),
+        ] {
+            reduce_approval_mode(&mut mode, event);
+        }
+        assert_eq!(mode, ApprovalMode::Yolo);
     }
 
     #[test]
