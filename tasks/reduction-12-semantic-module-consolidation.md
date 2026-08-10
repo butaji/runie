@@ -38,3 +38,5 @@ Transcript and dense-tool navigation are consolidated in `feed_navigation.rs`,
 keeping selection transitions and group identity in one semantic module.
 Tool display-mode transitions and identity projection are consolidated in
 `feed_tool_display.rs`.
+Logical range and terminal-cell selection transitions are consolidated in
+`feed_selection.rs`.
