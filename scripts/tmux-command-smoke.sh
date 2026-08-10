@@ -111,6 +111,7 @@ while IFS='|' read -r label command expected; do
   fi
 done <<'CASES'
 Resume Picker|/resume|Command Parameters
+Context Summary|/context|No compaction summary
 CASES
 
 # The quit path is a TUI-only terminal case: it must end the session rather
