@@ -187,8 +187,9 @@ mod tests {
             "Thinking",
             PaintIntent::Accent,
         );
-        let yaml = serde_yaml::to_string(&document).expect("paint YAML");
-        let restored: PaintDocument = serde_yaml::from_str(&yaml).expect("paint YAML restore");
+        let restored: PaintDocument =
+            serde_yaml::from_str(include_str!("fixtures/paint-document.yaml"))
+                .expect("paint YAML restore");
         assert_eq!(restored, document);
     }
 

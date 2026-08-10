@@ -17,6 +17,8 @@ Status projection tests now cover both explicit `EventMemo::replay` and the
 `event_trace!` shorthand, asserting identical ordered events and snapshots.
 `Status` and `StatusMsg` now have serde representations, and a YAML status
 trace exercises the shared public `replay_yaml` helper end to end.
+Paint document round-trip coverage now consumes a checked-in YAML fixture,
+extending fixture-backed declarative data into renderer-neutral paint values.
 
 Acceptance: representative core, feed, status, and TUI tests use the harness;
 no sleeps are introduced.
