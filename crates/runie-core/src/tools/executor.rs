@@ -1,8 +1,4 @@
 //! Sequential and parallel tool dispatch.
-//!
-//! Both paths emit `ToolExecutionStart` / `ToolExecutionEnd` events through
-//! the supplied sink. In parallel mode, completion-order and source-order
-//! are separated per the TS README §With Tool Calls.
 
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -43,15 +39,10 @@ pub struct ToolExecContext {
     pub registry: Arc<ToolRegistry>,
     pub hooks: ToolExecHooks,
     pub bus: Option<crate::events::EventBus>,
-    /// Compatibility-only collection used when no event bus is supplied.
-    /// Live execution publishes updates through `bus` and carries no mutable
-    /// side buffer.
     pub updates: Option<Arc<std::sync::Mutex<Vec<crate::types::AgentEvent>>>>,
-    /// Deterministic tool-result timestamp supplied by the owning actor.
     pub tool_result_timestamp: i64,
 }
 
-/// Result of dispatching a batch.
 #[derive(Debug, Clone, Default)]
 pub struct DispatchOutcome {
     pub tool_results: Vec<ToolResultMessage>,
@@ -63,8 +54,6 @@ pub async fn execute_sequential(calls: Vec<ToolCall>, ctx: ToolExecContext) -> D
     let mut outcome = DispatchOutcome::default();
 
     for call in calls {
-        // The lifecycle begins before the tool side effect, matching pi's
-        // tool_execution_start contract. Completion and result events follow.
         outcome.events.push(tool_start(&call));
         let (result, is_error) = match dispatch_one(&call, &ctx).await {
             Ok(result) => result,
@@ -424,6 +413,14 @@ async fn execute_tool(
     }
     if call.name == "web_search" {
         return execute_web_search(call, ctx).await;
+    }
+    if call.name == "background_bash" {
+        let Some(hook) = &ctx.hooks.background_shell else {
+            return Err("background_bash requires an owning background hook".into());
+        };
+        let request = serde_json::from_value(call.arguments.clone())
+            .map_err(|error| format!("invalid background shell request: {error}"))?;
+        return Ok(crate::tools::background::result(hook(request).await?));
     }
     let settled = Arc::new(AtomicBool::new(false));
     let on_update = tool_update_callback(call, ctx, settled.clone());

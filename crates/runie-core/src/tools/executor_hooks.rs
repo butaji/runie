@@ -11,6 +11,7 @@ pub struct ToolExecHooks {
     pub ask_user_question: Option<AskUserQuestionHook>,
     pub subagent: Option<SubagentHook>,
     pub web_search: Option<WebSearchHook>,
+    pub background_shell: Option<BackgroundShellHook>,
 }
 
 pub type BeforeToolCallHook = Arc<
@@ -42,6 +43,13 @@ pub type SubagentHook = Arc<
 pub type WebSearchHook = Arc<
     dyn Fn(
             crate::tools::WebSearchRequest,
+        ) -> Pin<Box<dyn Future<Output = Result<serde_json::Value, String>> + Send>>
+        + Send
+        + Sync,
+>;
+pub type BackgroundShellHook = Arc<
+    dyn Fn(
+            crate::tools::BackgroundShellRequest,
         ) -> Pin<Box<dyn Future<Output = Result<serde_json::Value, String>> + Send>>
         + Send
         + Sync,

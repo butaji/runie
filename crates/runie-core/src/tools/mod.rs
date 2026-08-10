@@ -2,6 +2,7 @@
 
 pub mod actor;
 pub mod ask_user;
+pub mod background;
 pub mod executor;
 pub mod git;
 pub mod mcp;
@@ -24,6 +25,7 @@ macro_rules! register_tools {
 
 pub use actor::{ToolCommand, ToolExecutorActor, ToolOutcome};
 pub use ask_user::{AskUserQuestionTool, UserQuestionOption, UserQuestionRequest};
+pub use background::{BackgroundShellRequest, BackgroundShellTool};
 pub use executor::{execute_parallel, execute_sequential, ToolExecContext, ToolExecHooks};
 pub use git::{GitDiffTool, GitReviewTool, GitStatusTool, GitWorktreeTool};
 pub use mcp::{McpCallHook, McpCallRequest, McpServer, McpTool, McpToolSpec};

@@ -38,7 +38,7 @@ use runie_core::state::AgentStateActor;
 use runie_core::tools::executor::ToolExecHooks;
 use runie_core::tools::ToolExecutorActor;
 use runie_core::tools::ToolRegistry;
-use runie_core::tools::{ApprovalMode, AskUserQuestionTool, BashTool, EditFileTool, GitDiffTool, GitReviewTool, GitStatusTool, GitWorktreeTool, GlobTool, GrepTool, ReadFileTool, SubagentTool, TodoWriteTool, WebSearchTool, WriteFileTool};
+use runie_core::tools::{ApprovalMode, AskUserQuestionTool, BackgroundShellTool, BashTool, EditFileTool, GitDiffTool, GitReviewTool, GitStatusTool, GitWorktreeTool, GlobTool, GrepTool, ReadFileTool, SubagentTool, TodoWriteTool, WebSearchTool, WriteFileTool};
 use runie_core::types::{
     AgentContext, AgentTool, AgentToolResult, AssistantMessage, AssistantMessageEvent, Model,
     QueueMode, SimpleStreamOptions, StopReason, ThemeKind, ToolCall, ToolExecutionMode,
@@ -1238,6 +1238,7 @@ async fn build_live_app() -> App {
     let question_broker = runie_core::tools::UserQuestionBroker::default();
     let approval_mode = runie_core::tools::ApprovalModeStore::default();
     let subagent_loop = std::sync::Arc::new(tokio::sync::OnceCell::<LoopActor>::new());
+    let background_actor = runie_core::background::BackgroundProcessActor::new();
     let state = AgentStateActor::new();
     let steering = SteeringQueueActor::new();
     let follow_up = FollowUpQueueActor::new();
@@ -1254,6 +1255,7 @@ async fn build_live_app() -> App {
         ,TodoWriteTool
         ,SubagentTool
         ,WebSearchTool
+        ,BackgroundShellTool
         ,GitStatusTool
         ,GitDiffTool
         ,GitReviewTool
@@ -1356,6 +1358,16 @@ async fn build_live_app() -> App {
                             .await
                             .map_err(|error| error.to_string())?;
                         Ok(serde_json::json!({"messages": messages}))
+                    })
+                })
+            }),
+            background_shell: Some({
+                let actor = background_actor.clone();
+                std::sync::Arc::new(move |request| {
+                    let actor = actor.clone();
+                    Box::pin(async move {
+                        let id = actor.start(request.command).await?;
+                        Ok(serde_json::json!({"job_id": id, "status": "running"}))
                     })
                 })
             }),
