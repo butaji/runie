@@ -89,6 +89,30 @@ for label in "${labels[@]}"; do
     echo "PASS $label"; ((passed += 1))
   fi
 done
+
+# Direct slash-command cases cover no-argument branches that are distinct
+# from the parameterized palette entries.
+while IFS='|' read -r label command expected; do
+  tmux -L "$socket" -f /dev/null kill-session -t smoke 2>/dev/null || true
+  tmux -L "$socket" -f /dev/null new-session -d -s smoke -x 120 -y 36 \
+    "env -u NO_COLOR TERM=xterm-256color COLORTERM=truecolor $binary" >/dev/null 2>&1 || {
+      echo "FAIL $label: launch"; ((failed += 1)); continue;
+    }
+  tmux -L "$socket" resize-window -t smoke -x 120 -y 36 >/dev/null 2>&1
+  if ! wait_for 'Enter:send|Type your message|Shift\\+Tab'; then
+    echo "FAIL $label: startup"; ((failed += 1)); continue
+  fi
+  tmux -L "$socket" send-keys -t smoke -l -- "$command"
+  tmux -L "$socket" send-keys -t smoke Enter
+  if wait_for "$expected" && ! capture | rg -qi 'panic|thread .* panicked|unknown command|fatal error'; then
+    echo "PASS $label"; ((passed += 1))
+  else
+    echo "FAIL $label: command-result"; ((failed += 1))
+  fi
+done <<'CASES'
+Resume Picker|/resume|Command Parameters
+CASES
+
 # The quit path is a TUI-only terminal case: it must end the session rather
 # than transition to another overlay.
 tmux -L "$socket" -f /dev/null new-session -d -s smoke -x 120 -y 36 \
