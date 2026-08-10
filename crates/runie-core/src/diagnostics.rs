@@ -21,11 +21,32 @@ pub struct DiagnosticMetric {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DiagnosticVisualization {
     pub metrics: Vec<DiagnosticMetric>,
+    pub series: Vec<DiagnosticSeries>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DiagnosticSeries {
+    pub label: String,
+    pub points: Vec<DiagnosticPoint>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct DiagnosticPoint {
+    pub sequence: u64,
+    pub value: f64,
 }
 
 impl DiagnosticVisualization {
     pub fn from_bundle(bundle: &DiagnosticBundle) -> Self {
         let usage = &bundle.usage;
+        let series = [
+            ("input_tokens", "pi.ai.usage.input_tokens"),
+            ("output_tokens", "pi.ai.usage.output_tokens"),
+            ("cost", "pi.ai.usage.cost"),
+        ]
+        .into_iter()
+        .map(|(label, key)| diagnostic_series(bundle, label, key))
+        .collect();
         Self {
             metrics: vec![
                 metric("requests", usage.requests as f64),
@@ -37,6 +58,7 @@ impl DiagnosticVisualization {
                 metric("total_tokens", usage.total_tokens as f64),
                 metric("cost", usage.cost),
             ],
+            series,
         }
     }
 
@@ -55,6 +77,29 @@ impl DiagnosticVisualization {
                 .map(|metric| format!("{}: {}", metric.label, metric.value)),
         );
         lines
+    }
+}
+
+fn diagnostic_series(bundle: &DiagnosticBundle, label: &str, key: &str) -> DiagnosticSeries {
+    let points = bundle
+        .telemetry
+        .spans
+        .iter()
+        .filter(|span| span.ended && span.name == "pi.ai.request")
+        .filter_map(|span| {
+            Some(DiagnosticPoint {
+                sequence: span.end_sequence?,
+                value: span
+                    .attributes
+                    .get(key)?
+                    .as_f64()
+                    .or_else(|| span.attributes.get(key)?.as_u64().map(|value| value as f64))?,
+            })
+        })
+        .collect();
+    DiagnosticSeries {
+        label: label.into(),
+        points,
     }
 }
 
@@ -101,9 +146,42 @@ mod tests {
         let visualization = DiagnosticVisualization::from_bundle(&restored);
         assert_eq!(visualization.metrics[0].label, "requests");
         assert_eq!(visualization.metrics.last().unwrap().label, "cost");
+        assert_eq!(visualization.series.len(), 3);
+        assert!(visualization
+            .series
+            .iter()
+            .all(|series| series.points.is_empty()));
         assert_eq!(
             visualization.terminal_lines(&restored)[0],
             "check: workspace"
         );
+    }
+
+    #[test]
+    fn visualization_projects_ended_request_series() {
+        let mut attributes = std::collections::HashMap::new();
+        attributes.insert("pi.ai.usage.input_tokens".into(), serde_json::json!(12));
+        attributes.insert("pi.ai.usage.output_tokens".into(), serde_json::json!(8));
+        attributes.insert("pi.ai.usage.cost".into(), serde_json::json!(0.25));
+        let telemetry = TelemetrySnapshot {
+            spans: vec![crate::telemetry::SpanSnapshot {
+                id: 3,
+                parent_id: None,
+                name: "pi.ai.request".into(),
+                attributes,
+                events: vec![],
+                status: crate::telemetry::SpanStatus::Ok,
+                explicit_status: true,
+                error: None,
+                ended: true,
+                end_sequence: Some(7),
+            }],
+            ..TelemetrySnapshot::default()
+        };
+        let bundle = DiagnosticBundle::from_snapshots(DiagnosticReport::default(), telemetry);
+        let visualization = DiagnosticVisualization::from_bundle(&bundle);
+        assert_eq!(visualization.series[0].points[0].sequence, 7);
+        assert_eq!(visualization.series[0].points[0].value, 12.0);
+        assert_eq!(visualization.series[2].points[0].value, 0.25);
     }
 }
