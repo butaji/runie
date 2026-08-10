@@ -8,16 +8,16 @@ semantic modules and remove obsolete indirection.
 Acceptance: source inventory remains valid, public APIs stay stable, and lint
 plus workspace tests pass.
 
-Current gap: numbered feed fragments and several oversized semantic modules
-remain; consolidation is deliberately deferred until the feed model settles.
+Current gap: several oversized semantic modules remain; feed fragment
+consolidation is complete now that the normalized feed model has settled.
 
 Progress: event projection tests now live in `events_tests.rs`, keeping the
 production projection module below the structural file-size limit.
 Palette matching helpers now live in `ui_palette.rs`, reducing the UI module's
 size without changing its public API.
 Dialog tests now live in `dialog_tests.rs`, and static provider/theme data was
-removed from oversized functions. The remaining numbered feed fragments are
-still intentionally retained while normalized feed state is incomplete.
+removed from oversized functions. Remaining semantic modules are retained
+until their behavior-specific boundaries can move without obscuring ownership.
 Structural lint now reports no feed-owned issues; remaining findings are in
 command/palette/UI modules owned by the parallel command-surface work.
 The command-surface ownership boundary is now clean as well: command tests
