@@ -35,7 +35,8 @@ pub use git::{
     GitPushTool, GitRevertRequest, GitRevertTool, GitReviewTool, GitStatusTool, GitWorktreeTool,
 };
 pub use mcp::{
-    McpCallHook, McpCallRequest, McpHttpClient, McpServer, McpStdioClient, McpTool, McpToolSpec,
+    McpCallHook, McpCallRequest, McpHttpClient, McpHttpSession, McpServer, McpStdioClient, McpTool,
+    McpToolSpec,
 };
 pub use policy::{decide as approval_decision, ApprovalDecision, ApprovalMode, ApprovalModeStore};
 pub use question_broker::{

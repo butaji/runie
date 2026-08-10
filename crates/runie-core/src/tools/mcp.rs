@@ -6,6 +6,11 @@ use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
 pub const MCP_HTTP_MAX_RESPONSE_BYTES: usize = 1_048_576;
+pub(crate) const MCP_SESSION_HEADER: &str = "mcp-session-id";
+
+#[path = "mcp_http_session.rs"]
+mod http_session;
+pub use http_session::McpHttpSession;
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct McpToolSpec {
@@ -37,9 +42,9 @@ pub struct McpStdioClient {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct McpHttpClient {
-    pub endpoint: String,
-    pub bearer_token: Option<String>,
-    pub timeout: Duration,
+    pub(crate) endpoint: String,
+    pub(crate) bearer_token: Option<String>,
+    pub(crate) timeout: Duration,
 }
 
 impl McpHttpClient {
@@ -63,6 +68,16 @@ impl McpHttpClient {
     }
 
     pub async fn request(&self, request: serde_json::Value) -> Result<serde_json::Value, String> {
+        self.request_with_session(request, None)
+            .await
+            .map(|(value, _)| value)
+    }
+
+    pub(crate) async fn request_with_session(
+        &self,
+        request: serde_json::Value,
+        session_id: Option<&str>,
+    ) -> Result<(serde_json::Value, Option<String>), String> {
         let client = reqwest::Client::builder()
             .timeout(self.timeout)
             .build()
@@ -71,29 +86,45 @@ impl McpHttpClient {
         if let Some(token) = &self.bearer_token {
             call = call.bearer_auth(token);
         }
+        if let Some(session_id) = session_id {
+            call = call.header(MCP_SESSION_HEADER, session_id);
+        }
         let response = call
             .send()
             .await
             .map_err(|error| format!("MCP HTTP request: {error}"))?;
-        let status = response.status();
-        let body = response
-            .bytes()
-            .await
-            .map_err(|error| format!("MCP HTTP body: {error}"))?;
-        if body.len() > MCP_HTTP_MAX_RESPONSE_BYTES {
-            return Err(format!(
-                "MCP HTTP response exceeds {} bytes",
-                MCP_HTTP_MAX_RESPONSE_BYTES
-            ));
-        }
-        if !status.is_success() {
-            return Err(format!(
-                "MCP HTTP status {status}: {}",
-                String::from_utf8_lossy(&body)
-            ));
-        }
-        serde_json::from_slice(&body).map_err(|error| format!("invalid MCP HTTP response: {error}"))
+        decode_http_response(response).await
     }
+}
+
+async fn decode_http_response(
+    response: reqwest::Response,
+) -> Result<(serde_json::Value, Option<String>), String> {
+    let status = response.status();
+    let response_session = response
+        .headers()
+        .get(MCP_SESSION_HEADER)
+        .and_then(|value| value.to_str().ok())
+        .map(str::to_owned);
+    let body = response
+        .bytes()
+        .await
+        .map_err(|error| format!("MCP HTTP body: {error}"))?;
+    if body.len() > MCP_HTTP_MAX_RESPONSE_BYTES {
+        return Err(format!(
+            "MCP HTTP response exceeds {} bytes",
+            MCP_HTTP_MAX_RESPONSE_BYTES
+        ));
+    }
+    if !status.is_success() {
+        return Err(format!(
+            "MCP HTTP status {status}: {}",
+            String::from_utf8_lossy(&body)
+        ));
+    }
+    serde_json::from_slice(&body)
+        .map(|value| (value, response_session))
+        .map_err(|error| format!("invalid MCP HTTP response: {error}"))
 }
 
 impl McpStdioClient {
@@ -449,38 +480,5 @@ mod tests {
             .await
             .unwrap_err();
         assert_eq!(error, "MCP error -32602: bad arguments");
-    }
-
-    #[tokio::test]
-    async fn http_transport_posts_json_and_decodes_response() {
-        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let address = listener.local_addr().unwrap();
-        let mut tasks = tokio::task::JoinSet::new();
-        tasks.spawn(async move {
-            let (mut socket, _) = listener.accept().await.unwrap();
-            let mut request = vec![0_u8; 2048];
-            let _ = tokio::io::AsyncReadExt::read(&mut socket, &mut request).await;
-            let body = r#"{"jsonrpc":"2.0","id":1,"result":{"ok":true}}"#;
-            let response = format!(
-                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nContent-Type: application/json\r\n\r\n{}",
-                body.len(),
-                body
-            );
-            tokio::io::AsyncWriteExt::write_all(&mut socket, response.as_bytes())
-                .await
-                .unwrap();
-        });
-        let client = McpHttpClient::new(
-            format!("http://{address}"),
-            Some("secret".into()),
-            Duration::from_secs(1),
-        )
-        .unwrap();
-        let response = client
-            .request(serde_json::json!({"jsonrpc":"2.0","id":1}))
-            .await
-            .unwrap();
-        tasks.join_next().await.unwrap().unwrap();
-        assert_eq!(response["result"]["ok"], true);
     }
 }
