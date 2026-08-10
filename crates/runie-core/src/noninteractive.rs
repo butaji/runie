@@ -15,6 +15,12 @@ pub enum JsonlEvent {
         name: String,
         result: serde_json::Value,
     },
+    /// Lossless provider stream event for scripted consumers. Keeping the
+    /// domain event typed avoids forcing each renderer to invent its own wire
+    /// projection.
+    Provider {
+        event: crate::types::AssistantMessageEvent,
+    },
     Finished {
         outcome: RunOutcome,
     },
@@ -105,6 +111,13 @@ mod tests {
             },
             JsonlEvent::Text {
                 text: "done".into(),
+            },
+            JsonlEvent::Provider {
+                event: crate::types::AssistantMessageEvent::TextDelta {
+                    index: 0,
+                    delta: "streamed".into(),
+                    partial: Default::default(),
+                },
             },
             JsonlEvent::Finished {
                 outcome: RunOutcome::Completed,
