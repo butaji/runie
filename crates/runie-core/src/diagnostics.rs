@@ -110,6 +110,11 @@ impl DiagnosticVisualization {
                 .iter()
                 .map(|metric| format!("{}: {}", metric.label, metric.value)),
         );
+        lines.extend(
+            self.series
+                .iter()
+                .map(|series| format!("{}: {}", series.label, series.sparkline(32))),
+        );
         lines
     }
 }
@@ -198,6 +203,10 @@ mod tests {
             visualization.terminal_lines(&restored)[0],
             "check: workspace"
         );
+        assert!(visualization
+            .terminal_lines(&restored)
+            .iter()
+            .any(|line| line == "input_tokens: "));
     }
 
     #[test]
@@ -276,5 +285,23 @@ mod tests {
         assert_eq!(series.sparkline(2).chars().count(), 2);
         assert_eq!(series.sparkline(2), "▁█");
         assert!(series.sparkline(0).is_empty());
+    }
+
+    #[test]
+    fn terminal_lines_append_series_after_scalar_metrics() {
+        let bundle = DiagnosticBundle::from_snapshots(
+            DiagnosticReport::default(),
+            TelemetrySnapshot::default(),
+        );
+        let lines = DiagnosticVisualization::from_bundle(&bundle).terminal_lines(&bundle);
+        let total_tokens = lines
+            .iter()
+            .position(|line| line.starts_with("total_tokens:"))
+            .unwrap();
+        let input_series = lines
+            .iter()
+            .rposition(|line| line.starts_with("input_tokens: "))
+            .unwrap();
+        assert!(input_series > total_tokens);
     }
 }
