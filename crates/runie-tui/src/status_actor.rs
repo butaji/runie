@@ -125,6 +125,15 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn shared_status_snapshot_reuses_immutable_projection() {
+        let actor = StatusActor::new();
+        let first = actor.shared_model_snapshot();
+        let second = actor.shared_model_snapshot();
+        assert_eq!(first, second);
+        assert_eq!(first.strong_count(), 3);
+    }
+
+    #[tokio::test]
     async fn actor_applies_status_owned_core_event() {
         let actor = StatusActor::new();
         let mut updates = actor.subscribe();

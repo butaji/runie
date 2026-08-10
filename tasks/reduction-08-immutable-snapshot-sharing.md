@@ -23,6 +23,8 @@ The prompt actor now publishes the same shared projection alongside its
 compatibility-owned channel, with focused actor coverage for shared reads.
 The event renderer now keeps the shared feed projection for its per-event
 atomic read, avoiding a deep snapshot clone on that hot path.
+Its immutable status label and elapsed-time reads now use the shared status
+projection as well.
 
 Acceptance: snapshot isolation tests, allocation-sensitive focused benchmark,
 and workspace tests.

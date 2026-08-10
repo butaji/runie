@@ -192,7 +192,7 @@ impl EventRenderer {
                             }
                             if matches!(event, AgentEvent::AgentEnd { .. }) && turn_was_started {
                                 feed_messages.push(ScrollbackMsg::AppendTurnSummary(
-                                    status_actor.model_snapshot().worked_for_label(),
+                                    status_actor.shared_model_snapshot().worked_for_label(),
                                 ));
                                 feed_messages.push(ScrollbackMsg::TurnEnd);
                             } else if matches!(event, AgentEvent::AgentEnd { .. }) {
@@ -368,7 +368,7 @@ impl EventRenderer {
     }
 
     fn thinking_elapsed_ms(&self) -> Option<u64> {
-        self.status_actor.model_snapshot().thinking_elapsed_ms
+        self.status_actor.shared_model_snapshot().thinking_elapsed_ms
     }
 
     #[allow(
@@ -563,7 +563,7 @@ fn append_lifecycle_messages(
     if matches!(event, AgentEvent::AgentEnd { .. }) {
         if turn_was_started {
             messages.push(ScrollbackMsg::AppendTurnSummary(
-                status_actor.model_snapshot().worked_for_label(),
+                status_actor.shared_model_snapshot().worked_for_label(),
             ));
         }
         messages.push(ScrollbackMsg::TurnEnd);
