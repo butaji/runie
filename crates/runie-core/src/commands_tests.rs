@@ -166,6 +166,8 @@ fn background_job_command_accepts_only_cancel_and_one_id() {
     );
     assert_eq!(parse_background_job_status_query("failed"), Some("failed"));
     assert_eq!(parse_background_job_status_query("queued"), None);
+    assert_eq!(parse_mcp_transport_query("http"), Some("http"));
+    assert_eq!(parse_mcp_transport_query("websocket"), None);
 }
 
 #[test]

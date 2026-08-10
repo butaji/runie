@@ -108,7 +108,7 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    stdio calls reuse an actor-owned persistent session, and both stdio and HTTP
    actors expose ready/busy/failed/closed lifecycle projections; persistent HTTP
    registry-backed stdio/HTTP sessions now reuse actor-owned transports, and
-   `/mcps` projects unified stdio/HTTP lifecycle rows.
+   `/mcps` projects unified stdio/HTTP lifecycle rows with transport filters.
 6. Session and Git interactive UX — `harness-12` and `harness-13`.
    Complete picker/history/conflict interactions over the existing actor-owned
    projections and inverse-safe event boundaries.

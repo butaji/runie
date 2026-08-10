@@ -1,9 +1,17 @@
 impl App {
     async fn route_extended_command(&self, name: &str, args: &str) -> bool {
         if name == "mcps" {
-            let statuses = self.loop_actor.mcp_status_rows();
+            let transport = runie_core::commands::parse_mcp_transport_query(args);
+            let statuses = self
+                .loop_actor
+                .mcp_status_rows()
+                .into_iter()
+                .filter(|row| transport.is_none_or(|transport| row.transport == transport))
+                .collect::<Vec<_>>();
             let result = if statuses.is_empty() {
-                "No MCP stdio servers".into()
+                transport
+                    .map(|transport| format!("No MCP {transport} servers"))
+                    .unwrap_or_else(|| "No MCP stdio servers".into())
             } else {
                 statuses
                     .into_iter()

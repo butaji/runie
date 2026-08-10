@@ -231,6 +231,11 @@ pub fn parse_background_job_status_query(args: &str) -> Option<&str> {
         .then_some(status)
 }
 
+pub fn parse_mcp_transport_query(args: &str) -> Option<&str> {
+    let transport = args.trim();
+    ["stdio", "http"].contains(&transport).then_some(transport)
+}
+
 #[allow(clippy::too_many_lines)]
 fn parse_parameterized_command(value: &str) -> Option<MappableBuiltinCommand> {
     if let Some(command) = parse_compact_command(value) {
