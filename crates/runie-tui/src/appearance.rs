@@ -7,7 +7,6 @@
 use crate::view::PaintIntent;
 use opaline::{load_from_str, Theme};
 use ratatui::style::{Color, Modifier, Style};
-use ratatui::text::Span;
 use runie_core::types::ThemeKind;
 use runie_tui_model::ThemeToken;
 
@@ -282,16 +281,6 @@ pub fn prompt_border_style_for(theme: ThemeKind) -> Style {
 
 pub fn footer_key_style_for(theme: ThemeKind) -> Style {
     base_style_for(theme).fg(token_color(theme, ThemeToken::TextFooterKey))
-}
-
-/// Shared app hotkey component used by both the main footer and modal
-/// footers. Keeping the bold/accent treatment here prevents widget-specific
-/// variants from drifting apart.
-pub fn footer_hotkey_span(theme: ThemeKind, label: impl Into<String>) -> Span<'static> {
-    Span::styled(
-        label.into(),
-        footer_key_style_for(theme).add_modifier(Modifier::BOLD),
-    )
 }
 
 pub fn assistant_body_style_for(theme: ThemeKind) -> Style {

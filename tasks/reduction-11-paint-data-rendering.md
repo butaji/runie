@@ -38,3 +38,5 @@ Dialog footer actions now use the same inline paint projection while retaining
 the dialog's existing two-row layout and centered padding.
 The remaining live footer helper now consumes the same generic hotkey paint
 projection, removing the last production dependency on the old span builder.
+The obsolete appearance-level hotkey span helper was then removed; tests now
+assert the semantic `FooterKey` intent directly.

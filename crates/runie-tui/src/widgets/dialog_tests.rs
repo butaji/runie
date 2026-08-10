@@ -156,7 +156,8 @@ fn panel_title_is_bold() {
 #[test]
 fn every_dialog_has_app_styled_hotkeys_on_its_bottom_row() {
     let theme = runie_core::types::ThemeKind::GrokNight;
-    let expected = appearance::footer_hotkey_span(theme, "key").style;
+    let expected = appearance::style_for_intent(theme, crate::view::PaintIntent::FooterKey)
+        .add_modifier(Modifier::BOLD);
     for spec in [
         COMMAND_DIALOG,
         FILE_SELECTOR_DIALOG,
