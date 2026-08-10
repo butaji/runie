@@ -3,6 +3,7 @@
 //! declarative extension metadata.
 
 use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct PluginManifest {
@@ -33,6 +34,53 @@ impl PluginManifest {
         }
         Ok(())
     }
+
+    pub fn from_json(input: &str) -> Result<Self, String> {
+        let manifest: Self = serde_json::from_str(input)
+            .map_err(|error| format!("invalid plugin manifest JSON: {error}"))?;
+        manifest.validate()?;
+        Ok(manifest)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PluginPackage {
+    pub root: PathBuf,
+    pub manifest: PluginManifest,
+}
+
+pub fn load_manifest(path: impl AsRef<Path>) -> Result<PluginManifest, String> {
+    let path = path.as_ref();
+    let input = std::fs::read_to_string(path)
+        .map_err(|error| format!("read plugin manifest {}: {error}", path.display()))?;
+    PluginManifest::from_json(&input)
+}
+
+pub fn discover_packages(root: impl AsRef<Path>) -> Result<Vec<PluginPackage>, String> {
+    let root = root.as_ref();
+    let mut packages = Vec::new();
+    let entries = std::fs::read_dir(root)
+        .map_err(|error| format!("read plugin directory {}: {error}", root.display()))?;
+    for entry in entries {
+        let entry = entry.map_err(|error| format!("read plugin directory entry: {error}"))?;
+        if !entry
+            .file_type()
+            .map_err(|error| error.to_string())?
+            .is_dir()
+        {
+            continue;
+        }
+        let package_root = entry.path();
+        let manifest_path = package_root.join("plugin.json");
+        if manifest_path.is_file() {
+            packages.push(PluginPackage {
+                root: package_root,
+                manifest: load_manifest(manifest_path)?,
+            });
+        }
+    }
+    packages.sort_by(|left, right| left.manifest.name.cmp(&right.manifest.name));
+    Ok(packages)
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -104,5 +152,47 @@ mod tests {
             .register(manifest())
             .unwrap_err()
             .contains("already"));
+    }
+
+    #[test]
+    fn manifest_json_is_validated_before_registration() {
+        let json = serde_json::to_string(&manifest()).unwrap();
+        assert_eq!(PluginManifest::from_json(&json).unwrap(), manifest());
+        assert!(PluginManifest::from_json(r#"{"name":"bad name","version":"1"}"#).is_err());
+    }
+
+    #[test]
+    fn discovery_loads_sorted_plugin_packages() {
+        let root = std::env::temp_dir().join(format!("runie-plugins-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("zeta")).unwrap();
+        std::fs::create_dir_all(root.join("alpha")).unwrap();
+        std::fs::write(
+            root.join("zeta/plugin.json"),
+            serde_json::to_vec(&PluginManifest {
+                name: "zeta".into(),
+                ..manifest()
+            })
+            .unwrap(),
+        )
+        .unwrap();
+        std::fs::write(
+            root.join("alpha/plugin.json"),
+            serde_json::to_vec(&PluginManifest {
+                name: "alpha".into(),
+                ..manifest()
+            })
+            .unwrap(),
+        )
+        .unwrap();
+        let packages = discover_packages(&root).unwrap();
+        assert_eq!(
+            packages
+                .iter()
+                .map(|package| package.manifest.name.as_str())
+                .collect::<Vec<_>>(),
+            ["alpha", "zeta"]
+        );
+        std::fs::remove_dir_all(root).unwrap();
     }
 }
