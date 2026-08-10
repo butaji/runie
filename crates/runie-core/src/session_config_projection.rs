@@ -31,6 +31,40 @@ pub enum CompactionDecision {
     },
 }
 
+/// Typed action selected after measuring a context. The action is data only:
+/// session and provider actors still own preparation, summarization, and
+/// publication respectively.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CompactionRecoveryAction {
+    Continue,
+    Prepare { keep_recent_tokens: u64 },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CompactionRecoveryPlan {
+    pub decision: CompactionDecision,
+    pub action: CompactionRecoveryAction,
+}
+
+/// Convert the pure threshold decision into the next event-driven operation.
+/// Keeping this mapping typed prevents loop/UI callers from duplicating
+/// threshold rules or inventing ad-hoc JSON commands.
+pub fn plan_compaction_recovery(
+    context_tokens: u64,
+    context_window: u64,
+    settings: CompactionSettings,
+) -> CompactionRecoveryPlan {
+    let decision = compaction_decision(context_tokens, context_window, settings);
+    let action = if decision.required() {
+        CompactionRecoveryAction::Prepare {
+            keep_recent_tokens: settings.keep_recent_tokens,
+        }
+    } else {
+        CompactionRecoveryAction::Continue
+    };
+    CompactionRecoveryPlan { decision, action }
+}
+
 impl CompactionDecision {
     pub const fn required(self) -> bool {
         matches!(self, Self::Required { .. })

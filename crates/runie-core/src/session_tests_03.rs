@@ -388,3 +388,28 @@
             }
         );
     }
+
+    #[test]
+    fn compaction_recovery_plan_is_typed_and_replayable() {
+        let settings = CompactionSettings {
+            enabled: true,
+            reserve_tokens: 100,
+            keep_recent_tokens: 20,
+        };
+        assert_eq!(
+            plan_compaction_recovery(901, 1_000, settings),
+            CompactionRecoveryPlan {
+                decision: CompactionDecision::Required {
+                    context_tokens: 901,
+                    threshold_tokens: 900,
+                },
+                action: CompactionRecoveryAction::Prepare {
+                    keep_recent_tokens: 20,
+                },
+            }
+        );
+        assert_eq!(
+            plan_compaction_recovery(900, 1_000, settings).action,
+            CompactionRecoveryAction::Continue
+        );
+    }
