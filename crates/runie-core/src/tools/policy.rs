@@ -1,7 +1,8 @@
 //! Pure tool approval policy. The TUI or host supplies the interactive answer
 //! through hooks; this module only classifies the safe default boundary.
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ApprovalMode {
     Deny,
     #[default]
@@ -32,11 +33,27 @@ impl ApprovalModeStore {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ApprovalDecision {
     Allow,
-    Deny { reason: &'static str },
-    Ask { reason: &'static str },
+    Deny { reason: String },
+    Ask { reason: String },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct ApprovalTrace {
+    pub tool: String,
+    pub mode: ApprovalMode,
+    pub decision: ApprovalDecision,
+}
+
+const MAX_APPROVAL_TRACES: usize = 128;
+
+pub fn record_approval_trace(traces: &mut Vec<ApprovalTrace>, trace: ApprovalTrace) {
+    traces.push(trace);
+    if traces.len() > MAX_APPROVAL_TRACES {
+        traces.remove(0);
+    }
 }
 
 pub fn decide(mode: ApprovalMode, tool: &str) -> ApprovalDecision {
@@ -58,11 +75,11 @@ pub fn decide(mode: ApprovalMode, tool: &str) -> ApprovalDecision {
         ApprovalDecision::Allow
     } else if mode == ApprovalMode::Deny {
         ApprovalDecision::Deny {
-            reason: "Tool execution is disabled by the current approval mode",
+            reason: "Tool execution is disabled by the current approval mode".into(),
         }
     } else {
         ApprovalDecision::Ask {
-            reason: "This tool can change files or execute a process",
+            reason: "This tool can change files or execute a process".into(),
         }
     }
 }
@@ -110,5 +127,22 @@ mod tests {
         assert_eq!(reader.current(), ApprovalMode::Auto);
         store.set(ApprovalMode::Yolo);
         assert_eq!(reader.current(), ApprovalMode::Yolo);
+    }
+
+    #[test]
+    fn approval_traces_are_bounded_replayable_data() {
+        let mut traces = Vec::new();
+        for index in 0..=MAX_APPROVAL_TRACES {
+            record_approval_trace(
+                &mut traces,
+                ApprovalTrace {
+                    tool: format!("tool-{index}"),
+                    mode: ApprovalMode::Ask,
+                    decision: ApprovalDecision::Allow,
+                },
+            );
+        }
+        assert_eq!(traces.len(), MAX_APPROVAL_TRACES);
+        assert_eq!(traces[0].tool, "tool-1");
     }
 }

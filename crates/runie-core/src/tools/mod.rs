@@ -39,7 +39,10 @@ pub use mcp::{
     McpCallHook, McpCallRequest, McpHttpClient, McpHttpSession, McpServer, McpStdioClient, McpTool,
     McpToolSpec,
 };
-pub use policy::{decide as approval_decision, ApprovalDecision, ApprovalMode, ApprovalModeStore};
+pub use policy::{
+    decide as approval_decision, record_approval_trace, ApprovalDecision, ApprovalMode,
+    ApprovalModeStore, ApprovalTrace,
+};
 pub use question_broker::{
     decode_question_traces, encode_question_traces, PendingUserQuestion, UserQuestionBroker,
     UserQuestionTrace,
