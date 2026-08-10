@@ -34,3 +34,5 @@ Activity facts and transcript presentation transitions are consolidated in
 `feed_activity.rs`, keeping activity ownership and spacing behavior together.
 Workflow start/progress/end and transcript replacement are consolidated in
 `feed_workflow.rs`, preserving the same lifecycle transitions.
+Transcript and dense-tool navigation are consolidated in `feed_navigation.rs`,
+keeping selection transitions and group identity in one semantic module.

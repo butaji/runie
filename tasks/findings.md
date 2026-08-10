@@ -101,6 +101,8 @@ As of 2026-08-09, the reduction work has these verified results:
   numbered dispatch modules.
 - Workflow start/progress/end and transcript replacement are consolidated in
   `feed_workflow.rs`, keeping the workflow state machine in one module.
+- Entry selection, tool selection, dense-group reveal, and member identity are
+  consolidated in `feed_navigation.rs`.
 - `component_specs!` generates the declarative component ownership table.
 - `event_trace!` reduces pure replay-test boilerplate.
 - `cargo test --workspace --quiet` passes across the current workspace.
