@@ -25,6 +25,52 @@ pub struct TodoSnapshot {
     pub items: Vec<TodoItem>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TodoPlanStatus {
+    Empty,
+    Pending,
+    InProgress,
+    Complete,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct TodoPlanSummary {
+    pub status: TodoPlanStatus,
+    pub completed: usize,
+    pub pending: usize,
+    pub in_progress: usize,
+}
+
+pub fn summarize_todo_plan(snapshot: &TodoSnapshot) -> TodoPlanSummary {
+    let completed = snapshot
+        .items
+        .iter()
+        .filter(|item| item.status == TodoStatus::Completed)
+        .count();
+    let in_progress = snapshot
+        .items
+        .iter()
+        .filter(|item| item.status == TodoStatus::InProgress)
+        .count();
+    let pending = snapshot.items.len() - completed - in_progress;
+    let status = if snapshot.items.is_empty() {
+        TodoPlanStatus::Empty
+    } else if completed == snapshot.items.len() {
+        TodoPlanStatus::Complete
+    } else if in_progress > 0 {
+        TodoPlanStatus::InProgress
+    } else {
+        TodoPlanStatus::Pending
+    };
+    TodoPlanSummary {
+        status,
+        completed,
+        pending,
+        in_progress,
+    }
+}
+
 enum TodoMessage {
     Replace {
         snapshot: TodoSnapshot,
@@ -182,6 +228,30 @@ mod tests {
             {"id":"b", "content":"two", "status":"in_progress"}
         ]});
         assert!(tool.validate_arguments(&duplicate_active).is_err());
+    }
+
+    #[test]
+    fn todo_plan_summary_is_a_replayable_status_projection() {
+        let snapshot = TodoSnapshot {
+            items: vec![
+                TodoItem {
+                    id: "done".into(),
+                    content: "ship".into(),
+                    status: TodoStatus::Completed,
+                },
+                TodoItem {
+                    id: "next".into(),
+                    content: "verify".into(),
+                    status: TodoStatus::InProgress,
+                },
+            ],
+        };
+        let summary = summarize_todo_plan(&snapshot);
+        assert_eq!(summary.status, TodoPlanStatus::InProgress);
+        assert_eq!(
+            (summary.completed, summary.in_progress, summary.pending),
+            (1, 1, 0)
+        );
     }
 
     #[tokio::test]

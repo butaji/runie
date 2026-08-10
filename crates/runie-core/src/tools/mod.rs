@@ -51,7 +51,10 @@ pub use registry::ToolRegistry;
 pub use subagent::{
     SubagentCapability, SubagentRequest, SubagentResult, SubagentRole, SubagentTool,
 };
-pub use todo::{TodoActor, TodoItem, TodoSnapshot, TodoStatus, TodoWriteTool};
+pub use todo::{
+    summarize_todo_plan, TodoActor, TodoItem, TodoPlanStatus, TodoPlanSummary, TodoSnapshot,
+    TodoStatus, TodoWriteTool,
+};
 pub use web::{
     source_cards, WebSearchHttpClient, WebSearchRequest, WebSearchResponse, WebSearchResult,
     WebSearchTool, WebSourceCard,
