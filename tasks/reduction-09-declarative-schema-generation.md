@@ -34,3 +34,6 @@ Unused legacy palette metadata macros were removed after confirming no call
 sites, leaving one live declaration path for command names and descriptions.
 The live slash command and description metadata now come from one typed table;
 the macro generates both exhaustive accessors from each action row.
+Normalized feed-fact reset groups now also come from one typed field table,
+keeping activity/workflow ownership explicit while removing repeated reset
+assignments.

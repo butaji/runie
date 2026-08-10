@@ -56,6 +56,11 @@ or fixture name here rather than creating another free-form task file.
 
 ## Reduction implementation evidence
 
+Normalized feed activity/workflow reset fields now use one macro-backed
+declaration, with a regression test proving each reset clears only its owned
+group. Full workspace verification and the live TUI smoke suite remain green
+(`55/55`).
+
 As of 2026-08-09, the reduction work has these verified results:
 
 - `EventMemo` is used by the scrollback and status actors.

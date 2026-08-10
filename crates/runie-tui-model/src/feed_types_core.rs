@@ -219,6 +219,29 @@ pub struct FeedFacts {
     pub assistant_stream_open: bool,
 }
 
+macro_rules! feed_fact_resets {
+    ($($method:ident => [$($field:ident),+ $(,)?]),+ $(,)?) => {
+        impl FeedFacts {
+            $(
+                pub fn $method(&mut self) {
+                    $(self.$field = Default::default();)+
+                }
+            )+
+        }
+    };
+}
+
+feed_fact_resets! {
+    reset_activity => [
+        activity_dirs,
+        activity_files,
+        activity_commands,
+        activity_subagents,
+        activity_failures,
+    ],
+    reset_workflows => [workflow_headers, workflow_phases],
+}
+
 impl ToolRecord {
     pub fn named(name: String) -> Self { Self { name: Some(name), args: None } }
     pub fn set_args(&mut self, args: serde_json::Value) { self.args = Some(args); }
@@ -232,19 +255,6 @@ impl FeedFacts {
 
     pub fn tool_args(&self, id: &str) -> Option<&serde_json::Value> {
         self.tools.get(id).and_then(|record| record.args.as_ref())
-    }
-
-    pub fn reset_activity(&mut self) {
-        self.activity_dirs = 0;
-        self.activity_files = 0;
-        self.activity_commands = 0;
-        self.activity_subagents = 0;
-        self.activity_failures = 0;
-    }
-
-    pub fn reset_workflows(&mut self) {
-        self.workflow_headers.clear();
-        self.workflow_phases.clear();
     }
 
     pub fn clear(&mut self) {

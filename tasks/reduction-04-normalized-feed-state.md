@@ -27,7 +27,9 @@ Lifecycle fields that had remained duplicated on `FeedNavigation` were
 removed; `FeedFacts` is now their sole owner and snapshot rehydration uses that
 single source.
 Activity and workflow reset operations are now methods on `FeedFacts`, so
-clear/reset reducers no longer duplicate field-by-field projection logic.
+clear/reset reducers no longer duplicate field-by-field projection logic. The
+two reset field groups are declared through one small typed macro, keeping the
+normalized ownership table inspectable as data.
 The full facts clear operation is also centralized on `FeedFacts`, leaving the
 feed reducer's clear path responsible only for transcript and navigation data.
 

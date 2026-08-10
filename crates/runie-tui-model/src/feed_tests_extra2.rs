@@ -13,6 +13,31 @@ fn bus_messages_for_event_emits_set_theme_for_theme_changed() {
 }
 
 #[test]
+fn declarative_fact_reset_tables_clear_only_their_owned_fields() {
+    let mut facts = super::FeedFacts {
+        activity_dirs: 1,
+        activity_files: 2,
+        workflow_headers: std::collections::HashMap::from([("run".into(), "Build".into())]),
+        workflow_phases: std::collections::HashMap::from([(
+            "run".into(),
+            vec![("compile".into(), "done".into())],
+        )]),
+        turn_started: true,
+        ..Default::default()
+    };
+
+    facts.reset_activity();
+    assert_eq!(facts.activity_dirs, 0);
+    assert_eq!(facts.activity_files, 0);
+    assert!(facts.turn_started);
+    assert!(!facts.workflow_headers.is_empty());
+
+    facts.reset_workflows();
+    assert!(facts.workflow_headers.is_empty());
+    assert!(facts.workflow_phases.is_empty());
+}
+
+#[test]
 fn bus_messages_for_event_returns_empty_for_non_actor_feed() {
     // Pin the negative path: a non-actor-feed event returns an
     // empty vector so the renderer can rely on the bus projection
