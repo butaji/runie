@@ -1,0 +1,12 @@
+question:
+  question: "Which checks should run?"
+  options:
+    - label: "Unit tests"
+      description: "Fast deterministic checks"
+    - label: "Replay tests"
+      description: "Event and provider traces"
+  allow_multiple: true
+answer:
+  answers:
+    - "Unit tests"
+    - "Replay tests"
