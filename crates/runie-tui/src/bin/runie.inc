@@ -1236,6 +1236,7 @@ fn restore_terminal(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result
 async fn build_live_app() -> App {
     let bus = EventBus::new();
     let question_broker = runie_core::tools::UserQuestionBroker::default();
+    let subagent_loop = std::sync::Arc::new(tokio::sync::OnceCell::<LoopActor>::new());
     let state = AgentStateActor::new();
     let steering = SteeringQueueActor::new();
     let follow_up = FollowUpQueueActor::new();
@@ -1281,6 +1282,29 @@ async fn build_live_app() -> App {
                     Box::pin(async move { broker.ask(request).await })
                 })
             }),
+            subagent: Some({
+                let loop_cell = subagent_loop.clone();
+                std::sync::Arc::new(move |request| {
+                    let loop_cell = loop_cell.clone();
+                    Box::pin(async move {
+                        let loop_actor = loop_cell
+                            .get()
+                            .ok_or_else(|| "subagent loop is not initialized".to_owned())?;
+                        let prompt = format!("[subagent:{}]\n{}\n{}", serde_json::to_string(&request.role).unwrap_or_default(), request.task, request.context);
+                        let messages = loop_actor
+                            .prompt(
+                                vec![runie_core::types::AgentMessage::User(runie_core::types::UserMessage {
+                                    content: vec![runie_core::types::UserContent::Text { text: prompt }],
+                                    timestamp: 0,
+                                })],
+                                AgentContext::default(),
+                            )
+                            .await
+                            .map_err(|error| error.to_string())?;
+                        Ok(serde_json::json!({"messages": messages}))
+                    })
+                })
+            }),
             ..ToolExecHooks::default()
         },
         turn_hooks: runie_core::hooks::TurnHooks::default(),
@@ -1293,7 +1317,9 @@ async fn build_live_app() -> App {
         steering_mode: QueueMode::OneAtATime,
         follow_up_mode: QueueMode::OneAtATime,
     };
-    let mut app = App::new_with_broker(LoopActor::new(deps), bus, question_broker);
+    let loop_actor = LoopActor::new(deps);
+    let _ = subagent_loop.set(loop_actor.clone());
+    let mut app = App::new_with_broker(loop_actor, bus, question_broker);
     app.provider_registry = provider_registry;
     app
 }
