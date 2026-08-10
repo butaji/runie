@@ -5,6 +5,23 @@ use crate::plugins::{
 use crate::ReducerActor;
 use std::collections::BTreeMap;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PluginCapabilityKind {
+    Command,
+    Tool,
+    Hook,
+}
+
+pub fn capability_entrypoint(kind: PluginCapabilityKind, name: &str) -> std::path::PathBuf {
+    let directory = match kind {
+        PluginCapabilityKind::Command => "commands",
+        PluginCapabilityKind::Tool => "tools",
+        PluginCapabilityKind::Hook => "hooks",
+    };
+    std::path::PathBuf::from(directory).join(name)
+}
+
 /// Actor-owned bridge between installed plugin packages and replayable runtime
 /// state. Process handles never cross the snapshot boundary.
 #[derive(Clone)]
@@ -73,6 +90,25 @@ impl PluginHost {
         }
     }
 
+    pub async fn execute_capability(
+        &self,
+        plugin: &str,
+        kind: PluginCapabilityKind,
+        capability: &str,
+        arguments: Vec<String>,
+        timeout_ms: u64,
+    ) -> Result<PluginExecutionResult, String> {
+        self.execute(
+            plugin,
+            PluginExecutionRequest {
+                entrypoint: capability_entrypoint(kind, capability),
+                arguments,
+                timeout_ms,
+            },
+        )
+        .await
+    }
+
     async fn apply_checked(&self, event: PluginRuntimeEvent) -> Result<(), String> {
         let mut candidate = self.snapshot();
         reduce_plugin_runtime(&self.registry, &mut candidate, event.clone())?;
@@ -103,5 +139,17 @@ mod tests {
             .await
             .unwrap_err();
         assert!(error.contains("not installed"));
+    }
+
+    #[test]
+    fn capability_entrypoints_are_typed_package_relative_data() {
+        assert_eq!(
+            capability_entrypoint(PluginCapabilityKind::Tool, "inspect"),
+            std::path::PathBuf::from("tools/inspect")
+        );
+        assert_eq!(
+            capability_entrypoint(PluginCapabilityKind::Hook, "after_turn"),
+            std::path::PathBuf::from("hooks/after_turn")
+        );
     }
 }
