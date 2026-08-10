@@ -8,6 +8,21 @@ use tokio::io::AsyncReadExt;
 pub const READ_MAX_LINES: usize = 1_000;
 pub const READ_MAX_BYTES: usize = 100 * 1024;
 
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct WorkspaceOutputSummary {
+    pub bytes: usize,
+    pub lines: usize,
+    pub truncated: bool,
+}
+
+pub fn summarize_workspace_output(text: &str, truncated: bool) -> WorkspaceOutputSummary {
+    WorkspaceOutputSummary {
+        bytes: text.len(),
+        lines: text.lines().count(),
+        truncated,
+    }
+}
+
 macro_rules! workspace_types { ($($name:ident),+ $(,)?) => { $(#[derive(Default)] pub struct $name;)+ }; }
 workspace_types!(
     ReadFileTool,
@@ -84,9 +99,10 @@ impl AgentTool for ReadFileTool {
             .unwrap_or(READ_MAX_LINES)
             .min(READ_MAX_LINES);
         let output = bounded_lines(&content, start, requested);
+        let summary = summarize_workspace_output(&output, output.contains("[output truncated]"));
         text_result_with_details(
             output,
-            serde_json::json!({"path": path, "line_offset": start + 1, "line_count": requested}),
+            serde_json::json!({"path": path, "line_offset": start + 1, "line_count": requested, "output": summary}),
         )
     }
 }
@@ -217,7 +233,7 @@ impl AgentTool for GrepTool {
         let matches = grep_matches(root.to_str().unwrap_or("."), pattern);
         text_result_with_details(
             matches.join("\n"),
-            serde_json::json!({"pattern": pattern, "match_count": matches.len()}),
+            serde_json::json!({"pattern": pattern, "match_count": matches.len(), "output": summarize_workspace_output(&matches.join("\n"), matches.len() >= 250)}),
         )
     }
 }
@@ -278,7 +294,7 @@ impl AgentTool for GlobTool {
         let paths: Vec<_> = paths.into_iter().take(100).collect();
         text_result_with_details(
             paths.join("\n"),
-            serde_json::json!({"pattern": pattern, "match_count": paths.len()}),
+            serde_json::json!({"pattern": pattern, "match_count": paths.len(), "output": summarize_workspace_output(&paths.join("\n"), paths.len() >= 100)}),
         )
     }
 }

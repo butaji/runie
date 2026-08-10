@@ -19,6 +19,8 @@ async fn read_returns_requested_line_range() {
     assert_eq!(text, "two\n[output truncated]");
     assert_eq!(result.details["line_offset"], 2);
     assert_eq!(result.details["line_count"], 1);
+    assert_eq!(result.details["output"]["lines"], 2);
+    assert!(result.details["output"]["truncated"].as_bool().unwrap());
     tokio::fs::remove_file(path).await.unwrap();
 }
 
