@@ -46,6 +46,7 @@ impl App {
             approval_mode,
             background_actor: runie_core::background::BackgroundProcessActor::new(),
             todo_actor: runie_core::tools::TodoActor::default(),
+            plugin_host: None,
             submission_tx,
             _submission_owner: submission_owner,
         }
@@ -87,6 +88,7 @@ impl App {
             approval_mode: Default::default(),
             background_actor: runie_core::background::BackgroundProcessActor::new(),
             todo_actor: runie_core::tools::TodoActor::default(),
+            plugin_host: None,
             submission_tx,
             _submission_owner: submission_owner,
         }
@@ -101,6 +103,10 @@ impl App {
 
     pub fn attach_todo_actor(&mut self, actor: runie_core::tools::TodoActor) {
         self.todo_actor = actor;
+    }
+
+    pub fn attach_plugin_host(&mut self, host: runie_core::plugins::PluginHost) {
+        self.plugin_host = Some(host);
     }
 
     pub async fn toggle_shortcuts(&self) {

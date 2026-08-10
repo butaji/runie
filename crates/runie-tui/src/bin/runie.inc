@@ -1603,6 +1603,16 @@ async fn build_live_app() -> App {
     );
     app.attach_background_actor(background_actor);
     app.attach_todo_actor(todo_actor);
+    let plugin_root = std::env::current_dir().ok().map(|path| path.join(".runie/plugins"));
+    if let Some(plugin_root) = plugin_root {
+        if let Ok(packages) = runie_core::plugins::discover_packages(plugin_root) {
+            let mut registry = runie_core::plugins::PluginRegistry::default();
+            for package in &packages {
+                let _ = registry.register(package.manifest.clone());
+            }
+            app.attach_plugin_host(runie_core::plugins::PluginHost::new(registry, packages));
+        }
+    }
     app.provider_registry = provider_registry;
     app
 }
