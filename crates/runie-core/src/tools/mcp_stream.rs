@@ -41,6 +41,27 @@ pub enum McpNotificationQueueEvent {
     Clear,
 }
 
+pub fn reduce_mcp_notification_queue(
+    queue: &mut McpNotificationQueue,
+    event: McpNotificationQueueEvent,
+) -> Option<serde_json::Value> {
+    match event {
+        McpNotificationQueueEvent::Push(notification) => {
+            if queue.pending.len() >= queue.capacity {
+                queue.dropped = queue.dropped.saturating_add(1);
+            } else {
+                queue.pending.push_back(notification);
+            }
+            None
+        }
+        McpNotificationQueueEvent::Pop => queue.pending.pop_front(),
+        McpNotificationQueueEvent::Clear => {
+            queue.pending.clear();
+            None
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum McpBackpressureStatus {
@@ -63,21 +84,7 @@ impl McpNotificationQueue {
     }
 
     pub fn apply(&mut self, event: McpNotificationQueueEvent) -> Option<serde_json::Value> {
-        match event {
-            McpNotificationQueueEvent::Push(notification) => {
-                if self.pending.len() >= self.capacity {
-                    self.dropped = self.dropped.saturating_add(1);
-                } else {
-                    self.pending.push_back(notification);
-                }
-                None
-            }
-            McpNotificationQueueEvent::Pop => self.pending.pop_front(),
-            McpNotificationQueueEvent::Clear => {
-                self.pending.clear();
-                None
-            }
-        }
+        reduce_mcp_notification_queue(self, event)
     }
 
     pub fn clear(&mut self) {
@@ -395,6 +402,17 @@ mod tests {
         }
         assert!(queue.pending.is_empty());
         assert_eq!(queue.dropped, 0);
+    }
+
+    #[test]
+    fn notification_queue_reducer_is_directly_replayable() {
+        let mut queue = McpNotificationQueue::new(1);
+        reduce_mcp_notification_queue(
+            &mut queue,
+            McpNotificationQueueEvent::Push(serde_json::json!({"method": "notice"})),
+        );
+        reduce_mcp_notification_queue(&mut queue, McpNotificationQueueEvent::Clear);
+        assert!(queue.pending.is_empty());
     }
 
     #[test]
