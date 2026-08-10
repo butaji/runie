@@ -1,4 +1,4 @@
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct QuestionHistoryQuery {
     pub text: String,
     pub outcome: Option<String>,
@@ -78,5 +78,13 @@ mod tests {
                 limit: 8,
             }
         );
+    }
+
+    #[test]
+    fn query_is_replayable_data() {
+        let query = parse_question_history_query("outcome=cancelled offset=2 limit=4 deploy");
+        let restored: QuestionHistoryQuery =
+            serde_json::from_value(serde_json::to_value(&query).unwrap()).unwrap();
+        assert_eq!(restored, query);
     }
 }
