@@ -12,7 +12,8 @@ git_tool_types!(
     GitWorktreeTool,
     GitCommitPrepareTool,
     GitCommitTool,
-    GitPushTool
+    GitPushTool,
+    GitRevertTool
 );
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -24,6 +25,11 @@ pub struct GitCommitPrepareRequest {
 pub struct GitPushRequest {
     pub remote: String,
     pub reference: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct GitRevertRequest {
+    pub commit: String,
 }
 
 #[async_trait::async_trait]
@@ -291,7 +297,7 @@ impl AgentTool for GitPushTool {
     fn description(&self) -> &str {
         "Push an explicit Git ref after approval allows this mutation."
     }
-    fn resource_key(&self, _args: &serde_json::Value) -> Option<String> {
+    fn resource_key(&self, _: &serde_json::Value) -> Option<String> {
         Some("git:remote".into())
     }
     fn parameters(&self) -> Option<serde_json::Value> {
@@ -321,6 +327,60 @@ impl AgentTool for GitPushTool {
             ..output
         })
     }
+}
+
+#[async_trait::async_trait]
+impl AgentTool for GitRevertTool {
+    fn name(&self) -> &str {
+        "git_revert"
+    }
+    fn label(&self) -> &str {
+        "Revert Git commit"
+    }
+    fn description(&self) -> &str {
+        "Create an inverse commit for an explicit Git commit after approval."
+    }
+    fn resource_key(&self, _: &serde_json::Value) -> Option<String> {
+        Some("git:index".into())
+    }
+    fn parameters(&self) -> Option<serde_json::Value> {
+        Some(
+            serde_json::json!({"type":"object","properties":{"commit":{"type":"string","minLength":7}},"required":["commit"]}),
+        )
+    }
+    fn validate_arguments(&self, args: &serde_json::Value) -> Result<(), String> {
+        let request: GitRevertRequest = serde_json::from_value(args.clone())
+            .map_err(|error| format!("invalid Git revert: {error}"))?;
+        validate_commit_reference(&request.commit)
+    }
+    async fn execute(
+        &self,
+        _: &str,
+        args: serde_json::Value,
+        signal: Option<tokio_util::sync::CancellationToken>,
+        _: Option<Box<dyn Fn(serde_json::Value) + Send + Sync>>,
+    ) -> Result<AgentToolResult, String> {
+        self.validate_arguments(&args)?;
+        let request: GitRevertRequest =
+            serde_json::from_value(args).map_err(|error| error.to_string())?;
+        let output = git_result(&["revert", "--no-edit", &request.commit], signal).await?;
+        Ok(AgentToolResult {
+            details: serde_json::json!({"commit": request.commit, "mutated": true, "output": output.details}),
+            ..output
+        })
+    }
+}
+
+fn validate_commit_reference(value: &str) -> Result<(), String> {
+    if value.trim().is_empty() || value.chars().any(char::is_whitespace) || value.starts_with('-') {
+        return Err(
+            "commit must be a nonempty Git reference without whitespace or a leading dash".into(),
+        );
+    }
+    if !value.chars().all(|character| character.is_ascii_hexdigit()) || value.len() < 7 {
+        return Err("commit must be at least 7 hexadecimal characters".into());
+    }
+    Ok(())
 }
 
 fn validate_git_token(name: &str, value: &str) -> Result<(), String> {
@@ -381,78 +441,5 @@ async fn git_capture(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    #[tokio::test]
-    async fn status_is_read_only_and_returns_structured_metadata() {
-        let result = GitStatusTool
-            .execute("1", serde_json::json!({}), None, None)
-            .await
-            .unwrap();
-        assert_eq!(result.details["command"][0], "status");
-        assert!(!result.details["truncated"].as_bool().unwrap());
-    }
-    #[tokio::test]
-    async fn diff_stat_is_a_valid_projection() {
-        let result = GitDiffTool
-            .execute("1", serde_json::json!({"stat":true}), None, None)
-            .await
-            .unwrap();
-        assert_eq!(result.details["command"][0], "diff");
-    }
-    #[tokio::test]
-    async fn review_reports_a_machine_readable_clean_state() {
-        let result = GitReviewTool
-            .execute("1", serde_json::json!({}), None, None)
-            .await
-            .unwrap();
-        assert!(result.details["clean"].is_boolean());
-        assert!(result.details["stat"].is_string());
-    }
-    #[tokio::test]
-    async fn worktree_listing_is_read_only() {
-        let result = GitWorktreeTool
-            .execute("1", serde_json::json!({}), None, None)
-            .await
-            .unwrap();
-        assert_eq!(result.details["command"][0], "worktree");
-    }
-    #[test]
-    fn commit_preparation_validates_subjects_without_mutation() {
-        let tool = GitCommitPrepareTool;
-        assert!(tool
-            .validate_arguments(&serde_json::json!({"message":"Add tool"}))
-            .is_ok());
-        assert!(tool
-            .validate_arguments(&serde_json::json!({"message":" "}))
-            .is_err());
-        assert!(tool
-            .validate_arguments(&serde_json::json!({"message":"x".repeat(73)}))
-            .is_err());
-    }
-    #[test]
-    fn commit_tool_shares_strict_message_validation() {
-        let tool = GitCommitTool;
-        assert!(tool
-            .validate_arguments(&serde_json::json!({"message":"Ship change"}))
-            .is_ok());
-        assert!(tool
-            .validate_arguments(&serde_json::json!({"message":" "}))
-            .is_err());
-    }
-    #[test]
-    fn push_requires_explicit_safe_remote_and_reference() {
-        let tool = GitPushTool;
-        assert!(tool
-            .validate_arguments(&serde_json::json!({"remote":"origin","reference":"main"}))
-            .is_ok());
-        for value in ["", "origin main", "-origin"] {
-            assert!(tool
-                .validate_arguments(&serde_json::json!({"remote":value,"reference":"main"}))
-                .is_err());
-        }
-        assert!(tool
-            .validate_arguments(&serde_json::json!({"remote":"origin","reference":"main branch"}))
-            .is_err());
-    }
-}
+#[path = "git_tests.rs"]
+mod tests;
