@@ -109,9 +109,6 @@ impl McpStdioClient {
         &self,
         requests: &[serde_json::Value],
     ) -> Result<Vec<serde_json::Value>, String> {
-        if requests.iter().any(|request| request.get("id").is_none()) {
-            return Err("MCP requests must contain ids".into());
-        }
         let mut child = tokio::process::Command::new(&self.command)
             .args(&self.args)
             .stdin(std::process::Stdio::piped())
@@ -129,19 +126,18 @@ impl McpStdioClient {
         let responses = self
             .request(&[
                 serde_json::json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"runie","version":"0.1.0"}}}),
+                serde_json::json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
                 serde_json::json!({"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}),
             ])
             .await?;
-        let initialize = responses.first().and_then(|value| value.get("result"));
+        let initialize = response_result(&responses, 1);
         let server_name = initialize
             .and_then(|value| value.get("serverInfo"))
             .and_then(|value| value.get("name"))
             .and_then(serde_json::Value::as_str)
             .unwrap_or(&self.command)
             .to_owned();
-        let tools = responses
-            .get(1)
-            .and_then(|value| value.get("result"))
+        let tools = response_result(&responses, 2)
             .and_then(|value| value.get("tools"))
             .cloned()
             .ok_or("MCP tools/list response has no tools")?;
@@ -190,22 +186,45 @@ impl McpStdioClient {
         }
         input.flush().await.map_err(|error| error.to_string())?;
         drop(input);
-        let mut lines = BufReader::new(stdout).lines();
-        let mut responses = Vec::new();
-        while responses.len() < requests.len() {
-            let line = tokio::time::timeout(self.timeout, lines.next_line())
-                .await
-                .map_err(|_| "MCP request timed out".to_owned())?
-                .map_err(|error| error.to_string())?
-                .ok_or("MCP server closed stdout")?;
-            let value: serde_json::Value = serde_json::from_str(&line)
-                .map_err(|error| format!("invalid MCP response: {error}"))?;
-            if value.get("id").is_some() {
-                responses.push(value);
-            }
-        }
-        Ok(responses)
+        let expected = requests
+            .iter()
+            .filter(|request| request.get("id").is_some())
+            .count();
+        return read_responses(stdout, expected, self.timeout).await;
     }
+}
+
+async fn read_responses(
+    stdout: tokio::process::ChildStdout,
+    expected: usize,
+    timeout: Duration,
+) -> Result<Vec<serde_json::Value>, String> {
+    let mut lines = BufReader::new(stdout).lines();
+    let mut responses: Vec<serde_json::Value> = Vec::new();
+    while responses.len() < expected {
+        let line = tokio::time::timeout(timeout, lines.next_line())
+            .await
+            .map_err(|_| "MCP request timed out".to_owned())?
+            .map_err(|error| error.to_string())?
+            .ok_or("MCP server closed stdout")?;
+        let value: serde_json::Value = serde_json::from_str(&line)
+            .map_err(|error| format!("invalid MCP response: {error}"))?;
+        if value.get("id").is_some()
+            && !responses
+                .iter()
+                .any(|response| response.get("id") == value.get("id"))
+        {
+            responses.push(value);
+        }
+    }
+    Ok(responses)
+}
+
+fn response_result(responses: &[serde_json::Value], id: u64) -> Option<&serde_json::Value> {
+    responses
+        .iter()
+        .find(|response| response.get("id").and_then(serde_json::Value::as_u64) == Some(id))
+        .and_then(|response| response.get("result"))
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
