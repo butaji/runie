@@ -129,20 +129,6 @@ pub fn render_status_paint(snapshot: &StatusSnapshot, area: Rect, buffer: &mut B
 }
 
 pub fn prompt_paint(snapshot: &PromptSnapshot) -> PaintDocument {
-    let mode = match snapshot.mode {
-        InputMode::Normal => snapshot.model_caption.clone(),
-        InputMode::Alternate => format!("alternate · {}", snapshot.model_caption),
-        InputMode::Plan => format!("plan · {}", snapshot.model_caption),
-        InputMode::FileSearch => format!("file search · {}", snapshot.model_caption),
-        InputMode::FileViewer => format!("file viewer · {}", snapshot.model_caption),
-    };
-    let caption = if snapshot.history_search {
-        format!("history search · {mode}")
-    } else if snapshot.history_index.is_some() {
-        format!("history · {mode}")
-    } else {
-        mode
-    };
     let intent = if snapshot.mode == InputMode::Plan {
         PaintIntent::Warning
     } else {
@@ -155,7 +141,12 @@ pub fn prompt_paint(snapshot: &PromptSnapshot) -> PaintDocument {
             snapshot.text.clone(),
             PaintIntent::Base
         ),
-        (Slot::Prompt, ComponentKind::Prompt, caption, intent),
+        (
+            Slot::Prompt,
+            ComponentKind::Prompt,
+            snapshot.caption(),
+            intent
+        ),
     ]
 }
 

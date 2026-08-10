@@ -75,6 +75,26 @@ impl PromptSnapshot {
             .saturating_add(candidate_lines)
             .saturating_add(2) as u16
     }
+
+    /// Pure caption projection shared by paint and terminal adapters.
+    pub fn caption(&self) -> String {
+        let mode = match self.mode {
+            InputMode::Normal => self.model_caption.clone(),
+            InputMode::Alternate => format!("alternate · {}", self.model_caption),
+            InputMode::Plan => format!("plan · {}", self.model_caption),
+            InputMode::FileSearch => format!("file search · {}", self.model_caption),
+            InputMode::FileViewer => format!("file viewer · {}", self.model_caption),
+        };
+        if self.history_search {
+            format!("history search · {mode}")
+        } else if self.history_index.is_some() {
+            format!("history · {mode}")
+        } else if self.text.contains('\n') {
+            format!("multiline · {mode}")
+        } else {
+            mode
+        }
+    }
 }
 
 #[cfg(test)]
@@ -110,5 +130,17 @@ mod tests {
             ..PromptSnapshot::default()
         };
         assert_eq!(snapshot.mode, InputMode::Plan);
+    }
+
+    #[test]
+    fn caption_is_a_single_pure_projection_of_prompt_state() {
+        let snapshot = PromptSnapshot {
+            mode: InputMode::Plan,
+            model_caption: "model".into(),
+            history_search: true,
+            text: "draft\ncontinued".into(),
+            ..PromptSnapshot::default()
+        };
+        assert_eq!(snapshot.caption(), "history search · plan · model");
     }
 }

@@ -26,3 +26,6 @@ coverage so renderer-neutral projections can participate in replay fixtures.
 The scrollback renderer now computes semantic tool-card rows once per render
 and reuses that immutable projection for every physical terminal row, removing
 the previous per-row projection rebuild.
+Prompt caption composition is now a pure `PromptSnapshot::caption` projection
+consumed by both paint data and the interactive widget, removing duplicated
+mode/history/multiline state logic.

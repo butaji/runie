@@ -403,22 +403,7 @@ impl Widget for PromptWidget {
 
 impl PromptWidget {
     fn draw_caption(&self, area: Rect, bottom: u16, right: u16, buf: &mut Buffer) {
-        let mode_caption = match self.mode {
-            InputMode::Normal => self.model_caption.clone(),
-            InputMode::Alternate => format!("alternate · {}", self.model_caption),
-            InputMode::Plan => format!("plan · {}", self.model_caption),
-            InputMode::FileSearch => format!("file search · {}", self.model_caption),
-            InputMode::FileViewer => format!("file viewer · {}", self.model_caption),
-        };
-        let caption = if self.history_search {
-            format!("history search · {mode_caption}")
-        } else if self.history_index.is_some() {
-            format!("history · {mode_caption}")
-        } else if self.buffer.contains('\n') {
-            format!("multiline · {mode_caption}")
-        } else {
-            mode_caption.to_string()
-        };
+        let caption = self.model_snapshot().caption();
         let caption_width = UnicodeWidthStr::width(caption.as_str()) as u16 + 2;
         if caption_width + 2 < area.width {
             let caption_x = right.saturating_sub(caption_width + 1);
