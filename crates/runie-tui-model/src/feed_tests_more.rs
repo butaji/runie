@@ -51,6 +51,28 @@ fn tool_yaml_trace_replays_through_the_normalized_tool_projection() {
 }
 
 #[test]
+fn workflow_yaml_trace_replays_through_the_workflow_projection() {
+    let state = runie_core::replay_yaml_state(
+        include_str!("../fixtures/scrollback-workflow.yaml"),
+        super::FeedState::default(),
+        |state, event: &super::ScrollbackWorkflowEvent| {
+            for message in super::ScrollbackEvent::Workflow(event.clone()).into_messages() {
+                state.reduce(message);
+            }
+        },
+    )
+    .expect("valid workflow fixture");
+
+    let snapshot = state.snapshot();
+    assert_eq!(
+        snapshot.facts.workflow_headers["run-1"],
+        "Workflow review: inspect changes"
+    );
+    assert_eq!(snapshot.facts.workflow_phases["run-1"][0].0, "analysis");
+    assert_eq!(snapshot.facts.workflow_phases["run-1"][0].1, "active");
+}
+
+#[test]
 fn line_kind_prefix_pins_user_and_assistant_rails() {
     // Pin the user/assistant prefix shapes: the user gutter is
     // three columns wide, the assistant/reasoning rail is two

@@ -32,6 +32,8 @@ replay through the public YAML reducer helper in a checked-in TUI-model
 fixture, covering the actor-facing lifecycle boundary.
 Normalized scrollback tool lifecycle events now have the same serde vocabulary
 and a YAML replay fixture covering start, update, and end projection state.
+Workflow lifecycle events now also replay from a checked-in YAML fixture,
+covering workflow header, progress phase, and terminal state projection.
 
 Acceptance: representative core, feed, status, and TUI tests use the harness;
 no sleeps are introduced.

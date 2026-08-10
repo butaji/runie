@@ -1,0 +1,13 @@
+- !started
+    run_id: run-1
+    name: review
+    objective: inspect changes
+- !progress
+    run_id: run-1
+    phase: analysis
+    state: active
+    active_agents: 2
+- !ended
+    run_id: run-1
+    status: completed
+    elapsed_ms: 1250

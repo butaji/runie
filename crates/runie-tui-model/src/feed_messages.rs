@@ -170,7 +170,8 @@ pub enum ScrollbackToolEvent {
     Ended { tool_call_id: String, header: String, activity: Option<String>, output: Vec<(LineKind, String)> },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ScrollbackWorkflowEvent {
     Started { run_id: String, name: String, objective: String },
     Progress { run_id: String, phase: String, state: String, active_agents: u32 },
