@@ -4,13 +4,17 @@
 //! touching a terminal buffer. The Ratatui adapter can interpret them later,
 //! while tests can assert the view data directly.
 
-use crate::view::{ComponentKind, PaintIntent, Slot};
+use crate::{
+    appearance,
+    view::{ComponentKind, PaintIntent, Slot},
+};
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
-    text::Line,
+    text::{Line, Span},
     widgets::{Paragraph, Widget},
 };
+use runie_core::types::ThemeKind;
 use runie_tui_model::{
     InputMode, PromptSnapshot, StatusSnapshot, ToolCardPaintIntent, ToolCardRow,
 };
@@ -100,18 +104,28 @@ pub fn tool_card_paint(rows: &[ToolCardRow]) -> PaintDocument {
 
 /// Interpret renderer-neutral text instructions at the terminal boundary.
 /// Intent-to-style mapping can evolve here without changing model projections.
-pub fn render_paint_document(document: &PaintDocument, area: Rect, buffer: &mut Buffer) {
+pub fn render_paint_document(
+    document: &PaintDocument,
+    theme: ThemeKind,
+    area: Rect,
+    buffer: &mut Buffer,
+) {
     let lines = document
         .text
         .iter()
-        .map(|text| Line::raw(text.text.clone()))
+        .map(|text| {
+            Line::from(Span::styled(
+                text.text.clone(),
+                appearance::style_for_intent(theme, text.intent),
+            ))
+        })
         .collect::<Vec<_>>();
     Paragraph::new(lines).render(area, buffer);
 }
 
 /// Minimal Ratatui adapter for the status paint document.
 pub fn render_status_paint(snapshot: &StatusSnapshot, area: Rect, buffer: &mut Buffer) {
-    render_paint_document(&status_paint(snapshot), area, buffer);
+    render_paint_document(&status_paint(snapshot), snapshot.theme, area, buffer);
 }
 
 pub fn prompt_paint(snapshot: &PromptSnapshot) -> PaintDocument {
@@ -146,7 +160,7 @@ pub fn prompt_paint(snapshot: &PromptSnapshot) -> PaintDocument {
 }
 
 pub fn render_prompt_paint(snapshot: &PromptSnapshot, area: Rect, buffer: &mut Buffer) {
-    render_paint_document(&prompt_paint(snapshot), area, buffer);
+    render_paint_document(&prompt_paint(snapshot), snapshot.theme, area, buffer);
 }
 
 #[cfg(test)]
@@ -186,6 +200,27 @@ mod tests {
             &mut buffer,
         );
         assert_eq!(buffer.cell((0, 0)).map(|cell| cell.symbol()), Some("r"));
+    }
+
+    #[test]
+    fn paint_adapter_preserves_semantic_intent_as_theme_style() {
+        let document = PaintDocument::default().text(
+            Slot::Status,
+            ComponentKind::Status,
+            "busy",
+            PaintIntent::Accent,
+        );
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 1));
+        render_paint_document(
+            &document,
+            ThemeKind::GrokNight,
+            Rect::new(0, 0, 10, 1),
+            &mut buffer,
+        );
+        assert_eq!(
+            buffer.cell((0, 0)).map(|cell| cell.fg),
+            appearance::accent_style_for(ThemeKind::GrokNight).fg
+        );
     }
 
     #[test]

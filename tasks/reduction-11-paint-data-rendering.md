@@ -19,3 +19,5 @@ providing a renderer-neutral migration seam for scrollback cards.
 The semantic-to-renderer intent conversion is centralized in one
 `From<ToolCardPaintIntent>` implementation, so card projection no longer
 duplicates the mapping table.
+The shared renderer now resolves each semantic intent through the selected
+theme, so paint data controls terminal styling instead of being discarded.
