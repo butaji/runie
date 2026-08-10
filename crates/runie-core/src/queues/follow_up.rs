@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use tokio::sync::{mpsc, Notify};
+use tokio::sync::{mpsc, watch, Notify};
 
 use crate::task_owner::{mailbox_call, spawn_actor_worker, TaskOwner};
 use crate::types::AgentMessage;
@@ -26,21 +26,19 @@ enum FollowUpCommand {
 pub struct FollowUpQueueActor {
     tx: mpsc::Sender<FollowUpCommand>,
     notify: Arc<Notify>,
+    snapshot: watch::Receiver<FollowUpQueueSnapshot>,
+    shared_snapshot: watch::Receiver<crate::SharedSnapshot<FollowUpQueueSnapshot>>,
     _worker: Arc<TaskOwner>,
 }
 
 impl FollowUpQueueActor {
     pub fn new() -> Self {
-        let notify = Arc::new(Notify::new());
-
-        // OWNER: FollowUpQueueActor
-        let (tx, worker) = spawn_actor_worker!(64, move |rx| async move {
-            run_follow_up_worker(rx).await;
-        });
-
+        let (tx, snapshot, shared_snapshot, worker) = spawn_follow_up_runtime();
         Self {
             tx,
-            notify,
+            notify: Arc::new(Notify::new()),
+            snapshot,
+            shared_snapshot,
             _worker: worker,
         }
     }
@@ -78,6 +76,29 @@ impl FollowUpQueueActor {
     pub fn notifier(&self) -> Arc<Notify> {
         self.notify.clone()
     }
+
+    pub fn snapshot(&self) -> FollowUpQueueSnapshot {
+        self.snapshot.borrow().clone()
+    }
+
+    pub fn shared_snapshot(&self) -> crate::SharedSnapshot<FollowUpQueueSnapshot> {
+        self.shared_snapshot.borrow().clone()
+    }
+}
+
+fn spawn_follow_up_runtime() -> (
+    mpsc::Sender<FollowUpCommand>,
+    watch::Receiver<FollowUpQueueSnapshot>,
+    watch::Receiver<crate::SharedSnapshot<FollowUpQueueSnapshot>>,
+    Arc<TaskOwner>,
+) {
+    let initial = FollowUpQueueSnapshot::default();
+    let (snapshot_tx, snapshot) = watch::channel(initial.clone());
+    let (shared_tx, shared_snapshot) = watch::channel(crate::SharedSnapshot::new(initial));
+    let (tx, worker) = spawn_actor_worker!(64, move |rx| async move {
+        run_follow_up_worker(rx, snapshot_tx, shared_tx).await;
+    });
+    (tx, snapshot, shared_snapshot, worker)
 }
 
 impl Default for FollowUpQueueActor {
@@ -86,44 +107,72 @@ impl Default for FollowUpQueueActor {
     }
 }
 
-async fn run_follow_up_worker(mut rx: mpsc::Receiver<FollowUpCommand>) {
+async fn run_follow_up_worker(
+    mut rx: mpsc::Receiver<FollowUpCommand>,
+    snapshot_tx: watch::Sender<FollowUpQueueSnapshot>,
+    shared_tx: watch::Sender<crate::SharedSnapshot<FollowUpQueueSnapshot>>,
+) {
     let mut queue: Vec<(String, AgentMessage)> = Vec::new();
     let mut next_id = 1_u64;
 
     while let Some(cmd) = rx.recv().await {
-        match cmd {
-            FollowUpCommand::Push(msg, reply) => {
-                let id = format!("follow-up-{next_id}");
-                next_id += 1;
-                queue.push((id.clone(), *msg));
-                let _ = reply.send(id).await;
-            }
-            FollowUpCommand::DrainOne(reply) => {
-                // `Vec::drain(..1)` panics on an empty queue; pop instead.
-                let popped = if queue.is_empty() {
-                    None
-                } else {
-                    Some(queue.remove(0).1)
-                };
-                let _ = reply.send(popped).await;
-            }
-            FollowUpCommand::DrainAll(reply) => {
-                let drained = std::mem::take(&mut queue)
-                    .into_iter()
-                    .map(|(_, message)| message)
-                    .collect();
-                let _ = reply.send(drained).await;
-            }
-            FollowUpCommand::Clear(reply) => {
-                let ids = queue.iter().map(|(id, _)| id.clone()).collect();
-                queue.clear();
-                let _ = reply.send(ids).await;
-            }
-            FollowUpCommand::Len(reply) => {
-                let _ = reply.send(queue.len()).await;
-            }
+        apply_follow_up_command(cmd, &mut queue, &mut next_id, &snapshot_tx, &shared_tx).await;
+    }
+}
+
+async fn apply_follow_up_command(
+    cmd: FollowUpCommand,
+    queue: &mut Vec<(String, AgentMessage)>,
+    next_id: &mut u64,
+    snapshot_tx: &watch::Sender<FollowUpQueueSnapshot>,
+    shared_tx: &watch::Sender<crate::SharedSnapshot<FollowUpQueueSnapshot>>,
+) {
+    match cmd {
+        FollowUpCommand::Push(msg, reply) => {
+            let id = format!("follow-up-{next_id}");
+            *next_id += 1;
+            queue.push((id.clone(), *msg));
+            let _ = reply.send(id).await;
+            publish(snapshot_tx, shared_tx, queue.len());
+        }
+        FollowUpCommand::DrainOne(reply) => {
+            let popped = queue.first().is_some().then(|| queue.remove(0).1);
+            let _ = reply.send(popped).await;
+            publish(snapshot_tx, shared_tx, queue.len());
+        }
+        FollowUpCommand::DrainAll(reply) => {
+            let drained = std::mem::take(queue)
+                .into_iter()
+                .map(|(_, message)| message)
+                .collect();
+            let _ = reply.send(drained).await;
+            publish(snapshot_tx, shared_tx, queue.len());
+        }
+        FollowUpCommand::Clear(reply) => {
+            let ids = queue.iter().map(|(id, _)| id.clone()).collect();
+            queue.clear();
+            let _ = reply.send(ids).await;
+            publish(snapshot_tx, shared_tx, queue.len());
+        }
+        FollowUpCommand::Len(reply) => {
+            let _ = reply.send(queue.len()).await;
         }
     }
+}
+
+fn publish(
+    snapshot_tx: &watch::Sender<FollowUpQueueSnapshot>,
+    shared_tx: &watch::Sender<crate::SharedSnapshot<FollowUpQueueSnapshot>>,
+    len: usize,
+) {
+    crate::publish_shared_snapshot(
+        snapshot_tx,
+        shared_tx,
+        FollowUpQueueSnapshot {
+            len,
+            is_empty: len == 0,
+        },
+    );
 }
 
 #[cfg(test)]
@@ -160,5 +209,16 @@ mod tests {
         assert!(!q.is_empty().await);
         q.clear().await;
         assert!(q.is_empty().await);
+    }
+
+    #[tokio::test]
+    async fn shared_snapshot_tracks_push_and_drain_data() {
+        let q = FollowUpQueueActor::new();
+        q.push(msg(1)).await;
+        assert_eq!(q.snapshot().len, 1);
+        assert!(!q.shared_snapshot().get().is_empty);
+        q.drain_one().await;
+        assert_eq!(q.shared_snapshot().get().len, 0);
+        assert_eq!(q.shared_snapshot().strong_count(), 2);
     }
 }
