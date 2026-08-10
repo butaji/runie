@@ -32,6 +32,25 @@ fn lifecycle_yaml_trace_replays_through_the_feed_reducer() {
 }
 
 #[test]
+fn tool_yaml_trace_replays_through_the_normalized_tool_projection() {
+    let state = runie_core::replay_yaml_state(
+        include_str!("../fixtures/scrollback-tool.yaml"),
+        super::FeedState::default(),
+        |state, event: &super::ScrollbackToolEvent| {
+            for message in super::ScrollbackEvent::Tool(event.clone()).into_messages() {
+                state.reduce(message);
+            }
+        },
+    )
+    .expect("valid tool fixture");
+
+    let snapshot = state.snapshot();
+    assert_eq!(snapshot.tool_blocks.len(), 1);
+    assert_eq!(snapshot.tool_blocks[0].tool_call_id, "tool-1");
+    assert!(!snapshot.tool_blocks[0].is_running);
+}
+
+#[test]
 fn line_kind_prefix_pins_user_and_assistant_rails() {
     // Pin the user/assistant prefix shapes: the user gutter is
     // three columns wide, the assistant/reasoning rail is two

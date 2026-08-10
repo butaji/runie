@@ -109,6 +109,8 @@ As of 2026-08-09, the reduction work has these verified results:
   semantic paint intent directly.
 - Activity counters now project directly from normalized `FeedFacts` without
   an extra forwarding function.
+- Normalized tool lifecycle events now replay from a checked-in YAML fixture
+  through the public event reducer harness.
 - Transcript-selectability is now a `LineKind` predicate shared by feed
   navigation, completing the central line-classification vocabulary.
 - Five numbered feed fragments covering tool-row lifecycle and selection are

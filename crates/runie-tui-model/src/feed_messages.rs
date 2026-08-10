@@ -162,7 +162,8 @@ pub enum ScrollbackContentEvent {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ScrollbackToolEvent {
     Started { tool_call_id: String, header: String, activity: Option<String> },
     Updated { tool_call_id: String, header: Option<String>, output: Vec<String> },

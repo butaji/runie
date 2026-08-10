@@ -1,0 +1,16 @@
+- !started
+    tool_call_id: tool-1
+    header: Read README.md
+    activity: file
+- !updated
+    tool_call_id: tool-1
+    header: Read README.md (1 line)
+    output:
+      - README.md
+- !ended
+    tool_call_id: tool-1
+    header: Read README.md (1 line)
+    activity: file
+    output:
+      - - tool_result
+        - "1 line"
