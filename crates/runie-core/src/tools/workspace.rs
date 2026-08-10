@@ -293,13 +293,7 @@ async fn run_shell(
     signal: Option<tokio_util::sync::CancellationToken>,
     update: Option<Box<dyn Fn(serde_json::Value) + Send + Sync>>,
 ) -> Result<String, String> {
-    let mut child = tokio::process::Command::new("sh")
-        .arg("-c")
-        .arg(command)
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .spawn()
-        .map_err(|error| error.to_string())?;
+    let mut child = spawn_shell(command)?;
     let mut stdout = child
         .stdout
         .take()
@@ -308,12 +302,16 @@ async fn run_shell(
         .stderr
         .take()
         .ok_or_else(|| "stderr pipe unavailable".to_owned())?;
-    let status = tokio::select! {
-        result = child.wait() => result.map_err(|error| error.to_string())?,
-        _ = cancellation(signal) => { let _ = child.kill().await; return Err("command cancelled".into()); }
-        _ = tokio::time::sleep(std::time::Duration::from_millis(timeout)) => { let _ = child.kill().await; return Err("command timed out".into()); }
+    let (out, err) = {
+        let output = read_output(&mut stdout, &mut stderr, update.as_deref());
+        tokio::pin!(output);
+        tokio::select! {
+            result = &mut output => result?,
+            _ = cancellation(signal) => { let _ = child.kill().await; return Err("command cancelled".into()); }
+            _ = tokio::time::sleep(std::time::Duration::from_millis(timeout)) => { let _ = child.kill().await; return Err("command timed out".into()); }
+        }
     };
-    let (out, err) = read_output(&mut stdout, &mut stderr).await?;
+    let status = child.wait().await.map_err(|error| error.to_string())?;
     let mut text = String::from_utf8_lossy(&out).into_owned();
     text.push_str(&String::from_utf8_lossy(&err));
     if let Some(update) = update {
@@ -325,20 +323,52 @@ async fn run_shell(
     Ok(text.trim_end().into())
 }
 
+fn spawn_shell(command: &str) -> Result<tokio::process::Child, String> {
+    tokio::process::Command::new("sh")
+        .arg("-c")
+        .arg(command)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .map_err(|error| error.to_string())
+}
+
 async fn read_output(
     stdout: &mut (impl tokio::io::AsyncRead + Unpin),
     stderr: &mut (impl tokio::io::AsyncRead + Unpin),
+    update: Option<&(dyn Fn(serde_json::Value) + Send + Sync)>,
 ) -> Result<(Vec<u8>, Vec<u8>), String> {
-    let (mut out, mut err) = (Vec::new(), Vec::new());
-    stdout
-        .read_to_end(&mut out)
-        .await
-        .map_err(|error| error.to_string())?;
-    stderr
-        .read_to_end(&mut err)
-        .await
-        .map_err(|error| error.to_string())?;
+    let (out, err) = tokio::join!(
+        read_stream(stdout, update, "stdout"),
+        read_stream(stderr, update, "stderr")
+    );
+    let (out, err) = (out?, err?);
     Ok((out, err))
+}
+
+async fn read_stream(
+    stream: &mut (impl tokio::io::AsyncRead + Unpin),
+    update: Option<&(dyn Fn(serde_json::Value) + Send + Sync)>,
+    name: &str,
+) -> Result<Vec<u8>, String> {
+    let mut all = Vec::new();
+    let mut chunk = [0_u8; 4096];
+    loop {
+        let read = stream
+            .read(&mut chunk)
+            .await
+            .map_err(|error| error.to_string())?;
+        if read == 0 {
+            break;
+        }
+        all.extend_from_slice(&chunk[..read]);
+        if let Some(update) = update {
+            update(
+                serde_json::json!({"text": String::from_utf8_lossy(&chunk[..read]), "stream": name, "complete": false}),
+            );
+        }
+    }
+    Ok(all)
 }
 
 async fn cancellation(signal: Option<tokio_util::sync::CancellationToken>) {
