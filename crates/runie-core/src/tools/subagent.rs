@@ -10,7 +10,29 @@ pub enum SubagentRole {
     Code,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SubagentCapability {
+    ReadWorkspace,
+    ProducePlan,
+    WriteWorkspace,
+}
+
 impl SubagentRole {
+    pub const fn capabilities(self) -> &'static [SubagentCapability] {
+        match self {
+            Self::Explore => &[SubagentCapability::ReadWorkspace],
+            Self::Plan => &[
+                SubagentCapability::ReadWorkspace,
+                SubagentCapability::ProducePlan,
+            ],
+            Self::Code => &[
+                SubagentCapability::ReadWorkspace,
+                SubagentCapability::WriteWorkspace,
+            ],
+        }
+    }
+
     pub fn system_prompt(self) -> &'static str {
         match self {
             Self::Explore => "You are an isolated exploration subagent. Inspect and report facts; do not edit files.",
@@ -116,5 +138,22 @@ mod tests {
             SubagentRole::Code.system_prompt()
         );
         assert!(SubagentRole::Plan.system_prompt().contains("planning"));
+    }
+
+    #[test]
+    fn roles_declare_replayable_capabilities() {
+        assert_eq!(
+            SubagentRole::Explore.capabilities(),
+            &[SubagentCapability::ReadWorkspace]
+        );
+        assert!(SubagentRole::Plan
+            .capabilities()
+            .contains(&SubagentCapability::ProducePlan));
+        assert!(SubagentRole::Code
+            .capabilities()
+            .contains(&SubagentCapability::WriteWorkspace));
+        assert!(!SubagentRole::Explore
+            .capabilities()
+            .contains(&SubagentCapability::WriteWorkspace));
     }
 }
