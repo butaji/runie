@@ -1,0 +1,6 @@
+- { mode: ask, tool: read, decision: allow }
+- { mode: ask, tool: write, decision: ask }
+- { mode: deny, tool: bash, decision: deny }
+- { mode: deny, tool: grep, decision: allow }
+- { mode: auto, tool: edit, decision: allow }
+- { mode: yolo, tool: exec, decision: allow }
