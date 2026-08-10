@@ -15,6 +15,9 @@ use std::sync::{
 #[path = "executor_hooks.rs"]
 mod executor_hooks;
 pub use executor_hooks::*;
+#[path = "scheduler_metrics.rs"]
+mod scheduler_metrics;
+pub use scheduler_metrics::{reduce_scheduler_event, SchedulerEvent, SchedulerMetrics};
 
 #[derive(Clone)]
 pub struct AfterToolCallInputs {
@@ -38,14 +41,12 @@ pub struct ToolExecContext {
     pub updates: Option<Arc<std::sync::Mutex<Vec<crate::types::AgentEvent>>>>,
     pub tool_result_timestamp: i64,
 }
-
 #[derive(Debug, Clone, Default)]
 pub struct DispatchOutcome {
     pub tool_results: Vec<ToolResultMessage>,
     pub all_terminated: bool,
     pub events: Vec<crate::types::AgentEvent>,
 }
-
 pub async fn execute_sequential(calls: Vec<ToolCall>, ctx: ToolExecContext) -> DispatchOutcome {
     let mut outcome = DispatchOutcome::default();
 
@@ -97,7 +98,6 @@ fn tool_end(call: &ToolCall, result: &AgentToolResult, is_error: bool) -> crate:
         is_error,
     }
 }
-
 fn tool_result_message(
     call: &ToolCall,
     result: &AgentToolResult,
