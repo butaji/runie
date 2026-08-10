@@ -10,6 +10,7 @@ pub struct ToolExecHooks {
     pub after_tool_call: Option<AfterToolCallHook>,
     pub ask_user_question: Option<AskUserQuestionHook>,
     pub subagent: Option<SubagentHook>,
+    pub web_search: Option<WebSearchHook>,
 }
 
 pub type BeforeToolCallHook = Arc<
@@ -34,6 +35,13 @@ pub type AskUserQuestionHook = Arc<
 pub type SubagentHook = Arc<
     dyn Fn(
             crate::tools::SubagentRequest,
+        ) -> Pin<Box<dyn Future<Output = Result<serde_json::Value, String>> + Send>>
+        + Send
+        + Sync,
+>;
+pub type WebSearchHook = Arc<
+    dyn Fn(
+            crate::tools::WebSearchRequest,
         ) -> Pin<Box<dyn Future<Output = Result<serde_json::Value, String>> + Send>>
         + Send
         + Sync,

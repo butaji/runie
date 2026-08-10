@@ -422,6 +422,9 @@ async fn execute_tool(
     if call.name == "ask_user_question" {
         return execute_question(call, ctx).await;
     }
+    if call.name == "web_search" {
+        return execute_web_search(call, ctx).await;
+    }
     let settled = Arc::new(AtomicBool::new(false));
     let on_update = tool_update_callback(call, ctx, settled.clone());
     let tool_future = tool.execute(
@@ -456,8 +459,6 @@ fn tool_update_callback(
     let bus = ctx.bus.clone();
     let update_call = call.clone();
     Box::new(move |partial_result| {
-        // Pi scopes updates to the execute promise. A callback retained by a
-        // tool after it settles must become a no-op, even if it fires later.
         if !tool_update_is_live(&settled) {
             return;
         }
@@ -485,4 +486,15 @@ async fn execute_question(
     let request = serde_json::from_value(call.arguments.clone())
         .map_err(|error| format!("invalid question: {error}"))?;
     Ok(crate::tools::ask_user::answer_result(hook(request).await?))
+}
+async fn execute_web_search(
+    call: &ToolCall,
+    ctx: &ToolExecContext,
+) -> Result<AgentToolResult, String> {
+    let Some(hook) = &ctx.hooks.web_search else {
+        return Err("web_search requires an owning web search hook".into());
+    };
+    let request = serde_json::from_value(call.arguments.clone())
+        .map_err(|error| format!("invalid web search request: {error}"))?;
+    Ok(crate::tools::web::result(hook(request).await?))
 }
