@@ -19,8 +19,8 @@ fn unix_timestamp_millis() -> i64 {
 }
 
 use super::executor::{
-    execute_parallel, execute_sequential, reduce_scheduler_event, SchedulerEvent, SchedulerMetrics,
-    ToolExecContext, ToolExecHooks,
+    execute_parallel, execute_sequential, reduce_scheduler_event, DispatchOutcome, SchedulerEvent,
+    SchedulerMetrics, ToolExecContext, ToolExecHooks,
 };
 use super::registry::ToolRegistry;
 
@@ -330,20 +330,29 @@ async fn run_tool_command(
         registry.clone(),
         tool_result_timestamp,
     );
-    let outcome = match effective_mode {
+    let outcome = execute_tool_calls(calls, ctx, effective_mode).await;
+    (reply, completed_tool_outcome(outcome))
+}
+
+async fn execute_tool_calls(
+    calls: Vec<ToolCall>,
+    ctx: ToolExecContext,
+    mode: ToolExecutionMode,
+) -> DispatchOutcome {
+    match mode {
         ToolExecutionMode::Sequential => execute_sequential(calls, ctx).await,
         ToolExecutionMode::Parallel => execute_parallel(calls, ctx).await,
-    };
-    (
-        reply,
-        ToolOutcome::Completed {
-            tool_results: outcome.tool_results,
-            all_terminated: outcome.all_terminated,
-            events: outcome.events,
-            scheduler: SchedulerMetrics::default(),
-            cancelled: outcome.cancelled,
-        },
-    )
+    }
+}
+
+fn completed_tool_outcome(outcome: DispatchOutcome) -> ToolOutcome {
+    ToolOutcome::Completed {
+        tool_results: outcome.tool_results,
+        all_terminated: outcome.all_terminated,
+        events: outcome.events,
+        scheduler: SchedulerMetrics::default(),
+        cancelled: outcome.cancelled,
+    }
 }
 
 async fn next_prioritized_command(rx: &mut mpsc::Receiver<ToolCommand>) -> Option<ToolCommand> {
@@ -457,19 +466,7 @@ mod tests {
                 super::super::executor::ToolExecHooks::default(),
             )
             .await;
-        match outcome {
-            ToolOutcome::Completed {
-                tool_results,
-                scheduler,
-                ..
-            } => {
-                assert!(tool_results.is_empty());
-                assert_eq!(scheduler.completed, 1);
-                assert_eq!(scheduler.running, 0);
-                assert_eq!(scheduler.interactive_enqueued, 1);
-            }
-            ToolOutcome::Aborted { .. } => panic!("expected completed"),
-        }
+        assert_empty_batch_outcome(outcome);
         let snapshot = actor.scheduler_metrics().await;
         assert_eq!(snapshot.completed, 1);
         assert_eq!(snapshot.running, 0);
@@ -499,6 +496,22 @@ mod tests {
         let snapshot = actor.scheduler_metrics().await;
         assert_eq!(snapshot.completed, 1);
         assert_eq!(snapshot.failed, 1);
+    }
+
+    fn assert_empty_batch_outcome(outcome: ToolOutcome) {
+        match outcome {
+            ToolOutcome::Completed {
+                tool_results,
+                scheduler,
+                ..
+            } => {
+                assert!(tool_results.is_empty());
+                assert_eq!(scheduler.completed, 1);
+                assert_eq!(scheduler.running, 0);
+                assert_eq!(scheduler.interactive_enqueued, 1);
+            }
+            ToolOutcome::Aborted { .. } => panic!("expected completed"),
+        }
     }
 
     #[tokio::test]
