@@ -144,3 +144,23 @@ fn navigation_yaml_trace_replays_through_the_view_state_projection() {
     assert!(snapshot.autoscroll);
     assert!(snapshot.selection_anchor.is_none());
 }
+
+#[test]
+fn content_yaml_trace_replays_through_transcript_and_assistant_projection() {
+    let state = runie_core::replay_yaml_state(
+        include_str!("../fixtures/scrollback-content.yaml"),
+        super::FeedState::default(),
+        |state, event: &super::ScrollbackContentEvent| {
+            for message in super::ScrollbackEvent::Content(event.clone()).into_messages() {
+                state.reduce(message);
+            }
+        },
+    )
+    .expect("valid content fixture");
+
+    let snapshot = state.snapshot();
+    assert_eq!(snapshot.lines.len(), 2);
+    assert_eq!(snapshot.lines[0].kind, super::LineKind::User);
+    assert_eq!(snapshot.lines[1].kind, super::LineKind::Assistant);
+    assert!(snapshot.facts.settled_no_tool_phase);
+}

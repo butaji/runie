@@ -147,7 +147,8 @@ impl LineKind {
 
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct Line {
     pub kind: LineKind,
     pub text: String,
@@ -158,7 +159,9 @@ pub struct Line {
     /// True while this reducer-owned row may receive lifecycle mutations.
     /// Completed rows retain their identity for replay/debug assertions but
     /// are no longer eligible targets for a later duplicate call ID.
+    #[serde(skip)]
     tool_row_active: bool,
+    #[serde(skip)]
     has_vpad: bool,
 }
 

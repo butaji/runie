@@ -36,6 +36,8 @@ Workflow lifecycle events now also replay from a checked-in YAML fixture,
 covering workflow header, progress phase, and terminal state projection.
 Navigation events now have YAML replay coverage for scroll, reveal-latest, and
 selection clearing through the same feed state machine.
+Content events now also have a checked-in YAML fixture covering user and
+assistant transcript lines plus assistant finalization through `FeedState`.
 
 Acceptance: representative core, feed, status, and TUI tests use the harness;
 no sleeps are introduced.

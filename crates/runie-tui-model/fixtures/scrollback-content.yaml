@@ -1,0 +1,15 @@
+- !append
+  kind: user
+  text: inspect the workspace
+  tool_call_id: null
+  tool_row_id: null
+- !append
+  kind: assistant
+  text: I will inspect the workspace.
+  tool_call_id: null
+  tool_row_id: null
+- !finalize_assistant
+  has_reasoning: false
+  reasoning_expanded: false
+  summary: I will inspect the workspace.
+  settled_no_tool_phase: true
