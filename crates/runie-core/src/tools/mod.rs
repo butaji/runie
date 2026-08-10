@@ -38,7 +38,10 @@ pub use mcp::{
     McpCallHook, McpCallRequest, McpHttpClient, McpServer, McpStdioClient, McpTool, McpToolSpec,
 };
 pub use policy::{decide as approval_decision, ApprovalDecision, ApprovalMode, ApprovalModeStore};
-pub use question_broker::{PendingUserQuestion, UserQuestionBroker, UserQuestionTrace};
+pub use question_broker::{
+    decode_question_traces, encode_question_traces, PendingUserQuestion, UserQuestionBroker,
+    UserQuestionTrace,
+};
 pub use registry::ToolRegistry;
 pub use subagent::{
     SubagentCapability, SubagentRequest, SubagentResult, SubagentRole, SubagentTool,

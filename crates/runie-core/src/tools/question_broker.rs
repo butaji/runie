@@ -20,6 +20,24 @@ pub struct UserQuestionTrace {
     pub error: Option<String>,
 }
 
+/// Encode question resolutions as a bounded, append-friendly session stream.
+pub fn encode_question_traces(traces: &[UserQuestionTrace]) -> Result<String, serde_json::Error> {
+    traces
+        .iter()
+        .map(serde_json::to_string)
+        .collect::<Result<Vec<_>, _>>()
+        .map(|lines| format!("{}\n", lines.join("\n")))
+}
+
+/// Decode question resolutions without attaching them to a UI or actor.
+pub fn decode_question_traces(input: &str) -> Result<Vec<UserQuestionTrace>, serde_json::Error> {
+    input
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .map(serde_json::from_str)
+        .collect()
+}
+
 const MAX_QUESTION_TRACES: usize = 128;
 
 #[derive(Clone)]
@@ -90,6 +108,21 @@ impl UserQuestionBroker {
 
     pub fn traces(&self) -> Vec<UserQuestionTrace> {
         self.traces.lock().expect("question traces lock").clone()
+    }
+
+    pub fn export_traces_jsonl(&self) -> Result<String, serde_json::Error> {
+        encode_question_traces(&self.traces())
+    }
+
+    pub fn restore_traces_jsonl(&self, input: &str) -> Result<(), serde_json::Error> {
+        let traces = decode_question_traces(input)?;
+        let mut owned = self.traces.lock().expect("question traces lock");
+        owned.extend(traces);
+        if owned.len() > MAX_QUESTION_TRACES {
+            let keep_from = owned.len() - MAX_QUESTION_TRACES;
+            owned.drain(..keep_from);
+        }
+        Ok(())
     }
 
     pub fn answer(&self, id: &str, value: serde_json::Value) -> Result<(), String> {
@@ -330,5 +363,38 @@ mod tests {
         .unwrap();
         assert!(trace.attempted_answer.is_none());
         assert_eq!(trace.error.as_deref(), Some("invalid answer"));
+    }
+
+    #[test]
+    fn question_traces_round_trip_as_session_jsonl() {
+        let traces = vec![UserQuestionTrace {
+            id: "7".into(),
+            question: "Continue?".into(),
+            outcome: "answered".into(),
+            attempted_answer: None,
+            error: None,
+        }];
+        let jsonl = encode_question_traces(&traces).unwrap();
+        assert_eq!(decode_question_traces(&jsonl).unwrap(), traces);
+    }
+
+    #[test]
+    fn broker_restores_only_the_bounded_trace_tail() {
+        let traces = (0..=MAX_QUESTION_TRACES)
+            .map(|index| UserQuestionTrace {
+                id: index.to_string(),
+                question: "Continue?".into(),
+                outcome: "cancelled".into(),
+                attempted_answer: None,
+                error: None,
+            })
+            .collect::<Vec<_>>();
+        let broker = UserQuestionBroker::default();
+        broker
+            .restore_traces_jsonl(&encode_question_traces(&traces).unwrap())
+            .unwrap();
+        let restored = broker.traces();
+        assert_eq!(restored.len(), MAX_QUESTION_TRACES);
+        assert_eq!(restored[0].id, "1");
     }
 }
