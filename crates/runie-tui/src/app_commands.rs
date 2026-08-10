@@ -44,6 +44,7 @@ impl App {
             command_actor: runie_core::command_actor::CommandActor::new(),
             question_broker,
             approval_mode,
+            background_actor: runie_core::background::BackgroundProcessActor::new(),
             submission_tx,
             _submission_owner: submission_owner,
         }
@@ -70,9 +71,17 @@ impl App {
             command_actor: runie_core::command_actor::CommandActor::new(),
             question_broker: runie_core::tools::UserQuestionBroker::default(),
             approval_mode: Default::default(),
+            background_actor: runie_core::background::BackgroundProcessActor::new(),
             submission_tx,
             _submission_owner: submission_owner,
         }
+    }
+
+    pub fn attach_background_actor(
+        &mut self,
+        actor: runie_core::background::BackgroundProcessActor,
+    ) {
+        self.background_actor = actor;
     }
 
     pub async fn toggle_shortcuts(&self) {

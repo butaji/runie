@@ -45,6 +45,10 @@ fn mappable_parser_rejects_unimplemented_commands_without_swallowing_text() {
         })
     );
     assert_eq!(parse_mappable_builtin_command("/model"), None);
+    assert_eq!(
+        parse_mappable_builtin_command("/jobs"),
+        Some(MappableBuiltinCommand::Extended { name: "jobs".into(), args: String::new() })
+    );
 }
 
 fn assert_mappable_basics() {

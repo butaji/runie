@@ -416,6 +416,7 @@ pub struct App {
     pub command_actor: runie_core::command_actor::CommandActor,
     pub question_broker: runie_core::tools::UserQuestionBroker,
     pub approval_mode: runie_core::tools::ApprovalModeStore,
+    pub background_actor: runie_core::background::BackgroundProcessActor,
     submission_tx: SubmissionTx,
     _submission_owner: std::sync::Arc<runie_core::task_owner::TaskOwner>,
 }

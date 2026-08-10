@@ -88,6 +88,8 @@ impl App {
                     "hooks" => "Hooks loaded".into(),
                     "plugins" => "Plugins loaded".into(),
                     "mcps" => "MCP servers loaded".into(),
+                    "jobs" => serde_json::to_string(&self.background_actor.snapshot())
+                        .unwrap_or_else(|_| "Background jobs unavailable".into()),
                     "doctor" => state
                         .last_diagnostic
                         .clone()
