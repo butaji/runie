@@ -100,6 +100,13 @@ fn assert_mappable_basics() {
 }
 
 #[test]
+fn background_job_command_accepts_only_cancel_and_one_id() {
+    assert_eq!(parse_background_job_command("cancel 7"), Some("7"));
+    assert_eq!(parse_background_job_command("cancel 7 extra"), None);
+    assert_eq!(parse_background_job_command("list 7"), None);
+}
+
+#[test]
 fn classifier_exposes_known_unsupported_capabilities() {
     assert_classifier_mappable_paths();
     assert_classifier_dispositions();

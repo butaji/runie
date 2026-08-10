@@ -35,6 +35,33 @@ impl App {
                 .await;
             return true;
         }
+        if name == "jobs" {
+            if let Some(id) = runie_core::commands::parse_background_job_command(args) {
+                let cancelled = self.background_actor.cancel(id).await;
+                self.ui
+                    .send(UiMsg::ShowCommandResult(if cancelled {
+                        format!("Background job {id} cancelled")
+                    } else {
+                        format!("Background job {id} is not running")
+                    }))
+                    .await;
+                return true;
+            }
+            let result = self
+                .background_actor
+                .snapshot()
+                .into_iter()
+                .map(|job| format!("{} · {:?} · {}", job.id, job.status, job.command))
+                .collect::<Vec<_>>();
+            self.ui
+                .send(UiMsg::ShowCommandResult(if result.is_empty() {
+                    "No background jobs".into()
+                } else {
+                    result.join("\n")
+                }))
+                .await;
+            return true;
+        }
         let state = self.command_actor.invoke(name, args).await;
         if matches!(name, "always-approve" | "auto" | "deny") {
             self.approval_mode.set(match state.approval {
@@ -123,8 +150,6 @@ impl App {
                     "hooks" => "Hooks loaded".into(),
                     "plugins" => "Plugins loaded".into(),
                     "mcps" => "MCP servers loaded".into(),
-                    "jobs" => serde_json::to_string(&self.background_actor.snapshot())
-                        .unwrap_or_else(|_| "Background jobs unavailable".into()),
                     "doctor" => state
                         .last_diagnostic
                         .clone()

@@ -204,6 +204,13 @@ pub fn parse_mappable_builtin_command(input: &str) -> Option<MappableBuiltinComm
     }
 }
 
+/// Parse the actor-owned background-job control arguments.
+pub fn parse_background_job_command(args: &str) -> Option<&str> {
+    let mut parts = args.split_whitespace();
+    (parts.next() == Some("cancel") && parts.next().is_some() && parts.next().is_none())
+        .then(|| args.split_whitespace().nth(1).unwrap())
+}
+
 #[allow(clippy::too_many_lines)]
 fn parse_parameterized_command(value: &str) -> Option<MappableBuiltinCommand> {
     if let Some(command) = parse_compact_command(value) {
