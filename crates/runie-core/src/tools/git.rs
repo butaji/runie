@@ -4,6 +4,35 @@ use crate::types::{AgentTool, AgentToolResult, ToolResultContent};
 
 const GIT_OUTPUT_MAX_BYTES: usize = 100 * 1024;
 
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct GitConflictSummary {
+    pub conflicted_paths: Vec<String>,
+    pub recoverable: bool,
+}
+
+pub fn classify_conflicts(status: &str) -> GitConflictSummary {
+    let conflicted_paths = status
+        .lines()
+        .filter_map(|line| {
+            let bytes = line.as_bytes();
+            (bytes.len() > 3 && is_conflict_code(bytes[0], bytes[1]))
+                .then(|| line[3..].trim().to_owned())
+        })
+        .filter(|path| !path.is_empty())
+        .collect::<Vec<_>>();
+    GitConflictSummary {
+        recoverable: !conflicted_paths.is_empty(),
+        conflicted_paths,
+    }
+}
+
+fn is_conflict_code(index: u8, worktree: u8) -> bool {
+    matches!(
+        (index, worktree),
+        (b'U', _) | (_, b'U') | (b'A', b'A') | (b'D', b'D')
+    )
+}
+
 macro_rules! git_tool_types { ($($name:ident),+ $(,)?) => { $(#[derive(Default)] pub struct $name;)+ }; }
 git_tool_types!(
     GitStatusTool,

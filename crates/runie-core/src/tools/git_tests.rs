@@ -95,3 +95,11 @@ fn revert_requires_a_hex_commit_reference() {
             .is_err());
     }
 }
+
+#[test]
+fn conflict_projection_is_lossless_and_ignores_clean_changes() {
+    let summary = classify_conflicts(" M clean.rs\nUU src/main.rs\nAA src/new.rs\n");
+    assert_eq!(summary.conflicted_paths, ["src/main.rs", "src/new.rs"]);
+    assert!(summary.recoverable);
+    assert!(!classify_conflicts(" M clean.rs\n").recoverable);
+}
