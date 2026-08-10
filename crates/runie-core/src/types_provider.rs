@@ -241,6 +241,74 @@ pub struct AgentToolResult {
     pub terminate: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ToolResultStatus {
+    Ok,
+    Error,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ToolResultTerminalProjection {
+    pub status: ToolResultStatus,
+    pub content_blocks: usize,
+    pub detail_keys: Vec<String>,
+    pub has_usage: bool,
+    pub terminated: bool,
+}
+
+impl AgentToolResult {
+    /// Bounded renderer-neutral metadata shared by TUI and noninteractive hosts.
+    pub fn terminal_projection(&self, is_error: bool) -> ToolResultTerminalProjection {
+        let mut detail_keys = self
+            .details
+            .as_object()
+            .map(|details| details.keys().cloned().collect::<Vec<_>>())
+            .unwrap_or_default();
+        detail_keys.sort();
+        ToolResultTerminalProjection {
+            status: if is_error {
+                ToolResultStatus::Error
+            } else {
+                ToolResultStatus::Ok
+            },
+            content_blocks: self.content.len(),
+            detail_keys,
+            has_usage: self.usage.is_some(),
+            terminated: self.terminate,
+        }
+    }
+}
+
+#[cfg(test)]
+mod terminal_projection_tests {
+    use super::*;
+
+    #[test]
+    fn tool_result_projection_is_bounded_metadata() {
+        let result = AgentToolResult {
+            content: vec![ToolResultContent::Text {
+                text: "large".into(),
+            }],
+            details: serde_json::json!({"z": 1, "a": 2}),
+            usage: Some(Usage::default()),
+            terminate: true,
+            ..AgentToolResult::default()
+        };
+        assert_eq!(
+            result.terminal_projection(true),
+            ToolResultTerminalProjection {
+                status: ToolResultStatus::Error,
+                content_blocks: 1,
+                detail_keys: vec!["a".into(), "z".into()],
+                has_usage: true,
+                terminated: true,
+            }
+        );
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum OperationRecordKind {
