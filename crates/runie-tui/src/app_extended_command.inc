@@ -164,12 +164,23 @@ impl App {
                 self.ui.send(UiMsg::ToggleCommandPalette).await;
             }
             "context" => {
-                let result = self
-                    .session_actor
-                    .snapshot()
-                    .compaction_context_projection()
-                    .map(|projection| projection.terminal_lines().join("\n"))
-                    .unwrap_or_else(|| "No compaction summary available".into());
+                let snapshot = self.session_actor.snapshot();
+                let messages = snapshot.branch_context_messages();
+                let estimate = runie_core::session::estimate_context_tokens(&messages);
+                let model = self.model_catalog.snapshot().selected;
+                let mut lines = vec![
+                    format!("context_tokens: {}", estimate.tokens),
+                    format!(
+                        "context_window: {}",
+                        model.as_ref().map(|model| model.context_window).unwrap_or(0)
+                    ),
+                ];
+                if let Some(projection) = snapshot.compaction_context_projection() {
+                    lines.extend(projection.terminal_lines());
+                } else {
+                    lines.push("compaction: none".into());
+                }
+                let result = lines.join("\n");
                 self.ui.send(UiMsg::ShowCommandResult(result)).await;
             }
             "recap" => {
