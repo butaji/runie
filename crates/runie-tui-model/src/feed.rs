@@ -24,14 +24,11 @@ include!("feed_line_ops.rs");
 include!("feed_reducer_boundary.rs");
 include!("feed_activity.rs");
 include!("feed_assistant.rs");
-include!("feed_state_25.rs");
+include!("feed_view_state.rs");
 include!("feed_state_27.rs");
 
 include!("feed_tool_lifecycle.rs");
-include!("feed_state_36.rs");
-include!("feed_state_37.rs");
 include!("feed_state_tool_rows.rs");
-include!("feed_state_53.rs");
 
 #[cfg(test)]
 #[path = "feed_tests.rs"]

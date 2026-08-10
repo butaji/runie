@@ -47,6 +47,8 @@ settled errors distinct while removing repeated matches from tool-card and
 selection projections.
 Transcript-selectability is also a `LineKind` predicate, so navigation does
 not maintain a separate classification table.
+Append/reset, layout measurement, and scroll transitions now share the
+semantic `feed_view_state.rs` boundary.
 
 Acceptance: snapshot parity, replay parity, and no stale derived index after
 insert/update/remove sequences.
