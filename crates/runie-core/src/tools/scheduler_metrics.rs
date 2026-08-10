@@ -1,9 +1,24 @@
+use std::collections::BTreeMap;
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd, serde::Serialize, serde::Deserialize,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum SchedulerCancellationReason {
+    Unspecified,
+    User,
+    Abort,
+    Dependency,
+    Shutdown,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum SchedulerEvent {
     Enqueued { interactive: bool },
     Started,
     Finished { success: bool },
     Cancelled,
+    CancelledWithReason { reason: SchedulerCancellationReason },
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -15,6 +30,8 @@ pub struct SchedulerMetrics {
     pub cancelled: u64,
     pub interactive_enqueued: u64,
     pub background_enqueued: u64,
+    #[serde(default)]
+    pub cancelled_by_reason: BTreeMap<SchedulerCancellationReason, u64>,
 }
 
 /// Pure scheduler telemetry reducer. Queue ownership remains in the executor.
@@ -37,16 +54,29 @@ pub fn reduce_scheduler_event(
         }
         SchedulerEvent::Started => return Err("scheduler started without a queued call".into()),
         SchedulerEvent::Finished { success } => finish(metrics, success)?,
-        SchedulerEvent::Cancelled if metrics.queued > 0 => {
-            metrics.queued -= 1;
-            metrics.cancelled += 1;
-        }
-        SchedulerEvent::Cancelled if metrics.running > 0 => {
-            metrics.running -= 1;
-            metrics.cancelled += 1;
-        }
-        SchedulerEvent::Cancelled => return Err("scheduler cancelled without a queued call".into()),
+        SchedulerEvent::Cancelled => cancel(metrics, SchedulerCancellationReason::Unspecified)?,
+        SchedulerEvent::CancelledWithReason { reason } => cancel(metrics, reason)?,
     }
+    Ok(())
+}
+
+fn count_cancellation(metrics: &mut SchedulerMetrics, reason: SchedulerCancellationReason) {
+    *metrics.cancelled_by_reason.entry(reason).or_default() += 1;
+}
+
+fn cancel(
+    metrics: &mut SchedulerMetrics,
+    reason: SchedulerCancellationReason,
+) -> Result<(), String> {
+    if metrics.queued > 0 {
+        metrics.queued -= 1;
+    } else if metrics.running > 0 {
+        metrics.running -= 1;
+    } else {
+        return Err("scheduler cancelled without a queued call".into());
+    }
+    metrics.cancelled += 1;
+    count_cancellation(metrics, reason);
     Ok(())
 }
 
@@ -98,5 +128,23 @@ mod tests {
         }
         assert_eq!(metrics.running, 0);
         assert_eq!(metrics.cancelled, 1);
+    }
+
+    #[test]
+    fn cancellation_reasons_are_replayable_and_counted() {
+        let mut metrics = SchedulerMetrics::default();
+        for event in [
+            SchedulerEvent::Enqueued { interactive: true },
+            SchedulerEvent::Started,
+            SchedulerEvent::CancelledWithReason {
+                reason: SchedulerCancellationReason::User,
+            },
+        ] {
+            reduce_scheduler_event(&mut metrics, event).unwrap();
+        }
+        assert_eq!(
+            metrics.cancelled_by_reason[&SchedulerCancellationReason::User],
+            1
+        );
     }
 }
