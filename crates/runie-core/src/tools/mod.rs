@@ -41,7 +41,7 @@ pub use git::{
     GitWorktreeTool,
 };
 pub use mcp::{
-    McpCallHook, McpCallRequest, McpConnectionStatus, McpHttpClient, McpHttpSession,
+    McpCallHook, McpCallRequest, McpConnectionStatus, McpHttpActor, McpHttpClient, McpHttpSession,
     McpReconnectDecision, McpReconnectPolicy, McpReconnectState, McpServer, McpStdioActor,
     McpStdioClient, McpTool, McpToolSpec,
 };
