@@ -2,13 +2,31 @@ use super::{ImageContent, UserContent, VideoContent};
 
 const MAX_MEDIA_BASE64_BYTES: usize = 16 * 1024 * 1024;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MediaWireFormat {
-    Pi,
-    OpenAiChat,
-    OpenAiResponses,
-    Gemini,
-    Anthropic,
+macro_rules! media_wire_formats {
+    ($(($variant:ident, $wire:literal, $video:literal)),+ $(,)?) => {
+        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+        pub enum MediaWireFormat {
+            $($variant),+
+        }
+
+        impl MediaWireFormat {
+            pub const fn wire_name(self) -> &'static str {
+                match self { $(Self::$variant => $wire),+ }
+            }
+
+            pub const fn supports_video(self) -> bool {
+                match self { $(Self::$variant => $video),+ }
+            }
+        }
+    };
+}
+
+media_wire_formats! {
+    (Pi, "pi", true),
+    (OpenAiChat, "openai-chat", false),
+    (OpenAiResponses, "openai-responses", false),
+    (Gemini, "gemini", true),
+    (Anthropic, "anthropic", false),
 }
 
 /// Encode validated user media at the provider boundary.
@@ -130,6 +148,12 @@ mod tests {
         assert_eq!(
             encode_user_content(&content, MediaWireFormat::Gemini).unwrap()["inline_data"],
             serde_json::json!({"mime_type":"video/mp4","data":"aGVsbG8="})
+        );
+        assert!(MediaWireFormat::Gemini.supports_video());
+        assert!(!MediaWireFormat::OpenAiChat.supports_video());
+        assert_eq!(
+            MediaWireFormat::OpenAiResponses.wire_name(),
+            "openai-responses"
         );
     }
 
