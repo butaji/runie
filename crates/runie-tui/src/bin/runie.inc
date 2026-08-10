@@ -1292,7 +1292,8 @@ fn jsonl_events_for_messages(messages: &[runie_core::types::AgentMessage]) -> Ve
     messages
         .iter()
         .flat_map(|message| match message {
-            runie_core::types::AgentMessage::Assistant(assistant) => assistant
+            runie_core::types::AgentMessage::Assistant(assistant) => {
+                let mut events = assistant
                 .content
                 .iter()
                 .filter_map(|content| match content {
@@ -1302,7 +1303,14 @@ fn jsonl_events_for_messages(messages: &[runie_core::types::AgentMessage]) -> Ve
                     }
                     runie_core::types::AssistantContent::ToolCall(_) => None,
                 })
-                .collect::<Vec<_>>(),
+                .collect::<Vec<_>>();
+                if assistant.usage != Default::default() {
+                    events.push(JsonlEvent::Usage {
+                        usage: assistant.usage.clone(),
+                    });
+                }
+                events
+            }
             runie_core::types::AgentMessage::ToolResult(result) => vec![JsonlEvent::Tool {
                 name: result.tool_name.clone(),
                 result: serde_json::json!({

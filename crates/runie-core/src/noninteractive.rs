@@ -13,6 +13,9 @@ pub enum JsonlEvent {
     Text {
         text: String,
     },
+    Usage {
+        usage: crate::types::Usage,
+    },
     Tool {
         name: String,
         result: serde_json::Value,
@@ -129,6 +132,14 @@ mod tests {
             },
             JsonlEvent::Text {
                 text: "done".into(),
+            },
+            JsonlEvent::Usage {
+                usage: crate::types::Usage {
+                    input: 4,
+                    output: 2,
+                    total_tokens: 6,
+                    ..Default::default()
+                },
             },
             JsonlEvent::Provider {
                 event: crate::types::AssistantMessageEvent::TextDelta {
