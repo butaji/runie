@@ -29,6 +29,7 @@ use ratatui::Terminal;
 use ratatui::widgets::Widget;
 use runie_core::commands::{classify_builtin_command, BuiltinCommandDisposition};
 use runie_core::events::EventBus;
+use runie_core::noninteractive::{encode_jsonl, JsonlEvent, NonInteractiveConfig, RunOutcome};
 use runie_core::provider::codex::CodexWebSocketAdapter;
 use runie_core::provider::stream_fn::{AssistantMessageEventStream, StreamError, StreamFn};
 use runie_core::provider::ProviderActor;
@@ -1196,6 +1197,13 @@ async fn main() -> Result<()> {
         .with_target(false)
         .init();
 
+    let args = std::env::args().skip(1).collect::<Vec<_>>();
+    if args.iter().any(|arg| arg == "--jsonl") {
+        let config = NonInteractiveConfig::parse(&args).map_err(anyhow::Error::msg)?;
+        let outcome = run_noninteractive(config).await;
+        std::process::exit(i32::from(outcome.exit_code()));
+    }
+
     // Resolve repository metadata before entering the redraw loop; render
     // paths only read the cached projection.
     let _ = current_branch();
@@ -1207,6 +1215,88 @@ async fn main() -> Result<()> {
         eprintln!("runie TUI error: {error:#}");
     }
     Ok(())
+}
+
+async fn run_noninteractive(config: NonInteractiveConfig) -> RunOutcome {
+    let Some(prompt) = config.prompt else {
+        let events = vec![
+            JsonlEvent::Error {
+                message: "--prompt is required in --jsonl mode".into(),
+            },
+            JsonlEvent::Finished {
+                outcome: RunOutcome::Failed,
+            },
+        ];
+        emit_jsonl(events);
+        return RunOutcome::Failed;
+    };
+
+    let app = build_live_app().await;
+    if config.auto_approve {
+        app.approval_mode.set(runie_core::tools::ApprovalMode::Auto);
+    }
+    let run_id = format!("run-{}", std::process::id());
+    let mut events = vec![JsonlEvent::Started { run_id }];
+    let messages = vec![runie_core::types::AgentMessage::User(
+        runie_core::types::UserMessage {
+            content: vec![runie_core::types::UserContent::Text { text: prompt }],
+            timestamp: 0,
+        },
+    )];
+    let outcome = match app
+        .loop_actor
+        .prompt(messages, AgentContext::default())
+        .await
+    {
+        Ok(messages) => {
+            events.extend(jsonl_events_for_messages(&messages));
+            RunOutcome::Completed
+        }
+        Err(error) => {
+            events.push(JsonlEvent::Error {
+                message: error.to_string(),
+            });
+            RunOutcome::Failed
+        }
+    };
+    events.push(JsonlEvent::Finished { outcome });
+    emit_jsonl(events);
+    outcome
+}
+
+fn jsonl_events_for_messages(messages: &[runie_core::types::AgentMessage]) -> Vec<JsonlEvent> {
+    messages
+        .iter()
+        .flat_map(|message| match message {
+            runie_core::types::AgentMessage::Assistant(assistant) => assistant
+                .content
+                .iter()
+                .filter_map(|content| match content {
+                    runie_core::types::AssistantContent::Text { text }
+                    | runie_core::types::AssistantContent::Thinking { text } => {
+                        Some(JsonlEvent::Text { text: text.clone() })
+                    }
+                    runie_core::types::AssistantContent::ToolCall(_) => None,
+                })
+                .collect::<Vec<_>>(),
+            runie_core::types::AgentMessage::ToolResult(result) => vec![JsonlEvent::Tool {
+                name: result.tool_name.clone(),
+                result: serde_json::json!({
+                    "details": result.details,
+                    "is_error": result.is_error,
+                    "content": result.content,
+                }),
+            }],
+            _ => Vec::new(),
+        })
+        .collect()
+}
+
+fn emit_jsonl(events: Vec<JsonlEvent>) {
+    match encode_jsonl(&events) {
+        Ok(output) => print!("{output}"),
+        Err(error) => eprintln!("could not encode JSONL output: {error}"),
+    }
 }
 
 fn setup_terminal() -> Result<Terminal<CrosstermBackend<Stdout>>> {
