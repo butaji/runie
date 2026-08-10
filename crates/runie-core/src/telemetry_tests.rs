@@ -20,6 +20,36 @@ impl TelemetryExporter for FailingExporter {
     }
 }
 
+#[test]
+fn usage_summary_reduces_ended_provider_spans() {
+    let snapshot = TelemetrySnapshot {
+        spans: vec![SpanSnapshot {
+            name: "pi.ai.request".into(),
+            ended: true,
+            attributes: [
+                ("pi.ai.usage.input_tokens".into(), serde_json::json!(4)),
+                ("pi.ai.usage.output_tokens".into(), serde_json::json!(6)),
+                ("pi.ai.usage.total_tokens".into(), serde_json::json!(10)),
+                ("pi.ai.usage.cost".into(), serde_json::json!(0.25)),
+            ]
+            .into_iter()
+            .collect(),
+            id: 1,
+            parent_id: None,
+            events: Vec::new(),
+            status: SpanStatus::Ok,
+            explicit_status: false,
+            error: None,
+            end_sequence: Some(1),
+        }],
+        ..TelemetrySnapshot::default()
+    };
+    let summary = usage_summary(&snapshot);
+    assert_eq!(summary.requests, 1);
+    assert_eq!(summary.total_tokens, 10);
+    assert_eq!(summary.cost, 0.25);
+}
+
 #[tokio::test]
 async fn nested_spans_and_terminal_state_are_actor_owned() {
     let actor = TelemetryActor::new();

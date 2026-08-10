@@ -52,6 +52,47 @@ pub struct TelemetrySnapshot {
     pub spans: Vec<SpanSnapshot>,
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct UsageSummary {
+    pub requests: u64,
+    pub input_tokens: u64,
+    pub output_tokens: u64,
+    pub cache_read_tokens: u64,
+    pub cache_write_tokens: u64,
+    pub reasoning_tokens: u64,
+    pub total_tokens: u64,
+    pub cost: f64,
+}
+
+pub fn usage_summary(snapshot: &TelemetrySnapshot) -> UsageSummary {
+    snapshot
+        .spans
+        .iter()
+        .filter(|span| span.ended && span.name == "pi.ai.request")
+        .fold(UsageSummary::default(), |mut summary, span| {
+            summary.requests += 1;
+            summary.input_tokens += attribute_u64(span, "pi.ai.usage.input_tokens");
+            summary.output_tokens += attribute_u64(span, "pi.ai.usage.output_tokens");
+            summary.cache_read_tokens += attribute_u64(span, "pi.ai.usage.cache_read_tokens");
+            summary.cache_write_tokens += attribute_u64(span, "pi.ai.usage.cache_write_tokens");
+            summary.reasoning_tokens += attribute_u64(span, "pi.ai.usage.reasoning_tokens");
+            summary.total_tokens += attribute_u64(span, "pi.ai.usage.total_tokens");
+            summary.cost += span
+                .attributes
+                .get("pi.ai.usage.cost")
+                .and_then(serde_json::Value::as_f64)
+                .unwrap_or_default();
+            summary
+        })
+}
+
+fn attribute_u64(span: &SpanSnapshot, key: &str) -> u64 {
+    span.attributes
+        .get(key)
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or_default()
+}
+
 /// Validate the source-defined start vocabulary for Pi's `pi.ai.request`
 /// span. The generic actor remains schema-agnostic so extension spans can be
 /// recorded, while provider adapters can opt into this typed boundary.
