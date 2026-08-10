@@ -23,6 +23,15 @@ pub struct SessionSearchResult {
     pub id: String,
     pub name: Option<String>,
     pub score: u8,
+    pub matched_by: SessionMatchField,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SessionMatchField {
+    Id,
+    Name,
+    Preview,
 }
 
 pub fn document_from_snapshot(
@@ -139,24 +148,38 @@ pub fn search_sessions(
                 .unwrap_or_default()
                 .to_ascii_lowercase();
             let preview = document.preview.to_ascii_lowercase();
-            let score = if id == query || name == query {
-                3
-            } else if id.contains(&query) || name.contains(&query) {
-                2
-            } else if preview.contains(&query) {
-                1
-            } else {
-                return None;
-            };
+            let (score, matched_by) = match_field(&id, &name, &preview, &query)?;
             Some(SessionSearchResult {
                 id: document.id.clone(),
                 name: document.name.clone(),
                 score,
+                matched_by,
             })
         })
         .collect::<Vec<_>>();
     results.sort_by(|left, right| right.score.cmp(&left.score).then(left.id.cmp(&right.id)));
     results
+}
+
+fn match_field(
+    id: &str,
+    name: &str,
+    preview: &str,
+    query: &str,
+) -> Option<(u8, SessionMatchField)> {
+    if id == query {
+        Some((3, SessionMatchField::Id))
+    } else if name == query {
+        Some((3, SessionMatchField::Name))
+    } else if id.contains(query) {
+        Some((2, SessionMatchField::Id))
+    } else if name.contains(query) {
+        Some((2, SessionMatchField::Name))
+    } else if preview.contains(query) {
+        Some((1, SessionMatchField::Preview))
+    } else {
+        None
+    }
 }
 
 #[cfg(test)]
@@ -180,8 +203,10 @@ mod tests {
         let results = search_sessions(&documents, "deploy");
         assert_eq!(results[0].id, "a");
         assert_eq!(results[0].score, 3);
+        assert_eq!(results[0].matched_by, SessionMatchField::Name);
         assert_eq!(results[1].id, "b");
         assert_eq!(results[1].score, 1);
+        assert_eq!(results[1].matched_by, SessionMatchField::Preview);
         assert!(search_sessions(&documents, " ").is_empty());
     }
 
