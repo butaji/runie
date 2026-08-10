@@ -265,12 +265,14 @@ mod tests {
     fn storage_rows_filter_by_id_label_or_cwd_without_reordering() {
         let rows = vec![
             SessionStorageRow {
+                path: "/tmp/one.jsonl".into(),
                 session_id: "one".into(),
                 label: "Deploy".into(),
                 cwd: "/work/a".into(),
                 created_at: 1,
             },
             SessionStorageRow {
+                path: "/tmp/two.jsonl".into(),
                 session_id: "two".into(),
                 label: "Notes".into(),
                 cwd: "/work/b".into(),

@@ -90,6 +90,17 @@ fn parser_maps_session_text_as_a_query_argument() {
     );
 }
 
+#[test]
+fn parser_maps_resume_without_an_argument_to_the_session_picker() {
+    assert_eq!(
+        parse_mappable_builtin_command("/resume"),
+        Some(MappableBuiltinCommand::Extended {
+            name: "resume".into(),
+            args: String::new()
+        })
+    );
+}
+
 fn assert_mappable_basics() {
     assert_eq!(
         parse_mappable_builtin_command(" /new "),

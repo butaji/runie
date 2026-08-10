@@ -157,6 +157,7 @@
         assert_eq!(
             entry.row(),
             SessionStorageRow {
+                path: "/sessions/abc.jsonl".into(),
                 session_id: "abc".into(),
                 label: "runie".into(),
                 cwd: "/workspace/runie".into(),

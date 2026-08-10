@@ -36,6 +36,7 @@ pub struct SessionStorageEntry {
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct SessionStorageRow {
+    pub path: String,
     pub session_id: String,
     pub label: String,
     pub cwd: String,
@@ -45,6 +46,7 @@ pub struct SessionStorageRow {
 impl SessionStorageEntry {
     pub fn row(&self) -> SessionStorageRow {
         SessionStorageRow {
+            path: self.path.clone(),
             session_id: self.session_id.clone(),
             label: self
                 .cwd

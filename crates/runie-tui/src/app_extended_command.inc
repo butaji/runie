@@ -20,6 +20,22 @@ impl App {
             self.ui.send(UiMsg::ShowCommandResult(result)).await;
             return true;
         }
+        if name == "resume" && args.trim().is_empty() {
+            let root = std::env::current_dir()
+                .map(|path| path.to_string_lossy().into_owned())
+                .unwrap_or_else(|_| ".".into());
+            let options = match self.session_storage.discover(root, 64).await {
+                Ok(entries) => entries.into_iter().map(|entry| entry.path).collect(),
+                Err(_) => Vec::new(),
+            };
+            self.ui
+                .send(UiMsg::SetPaletteParameterOptions(options))
+                .await;
+            self.ui
+                .send(UiMsg::OpenPaletteParameters(PaletteAction::ResumeSession))
+                .await;
+            return true;
+        }
         if name == "undo" {
             let result = self.session_actor.undo().await;
             if let Err(error) = &result {
