@@ -1,7 +1,6 @@
 //! Bounded, read-only workspace tools.
 
 use std::path::Path;
-
 use crate::types::{AgentTool, AgentToolResult, ToolResultContent};
 use tokio::io::AsyncReadExt;
 
@@ -258,14 +257,14 @@ impl AgentTool for BashTool {
         _id: &str,
         args: serde_json::Value,
         signal: Option<tokio_util::sync::CancellationToken>,
-        _update: Option<Box<dyn Fn(serde_json::Value) + Send + Sync>>,
+        update: Option<Box<dyn Fn(serde_json::Value) + Send + Sync>>,
     ) -> Result<AgentToolResult, String> {
         let command = required_string(&args, "command", "bash")?;
         let timeout = args
             .get("timeout_ms")
             .and_then(serde_json::Value::as_u64)
             .unwrap_or(120_000);
-        text_result(&run_shell(command, timeout, signal).await?)
+        text_result(&run_shell(command, timeout, signal, update).await?)
     }
 }
 
@@ -273,6 +272,7 @@ async fn run_shell(
     command: &str,
     timeout: u64,
     signal: Option<tokio_util::sync::CancellationToken>,
+    update: Option<Box<dyn Fn(serde_json::Value) + Send + Sync>>,
 ) -> Result<String, String> {
     let mut child = tokio::process::Command::new("sh")
         .arg("-c")
@@ -294,6 +294,22 @@ async fn run_shell(
         _ = cancellation(signal) => { let _ = child.kill().await; return Err("command cancelled".into()); }
         _ = tokio::time::sleep(std::time::Duration::from_millis(timeout)) => { let _ = child.kill().await; return Err("command timed out".into()); }
     };
+    let (out, err) = read_output(&mut stdout, &mut stderr).await?;
+    let mut text = String::from_utf8_lossy(&out).into_owned();
+    text.push_str(&String::from_utf8_lossy(&err));
+    if let Some(update) = update {
+        update(serde_json::json!({"text": text, "complete": true}));
+    }
+    if !status.success() {
+        return Err(format!("command exited {status}: {text}"));
+    }
+    Ok(text.trim_end().into())
+}
+
+async fn read_output(
+    stdout: &mut (impl tokio::io::AsyncRead + Unpin),
+    stderr: &mut (impl tokio::io::AsyncRead + Unpin),
+) -> Result<(Vec<u8>, Vec<u8>), String> {
     let (mut out, mut err) = (Vec::new(), Vec::new());
     stdout
         .read_to_end(&mut out)
@@ -303,10 +319,7 @@ async fn run_shell(
         .read_to_end(&mut err)
         .await
         .map_err(|error| error.to_string())?;
-    let mut text = String::from_utf8_lossy(&out).into_owned();
-    text.push_str(&String::from_utf8_lossy(&err));
-    if !status.success() { return Err(format!("command exited {status}: {text}")); }
-    Ok(text.trim_end().into())
+    Ok((out, err))
 }
 
 async fn cancellation(signal: Option<tokio_util::sync::CancellationToken>) {
@@ -460,14 +473,24 @@ mod tests {
 
     #[tokio::test]
     async fn bash_returns_output_and_surfaces_failures() {
+        let updates = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let updates_seen = updates.clone();
         let result = BashTool
-            .execute("b", serde_json::json!({"command": "printf ok"}), None, None)
+            .execute(
+                "b",
+                serde_json::json!({"command": "printf ok"}),
+                None,
+                Some(Box::new(move |value| {
+                    updates_seen.lock().unwrap().push(value)
+                })),
+            )
             .await
             .unwrap();
         let ToolResultContent::Text { text } = &result.content[0] else {
             panic!("expected text")
         };
         assert_eq!(text, "ok");
+        assert_eq!(updates.lock().unwrap()[0]["text"], "ok");
         let error = BashTool
             .execute("b", serde_json::json!({"command": "exit 3"}), None, None)
             .await
