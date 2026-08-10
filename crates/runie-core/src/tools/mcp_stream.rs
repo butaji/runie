@@ -15,6 +15,35 @@ pub struct McpStreamSnapshot {
     pub notifications: Vec<serde_json::Value>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct McpReconnectPolicy {
+    pub max_attempts: u32,
+    pub base_delay_ms: u64,
+    pub max_delay_ms: u64,
+}
+
+impl McpReconnectPolicy {
+    pub const fn bounded() -> Self {
+        Self {
+            max_attempts: 3,
+            base_delay_ms: 250,
+            max_delay_ms: 4_000,
+        }
+    }
+
+    pub fn delay_ms(self, attempt: u32) -> Option<u64> {
+        if attempt >= self.max_attempts || self.max_attempts == 0 {
+            return None;
+        }
+        let multiplier = 1_u64.checked_shl(attempt).unwrap_or(u64::MAX);
+        Some(
+            self.base_delay_ms
+                .saturating_mul(multiplier)
+                .min(self.max_delay_ms),
+        )
+    }
+}
+
 /// Reduce MCP JSON-RPC envelopes into a replayable response/notification
 /// projection. Unknown JSON-RPC fields remain intact in the stored values.
 pub fn reduce_mcp_stream_event(
@@ -143,5 +172,14 @@ mod tests {
         }
         assert_eq!(snapshot.responses["2"]["result"]["ok"], true);
         assert_eq!(snapshot.notifications.len(), 1);
+    }
+
+    #[test]
+    fn reconnect_policy_is_bounded_data_without_sleeping() {
+        let policy = McpReconnectPolicy::bounded();
+        assert_eq!(policy.delay_ms(0), Some(250));
+        assert_eq!(policy.delay_ms(1), Some(500));
+        assert_eq!(policy.delay_ms(2), Some(1_000));
+        assert_eq!(policy.delay_ms(3), None);
     }
 }
