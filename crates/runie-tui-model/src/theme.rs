@@ -25,31 +25,37 @@ pub enum ThemeToken {
     BorderSelection,
 }
 
-impl ThemeToken {
-    pub const fn opaline_name(self) -> &'static str {
-        match self {
-            Self::TextPrimary => "text.primary",
-            Self::TextMuted => "text.muted",
-            Self::TextFooterKey => "text.footer_key",
-            Self::TextAssistant => "text.assistant",
-            Self::TextHeaderPath => "text.header_path",
-            Self::TextHeaderMeter => "text.header_meter",
-            Self::TextModel => "text.model",
-            Self::AccentPrimary => "accent.primary",
-            Self::AccentSecondary => "accent.secondary",
-            Self::AccentThought => "accent.thought",
-            Self::Success => "success",
-            Self::Error => "error",
-            Self::Warning => "warning",
-            Self::BackgroundBase => "bg.base",
-            Self::BackgroundPanel => "bg.panel",
-            Self::BackgroundDiffDelete => "bg.diff_delete",
-            Self::BackgroundDiffInsert => "bg.diff_insert",
-            Self::BackgroundSelection => "bg.selection",
-            Self::BorderPrompt => "border.prompt",
-            Self::BorderSelection => "border.selection",
+macro_rules! theme_tokens {
+    ($(($token:ident, $name:literal)),+ $(,)?) => {
+        impl ThemeToken {
+            pub const fn opaline_name(self) -> &'static str {
+                match self { $(Self::$token => $name,)+ }
+            }
         }
-    }
+    };
+}
+
+theme_tokens! {
+    (TextPrimary, "text.primary"),
+    (TextMuted, "text.muted"),
+    (TextFooterKey, "text.footer_key"),
+    (TextAssistant, "text.assistant"),
+    (TextHeaderPath, "text.header_path"),
+    (TextHeaderMeter, "text.header_meter"),
+    (TextModel, "text.model"),
+    (AccentPrimary, "accent.primary"),
+    (AccentSecondary, "accent.secondary"),
+    (AccentThought, "accent.thought"),
+    (Success, "success"),
+    (Error, "error"),
+    (Warning, "warning"),
+    (BackgroundBase, "bg.base"),
+    (BackgroundPanel, "bg.panel"),
+    (BackgroundDiffDelete, "bg.diff_delete"),
+    (BackgroundDiffInsert, "bg.diff_insert"),
+    (BackgroundSelection, "bg.selection"),
+    (BorderPrompt, "border.prompt"),
+    (BorderSelection, "border.selection"),
 }
 
 #[cfg(test)]

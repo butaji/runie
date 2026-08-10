@@ -73,6 +73,8 @@ Session-lane decode and wire-name round trips now use one shared typed table;
 workspace verification and the live 55-case TUI smoke suite remain green.
 Provider effort wire keys now use a macro-backed typed table; provider tests,
 workspace verification, and the live 55-case TUI smoke suite remain green.
+Semantic theme token names now use one macro-backed table; theme tests,
+workspace tests, and the live 55-case TUI smoke suite remain green.
 The event-trace harness now replays a YAML content fixture through the feed
 transcript/assistant projection; workspace tests and the 55-case TUI smoke
 suite remain green.
