@@ -409,7 +409,6 @@ fn apply_prompt_message_event(prompt: &mut PromptWidget, event: AgentEvent) {
         _ => {}
     }
 }
-
 pub struct App {
     pub prompt: PromptActor,
     pub status_actor: StatusActor,
@@ -425,6 +424,7 @@ pub struct App {
     pub question_broker: runie_core::tools::UserQuestionBroker,
     pub approval_mode: runie_core::tools::ApprovalModeStore,
     pub background_actor: runie_core::background::BackgroundProcessActor,
+    pub todo_actor: runie_core::tools::TodoActor,
     submission_tx: SubmissionTx,
     _submission_owner: std::sync::Arc<runie_core::task_owner::TaskOwner>,
 }

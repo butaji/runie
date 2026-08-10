@@ -194,7 +194,16 @@ impl App {
                     "plan" | "view-plan" => state
                         .plan
                         .clone()
-                        .unwrap_or_else(|| "No active plan".into()),
+                        .unwrap_or_else(|| {
+                            let summary = self.todo_actor.summary();
+                            format!(
+                                "Todo plan: {:?} · completed={} pending={} in_progress={}",
+                                summary.status,
+                                summary.completed,
+                                summary.pending,
+                                summary.in_progress
+                            )
+                        }),
                     "memory" | "remember" => format!(
                         "Memory: {} ({} notes)",
                         if state.memory_enabled { "on" } else { "off" },

@@ -118,6 +118,10 @@ impl TodoActor {
     pub fn snapshot(&self) -> TodoSnapshot {
         self.snapshot.borrow().clone()
     }
+
+    pub fn summary(&self) -> TodoPlanSummary {
+        summarize_todo_plan(&self.snapshot())
+    }
 }
 
 fn validate_snapshot(snapshot: &TodoSnapshot) -> Result<(), String> {
@@ -266,6 +270,7 @@ mod tests {
         };
         assert_eq!(actor.replace(snapshot.clone()).await.unwrap(), snapshot);
         assert_eq!(actor.snapshot(), snapshot);
+        assert_eq!(actor.summary().status, TodoPlanStatus::InProgress);
     }
 
     #[tokio::test]

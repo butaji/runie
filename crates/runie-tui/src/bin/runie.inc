@@ -1538,6 +1538,7 @@ async fn build_live_app() -> App {
     let _ = subagent_loop.set(loop_actor.clone());
     let mut app = App::new_with_broker_and_approval(loop_actor, bus, question_broker, approval_mode);
     app.attach_background_actor(background_actor);
+    app.attach_todo_actor(todo_actor);
     app.provider_registry = provider_registry;
     app
 }
