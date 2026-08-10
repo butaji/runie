@@ -40,6 +40,36 @@ async fn responses_trace_maps_text_delta_and_completion_to_pi_events() {
     ));
 }
 
+#[test]
+fn provider_usage_conformance_accepts_common_wire_shapes() {
+    let cases = [
+        (
+            serde_json::json!({"response":{"usage":{"input_tokens":12,"output_tokens":7,"total_tokens":19,"input_tokens_details":{"cached_tokens":3}}}}),
+            (9, 7, 3, 19),
+        ),
+        (
+            serde_json::json!({"usage":{"prompt_tokens":12,"completion_tokens":7,"total_tokens":19,"prompt_tokens_details":{"cached_tokens":3}}}),
+            (9, 7, 3, 19),
+        ),
+        (
+            serde_json::json!({"usage":{"input_tokens":4,"output_tokens":2,"cached_tokens":1,"reasoning_tokens":1}}),
+            (3, 2, 1, 6),
+        ),
+    ];
+    for (payload, expected) in cases {
+        let usage = response_usage(&payload);
+        assert_eq!(
+            (
+                usage.input,
+                usage.output,
+                usage.cache_read,
+                usage.total_tokens
+            ),
+            expected
+        );
+    }
+}
+
 #[tokio::test]
 async fn deferred_replay_uses_provider_scoped_event_fixture() {
     let handle = crate::types::DeferredHandle {

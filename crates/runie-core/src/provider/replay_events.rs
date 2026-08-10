@@ -108,23 +108,31 @@ pub(super) fn response_stop_reason(value: &serde_json::Value) -> StopReason {
 }
 
 pub(super) fn response_usage(value: &serde_json::Value) -> Usage {
-    let Some(raw) = value.pointer("/response/usage") else {
+    let Some(raw) = value
+        .pointer("/response/usage")
+        .or_else(|| value.pointer("/usage"))
+    else {
         return Usage::default();
     };
     let input = raw
         .get("input_tokens")
+        .or_else(|| raw.get("prompt_tokens"))
         .and_then(|v| v.as_u64())
         .unwrap_or_default();
     let output = raw
         .get("output_tokens")
+        .or_else(|| raw.get("completion_tokens"))
         .and_then(|v| v.as_u64())
         .unwrap_or_default();
     let cache_read = raw
         .pointer("/input_tokens_details/cached_tokens")
+        .or_else(|| raw.pointer("/prompt_tokens_details/cached_tokens"))
+        .or_else(|| raw.get("cached_tokens"))
         .and_then(|v| v.as_u64())
         .unwrap_or_default();
     let reasoning = raw
         .pointer("/output_tokens_details/reasoning_tokens")
+        .or_else(|| raw.get("reasoning_tokens"))
         .and_then(|v| v.as_u64())
         .unwrap_or_default();
     Usage {
