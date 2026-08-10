@@ -5,6 +5,8 @@ use crate::command_actor::DiagnosticReport;
 use crate::telemetry::{usage_summary, TelemetrySnapshot, UsageSummary};
 use serde::{Deserialize, Serialize};
 
+const MAX_DIAGNOSTIC_POINTS: usize = 1_024;
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DiagnosticBundle {
     pub report: DiagnosticReport,
@@ -81,7 +83,7 @@ impl DiagnosticVisualization {
 }
 
 fn diagnostic_series(bundle: &DiagnosticBundle, label: &str, key: &str) -> DiagnosticSeries {
-    let points = bundle
+    let mut points = bundle
         .telemetry
         .spans
         .iter()
@@ -96,10 +98,19 @@ fn diagnostic_series(bundle: &DiagnosticBundle, label: &str, key: &str) -> Diagn
                     .or_else(|| span.attributes.get(key)?.as_u64().map(|value| value as f64))?,
             })
         })
-        .collect();
+        .collect::<Vec<_>>();
+    limit_diagnostic_points(&mut points);
     DiagnosticSeries {
         label: label.into(),
         points,
+    }
+}
+
+fn limit_diagnostic_points(points: &mut Vec<DiagnosticPoint>) {
+    points.sort_by_key(|point| point.sequence);
+    if points.len() > MAX_DIAGNOSTIC_POINTS {
+        let keep_from = points.len() - MAX_DIAGNOSTIC_POINTS;
+        points.drain(..keep_from);
     }
 }
 
@@ -183,5 +194,31 @@ mod tests {
         assert_eq!(visualization.series[0].points[0].sequence, 7);
         assert_eq!(visualization.series[0].points[0].value, 12.0);
         assert_eq!(visualization.series[2].points[0].value, 0.25);
+    }
+
+    #[test]
+    fn visualization_keeps_newest_bounded_points_in_sequence_order() {
+        let mut points = vec![
+            DiagnosticPoint {
+                sequence: 3,
+                value: 3.0,
+            },
+            DiagnosticPoint {
+                sequence: 1,
+                value: 1.0,
+            },
+            DiagnosticPoint {
+                sequence: 2,
+                value: 2.0,
+            },
+        ];
+        limit_diagnostic_points(&mut points);
+        assert_eq!(
+            points
+                .iter()
+                .map(|point| point.sequence)
+                .collect::<Vec<_>>(),
+            [1, 2, 3]
+        );
     }
 }
