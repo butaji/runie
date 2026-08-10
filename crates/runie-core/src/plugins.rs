@@ -49,6 +49,10 @@ pub struct PluginPackage {
     pub manifest: PluginManifest,
 }
 
+#[path = "plugin_entrypoint.rs"]
+mod entrypoint;
+pub use entrypoint::resolve_plugin_entrypoint;
+
 pub fn load_manifest(path: impl AsRef<Path>) -> Result<PluginManifest, String> {
     let path = path.as_ref();
     let input = std::fs::read_to_string(path)
