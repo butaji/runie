@@ -29,9 +29,7 @@ impl FeedState {
             ScrollbackMsg::AppendToLastByKind(kind, text) => {
                 self.append_to_last_by_kind(kind, text)
             }
-            ScrollbackMsg::SetToolName(id, name) => {
-                self.navigation.facts.tools.entry(id).or_default().name = Some(name);
-            }
+            ScrollbackMsg::SetToolName(id, name) => self.set_tool_name(id, name),
             ScrollbackMsg::SetToolMode(id, mode) => self.set_tool_mode(id, mode),
             _ => unreachable!("lifecycle messages handled before core reduction"),
         }

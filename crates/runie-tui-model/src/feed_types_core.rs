@@ -203,6 +203,12 @@ pub struct FeedFacts {
     pub assistant_stream_open: bool,
 }
 
+impl ToolRecord {
+    pub fn named(name: String) -> Self { Self { name: Some(name), args: None } }
+    pub fn set_args(&mut self, args: serde_json::Value) { self.args = Some(args); }
+    pub fn clear_args(&mut self) { self.args = None; }
+}
+
 impl FeedFacts {
     pub fn tool_name(&self, id: &str) -> Option<&str> {
         self.tools.get(id).and_then(|record| record.name.as_deref())

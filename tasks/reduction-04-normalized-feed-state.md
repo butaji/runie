@@ -31,6 +31,9 @@ clear/reset reducers no longer duplicate field-by-field projection logic.
 The full facts clear operation is also centralized on `FeedFacts`, leaving the
 feed reducer's clear path responsible only for transcript and navigation data.
 
+`ToolRecord` now owns name/argument mutation operations, so reducer stages no
+longer duplicate record construction and argument clearing semantics.
+
 Remaining work is removal of duplicated derived indexes and normalization of
 individual line/tool records.
 

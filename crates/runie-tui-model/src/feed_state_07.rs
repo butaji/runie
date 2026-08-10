@@ -1,4 +1,13 @@
 impl FeedState {
+    fn set_tool_name(&mut self, id: String, name: String) {
+        self.navigation
+            .facts
+            .tools
+            .entry(id)
+            .and_modify(|record| record.name = Some(name.clone()))
+            .or_insert_with(|| ToolRecord::named(name));
+    }
+
     fn reduce_content(&mut self, message: ScrollbackMsg) -> Result<(), ScrollbackMsg> {
         match message {
             ScrollbackMsg::Append(line) => self.append(line),
@@ -39,12 +48,12 @@ impl FeedState {
 
 impl FeedState {
     fn set_tool_args(&mut self, id: String, args: serde_json::Value) {
-        self.navigation.facts.tools.entry(id).or_default().args = Some(args);
+        self.navigation.facts.tools.entry(id).or_default().set_args(args);
     }
 
     fn remove_tool_args(&mut self, id: &str) {
         if let Some(record) = self.navigation.facts.tools.get_mut(id) {
-            record.args = None;
+            record.clear_args();
         }
     }
 }
