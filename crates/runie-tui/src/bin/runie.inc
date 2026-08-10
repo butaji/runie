@@ -1401,11 +1401,14 @@ async fn build_live_app() -> App {
     let recovery_session = session_actor.clone();
     let recovery_provider = provider.clone();
     let context_recovery: Option<runie_core::r#loop::driver::ContextRecoveryHook> = Some(
-        std::sync::Arc::new(move |context| {
+        std::sync::Arc::new(move |context, model| {
             let session = recovery_session.clone();
             let provider = recovery_provider.clone();
             Box::pin(async move {
                 let estimate = runie_core::session::estimate_context_tokens(&context.messages);
+                let context_window = (model.context_window > 0)
+                    .then_some(model.context_window)
+                    .unwrap_or(PRODUCTION_CONTEXT_WINDOW);
                 let settings = runie_core::session::CompactionSettings {
                     enabled: true,
                     reserve_tokens: PRODUCTION_RESERVE_TOKENS,
@@ -1413,7 +1416,7 @@ async fn build_live_app() -> App {
                 };
                 if !runie_core::session::should_compact(
                     estimate.tokens,
-                    PRODUCTION_CONTEXT_WINDOW,
+                    context_window,
                     settings,
                 ) {
                     return Ok(context);

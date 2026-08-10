@@ -45,7 +45,7 @@ pub type ApiKeyResolver =
 /// Actor-owned context recovery invoked immediately before a provider turn.
 /// The loop owns timing; the hook owner owns compaction state and events.
 pub type ContextRecoveryHook = Arc<
-    dyn Fn(AgentContext) -> futures::future::BoxFuture<'static, Result<AgentContext, String>>
+    dyn Fn(AgentContext, Model) -> futures::future::BoxFuture<'static, Result<AgentContext, String>>
         + Send
         + Sync,
 >;

@@ -85,6 +85,9 @@ provider tests, full workspace tests, and the 55-case TUI smoke suite remain
 green.
 Dialog hint strings now come from the model-owned kind table; dialog tests,
 full workspace tests, and the 55-case TUI smoke suite remain green.
+The owned context-recovery hook now receives the active model and uses its
+declared context window for compaction decisions; context replay/tests,
+workspace verification, and the 55-case TUI smoke suite remain green.
 The event-trace harness now replays a YAML content fixture through the feed
 transcript/assistant projection; workspace tests and the 55-case TUI smoke
 suite remain green.
