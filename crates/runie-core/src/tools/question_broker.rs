@@ -9,12 +9,24 @@ pub struct PendingUserQuestion {
     pub request: UserQuestionRequest,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct UserQuestionTrace {
+    pub id: String,
+    pub question: String,
+    pub outcome: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+const MAX_QUESTION_TRACES: usize = 128;
+
 #[derive(Clone)]
 pub struct UserQuestionBroker {
     tx: mpsc::UnboundedSender<PendingUserQuestion>,
     rx: Arc<Mutex<mpsc::UnboundedReceiver<PendingUserQuestion>>>,
     answers: Arc<Mutex<HashMap<String, oneshot::Sender<serde_json::Value>>>>,
     requests: Arc<Mutex<HashMap<String, UserQuestionRequest>>>,
+    traces: Arc<Mutex<Vec<UserQuestionTrace>>>,
     next_id: Arc<std::sync::atomic::AtomicU64>,
 }
 
@@ -26,6 +38,7 @@ impl Default for UserQuestionBroker {
             rx: Arc::new(Mutex::new(rx)),
             answers: Arc::new(Mutex::new(HashMap::new())),
             requests: Arc::new(Mutex::new(HashMap::new())),
+            traces: Arc::new(Mutex::new(Vec::new())),
             next_id: Default::default(),
         }
     }
@@ -73,6 +86,10 @@ impl UserQuestionBroker {
         self.rx.lock().expect("question queue lock").try_recv().ok()
     }
 
+    pub fn traces(&self) -> Vec<UserQuestionTrace> {
+        self.traces.lock().expect("question traces lock").clone()
+    }
+
     pub fn answer(&self, id: &str, value: serde_json::Value) -> Result<(), String> {
         let request = self
             .requests
@@ -81,7 +98,11 @@ impl UserQuestionBroker {
             .get(id)
             .cloned()
             .ok_or_else(|| "question is no longer pending".to_owned())?;
-        validate_answer(&request, &value)?;
+        if let Err(error) = validate_answer(&request, &value) {
+            self.record_trace(id, &request.question, "rejected", Some(error.clone()));
+            return Err(error);
+        }
+        self.record_trace(id, &request.question, "answered", None);
         self.requests
             .lock()
             .expect("question requests lock")
@@ -102,7 +123,7 @@ impl UserQuestionBroker {
             .expect("question requests lock")
             .remove(id)
             .ok_or_else(|| "question is no longer pending".to_owned())?;
-        let _ = request;
+        self.record_trace(id, &request.question, "cancelled", None);
         self.answers
             .lock()
             .expect("question answers lock")
@@ -110,6 +131,19 @@ impl UserQuestionBroker {
             .ok_or_else(|| "question is no longer pending".to_owned())?
             .send(serde_json::json!({"cancelled": true}))
             .map_err(|_| "question waiter is closed".to_owned())
+    }
+
+    fn record_trace(&self, id: &str, question: &str, outcome: &str, error: Option<String>) {
+        let mut traces = self.traces.lock().expect("question traces lock");
+        traces.push(UserQuestionTrace {
+            id: id.to_owned(),
+            question: question.to_owned(),
+            outcome: outcome.to_owned(),
+            error,
+        });
+        if traces.len() > MAX_QUESTION_TRACES {
+            traces.remove(0);
+        }
     }
 }
 
@@ -256,9 +290,12 @@ mod tests {
             .answer(&pending.id, serde_json::json!({"answer": "no"}))
             .unwrap_err();
         assert!(error.contains("not offered"));
+        assert_eq!(broker.traces()[0].outcome, "rejected");
+        assert!(broker.traces()[0].error.is_some());
         broker
             .answer(&pending.id, serde_json::json!({"answer": "yes"}))
             .unwrap();
         assert_eq!(waiter.await.unwrap().unwrap()["answer"], "yes");
+        assert_eq!(broker.traces()[1].outcome, "answered");
     }
 }

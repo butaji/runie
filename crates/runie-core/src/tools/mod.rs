@@ -38,7 +38,7 @@ pub use mcp::{
     McpCallHook, McpCallRequest, McpHttpClient, McpServer, McpStdioClient, McpTool, McpToolSpec,
 };
 pub use policy::{decide as approval_decision, ApprovalDecision, ApprovalMode, ApprovalModeStore};
-pub use question_broker::{PendingUserQuestion, UserQuestionBroker};
+pub use question_broker::{PendingUserQuestion, UserQuestionBroker, UserQuestionTrace};
 pub use registry::ToolRegistry;
 pub use subagent::{SubagentRequest, SubagentRole, SubagentTool};
 pub use todo::{TodoActor, TodoItem, TodoSnapshot, TodoStatus, TodoWriteTool};
