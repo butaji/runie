@@ -38,7 +38,7 @@ use runie_core::state::AgentStateActor;
 use runie_core::tools::executor::ToolExecHooks;
 use runie_core::tools::ToolExecutorActor;
 use runie_core::tools::ToolRegistry;
-use runie_core::tools::{ApprovalMode, AskUserQuestionTool, BackgroundJobsTool, BackgroundShellTool, BashTool, EditFileTool, GitCommitPrepareTool, GitDiffTool, GitReviewTool, GitStatusTool, GitWorktreeTool, GlobTool, GrepTool, ReadFileTool, SubagentTool, TodoWriteTool, WebSearchTool, WriteFileTool};
+use runie_core::tools::{ApprovalMode, AskUserQuestionTool, BackgroundCancelTool, BackgroundJobsTool, BackgroundShellTool, BashTool, EditFileTool, GitCommitPrepareTool, GitDiffTool, GitReviewTool, GitStatusTool, GitWorktreeTool, GlobTool, GrepTool, ReadFileTool, SubagentTool, TodoWriteTool, WebSearchTool, WriteFileTool};
 use runie_core::types::{
     AgentContext, AgentTool, AgentToolResult, AssistantMessage, AssistantMessageEvent, Model,
     QueueMode, SimpleStreamOptions, StopReason, ThemeKind, ToolCall, ToolExecutionMode,
@@ -1257,6 +1257,7 @@ async fn build_live_app() -> App {
         ,WebSearchTool
         ,BackgroundShellTool
         ,BackgroundJobsTool
+        ,BackgroundCancelTool
         ,GitStatusTool
         ,GitDiffTool
         ,GitReviewTool
@@ -1382,6 +1383,15 @@ async fn build_live_app() -> App {
                     let actor = actor.clone();
                     Box::pin(async move {
                         serde_json::to_value(actor.snapshot()).map_err(|error| error.to_string())
+                    })
+                })
+            }),
+            background_cancel: Some({
+                let actor = background_actor.clone();
+                std::sync::Arc::new(move |request| {
+                    let actor = actor.clone();
+                    Box::pin(async move {
+                        Ok(serde_json::json!({"job_id": request.job_id, "cancelled": actor.cancel(request.job_id).await}))
                     })
                 })
             }),

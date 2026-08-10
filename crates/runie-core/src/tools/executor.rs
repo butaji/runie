@@ -415,18 +415,13 @@ async fn execute_tool(
         return execute_web_search(call, ctx).await;
     }
     if call.name == "background_bash" {
-        let Some(hook) = &ctx.hooks.background_shell else {
-            return Err("background_bash requires an owning background hook".into());
-        };
-        let request = serde_json::from_value(call.arguments.clone())
-            .map_err(|error| format!("invalid background shell request: {error}"))?;
-        return Ok(crate::tools::background::result(hook(request).await?));
+        return crate::tools::background::execute_shell(call, ctx).await;
     }
     if call.name == "background_jobs" {
-        let Some(hook) = &ctx.hooks.background_jobs else {
-            return Err("background_jobs requires an owning background jobs hook".into());
-        };
-        return Ok(crate::tools::background::result(hook().await?));
+        return crate::tools::background::execute_jobs(ctx).await;
+    }
+    if call.name == "background_cancel" {
+        return crate::tools::background::execute_cancel(call, ctx).await;
     }
     let settled = Arc::new(AtomicBool::new(false));
     let tool_future = tool.execute(
