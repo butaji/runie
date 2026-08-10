@@ -1,6 +1,11 @@
 // Tool lifecycle reduction: start, finish, display mode, and output identity.
 
 impl FeedState {
+    fn update_tool_output(&mut self, id: String, header: Option<String>, output: Vec<String>) {
+        if let Some(header) = header { self.update_tool(&id, header); }
+        for text in output { self.append(Line::new(LineKind::ToolOutput, text).for_tool(&id)); }
+    }
+
     fn finish_tool(&mut self, tool_call_id: String, header: String, activity: Option<String>, output: Vec<(LineKind, String)>) {
         let mode_key = self.tool_mode_key(&tool_call_id);
         self.replace_tool(&tool_call_id, header);

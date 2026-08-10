@@ -115,6 +115,8 @@ As of 2026-08-09, the reduction work has these verified results:
   selected-member derivation are consolidated in `feed_snapshot_state.rs`.
 - Assistant normalization and reasoning-summary settlement are consolidated
   in `feed_assistant.rs`, alongside activity reset in its activity module.
+- Tool output update routing is now part of `feed_tool_lifecycle.rs`; no
+  numbered feed fragments remain.
 - Append/reset, layout measurement, and scroll transitions are consolidated in
   `feed_view_state.rs`.
 - `component_specs!` generates the declarative component ownership table.
