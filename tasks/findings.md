@@ -75,6 +75,9 @@ Provider effort wire keys now use a macro-backed typed table; provider tests,
 workspace verification, and the live 55-case TUI smoke suite remain green.
 Semantic theme token names now use one macro-backed table; theme tests,
 workspace tests, and the live 55-case TUI smoke suite remain green.
+Stop-reason telemetry/display projections now share a typed table with their
+distinct wire and UI spellings; full tests and the 55-case TUI smoke suite
+remain green.
 The event-trace harness now replays a YAML content fixture through the feed
 transcript/assistant projection; workspace tests and the 55-case TUI smoke
 suite remain green.

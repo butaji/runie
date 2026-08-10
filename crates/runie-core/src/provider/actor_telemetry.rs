@@ -137,13 +137,5 @@ pub(super) fn telemetry_response_attributes(
 }
 
 pub(super) fn telemetry_stop_reason(reason: crate::types::StopReason) -> &'static str {
-    match reason {
-        crate::types::StopReason::Stop => "stop",
-        crate::types::StopReason::ToolUse => "tool_use",
-        crate::types::StopReason::MaxTokens => "length",
-        crate::types::StopReason::Error => "error",
-        crate::types::StopReason::Aborted => "aborted",
-        crate::types::StopReason::Pending => "pending",
-        crate::types::StopReason::Deferred => "deferred",
-    }
+    reason.telemetry_name()
 }

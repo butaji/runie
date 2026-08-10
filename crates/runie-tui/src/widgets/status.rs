@@ -363,15 +363,7 @@ impl StatusBar {
 }
 
 fn stop_reason_label(reason: StopReason) -> &'static str {
-    match reason {
-        StopReason::Stop => "stop",
-        StopReason::ToolUse => "toolUse",
-        StopReason::MaxTokens => "length",
-        StopReason::Error => "error",
-        StopReason::Aborted => "aborted",
-        StopReason::Pending => "pending",
-        StopReason::Deferred => "deferred",
-    }
+    reason.display_name()
 }
 
 fn format_token_count(tokens: u64) -> String {

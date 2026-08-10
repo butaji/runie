@@ -51,3 +51,5 @@ Provider effort wire fields now use one macro-backed key table, keeping
 adapter-specific spellings explicit without duplicating the enum mapping.
 Semantic theme tokens and their stable Opaline names now share one typed
 macro-backed table, keeping renderer vocabulary data-shaped.
+Stop-reason telemetry and display labels now share one typed table while
+retaining their intentional `tool_use` versus `toolUse` representations.

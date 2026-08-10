@@ -30,7 +30,8 @@ pub use types_provider::*;
 #[path = "types_events.rs"]
 mod types_events;
 pub use types_events::*;
-
+#[path = "types_stop_reason.rs"]
+mod types_stop_reason;
 /// Reasoning level requested for the next turn. Some providers only support a
 /// subset; consult the model's metadata before using `XHigh` / `Max`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
@@ -88,7 +89,6 @@ pub enum StopReason {
     #[serde(rename = "deferred")]
     Deferred,
 }
-
 #[cfg(test)]
 mod stop_reason_tests {
     use super::{AssistantMessage, DeferredHandle, StopReason};
