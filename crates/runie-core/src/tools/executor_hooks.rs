@@ -12,6 +12,7 @@ pub struct ToolExecHooks {
     pub subagent: Option<SubagentHook>,
     pub web_search: Option<WebSearchHook>,
     pub background_shell: Option<BackgroundShellHook>,
+    pub background_jobs: Option<BackgroundJobsHook>,
 }
 
 pub type BeforeToolCallHook = Arc<
@@ -51,6 +52,11 @@ pub type BackgroundShellHook = Arc<
     dyn Fn(
             crate::tools::BackgroundShellRequest,
         ) -> Pin<Box<dyn Future<Output = Result<serde_json::Value, String>> + Send>>
+        + Send
+        + Sync,
+>;
+pub type BackgroundJobsHook = Arc<
+    dyn Fn() -> Pin<Box<dyn Future<Output = Result<serde_json::Value, String>> + Send>>
         + Send
         + Sync,
 >;

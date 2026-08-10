@@ -422,19 +422,23 @@ async fn execute_tool(
             .map_err(|error| format!("invalid background shell request: {error}"))?;
         return Ok(crate::tools::background::result(hook(request).await?));
     }
+    if call.name == "background_jobs" {
+        let Some(hook) = &ctx.hooks.background_jobs else {
+            return Err("background_jobs requires an owning background jobs hook".into());
+        };
+        return Ok(crate::tools::background::result(hook().await?));
+    }
     let settled = Arc::new(AtomicBool::new(false));
-    let on_update = tool_update_callback(call, ctx, settled.clone());
     let tool_future = tool.execute(
         &call.id,
         call.arguments.clone(),
         Some(signal.clone()),
-        Some(on_update),
+        Some(tool_update_callback(call, ctx, settled.clone())),
     );
     let result = await_tool_result(tool_future, ctx.abort.clone(), signal.clone()).await;
     settled.store(true, Ordering::Release);
     result
 }
-
 async fn execute_subagent(
     call: &ToolCall,
     ctx: &ToolExecContext,
@@ -446,7 +450,6 @@ async fn execute_subagent(
         .map_err(|error| format!("invalid subagent request: {error}"))?;
     Ok(crate::tools::subagent::result(hook(request).await?))
 }
-
 fn tool_update_callback(
     call: &ToolCall,
     ctx: &ToolExecContext,

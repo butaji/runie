@@ -10,6 +10,9 @@ pub struct BackgroundShellRequest {
 #[derive(Default)]
 pub struct BackgroundShellTool;
 
+#[derive(Default)]
+pub struct BackgroundJobsTool;
+
 #[async_trait::async_trait]
 impl AgentTool for BackgroundShellTool {
     fn name(&self) -> &str {
@@ -45,6 +48,31 @@ impl AgentTool for BackgroundShellTool {
     }
 }
 
+#[async_trait::async_trait]
+impl AgentTool for BackgroundJobsTool {
+    fn name(&self) -> &str {
+        "background_jobs"
+    }
+    fn label(&self) -> &str {
+        "Background jobs"
+    }
+    fn description(&self) -> &str {
+        "Inspect owned background shell jobs and their current output."
+    }
+    fn parameters(&self) -> Option<serde_json::Value> {
+        Some(serde_json::json!({"type":"object"}))
+    }
+    async fn execute(
+        &self,
+        _: &str,
+        _: serde_json::Value,
+        _: Option<tokio_util::sync::CancellationToken>,
+        _: Option<Box<dyn Fn(serde_json::Value) + Send + Sync>>,
+    ) -> Result<AgentToolResult, String> {
+        Err("background_jobs requires an owning background jobs hook".into())
+    }
+}
+
 pub(crate) fn result(value: serde_json::Value) -> AgentToolResult {
     AgentToolResult {
         content: vec![ToolResultContent::Text {
@@ -67,5 +95,15 @@ mod tests {
         assert!(tool
             .validate_arguments(&serde_json::json!({"command":" "}))
             .is_err());
+    }
+
+    #[test]
+    fn jobs_tool_is_read_only_and_has_no_arguments() {
+        let tool = BackgroundJobsTool;
+        assert_eq!(tool.name(), "background_jobs");
+        assert_eq!(
+            tool.parameters(),
+            Some(serde_json::json!({"type":"object"}))
+        );
     }
 }

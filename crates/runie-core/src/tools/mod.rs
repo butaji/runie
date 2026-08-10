@@ -25,7 +25,7 @@ macro_rules! register_tools {
 
 pub use actor::{ToolCommand, ToolExecutorActor, ToolOutcome};
 pub use ask_user::{AskUserQuestionTool, UserQuestionOption, UserQuestionRequest};
-pub use background::{BackgroundShellRequest, BackgroundShellTool};
+pub use background::{BackgroundJobsTool, BackgroundShellRequest, BackgroundShellTool};
 pub use executor::{execute_parallel, execute_sequential, ToolExecContext, ToolExecHooks};
 pub use git::{
     GitCommitPrepareRequest, GitCommitPrepareTool, GitDiffTool, GitReviewTool, GitStatusTool,
