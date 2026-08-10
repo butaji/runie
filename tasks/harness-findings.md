@@ -4,7 +4,7 @@ Ranked from the current Runie codebase and comparison with `../../kimi-code`.
 Status is `planned` until source, event tests, replay tests, and TUI smoke
 evidence prove the item.
 
-1. `harness-01-tools` — **partial** — production Read, Write, Edit, Grep, Glob, and Bash tools are registered and tested; centralized traversal/sensitive-path policy is covered, while richer output remains.
+1. `harness-01-tools` — **partial** — production Read, Write, Edit, Grep, Glob, and Bash tools are registered and tested; centralized traversal/sensitive-path policy and structured read/search metadata are covered, while richer output and background lifecycle remain.
 2. `harness-02-permissions` — **partial** — pure Ask/Auto/YOLO policy blocks known mutating tools without an approval hook; interactive TUI approval remains.
 3. `harness-03-shell-lifecycle` — **partial** — Bash now streams stdout/stderr chunks with timeout/cancellation; background task actors remain.
 4. `harness-04-model-effort-ui` — **partial** — model metadata now supplies finite effort rows and selection; replay coverage and provider-specific wire display remain.

@@ -84,10 +84,10 @@ impl AgentTool for ReadFileTool {
             .unwrap_or(READ_MAX_LINES)
             .min(READ_MAX_LINES);
         let output = bounded_lines(&content, start, requested);
-        Ok(AgentToolResult {
-            content: vec![ToolResultContent::Text { text: output }],
-            ..AgentToolResult::default()
-        })
+        text_result_with_details(
+            output,
+            serde_json::json!({"path": path, "line_offset": start + 1, "line_count": requested}),
+        )
     }
 }
 
@@ -111,10 +111,10 @@ impl AgentTool for WriteFileTool {
             PathOperation::Write,
         )?;
         let content = required_string(&args, "content", "write")?;
-        tokio::fs::write(path, content)
+        tokio::fs::write(&path, content)
             .await
             .map_err(|error| error.to_string())?;
-        text_result("written")
+        text_result_with_details("written".into(), serde_json::json!({"path": path}))
     }
 }
 
@@ -146,7 +146,10 @@ impl AgentTool for EditFileTool {
             replace_all(&args),
         )
         .await?;
-        text_result("edited")
+        text_result_with_details(
+            "edited".into(),
+            serde_json::json!({"path": path, "replace_all": replace_all(&args)}),
+        )
     }
 }
 
@@ -202,7 +205,10 @@ impl AgentTool for GrepTool {
             .unwrap_or(".");
         let root = validate(root, PathOperation::Search)?;
         let matches = grep_matches(root.to_str().unwrap_or("."), pattern);
-        text_result(&matches.join("\n"))
+        text_result_with_details(
+            matches.join("\n"),
+            serde_json::json!({"pattern": pattern, "match_count": matches.len()}),
+        )
     }
 }
 
@@ -259,7 +265,11 @@ impl AgentTool for GlobTool {
             .map(|entry| entry.path().display().to_string())
             .collect();
         paths.sort_unstable();
-        text_result(&paths.into_iter().take(100).collect::<Vec<_>>().join("\n"))
+        let paths: Vec<_> = paths.into_iter().take(100).collect();
+        text_result_with_details(
+            paths.join("\n"),
+            serde_json::json!({"pattern": pattern, "match_count": paths.len()}),
+        )
     }
 }
 
@@ -392,6 +402,17 @@ fn required_string<'a>(
 fn text_result(text: &str) -> Result<AgentToolResult, String> {
     Ok(AgentToolResult {
         content: vec![ToolResultContent::Text { text: text.into() }],
+        ..AgentToolResult::default()
+    })
+}
+
+fn text_result_with_details(
+    text: String,
+    details: serde_json::Value,
+) -> Result<AgentToolResult, String> {
+    Ok(AgentToolResult {
+        content: vec![ToolResultContent::Text { text }],
+        details,
         ..AgentToolResult::default()
     })
 }

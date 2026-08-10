@@ -17,6 +17,8 @@ async fn read_returns_requested_line_range() {
         panic!("expected text")
     };
     assert_eq!(text, "two\n[output truncated]");
+    assert_eq!(result.details["line_offset"], 2);
+    assert_eq!(result.details["line_count"], 1);
     tokio::fs::remove_file(path).await.unwrap();
 }
 
@@ -79,6 +81,7 @@ async fn grep_and_glob_return_deterministic_matches() {
         panic!("expected text")
     };
     assert!(text.ends_with(":1:needle"));
+    assert_eq!(grep.details["match_count"], 1);
     let glob = GlobTool
         .execute(
             "f",
@@ -92,6 +95,7 @@ async fn grep_and_glob_return_deterministic_matches() {
         panic!("expected text")
     };
     assert!(text.ends_with("a.rs"));
+    assert_eq!(glob.details["match_count"], 1);
     tokio::fs::remove_dir_all(root).await.unwrap();
 }
 
