@@ -22,3 +22,6 @@ Model-declared effort levels now use one macro-backed data table for picker
 options, selection validation, and model capability checks.
 Tool-card paint intent conversion is now one typed mapping shared by the
 renderer and pure paint projection, removing a duplicate dispatch table.
+Feed navigation-to-snapshot projection now uses one typed field declaration
+macro, including explicit clone fields and the derived selected-member field,
+so the projection schema is data-shaped instead of repeated assignments.
