@@ -142,6 +142,19 @@ pub struct ProviderFailure {
     pub retryable: bool,
 }
 
+impl ProviderFailure {
+    pub fn terminal_line(&self) -> String {
+        let status = self
+            .status
+            .map(|value| format!(" status={value}"))
+            .unwrap_or_default();
+        format!(
+            "{:?}{} retryable={} · {}",
+            self.kind, status, self.retryable, self.message
+        )
+    }
+}
+
 pub fn classify_failure(error: &StreamError) -> ProviderFailure {
     let (kind, message, status, retryable) = match error {
         StreamError::Network(message) => {
@@ -266,23 +279,15 @@ mod tests {
 
     #[test]
     fn parse_streaming_json_full_and_salvage() {
-        // Full object parses.
-        assert_eq!(
-            parse_streaming_json(r#"{"a":1,"b":"x"}"#),
-            Some(serde_json::json!({"a":1,"b":"x"}))
-        );
-        // Truncated string is closed.
-        assert_eq!(
-            parse_streaming_json(r#"{"a":"unterminated"#),
-            Some(serde_json::json!({"a":"unterminated"}))
-        );
-        // Open object is closed.
-        assert_eq!(
-            parse_streaming_json(r#"{"a":1,"b":{"c":2"#),
-            Some(serde_json::json!({"a":1,"b":{"c":2}}))
-        );
-        // Garbage yields None.
-        assert_eq!(parse_streaming_json("not json at all"), None);
+        #[derive(serde::Deserialize)]
+        struct Case {
+            input: String,
+            expected: Option<serde_json::Value>,
+        }
+        let cases: Vec<Case> = serde_yaml::from_str(include_str!("stream-json.yaml")).unwrap();
+        for case in cases {
+            assert_eq!(parse_streaming_json(&case.input), case.expected);
+        }
     }
 
     #[test]
@@ -301,5 +306,19 @@ mod tests {
         let decoded: ProviderFailure =
             serde_json::from_value(serde_json::to_value(failure).unwrap()).unwrap();
         assert_eq!(decoded.message, "busy");
+    }
+
+    #[test]
+    fn provider_failure_terminal_line_preserves_retry_context() {
+        let failure = ProviderFailure {
+            kind: ProviderFailureKind::Provider,
+            message: "busy".into(),
+            status: Some(503),
+            retryable: true,
+        };
+        assert_eq!(
+            failure.terminal_line(),
+            "Provider status=503 retryable=true · busy"
+        );
     }
 }

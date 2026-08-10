@@ -1,0 +1,14 @@
+- input: '{"a":1,"b":"x"}'
+  expected:
+    a: 1
+    b: x
+- input: '{"a":"unterminated"'
+  expected:
+    a: unterminated
+- input: '{"a":1,"b":{"c":2'
+  expected:
+    a: 1
+    b:
+      c: 2
+- input: not json at all
+  expected: null
