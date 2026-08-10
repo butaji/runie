@@ -38,6 +38,19 @@ mod tests {
     }
 
     #[test]
+    fn provider_transport_wire_names_are_generated_from_the_contract_table() {
+        for (transport, wire) in [
+            (ProviderTransport::Sse, "sse"),
+            (ProviderTransport::Websocket, "websocket"),
+            (ProviderTransport::WebsocketCached, "websocket-cached"),
+            (ProviderTransport::Auto, "auto"),
+        ] {
+            assert_eq!(transport.wire_name(), wire);
+            assert_eq!(serde_json::to_value(transport).unwrap(), wire);
+        }
+    }
+
+    #[test]
     fn assistant_message_round_trips_new_parity_fields() {
         let m = parity_assistant_message();
         let json = serde_json::to_value(&m).unwrap();

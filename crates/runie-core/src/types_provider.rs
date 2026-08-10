@@ -99,13 +99,29 @@ pub enum DeferredWindow {
     OneDay,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum ProviderTransport {
-    Sse,
-    Websocket,
-    WebsocketCached,
-    Auto,
+macro_rules! provider_transports {
+    ($(($variant:ident, $wire:literal)),+ $(,)?) => {
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+        #[serde(rename_all = "kebab-case")]
+        pub enum ProviderTransport {
+            $($variant),+
+        }
+
+        impl ProviderTransport {
+            pub const fn wire_name(self) -> &'static str {
+                match self {
+                    $(Self::$variant => $wire),+
+                }
+            }
+        }
+    };
+}
+
+provider_transports! {
+    (Sse, "sse"),
+    (Websocket, "websocket"),
+    (WebsocketCached, "websocket-cached"),
+    (Auto, "auto"),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
