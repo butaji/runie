@@ -86,11 +86,11 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
 2. Tool output and background lifecycle UX — `harness-01` and `harness-03`.
    Add renderer-neutral bounded output cards and owned lifecycle controls,
    with failure/cancellation replay traces.
-3. Model-aware context policy — `harness-05` (boundary implemented).
-   Recovery now receives the active model and uses its declared window;
+3. Model-aware context policy — `harness-05` (live usage boundary implemented).
+   Recovery and `/context` now use the active model’s declared window;
    remaining work is richer compaction controls and threshold/recovery replay
    coverage for those controls.
-4. Scheduler cancellation controls — `harness-08` (executor now owns and returns replayable lifecycle metrics; cancellation controls/UI projection remain).
+4. Scheduler cancellation controls — `harness-08` (actor-owned metrics and `/jobs` projection implemented; richer controls remain).
    Extend the existing mailbox/replay state machine with user-visible queued,
    running, and cancelled control projections.
 5. MCP lifecycle ownership — `harness-10`.
