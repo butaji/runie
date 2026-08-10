@@ -55,3 +55,5 @@ Stop-reason telemetry and display labels now share one typed table while
 retaining their intentional `tool_use` versus `toolUse` representations.
 Operation-record kinds now also generate both wire-name encoding and
 compatibility decoding from one typed table.
+Web-search provider snippet fields now use one typed wire-format table for
+Generic, Brave, and Tavily normalization.

@@ -27,6 +27,22 @@ pub enum WebSearchWireFormat {
     Tavily,
 }
 
+macro_rules! web_search_wire_fields {
+    ($(($format:ident, $snippet_key:literal)),+ $(,)?) => {
+        impl WebSearchWireFormat {
+            pub const fn snippet_key(self) -> &'static str {
+                match self { $(Self::$format => $snippet_key,)+ }
+            }
+        }
+    };
+}
+
+web_search_wire_fields! {
+    (Generic, "snippet"),
+    (Brave, "description"),
+    (Tavily, "content"),
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct WebSourceCard {
     pub rank: u32,
@@ -148,16 +164,11 @@ fn decode_provider_response(
         .filter_map(|item| {
             let title = item.get("title")?.as_str()?.to_owned();
             let url = item.get("url")?.as_str()?.to_owned();
-            let snippet_key = match format {
-                WebSearchWireFormat::Brave => "description",
-                WebSearchWireFormat::Tavily => "content",
-                WebSearchWireFormat::Generic => "snippet",
-            };
             Some(WebSearchResult {
                 title,
                 url,
                 snippet: item
-                    .get(snippet_key)
+                    .get(format.snippet_key())
                     .and_then(serde_json::Value::as_str)
                     .unwrap_or_default()
                     .to_owned(),

@@ -80,6 +80,9 @@ distinct wire and UI spellings; full tests and the 55-case TUI smoke suite
 remain green.
 Operation-record wire encoding and decoding now share one macro-backed table;
 focused and full workspace tests remain green.
+Web-search snippet-field normalization now uses one typed provider table;
+provider tests, full workspace tests, and the 55-case TUI smoke suite remain
+green.
 The event-trace harness now replays a YAML content fixture through the feed
 transcript/assistant projection; workspace tests and the 55-case TUI smoke
 suite remain green.
