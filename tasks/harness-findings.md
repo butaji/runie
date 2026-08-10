@@ -13,7 +13,7 @@ evidence prove the item.
 7. `harness-07-subagents` — **partial** — typed explore/plan/code requests now execute through an owned loop hook and return messages; role-specific isolation and result replay remain.
 8. `harness-08-tool-scheduler` — **partial** — independent read/search tools remain parallel while mutations and subagents are serialized; typed per-tool resource keys now prevent conflicting workspace/Git calls from sharing a parallel batch; finer-grained queueing remains.
 9. `harness-09-web` — typed bounded `web_search` contract, executor hook, HTTP client with structured citation results, and optional live endpoint wiring now exist; provider adapters and source cards remain.
-10. `harness-10-mcp` — **partial** — typed server/tool data, atomic stdio discovery/call registration, protocol-correct initialized notifications, ID-correlated notification-tolerant responses, and bounded HTTP JSON transport with bearer auth now exist; streaming auth/session cleanup remains.
+10. `harness-10-mcp` — **partial** — typed server/tool data, atomic stdio discovery/call registration, protocol-correct initialized notifications, ID-correlated notification-tolerant responses, and bounded HTTP JSON transport with bearer auth and a 1 MiB response cap now exist; streaming auth/session cleanup remains.
 11. `harness-11-plugins` — installable skills, commands, tools, and hooks.
 12. `harness-12-git` — **partial** — bounded read-only Git inspection, typed non-mutating `git_commit_prepare`, approval-gated `git_commit`, explicit validated `git_push`, and safe inverse-commit `git_revert` now exist; richer conflict recovery remains.
 13. `harness-13-sessions` — resume, fork, rename, undo, export, and session search UX.

@@ -5,6 +5,8 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
+pub const MCP_HTTP_MAX_RESPONSE_BYTES: usize = 1_048_576;
+
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct McpToolSpec {
     pub name: String,
@@ -75,13 +77,22 @@ impl McpHttpClient {
             .map_err(|error| format!("MCP HTTP request: {error}"))?;
         let status = response.status();
         let body = response
-            .text()
+            .bytes()
             .await
             .map_err(|error| format!("MCP HTTP body: {error}"))?;
-        if !status.is_success() {
-            return Err(format!("MCP HTTP status {status}: {body}"));
+        if body.len() > MCP_HTTP_MAX_RESPONSE_BYTES {
+            return Err(format!(
+                "MCP HTTP response exceeds {} bytes",
+                MCP_HTTP_MAX_RESPONSE_BYTES
+            ));
         }
-        serde_json::from_str(&body).map_err(|error| format!("invalid MCP HTTP response: {error}"))
+        if !status.is_success() {
+            return Err(format!(
+                "MCP HTTP status {status}: {}",
+                String::from_utf8_lossy(&body)
+            ));
+        }
+        serde_json::from_slice(&body).map_err(|error| format!("invalid MCP HTTP response: {error}"))
     }
 }
 
