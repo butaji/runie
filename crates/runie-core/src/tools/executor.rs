@@ -124,6 +124,7 @@ pub async fn execute_parallel(calls: Vec<ToolCall>, ctx: ToolExecContext) -> Dis
     if calls
         .iter()
         .any(|call| requires_serial_execution(&call.name))
+        || has_resource_conflict(&calls, &ctx)
     {
         return execute_sequential(calls, ctx).await;
     }

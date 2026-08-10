@@ -228,6 +228,9 @@ impl AgentTool for GitCommitTool {
     fn description(&self) -> &str {
         "Create a Git commit after approval allows this mutation."
     }
+    fn resource_key(&self, _args: &serde_json::Value) -> Option<String> {
+        Some("git:index".into())
+    }
     fn parameters(&self) -> Option<serde_json::Value> {
         Some(
             serde_json::json!({"type":"object","properties":{"message":{"type":"string","minLength":1}},"required":["message"]}),

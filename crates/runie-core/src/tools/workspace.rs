@@ -99,6 +99,11 @@ impl AgentTool for WriteFileTool {
         "Create or replace a text file.",
         serde_json::json!({"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"}},"required":["path","content"]})
     );
+    fn resource_key(&self, args: &serde_json::Value) -> Option<String> {
+        args.get("path")
+            .and_then(serde_json::Value::as_str)
+            .map(|path| format!("workspace:{path}"))
+    }
     async fn execute(
         &self,
         _id: &str,
@@ -126,6 +131,11 @@ impl AgentTool for EditFileTool {
         "Replace one exact text occurrence in a file.",
         serde_json::json!({"type":"object","properties":{"path":{"type":"string"},"old_string":{"type":"string"},"new_string":{"type":"string"},"replace_all":{"type":"boolean"}},"required":["path","old_string","new_string"]})
     );
+    fn resource_key(&self, args: &serde_json::Value) -> Option<String> {
+        args.get("path")
+            .and_then(serde_json::Value::as_str)
+            .map(|path| format!("workspace:{path}"))
+    }
     async fn execute(
         &self,
         _id: &str,

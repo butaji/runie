@@ -9,6 +9,33 @@ struct AbortAwareTool {
     executed: Arc<AtomicBool>,
 }
 
+struct ResourceTool(&'static str, &'static str);
+
+#[async_trait::async_trait]
+impl AgentTool for ResourceTool {
+    fn name(&self) -> &str {
+        self.0
+    }
+    fn label(&self) -> &str {
+        self.0
+    }
+    fn description(&self) -> &str {
+        "resource test tool"
+    }
+    fn resource_key(&self, _args: &serde_json::Value) -> Option<String> {
+        Some(self.1.into())
+    }
+    async fn execute(
+        &self,
+        _: &str,
+        _: serde_json::Value,
+        _: Option<tokio_util::sync::CancellationToken>,
+        _: Option<Box<dyn Fn(serde_json::Value) + Send + Sync>>,
+    ) -> Result<AgentToolResult, String> {
+        Ok(AgentToolResult::default())
+    }
+}
+
 #[async_trait::async_trait]
 impl AgentTool for AbortAwareTool {
     fn name(&self) -> &str {
@@ -99,6 +126,38 @@ fn scheduler_serializes_mutations_but_allows_read_tools_to_batch() {
     assert!(super::requires_serial_execution("subagent"));
     assert!(!super::requires_serial_execution("read"));
     assert!(!super::requires_serial_execution("grep"));
+}
+
+#[test]
+fn scheduler_detects_shared_resource_keys_across_tool_names() {
+    let mut registry = ToolRegistry::new();
+    registry.register(Arc::new(ResourceTool("read_a", "workspace")));
+    registry.register(Arc::new(ResourceTool("read_b", "workspace")));
+    let ctx = ToolExecContext {
+        assistant_message: AssistantMessage::default(),
+        context: crate::types::AgentContext::default(),
+        abort: None,
+        registry: Arc::new(registry),
+        hooks: ToolExecHooks::default(),
+        bus: None,
+        updates: None,
+        tool_result_timestamp: 0,
+    };
+    let calls = vec![
+        ToolCall {
+            id: "a".into(),
+            name: "read_a".into(),
+            arguments: serde_json::json!({}),
+            thought_signature: None,
+        },
+        ToolCall {
+            id: "b".into(),
+            name: "read_b".into(),
+            arguments: serde_json::json!({}),
+            thought_signature: None,
+        },
+    ];
+    assert!(has_resource_conflict(&calls, &ctx));
 }
 
 #[test]

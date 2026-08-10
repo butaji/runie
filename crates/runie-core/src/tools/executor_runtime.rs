@@ -1,4 +1,12 @@
 use super::*;
+
+pub(super) fn has_resource_conflict(calls: &[ToolCall], ctx: &ToolExecContext) -> bool {
+    let mut keys = std::collections::HashSet::new();
+    calls
+        .iter()
+        .filter_map(|call| ctx.registry.resource_key(&call.name, &call.arguments))
+        .any(|key| !keys.insert(key))
+}
 pub(super) async fn await_tool_result<F>(
     tool_future: F,
     abort: Option<tokio::sync::watch::Receiver<bool>>,

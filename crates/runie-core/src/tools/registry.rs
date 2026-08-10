@@ -71,6 +71,12 @@ impl ToolRegistry {
         self.tools.get(name).and_then(|t| t.execution_mode())
     }
 
+    pub fn resource_key(&self, name: &str, args: &serde_json::Value) -> Option<String> {
+        self.tools
+            .get(name)
+            .and_then(|tool| tool.resource_key(args))
+    }
+
     pub fn len(&self) -> usize {
         self.tools.len()
     }

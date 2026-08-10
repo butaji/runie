@@ -202,6 +202,11 @@ pub trait AgentTool: Send + Sync + 'static {
     fn execution_mode(&self) -> Option<ToolExecutionMode> {
         None
     }
+    /// Optional exclusive resource key. Calls sharing a key are not run in
+    /// the same parallel batch (for example, two tools writing one workspace).
+    fn resource_key(&self, _args: &serde_json::Value) -> Option<String> {
+        None
+    }
     /// Execute the tool. Throw on failure (return Err); the agent surfaces
     /// errors as `is_error: true` toolResult messages.
     async fn execute(
