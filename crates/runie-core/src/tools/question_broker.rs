@@ -14,6 +14,7 @@ pub struct UserQuestionBroker {
     tx: mpsc::UnboundedSender<PendingUserQuestion>,
     rx: Arc<Mutex<mpsc::UnboundedReceiver<PendingUserQuestion>>>,
     answers: Arc<Mutex<HashMap<String, oneshot::Sender<serde_json::Value>>>>,
+    requests: Arc<Mutex<HashMap<String, UserQuestionRequest>>>,
     next_id: Arc<std::sync::atomic::AtomicU64>,
 }
 
@@ -24,6 +25,7 @@ impl Default for UserQuestionBroker {
             tx,
             rx: Arc::new(Mutex::new(rx)),
             answers: Arc::new(Mutex::new(HashMap::new())),
+            requests: Arc::new(Mutex::new(HashMap::new())),
             next_id: Default::default(),
         }
     }
@@ -40,6 +42,10 @@ impl UserQuestionBroker {
             .lock()
             .expect("question answers lock")
             .insert(id.clone(), answer_tx);
+        self.requests
+            .lock()
+            .expect("question requests lock")
+            .insert(id.clone(), request.clone());
         if self
             .tx
             .send(PendingUserQuestion {
@@ -51,6 +57,10 @@ impl UserQuestionBroker {
             self.answers
                 .lock()
                 .expect("question answers lock")
+                .remove(&id);
+            self.requests
+                .lock()
+                .expect("question requests lock")
                 .remove(&id);
             return Err("question UI is closed".to_owned());
         }
@@ -64,6 +74,18 @@ impl UserQuestionBroker {
     }
 
     pub fn answer(&self, id: &str, value: serde_json::Value) -> Result<(), String> {
+        let request = self
+            .requests
+            .lock()
+            .expect("question requests lock")
+            .get(id)
+            .cloned()
+            .ok_or_else(|| "question is no longer pending".to_owned())?;
+        validate_answer(&request, &value)?;
+        self.requests
+            .lock()
+            .expect("question requests lock")
+            .remove(id);
         self.answers
             .lock()
             .expect("question answers lock")
@@ -74,13 +96,73 @@ impl UserQuestionBroker {
     }
 
     pub fn cancel(&self, id: &str) -> Result<(), String> {
-        self.answer(id, serde_json::json!({"cancelled": true}))
+        let request = self
+            .requests
+            .lock()
+            .expect("question requests lock")
+            .remove(id)
+            .ok_or_else(|| "question is no longer pending".to_owned())?;
+        let _ = request;
+        self.answers
+            .lock()
+            .expect("question answers lock")
+            .remove(id)
+            .ok_or_else(|| "question is no longer pending".to_owned())?
+            .send(serde_json::json!({"cancelled": true}))
+            .map_err(|_| "question waiter is closed".to_owned())
     }
+}
+
+fn validate_answer(request: &UserQuestionRequest, value: &serde_json::Value) -> Result<(), String> {
+    if value.get("cancelled").and_then(serde_json::Value::as_bool) == Some(true) {
+        return Err("cancel answers must use cancel()".into());
+    }
+    let labels = answer_labels(request, value)?;
+    if labels.is_empty() {
+        return Err("answer must select at least one option".into());
+    }
+    if !labels
+        .iter()
+        .all(|label| request.options.iter().any(|option| option.label == *label))
+    {
+        return Err(format!(
+            "answer contains an option not offered by the question: {labels:?}"
+        ));
+    }
+    if !request.allow_multiple && labels.len() != 1 {
+        return Err("single-select questions accept exactly one option".into());
+    }
+    Ok(())
+}
+
+fn answer_labels<'a>(
+    request: &UserQuestionRequest,
+    value: &'a serde_json::Value,
+) -> Result<Vec<&'a str>, String> {
+    if request.allow_multiple {
+        return value
+            .get("answers")
+            .and_then(serde_json::Value::as_array)
+            .ok_or_else(|| "answer must contain an `answers` array".to_owned())?
+            .iter()
+            .map(|item| {
+                item.as_str()
+                    .ok_or_else(|| "answers must contain strings".to_owned())
+            })
+            .collect();
+    }
+    Ok(vec![value
+        .get("answer")
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| {
+            "answer must contain an `answer` string".to_owned()
+        })?])
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tools::UserQuestionOption;
 
     #[tokio::test]
     async fn broker_round_trips_an_answer() {
@@ -92,7 +174,16 @@ mod tests {
                 broker
                     .ask(UserQuestionRequest {
                         question: "Continue?".into(),
-                        options: vec![],
+                        options: vec![
+                            UserQuestionOption {
+                                label: "yes".into(),
+                                description: String::new(),
+                            },
+                            UserQuestionOption {
+                                label: "no".into(),
+                                description: String::new(),
+                            },
+                        ],
                         allow_multiple: false,
                     })
                     .await
@@ -134,5 +225,40 @@ mod tests {
         };
         broker.cancel(&pending.id).unwrap();
         assert_eq!(waiter.await.unwrap().unwrap()["cancelled"], true);
+    }
+
+    #[tokio::test]
+    async fn broker_rejects_answers_not_in_the_question_options() {
+        let broker = UserQuestionBroker::default();
+        let waiter = {
+            let broker = broker.clone();
+            // OWNER: broker_rejects_answers_not_in_question_options test task is awaited below.
+            tokio::spawn(async move {
+                broker
+                    .ask(UserQuestionRequest {
+                        question: "Continue?".into(),
+                        options: vec![UserQuestionOption {
+                            label: "yes".into(),
+                            description: String::new(),
+                        }],
+                        allow_multiple: false,
+                    })
+                    .await
+            })
+        };
+        let pending = loop {
+            if let Some(value) = broker.try_next() {
+                break value;
+            }
+            tokio::task::yield_now().await;
+        };
+        let error = broker
+            .answer(&pending.id, serde_json::json!({"answer": "no"}))
+            .unwrap_err();
+        assert!(error.contains("not offered"));
+        broker
+            .answer(&pending.id, serde_json::json!({"answer": "yes"}))
+            .unwrap();
+        assert_eq!(waiter.await.unwrap().unwrap()["answer"], "yes");
     }
 }
