@@ -79,6 +79,17 @@ impl McpNotificationQueue {
         }
     }
 
+    pub fn replay<I>(capacity: usize, events: I) -> Self
+    where
+        I: IntoIterator<Item = McpNotificationQueueEvent>,
+    {
+        let mut queue = Self::new(capacity);
+        for event in events {
+            queue.apply(event);
+        }
+        queue
+    }
+
     pub fn push(&mut self, notification: serde_json::Value) {
         self.apply(McpNotificationQueueEvent::Push(notification));
     }
@@ -413,6 +424,24 @@ mod tests {
         );
         reduce_mcp_notification_queue(&mut queue, McpNotificationQueueEvent::Clear);
         assert!(queue.pending.is_empty());
+    }
+
+    #[test]
+    fn notification_queue_replay_preserves_order_and_drop_data() {
+        let queue = McpNotificationQueue::replay(
+            1,
+            [
+                McpNotificationQueueEvent::Push(serde_json::json!({"n": 1})),
+                McpNotificationQueueEvent::Push(serde_json::json!({"n": 2})),
+                McpNotificationQueueEvent::Pop,
+                McpNotificationQueueEvent::Push(serde_json::json!({"n": 3})),
+            ],
+        );
+        assert_eq!(
+            queue.pending.iter().collect::<Vec<_>>(),
+            [&serde_json::json!({"n": 3})]
+        );
+        assert_eq!(queue.dropped, 1);
     }
 
     #[test]
