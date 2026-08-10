@@ -63,6 +63,6 @@ pub use todo::{
 };
 pub use web::{
     source_cards, WebSearchHttpClient, WebSearchRequest, WebSearchResponse, WebSearchResult,
-    WebSearchTool, WebSourceCard,
+    WebSearchTool, WebSearchWireFormat, WebSourceCard,
 };
 pub use workspace::{BashTool, EditFileTool, GlobTool, GrepTool, ReadFileTool, WriteFileTool};

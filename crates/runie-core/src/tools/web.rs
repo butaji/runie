@@ -19,6 +19,14 @@ pub struct WebSearchResponse {
     pub results: Vec<WebSearchResult>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WebSearchWireFormat {
+    Generic,
+    Brave,
+    Tavily,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct WebSourceCard {
     pub rank: u32,
@@ -53,6 +61,7 @@ pub struct WebSearchHttpClient {
     pub endpoint: String,
     pub bearer_token: Option<String>,
     pub timeout: Duration,
+    pub format: WebSearchWireFormat,
 }
 
 impl WebSearchHttpClient {
@@ -72,7 +81,13 @@ impl WebSearchHttpClient {
             endpoint,
             bearer_token,
             timeout,
+            format: WebSearchWireFormat::Generic,
         })
+    }
+
+    pub fn with_format(mut self, format: WebSearchWireFormat) -> Self {
+        self.format = format;
+        self
     }
     pub async fn search(&self, request: WebSearchRequest) -> Result<WebSearchResponse, String> {
         let client = reqwest::Client::builder()
@@ -99,7 +114,9 @@ impl WebSearchHttpClient {
         if !status.is_success() {
             return Err(format!("web search HTTP status {status}: {body}"));
         }
-        serde_json::from_str(&body).map_err(|error| format!("invalid web search response: {error}"))
+        let mut result = decode_provider_response(&body, self.format)?;
+        result.results.truncate(request.max_results as usize);
+        Ok(result)
     }
 
     pub fn hook(self) -> crate::tools::executor::WebSearchHook {
@@ -111,6 +128,43 @@ impl WebSearchHttpClient {
             })
         })
     }
+}
+
+fn decode_provider_response(
+    body: &str,
+    format: WebSearchWireFormat,
+) -> Result<WebSearchResponse, String> {
+    if matches!(format, WebSearchWireFormat::Generic) {
+        return serde_json::from_str(body)
+            .map_err(|error| format!("invalid web search response: {error}"));
+    }
+    let value: serde_json::Value = serde_json::from_str(body)
+        .map_err(|error| format!("invalid web search response: {error}"))?;
+    let Some(results) = value.get("results").and_then(serde_json::Value::as_array) else {
+        return Err("provider web search response has no results array".into());
+    };
+    let results = results
+        .iter()
+        .filter_map(|item| {
+            let title = item.get("title")?.as_str()?.to_owned();
+            let url = item.get("url")?.as_str()?.to_owned();
+            let snippet_key = match format {
+                WebSearchWireFormat::Brave => "description",
+                WebSearchWireFormat::Tavily => "content",
+                WebSearchWireFormat::Generic => "snippet",
+            };
+            Some(WebSearchResult {
+                title,
+                url,
+                snippet: item
+                    .get(snippet_key)
+                    .and_then(serde_json::Value::as_str)
+                    .unwrap_or_default()
+                    .to_owned(),
+            })
+        })
+        .collect();
+    Ok(WebSearchResponse { results })
 }
 
 fn validate_response_size(bytes: usize) -> Result<(), String> {
@@ -238,6 +292,22 @@ mod tests {
     fn response_size_boundary_rejects_unbounded_provider_data() {
         assert!(validate_response_size(MAX_WEB_SEARCH_RESPONSE_BYTES).is_ok());
         assert!(validate_response_size(MAX_WEB_SEARCH_RESPONSE_BYTES + 1).is_err());
+    }
+
+    #[test]
+    fn provider_wire_formats_normalize_distinct_snippet_fields() {
+        let brave = decode_provider_response(
+            r#"{"results":[{"title":"Rust","url":"https://rust-lang.org","description":"brave"}]}"#,
+            WebSearchWireFormat::Brave,
+        )
+        .unwrap();
+        let tavily = decode_provider_response(
+            r#"{"results":[{"title":"Rust","url":"https://rust-lang.org","content":"tavily"}]}"#,
+            WebSearchWireFormat::Tavily,
+        )
+        .unwrap();
+        assert_eq!(brave.results[0].snippet, "brave");
+        assert_eq!(tavily.results[0].snippet, "tavily");
     }
 
     #[tokio::test]
