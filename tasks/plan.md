@@ -90,7 +90,7 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    Recovery now receives the active model and uses its declared window;
    remaining work is richer compaction controls and threshold/recovery replay
    coverage for those controls.
-4. Scheduler cancellation controls — `harness-08`.
+4. Scheduler cancellation controls — `harness-08` (executor now owns and returns replayable lifecycle metrics; cancellation controls/UI projection remain).
    Extend the existing mailbox/replay state machine with user-visible queued,
    running, and cancelled control projections.
 5. MCP lifecycle ownership — `harness-10`.

@@ -18,7 +18,10 @@ fn unix_timestamp_millis() -> i64 {
         .unwrap_or_default()
 }
 
-use super::executor::{execute_parallel, execute_sequential, ToolExecContext, ToolExecHooks};
+use super::executor::{
+    execute_parallel, execute_sequential, reduce_scheduler_event, SchedulerEvent, SchedulerMetrics,
+    ToolExecContext, ToolExecHooks,
+};
 use super::registry::ToolRegistry;
 
 #[derive(Debug)]
@@ -28,6 +31,7 @@ pub enum ToolOutcome {
         tool_results: Vec<ToolResultMessage>,
         all_terminated: bool,
         events: Vec<crate::types::AgentEvent>,
+        scheduler: SchedulerMetrics,
     },
     /// Tool not found / preflight rejected.
     Aborted { reason: String },
@@ -198,6 +202,7 @@ fn aborted_outcome(calls: &[ToolCall], reason: &str) -> ToolOutcome {
         tool_results,
         all_terminated: false,
         events,
+        scheduler: SchedulerMetrics::default(),
     }
 }
 
@@ -206,16 +211,46 @@ async fn run_tool_worker(
     registry: Arc<ToolRegistry>,
     tool_result_timestamp: Option<i64>,
 ) {
+    let mut scheduler = SchedulerMetrics::default();
     while let Some(cmd) = next_prioritized_command(&mut rx).await {
-        run_tool_command(cmd, &registry, tool_result_timestamp).await;
+        let interactive = matches!(
+            &cmd,
+            ToolCommand::Execute {
+                priority: ToolPriority::Interactive,
+                ..
+            }
+        );
+        apply_scheduler(&mut scheduler, SchedulerEvent::Enqueued { interactive });
+        apply_scheduler(&mut scheduler, SchedulerEvent::Started);
+        let (reply, outcome) = run_tool_command(cmd, &registry, tool_result_timestamp).await;
+        apply_scheduler(&mut scheduler, SchedulerEvent::Finished { success: true });
+        let outcome = match outcome {
+            ToolOutcome::Completed {
+                tool_results,
+                all_terminated,
+                events,
+                ..
+            } => ToolOutcome::Completed {
+                tool_results,
+                all_terminated,
+                events,
+                scheduler: scheduler.clone(),
+            },
+            aborted => aborted,
+        };
+        let _ = reply.send(outcome);
     }
+}
+
+fn apply_scheduler(metrics: &mut SchedulerMetrics, event: SchedulerEvent) {
+    reduce_scheduler_event(metrics, event).expect("executor scheduler lifecycle must be valid");
 }
 
 async fn run_tool_command(
     command: ToolCommand,
     registry: &Arc<ToolRegistry>,
     tool_result_timestamp: Option<i64>,
-) {
+) -> (oneshot::Sender<ToolOutcome>, ToolOutcome) {
     let ToolCommand::Execute {
         assistant_message,
         context,
@@ -241,11 +276,15 @@ async fn run_tool_command(
         ToolExecutionMode::Sequential => execute_sequential(calls, ctx).await,
         ToolExecutionMode::Parallel => execute_parallel(calls, ctx).await,
     };
-    let _ = reply.send(ToolOutcome::Completed {
-        tool_results: outcome.tool_results,
-        all_terminated: outcome.all_terminated,
-        events: outcome.events,
-    });
+    (
+        reply,
+        ToolOutcome::Completed {
+            tool_results: outcome.tool_results,
+            all_terminated: outcome.all_terminated,
+            events: outcome.events,
+            scheduler: SchedulerMetrics::default(),
+        },
+    )
 }
 
 async fn next_prioritized_command(rx: &mut mpsc::Receiver<ToolCommand>) -> Option<ToolCommand> {
@@ -327,7 +366,16 @@ mod tests {
             )
             .await;
         match outcome {
-            ToolOutcome::Completed { tool_results, .. } => assert!(tool_results.is_empty()),
+            ToolOutcome::Completed {
+                tool_results,
+                scheduler,
+                ..
+            } => {
+                assert!(tool_results.is_empty());
+                assert_eq!(scheduler.completed, 1);
+                assert_eq!(scheduler.running, 0);
+                assert_eq!(scheduler.interactive_enqueued, 1);
+            }
             ToolOutcome::Aborted { .. } => panic!("expected completed"),
         }
     }
@@ -344,6 +392,7 @@ mod tests {
             tool_results,
             events,
             all_terminated,
+            ..
         } = aborted_outcome(&calls, "executor dropped")
         else {
             panic!("fallback must complete with synthetic tool results");

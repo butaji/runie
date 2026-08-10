@@ -297,6 +297,7 @@ pub(super) async fn execute_tool_calls(
             tool_results,
             events,
             all_terminated,
+            ..
         } => Some(ToolExecOutcome {
             tool_results,
             events,
