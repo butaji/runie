@@ -96,6 +96,9 @@ As of 2026-08-09, the reduction work has these verified results:
 - Four activity fragments are consolidated into `feed_activity.rs`, keeping
   activity counters, replacement, and spacing normalization in one semantic
   state boundary.
+- Content, tool, and workflow routing fragments are consolidated into
+  `feed_reducers.rs`, preserving the event reducer API while removing three
+  numbered dispatch modules.
 - `component_specs!` generates the declarative component ownership table.
 - `event_trace!` reduces pure replay-test boilerplate.
 - `cargo test --workspace --quiet` passes across the current workspace.

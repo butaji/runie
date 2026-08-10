@@ -1,19 +1,15 @@
+// Data-oriented routing from compatibility messages into domain reducers.
+
 impl FeedState {
     fn set_tool_name(&mut self, id: String, name: String) {
-        self.navigation
-            .facts
-            .tools
-            .entry(id)
+        self.navigation.facts.tools.entry(id)
             .and_modify(|record| record.name = Some(name.clone()))
             .or_insert_with(|| ToolRecord::named(name));
     }
-
     fn reduce_content(&mut self, message: ScrollbackMsg) -> Result<(), ScrollbackMsg> {
         match message {
             ScrollbackMsg::Append(line) => self.append(line),
-            ScrollbackMsg::AppendTurnSummary(text) => {
-                self.append(Line::new(LineKind::TurnSummary, text))
-            }
+            ScrollbackMsg::AppendTurnSummary(text) => self.append(Line::new(LineKind::TurnSummary, text)),
             ScrollbackMsg::TurnStart => self.navigation.facts.turn_started = true,
             ScrollbackMsg::TurnEnd => self.navigation.facts.turn_started = false,
             ScrollbackMsg::AssistantStreamStart => self.navigation.facts.assistant_stream_open = true,
@@ -31,29 +27,32 @@ impl FeedState {
             ScrollbackMsg::AddLiveAssistantTimestamp(_) => {}
             ScrollbackMsg::RemoveEmptyAfter(kind) => self.remove_empty_after(kind),
             ScrollbackMsg::NormalizeActivitySpacing => self.normalize_activity_spacing(),
-            ScrollbackMsg::SetReasoningExpanded(value) => {
-                self.navigation.reasoning_expanded = value
-            }
+            ScrollbackMsg::SetReasoningExpanded(value) => self.navigation.reasoning_expanded = value,
             ScrollbackMsg::SetActivityExpanded(value) => self.navigation.activity_expanded = value,
-            ScrollbackMsg::ToggleActivityExpanded => {
-                self.navigation.activity_expanded = !self.navigation.activity_expanded
-            }
+            ScrollbackMsg::ToggleActivityExpanded => self.navigation.activity_expanded = !self.navigation.activity_expanded,
             ScrollbackMsg::SetPromptTimestamp(value) => self.navigation.prompt_timestamp = value,
             ScrollbackMsg::SetFollowLatestUser(value) => self.navigation.follow_latest_user = value,
             message => return Err(message),
         }
         Ok(())
     }
-}
-
-impl FeedState {
-    fn set_tool_args(&mut self, id: String, args: serde_json::Value) {
-        self.navigation.facts.tools.entry(id).or_default().set_args(args);
+    fn set_tool_args(&mut self, id: String, args: serde_json::Value) { self.navigation.facts.tools.entry(id).or_default().set_args(args); }
+    fn remove_tool_args(&mut self, id: &str) { if let Some(record) = self.navigation.facts.tools.get_mut(id) { record.clear_args(); } }
+    fn reduce_tool(&mut self, message: ScrollbackMsg) -> Result<(), ScrollbackMsg> {
+        match message {
+            ScrollbackMsg::ToolStart { tool_call_id, header, activity } => { self.start_tool(tool_call_id, header, activity, false); Ok(()) }
+            ScrollbackMsg::ToolStartRunning { tool_call_id, header, activity } => { self.start_tool(tool_call_id, header, activity, true); Ok(()) }
+            ScrollbackMsg::ToolUpdate { tool_call_id, header, output } => { self.update_tool_output(tool_call_id, header, output); Ok(()) }
+            ScrollbackMsg::ToolEnd { tool_call_id, header, activity, output } => { self.finish_tool(tool_call_id, header, activity, output); Ok(()) }
+            message => Err(message),
+        }
     }
-
-    fn remove_tool_args(&mut self, id: &str) {
-        if let Some(record) = self.navigation.facts.tools.get_mut(id) {
-            record.clear_args();
+    fn reduce_workflow(&mut self, message: ScrollbackMsg) -> Result<(), ScrollbackMsg> {
+        match message {
+            ScrollbackMsg::WorkflowStart { run_id, name, objective } => { self.start_workflow(run_id, name, objective); Ok(()) }
+            ScrollbackMsg::WorkflowProgress { run_id, phase, state, active_agents } => { self.update_workflow(run_id, phase, state, active_agents); Ok(()) }
+            ScrollbackMsg::WorkflowEnd { run_id, status, elapsed_ms } => { self.finish_workflow(run_id, status, elapsed_ms); Ok(()) }
+            message => Err(message),
         }
     }
 }
