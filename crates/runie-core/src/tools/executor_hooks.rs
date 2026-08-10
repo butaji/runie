@@ -1,0 +1,40 @@
+use super::AfterToolCallInputs;
+use crate::tools::policy::ApprovalMode;
+use crate::types::{BeforeToolCallContext, BeforeToolCallResult};
+use std::{future::Future, pin::Pin, sync::Arc};
+
+#[derive(Default, Clone)]
+pub struct ToolExecHooks {
+    pub approval_mode: ApprovalMode,
+    pub before_tool_call: Option<BeforeToolCallHook>,
+    pub after_tool_call: Option<AfterToolCallHook>,
+    pub ask_user_question: Option<AskUserQuestionHook>,
+    pub subagent: Option<SubagentHook>,
+}
+
+pub type BeforeToolCallHook = Arc<
+    dyn Fn(BeforeToolCallContext) -> Pin<Box<dyn Future<Output = BeforeToolCallResult> + Send>>
+        + Send
+        + Sync,
+>;
+pub type AfterToolCallHook = Arc<
+    dyn Fn(
+            AfterToolCallInputs,
+        ) -> Pin<Box<dyn Future<Output = crate::types::AfterToolCallResult> + Send>>
+        + Send
+        + Sync,
+>;
+pub type AskUserQuestionHook = Arc<
+    dyn Fn(
+            crate::tools::UserQuestionRequest,
+        ) -> Pin<Box<dyn Future<Output = Result<serde_json::Value, String>> + Send>>
+        + Send
+        + Sync,
+>;
+pub type SubagentHook = Arc<
+    dyn Fn(
+            crate::tools::SubagentRequest,
+        ) -> Pin<Box<dyn Future<Output = Result<serde_json::Value, String>> + Send>>
+        + Send
+        + Sync,
+>;

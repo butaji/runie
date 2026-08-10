@@ -4,19 +4,15 @@
 //! the supplied sink. In parallel mode, completion-order and source-order
 //! are separated per the TS README §With Tool Calls.
 
-use std::{
-    future::Future,
-    pin::Pin,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
 };
 
 use futures::StreamExt;
 
 use super::{
-    policy::{decide, ApprovalDecision, ApprovalMode},
+    policy::{decide, ApprovalDecision},
     registry::ToolRegistry,
 };
 use crate::types::{
@@ -24,36 +20,9 @@ use crate::types::{
     ToolCall, ToolResultContent, ToolResultMessage,
 };
 
-/// Hooks applied during tool dispatch. `None` for any field means "use
-/// default (allow / no override)".
-#[derive(Default, Clone)]
-pub struct ToolExecHooks {
-    pub approval_mode: ApprovalMode,
-    pub before_tool_call: Option<BeforeToolCallHook>,
-    pub after_tool_call: Option<AfterToolCallHook>,
-    pub ask_user_question: Option<AskUserQuestionHook>,
-}
-
-pub type AskUserQuestionHook = Arc<
-    dyn Fn(
-            crate::tools::UserQuestionRequest,
-        ) -> Pin<Box<dyn Future<Output = Result<serde_json::Value, String>> + Send>>
-        + Send
-        + Sync,
->;
-
-pub type BeforeToolCallHook = Arc<
-    dyn Fn(BeforeToolCallContext) -> Pin<Box<dyn Future<Output = BeforeToolCallResult> + Send>>
-        + Send
-        + Sync,
->;
-pub type AfterToolCallHook = Arc<
-    dyn Fn(
-            AfterToolCallInputs,
-        ) -> Pin<Box<dyn Future<Output = crate::types::AfterToolCallResult> + Send>>
-        + Send
-        + Sync,
->;
+#[path = "executor_hooks.rs"]
+mod executor_hooks;
+pub use executor_hooks::*;
 
 #[derive(Clone)]
 pub struct AfterToolCallInputs {
@@ -439,6 +408,9 @@ async fn execute_tool(
     ctx: &ToolExecContext,
     signal: tokio_util::sync::CancellationToken,
 ) -> Result<AgentToolResult, String> {
+    if call.name == "subagent" {
+        return execute_subagent(call, ctx).await;
+    }
     if call.name == "ask_user_question" {
         return execute_question(call, ctx).await;
     }
@@ -453,6 +425,18 @@ async fn execute_tool(
     let result = await_tool_result(tool_future, ctx.abort.clone(), signal.clone()).await;
     settled.store(true, Ordering::Release);
     result
+}
+
+async fn execute_subagent(
+    call: &ToolCall,
+    ctx: &ToolExecContext,
+) -> Result<AgentToolResult, String> {
+    let Some(hook) = &ctx.hooks.subagent else {
+        return Err("subagent requires an owning subagent hook".into());
+    };
+    let request = serde_json::from_value(call.arguments.clone())
+        .map_err(|error| format!("invalid subagent request: {error}"))?;
+    Ok(crate::tools::subagent::result(hook(request).await?))
 }
 
 fn tool_update_callback(
