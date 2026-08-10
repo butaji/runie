@@ -22,7 +22,7 @@ evidence prove the item.
 16. `harness-16-media` — image/video input and capability-aware tool exposure.
 17. `harness-17-ide` — ACP or equivalent IDE protocol.
 18. `harness-18-noninteractive` — JSON/JSONL, CI behavior, approvals, and exit codes.
-19. `harness-19-diagnostics` — doctor, tracing, usage, export bundles, and visualization.
+19. `harness-19-diagnostics` — **partial** — actor-owned `/doctor` now projects a serializable report with explicit checks and fix intent; tracing, usage, export bundles, and visualization remain.
 20. `harness-20-tui-polish` — searchable selectors, approvals, tasks, tool cards, and keyboard UX.
 
 Existing foundations are not duplicated here: actors/events, provider registry,

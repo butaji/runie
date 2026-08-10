@@ -18,6 +18,26 @@ pub enum ApprovalMode {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct DiagnosticReport {
+    pub fix_requested: bool,
+    pub checks: Vec<String>,
+}
+
+impl DiagnosticReport {
+    pub fn summary(&self) -> String {
+        format!(
+            "{} ({} checks)",
+            if self.fix_requested {
+                "fix requested"
+            } else {
+                "diagnostic requested"
+            },
+            self.checks.len()
+        )
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct CommandState {
     pub last_command: Option<String>,
     pub invocation_count: u64,
@@ -45,6 +65,8 @@ pub struct CommandState {
     pub usage_requests: u64,
     pub reload_count: u64,
     pub last_diagnostic: Option<String>,
+    #[serde(default)]
+    pub diagnostic_report: Option<DiagnosticReport>,
 }
 
 enum CommandMessage {
@@ -145,14 +167,12 @@ fn reduce_command(state: &mut CommandState, name: &str, args: &str) {
         "plugins" => state.plugins_loaded = true,
         "mcps" => state.mcps_loaded = true,
         "doctor" => {
-            state.last_diagnostic = Some(
-                if args == "fix" {
-                    "fix requested"
-                } else {
-                    "diagnostic requested"
-                }
-                .into(),
-            )
+            let report = DiagnosticReport {
+                fix_requested: args == "fix",
+                checks: vec!["workspace".into(), "provider".into(), "session".into()],
+            };
+            state.last_diagnostic = Some(report.summary());
+            state.diagnostic_report = Some(report);
         }
         _ => {}
     }
@@ -258,5 +278,19 @@ mod tests {
         assert_eq!(state.shared_sessions, 1);
         assert_eq!(state.feedback, vec!["needs clearer output"]);
         assert_eq!(state.transcript_queries, vec!["provider"]);
+    }
+
+    #[tokio::test]
+    async fn doctor_projects_a_replayable_report() {
+        let actor = CommandActor::new();
+        actor.invoke("doctor", "fix").await;
+        let state = actor.snapshot();
+        let report = state.diagnostic_report.expect("diagnostic report");
+        assert!(report.fix_requested);
+        assert_eq!(report.checks, ["workspace", "provider", "session"]);
+        assert_eq!(
+            state.last_diagnostic.as_deref(),
+            Some("fix requested (3 checks)")
+        );
     }
 }
