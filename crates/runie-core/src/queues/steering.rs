@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use tokio::sync::{mpsc, Notify};
+use tokio::sync::{mpsc, watch, Notify};
 
 use crate::task_owner::{mailbox_call, spawn_actor_worker, TaskOwner};
 use crate::types::AgentMessage;
@@ -28,21 +28,20 @@ enum SteeringCommand {
 pub struct SteeringQueueActor {
     tx: mpsc::Sender<SteeringCommand>,
     notify: Arc<Notify>,
+    snapshot: watch::Receiver<SteeringQueueSnapshot>,
+    shared_snapshot: watch::Receiver<crate::SharedSnapshot<SteeringQueueSnapshot>>,
     _worker: Arc<TaskOwner>,
 }
 
 impl SteeringQueueActor {
     pub fn new() -> Self {
-        let notify = Arc::new(Notify::new());
-
-        // OWNER: SteeringQueueActor
-        let (tx, worker) = spawn_actor_worker!(64, move |rx| async move {
-            run_steering_worker(rx).await;
-        });
+        let (tx, snapshot, shared_snapshot, worker) = spawn_steering_runtime();
 
         Self {
             tx,
-            notify,
+            notify: Arc::new(Notify::new()),
+            snapshot,
+            shared_snapshot,
             _worker: worker,
         }
     }
@@ -80,6 +79,28 @@ impl SteeringQueueActor {
     pub fn notifier(&self) -> Arc<Notify> {
         self.notify.clone()
     }
+
+    pub fn snapshot(&self) -> SteeringQueueSnapshot {
+        self.snapshot.borrow().clone()
+    }
+    pub fn shared_snapshot(&self) -> crate::SharedSnapshot<SteeringQueueSnapshot> {
+        self.shared_snapshot.borrow().clone()
+    }
+}
+
+fn spawn_steering_runtime() -> (
+    mpsc::Sender<SteeringCommand>,
+    watch::Receiver<SteeringQueueSnapshot>,
+    watch::Receiver<crate::SharedSnapshot<SteeringQueueSnapshot>>,
+    Arc<TaskOwner>,
+) {
+    let initial = SteeringQueueSnapshot::default();
+    let (snapshot_tx, snapshot) = watch::channel(initial.clone());
+    let (shared_tx, shared_snapshot) = watch::channel(crate::SharedSnapshot::new(initial));
+    let (tx, worker) = spawn_actor_worker!(64, move |rx| async move {
+        run_steering_worker(rx, snapshot_tx, shared_tx).await;
+    });
+    (tx, snapshot, shared_snapshot, worker)
 }
 
 impl Default for SteeringQueueActor {
@@ -88,27 +109,25 @@ impl Default for SteeringQueueActor {
     }
 }
 
-async fn run_steering_worker(mut rx: mpsc::Receiver<SteeringCommand>) {
+async fn run_steering_worker(
+    mut rx: mpsc::Receiver<SteeringCommand>,
+    snapshot_tx: watch::Sender<SteeringQueueSnapshot>,
+    shared_tx: watch::Sender<crate::SharedSnapshot<SteeringQueueSnapshot>>,
+) {
     let mut queue: Vec<(String, AgentMessage)> = Vec::new();
     let mut next_id = 1_u64;
-
     while let Some(cmd) = rx.recv().await {
         match cmd {
             SteeringCommand::Push(msg, reply) => {
-                let id = format!("steer-{next_id}");
-                next_id += 1;
+                let id = next_steering_id(&mut next_id);
                 queue.push((id.clone(), *msg));
                 let _ = reply.send(id).await;
+                publish(&snapshot_tx, &shared_tx, queue.len());
             }
             SteeringCommand::DrainOne(reply) => {
-                // `Vec::drain(..1)` panics when the queue is empty, so
-                // explicitly pop when there's at least one item.
-                let popped = if queue.is_empty() {
-                    None
-                } else {
-                    Some(queue.remove(0).1)
-                };
+                let popped = queue.first().is_some().then(|| queue.remove(0).1);
                 let _ = reply.send(popped).await;
+                publish(&snapshot_tx, &shared_tx, queue.len());
             }
             SteeringCommand::DrainAll(reply) => {
                 let drained = std::mem::take(&mut queue)
@@ -116,17 +135,40 @@ async fn run_steering_worker(mut rx: mpsc::Receiver<SteeringCommand>) {
                     .map(|(_, message)| message)
                     .collect();
                 let _ = reply.send(drained).await;
+                publish(&snapshot_tx, &shared_tx, queue.len());
             }
             SteeringCommand::Clear(reply) => {
                 let ids = queue.iter().map(|(id, _)| id.clone()).collect();
                 queue.clear();
                 let _ = reply.send(ids).await;
+                publish(&snapshot_tx, &shared_tx, queue.len());
             }
             SteeringCommand::Len(reply) => {
                 let _ = reply.send(queue.len()).await;
             }
         }
     }
+}
+
+fn next_steering_id(next_id: &mut u64) -> String {
+    let id = format!("steer-{next_id}");
+    *next_id += 1;
+    id
+}
+
+fn publish(
+    tx: &watch::Sender<SteeringQueueSnapshot>,
+    shared: &watch::Sender<crate::SharedSnapshot<SteeringQueueSnapshot>>,
+    len: usize,
+) {
+    crate::publish_shared_snapshot(
+        tx,
+        shared,
+        SteeringQueueSnapshot {
+            len,
+            is_empty: len == 0,
+        },
+    );
 }
 
 #[cfg(test)]
@@ -173,5 +215,16 @@ mod tests {
         assert!(!q.is_empty().await);
         q.clear().await;
         assert!(q.is_empty().await);
+    }
+
+    #[tokio::test]
+    async fn snapshot_tracks_push_and_drain_as_shared_data() {
+        let q = SteeringQueueActor::new();
+        q.push(msg(1)).await;
+        assert_eq!(q.snapshot().len, 1);
+        assert!(!q.shared_snapshot().get().is_empty);
+        q.drain_one().await;
+        assert_eq!(q.shared_snapshot().get().len, 0);
+        assert_eq!(q.shared_snapshot().strong_count(), 2);
     }
 }

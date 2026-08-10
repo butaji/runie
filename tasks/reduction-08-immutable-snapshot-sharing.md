@@ -61,3 +61,5 @@ reducer-owned data boundary.
 `FollowUpQueueActor` now publishes its previously unused queue snapshot as both
 an owned compatibility view and immutable shared projection, with push/drain/
 clear transitions reducing through one queue-owned publication boundary.
+`SteeringQueueActor` now follows the same queue snapshot contract, keeping both
+interactive queue state machines symmetric and renderer-independent.
