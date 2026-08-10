@@ -2,7 +2,7 @@
 //! stay at the application boundary; this module only validates and stores
 //! declarative extension metadata.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -86,6 +86,44 @@ pub fn discover_packages(root: impl AsRef<Path>) -> Result<Vec<PluginPackage>, S
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct PluginRegistry {
     manifests: BTreeMap<String, PluginManifest>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum PluginLifecycleEvent {
+    Activated { name: String },
+    Deactivated { name: String },
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct PluginRuntimeSnapshot {
+    pub active: BTreeSet<String>,
+}
+
+/// Pure plugin lifecycle reducer. Loading, hook execution, and unloading are
+/// host concerns; this projection makes activation state replayable and
+/// rejects events for unknown or already-settled plugins.
+pub fn reduce_plugin_lifecycle(
+    registry: &PluginRegistry,
+    snapshot: &mut PluginRuntimeSnapshot,
+    event: PluginLifecycleEvent,
+) -> Result<(), String> {
+    let name = match &event {
+        PluginLifecycleEvent::Activated { name } | PluginLifecycleEvent::Deactivated { name } => {
+            name
+        }
+    };
+    if registry.get(name).is_none() {
+        return Err(format!("plugin is not registered: {name}"));
+    }
+    match event {
+        PluginLifecycleEvent::Activated { name } if !snapshot.active.insert(name.clone()) => {
+            Err(format!("plugin is already active: {name}"))
+        }
+        PluginLifecycleEvent::Deactivated { name } if !snapshot.active.remove(&name) => {
+            Err(format!("plugin is not active: {name}"))
+        }
+        _ => Ok(()),
+    }
 }
 
 impl PluginRegistry {
@@ -194,5 +232,37 @@ mod tests {
             ["alpha", "zeta"]
         );
         std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn lifecycle_replay_is_deterministic_and_validated() {
+        let mut registry = PluginRegistry::default();
+        registry.register(manifest()).unwrap();
+        let mut state = PluginRuntimeSnapshot::default();
+        reduce_plugin_lifecycle(
+            &registry,
+            &mut state,
+            PluginLifecycleEvent::Activated {
+                name: "sample-plugin".into(),
+            },
+        )
+        .unwrap();
+        assert!(reduce_plugin_lifecycle(
+            &registry,
+            &mut state,
+            PluginLifecycleEvent::Activated {
+                name: "sample-plugin".into(),
+            },
+        )
+        .is_err());
+        reduce_plugin_lifecycle(
+            &registry,
+            &mut state,
+            PluginLifecycleEvent::Deactivated {
+                name: "sample-plugin".into(),
+            },
+        )
+        .unwrap();
+        assert!(state.active.is_empty());
     }
 }
