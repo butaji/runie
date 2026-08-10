@@ -34,6 +34,13 @@ pub struct McpNotificationQueue {
     pub dropped: usize,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum McpNotificationQueueEvent {
+    Push(serde_json::Value),
+    Pop,
+    Clear,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum McpBackpressureStatus {
@@ -52,15 +59,33 @@ impl McpNotificationQueue {
     }
 
     pub fn push(&mut self, notification: serde_json::Value) {
-        if self.pending.len() >= self.capacity {
-            self.dropped = self.dropped.saturating_add(1);
-            return;
+        self.apply(McpNotificationQueueEvent::Push(notification));
+    }
+
+    pub fn apply(&mut self, event: McpNotificationQueueEvent) -> Option<serde_json::Value> {
+        match event {
+            McpNotificationQueueEvent::Push(notification) => {
+                if self.pending.len() >= self.capacity {
+                    self.dropped = self.dropped.saturating_add(1);
+                } else {
+                    self.pending.push_back(notification);
+                }
+                None
+            }
+            McpNotificationQueueEvent::Pop => self.pending.pop_front(),
+            McpNotificationQueueEvent::Clear => {
+                self.pending.clear();
+                None
+            }
         }
-        self.pending.push_back(notification);
+    }
+
+    pub fn clear(&mut self) {
+        self.apply(McpNotificationQueueEvent::Clear);
     }
 
     pub fn pop(&mut self) -> Option<serde_json::Value> {
-        self.pending.pop_front()
+        self.apply(McpNotificationQueueEvent::Pop)
     }
 
     pub fn backpressure(&self) -> McpBackpressureStatus {
@@ -356,6 +381,20 @@ mod tests {
         assert_eq!(queue.pop().unwrap()["n"], 2);
         assert!(queue.pop().is_none());
         assert_eq!(serde_json::to_value(&queue).unwrap()["capacity"], 2);
+    }
+
+    #[test]
+    fn notification_queue_events_replay_clear_as_data() {
+        let mut queue = McpNotificationQueue::new(2);
+        for event in [
+            McpNotificationQueueEvent::Push(serde_json::json!({"n": 1})),
+            McpNotificationQueueEvent::Push(serde_json::json!({"n": 2})),
+            McpNotificationQueueEvent::Clear,
+        ] {
+            queue.apply(event);
+        }
+        assert!(queue.pending.is_empty());
+        assert_eq!(queue.dropped, 0);
     }
 
     #[test]
