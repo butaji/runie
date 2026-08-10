@@ -275,6 +275,7 @@ async fn abort_cancels_in_flight_tool_and_emits_error_result() {
         tool_result_timestamp: 0,
         registry: Arc::new(registry),
         hooks: ToolExecHooks {
+            approval_mode: crate::tools::ApprovalMode::Auto,
             after_tool_call: Some(Arc::new(|input| {
                 Box::pin(async move {
                     assert!(input.is_error);

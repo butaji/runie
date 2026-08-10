@@ -1,8 +1,5 @@
 //! Sequential and parallel tool dispatch.
-use super::{
-    policy::{decide, ApprovalDecision},
-    registry::ToolRegistry,
-};
+use super::{policy::ApprovalDecision, registry::ToolRegistry};
 use crate::types::{
     AgentContext, AgentToolResult, AssistantMessage, BeforeToolCallContext, BeforeToolCallResult,
     ToolCall, ToolResultContent, ToolResultMessage,
@@ -29,7 +26,6 @@ pub struct AfterToolCallInputs {
     pub context: crate::types::AgentContext,
     pub signal: tokio_util::sync::CancellationToken,
 }
-
 #[derive(Clone)]
 pub struct ToolExecContext {
     pub assistant_message: AssistantMessage,
@@ -81,7 +77,6 @@ pub async fn execute_sequential(calls: Vec<ToolCall>, ctx: ToolExecContext) -> D
 
     outcome
 }
-
 fn tool_start(call: &ToolCall) -> crate::types::AgentEvent {
     crate::types::AgentEvent::ToolExecutionStart {
         tool_call_id: call.id.clone(),
@@ -89,7 +84,6 @@ fn tool_start(call: &ToolCall) -> crate::types::AgentEvent {
         args: call.arguments.clone(),
     }
 }
-
 fn tool_end(call: &ToolCall, result: &AgentToolResult, is_error: bool) -> crate::types::AgentEvent {
     crate::types::AgentEvent::ToolExecutionEnd {
         tool_call_id: call.id.clone(),
@@ -135,7 +129,6 @@ pub async fn execute_parallel(calls: Vec<ToolCall>, ctx: ToolExecContext) -> Dis
 }
 async fn execute_parallel_batch(calls: Vec<ToolCall>, ctx: &ToolExecContext) -> DispatchOutcome {
     let (preflighted, mut outcome, had_invalid) = preflight_calls(calls, &ctx);
-
     if preflighted.is_empty() {
         outcome.all_terminated = !had_invalid;
         return outcome;
@@ -144,7 +137,6 @@ async fn execute_parallel_batch(calls: Vec<ToolCall>, ctx: &ToolExecContext) -> 
     outcome.events.extend(preflighted.iter().map(tool_start));
     let (completion_events, mut by_id) = run_parallel_calls(&preflighted, &ctx).await;
     outcome.events.extend(completion_events);
-
     // Emit toolResult messages in source order.
     let mut all_terminated = !by_id.is_empty();
     for call in &preflighted {
@@ -327,7 +319,7 @@ async fn run_before_tool_gate(
     ctx: &ToolExecContext,
     signal: tokio_util::sync::CancellationToken,
 ) -> Result<(), String> {
-    if let ApprovalDecision::Ask { reason } = decide(ctx.hooks.approval_mode, &call.name) {
+    if let ApprovalDecision::Ask { reason } = approval_decision(ctx, call) {
         let interactive = ctx.hooks.before_tool_call.is_some();
         if !interactive {
             return Err(format!("Approval required for {}: {reason}", call.name));
@@ -359,6 +351,14 @@ async fn run_before_tool_gate(
             .unwrap_or_else(|| "Tool execution was blocked".into()));
     }
     Ok(())
+}
+
+fn approval_decision(ctx: &ToolExecContext, call: &ToolCall) -> ApprovalDecision {
+    crate::tools::policy::decide_registered(
+        ctx.hooks.approval_mode,
+        &call.name,
+        ctx.registry.lookup(&call.name).is_some(),
+    )
 }
 
 fn run_abort_requested(ctx: &ToolExecContext) -> bool {

@@ -44,8 +44,8 @@ pub use mcp::{
     McpTool, McpToolSpec,
 };
 pub use policy::{
-    decide as approval_decision, record_approval_trace, ApprovalDecision, ApprovalMode,
-    ApprovalModeStore, ApprovalTrace,
+    decide as approval_decision, decide_registered, record_approval_trace, ApprovalDecision,
+    ApprovalMode, ApprovalModeStore, ApprovalTrace,
 };
 pub use question_broker::{
     decode_question_traces, encode_question_traces, question_history_rows,

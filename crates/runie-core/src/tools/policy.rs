@@ -68,21 +68,15 @@ pub fn record_approval_trace(traces: &mut Vec<ApprovalTrace>, trace: ApprovalTra
 }
 
 pub fn decide(mode: ApprovalMode, tool: &str) -> ApprovalDecision {
+    decide_registered(mode, tool, false)
+}
+
+pub fn decide_registered(mode: ApprovalMode, tool: &str, registered: bool) -> ApprovalDecision {
     if matches!(mode, ApprovalMode::Auto | ApprovalMode::Yolo)
         || matches!(tool, "read" | "grep" | "glob" | "list_dir" | "echo")
-        || !matches!(
-            tool,
-            "write"
-                | "edit"
-                | "bash"
-                | "shell"
-                | "exec"
-                | "run"
-                | "git_commit"
-                | "git_push"
-                | "git_revert"
-        )
     {
+        ApprovalDecision::Allow
+    } else if registered && mode != ApprovalMode::Deny {
         ApprovalDecision::Allow
     } else if mode == ApprovalMode::Deny {
         ApprovalDecision::Deny {
@@ -90,7 +84,25 @@ pub fn decide(mode: ApprovalMode, tool: &str) -> ApprovalDecision {
         }
     } else {
         ApprovalDecision::Ask {
-            reason: "This tool can change files or execute a process".into(),
+            reason: if matches!(
+                tool,
+                "write"
+                    | "edit"
+                    | "bash"
+                    | "shell"
+                    | "exec"
+                    | "run"
+                    | "git_commit"
+                    | "git_push"
+                    | "git_revert"
+            ) {
+                "This tool can change files or execute a process"
+            } else if registered {
+                "This registered tool can change files or execute a process"
+            } else {
+                "This tool is not in the trusted tool policy"
+            }
+            .into(),
         }
     }
 }
@@ -127,6 +139,22 @@ mod tests {
             decide(ApprovalMode::Deny, "bash"),
             ApprovalDecision::Deny { .. }
         ));
+    }
+
+    #[test]
+    fn unknown_tools_require_explicit_approval() {
+        assert!(matches!(
+            decide(ApprovalMode::Ask, "plugin__demo__inspect"),
+            ApprovalDecision::Ask { reason } if reason.contains("trusted")
+        ));
+    }
+
+    #[test]
+    fn registered_tools_keep_their_explicit_mutation_classification() {
+        assert_eq!(
+            decide_registered(ApprovalMode::Ask, "plugin__demo__inspect", true),
+            ApprovalDecision::Allow
+        );
     }
 
     #[test]
