@@ -35,6 +35,7 @@ pub mod types;
 pub mod events;
 pub mod r#loop;
 pub mod pi_event;
+pub mod plugins;
 pub mod provider;
 pub mod provider_registry;
 pub mod queues;
