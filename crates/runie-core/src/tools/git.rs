@@ -11,12 +11,19 @@ git_tool_types!(
     GitReviewTool,
     GitWorktreeTool,
     GitCommitPrepareTool,
-    GitCommitTool
+    GitCommitTool,
+    GitPushTool
 );
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct GitCommitPrepareRequest {
     pub message: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct GitPushRequest {
+    pub remote: String,
+    pub reference: String,
 }
 
 #[async_trait::async_trait]
@@ -273,6 +280,58 @@ impl AgentTool for GitCommitTool {
     }
 }
 
+#[async_trait::async_trait]
+impl AgentTool for GitPushTool {
+    fn name(&self) -> &str {
+        "git_push"
+    }
+    fn label(&self) -> &str {
+        "Push Git ref"
+    }
+    fn description(&self) -> &str {
+        "Push an explicit Git ref after approval allows this mutation."
+    }
+    fn resource_key(&self, _args: &serde_json::Value) -> Option<String> {
+        Some("git:remote".into())
+    }
+    fn parameters(&self) -> Option<serde_json::Value> {
+        Some(
+            serde_json::json!({"type":"object","properties":{"remote":{"type":"string","minLength":1},"reference":{"type":"string","minLength":1}},"required":["remote","reference"]}),
+        )
+    }
+    fn validate_arguments(&self, args: &serde_json::Value) -> Result<(), String> {
+        let request: GitPushRequest = serde_json::from_value(args.clone())
+            .map_err(|error| format!("invalid Git push: {error}"))?;
+        validate_git_token("remote", &request.remote)?;
+        validate_git_token("reference", &request.reference)
+    }
+    async fn execute(
+        &self,
+        _: &str,
+        args: serde_json::Value,
+        signal: Option<tokio_util::sync::CancellationToken>,
+        _: Option<Box<dyn Fn(serde_json::Value) + Send + Sync>>,
+    ) -> Result<AgentToolResult, String> {
+        self.validate_arguments(&args)?;
+        let request: GitPushRequest =
+            serde_json::from_value(args).map_err(|error| error.to_string())?;
+        let output = git_result(&["push", &request.remote, &request.reference], signal).await?;
+        Ok(AgentToolResult {
+            details: serde_json::json!({"remote": request.remote, "reference": request.reference, "mutated": true, "output": output.details}),
+            ..output
+        })
+    }
+}
+
+fn validate_git_token(name: &str, value: &str) -> Result<(), String> {
+    if value.trim().is_empty() || value.chars().any(char::is_whitespace) || value.starts_with('-') {
+        return Err(format!(
+            "{name} must be a nonempty Git token without whitespace or a leading dash"
+        ));
+    }
+    Ok(())
+}
+
 async fn git_result(
     args: &[&str],
     signal: Option<tokio_util::sync::CancellationToken>,
@@ -379,6 +438,21 @@ mod tests {
             .is_ok());
         assert!(tool
             .validate_arguments(&serde_json::json!({"message":" "}))
+            .is_err());
+    }
+    #[test]
+    fn push_requires_explicit_safe_remote_and_reference() {
+        let tool = GitPushTool;
+        assert!(tool
+            .validate_arguments(&serde_json::json!({"remote":"origin","reference":"main"}))
+            .is_ok());
+        for value in ["", "origin main", "-origin"] {
+            assert!(tool
+                .validate_arguments(&serde_json::json!({"remote":value,"reference":"main"}))
+                .is_err());
+        }
+        assert!(tool
+            .validate_arguments(&serde_json::json!({"remote":"origin","reference":"main branch"}))
             .is_err());
     }
 }

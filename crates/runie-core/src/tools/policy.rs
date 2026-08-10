@@ -44,7 +44,7 @@ pub fn decide(mode: ApprovalMode, tool: &str) -> ApprovalDecision {
         || matches!(tool, "read" | "grep" | "glob" | "list_dir" | "echo")
         || !matches!(
             tool,
-            "write" | "edit" | "bash" | "shell" | "exec" | "run" | "git_commit"
+            "write" | "edit" | "bash" | "shell" | "exec" | "run" | "git_commit" | "git_push"
         )
     {
         ApprovalDecision::Allow

@@ -31,8 +31,8 @@ pub use background::{
 };
 pub use executor::{execute_parallel, execute_sequential, ToolExecContext, ToolExecHooks};
 pub use git::{
-    GitCommitPrepareRequest, GitCommitPrepareTool, GitCommitTool, GitDiffTool, GitReviewTool,
-    GitStatusTool, GitWorktreeTool,
+    GitCommitPrepareRequest, GitCommitPrepareTool, GitCommitTool, GitDiffTool, GitPushRequest,
+    GitPushTool, GitReviewTool, GitStatusTool, GitWorktreeTool,
 };
 pub use mcp::{
     McpCallHook, McpCallRequest, McpHttpClient, McpServer, McpStdioClient, McpTool, McpToolSpec,
