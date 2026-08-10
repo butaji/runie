@@ -120,3 +120,11 @@ fn conflict_recovery_plan_is_data_only_and_deterministic() {
         .actions
         .is_empty());
 }
+
+#[test]
+fn conflict_recovery_plan_admits_only_known_actions_and_paths() {
+    let plan = plan_conflict_recovery(&classify_conflicts("UU src/main.rs\n"));
+    assert!(plan.admits(&GitConflictAction::Inspect, Some("src/main.rs")));
+    assert!(plan.admits(&GitConflictAction::Abort, None));
+    assert!(!plan.admits(&GitConflictAction::Inspect, Some("other.rs")));
+}

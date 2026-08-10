@@ -18,6 +18,15 @@ pub struct GitConflictRecoveryPlan {
     pub actions: Vec<GitConflictAction>,
 }
 
+impl GitConflictRecoveryPlan {
+    pub fn admits(&self, action: &GitConflictAction, path: Option<&str>) -> bool {
+        if !self.actions.contains(action) {
+            return false;
+        }
+        path.is_none_or(|path| self.paths.iter().any(|candidate| candidate == path))
+    }
+}
+
 pub fn classify_conflicts(status: &str) -> GitConflictSummary {
     let conflicted_paths = status
         .lines()
