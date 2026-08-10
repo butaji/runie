@@ -1,6 +1,8 @@
 use super::{MCP_HTTP_MAX_RESPONSE_BYTES, MCP_MAX_STREAM_EVENTS};
 use std::collections::BTreeMap;
 
+const MAX_MCP_STREAM_NOTIFICATIONS: usize = 4_096;
+
 /// One server-sent MCP event. The JSON-RPC envelope remains data so callers
 /// can project responses, notifications, and errors without losing fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -61,6 +63,12 @@ pub fn reduce_mcp_stream_event(
         };
         snapshot.responses.insert(key, event.data.clone());
     } else if object.get("method").is_some() {
+        if snapshot.notifications.len() >= MAX_MCP_STREAM_NOTIFICATIONS {
+            return Err(format!(
+                "MCP notification projection exceeds {} entries",
+                MAX_MCP_STREAM_NOTIFICATIONS
+            ));
+        }
         snapshot.notifications.push(event.data.clone());
     } else {
         return Err("MCP stream envelope needs an id or method".into());
@@ -181,5 +189,21 @@ mod tests {
         assert_eq!(policy.delay_ms(1), Some(500));
         assert_eq!(policy.delay_ms(2), Some(1_000));
         assert_eq!(policy.delay_ms(3), None);
+    }
+
+    #[test]
+    fn notification_projection_has_a_replayable_bound() {
+        let mut snapshot = McpStreamSnapshot {
+            notifications: vec![
+                serde_json::json!({"method": "notice"});
+                MAX_MCP_STREAM_NOTIFICATIONS
+            ],
+            ..McpStreamSnapshot::default()
+        };
+        let event = McpStreamEvent {
+            event: None,
+            data: serde_json::json!({"method": "notice"}),
+        };
+        assert!(reduce_mcp_stream_event(&mut snapshot, &event).is_err());
     }
 }
