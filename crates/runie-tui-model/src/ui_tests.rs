@@ -182,9 +182,25 @@ fn enter_on_model_selection_applies_and_pops_the_model_dialog() {
 }
 
 #[test]
-#[allow(clippy::too_many_lines)]
 fn every_parameterized_palette_action_completes_shared_form_flow() {
-    let actions = [
+    for action in parameterized_palette_actions() {
+        let state = UiState::new()
+            .update(UiMsg::OpenPaletteParameters(action.clone()))
+            .update(UiMsg::PaletteParameterChar('x'))
+            .update(UiMsg::PaletteParameterSubmit);
+        assert!(
+            state.dialog_stack.is_empty(),
+            "{action:?} left a dialog open"
+        );
+        assert!(
+            state.palette_parameter_action.is_none(),
+            "{action:?} left form state behind"
+        );
+    }
+}
+
+fn parameterized_palette_actions() -> Vec<PaletteAction> {
+    vec![
         PaletteAction::SetSessionName,
         PaletteAction::CompactContext,
         PaletteAction::ForkSession,
@@ -214,21 +230,7 @@ fn every_parameterized_palette_action_completes_shared_form_flow() {
         PaletteAction::DeepResearch,
         PaletteAction::Feedback,
         PaletteAction::Usage,
-    ];
-    for action in actions {
-        let state = UiState::new()
-            .update(UiMsg::OpenPaletteParameters(action.clone()))
-            .update(UiMsg::PaletteParameterChar('x'))
-            .update(UiMsg::PaletteParameterSubmit);
-        assert!(
-            state.dialog_stack.is_empty(),
-            "{action:?} left a dialog open"
-        );
-        assert!(
-            state.palette_parameter_action.is_none(),
-            "{action:?} left form state behind"
-        );
-    }
+    ]
 }
 
 #[test]

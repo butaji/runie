@@ -1,28 +1,19 @@
 //! Actor-owned status projection.
 
-use std::sync::Arc;
-
 use runie_core::types::AgentEvent;
-use runie_core::{
-    mailbox_ack, mailbox_batch_ack, spawn_actor_worker, spawn_owned_worker, task_owner::TaskOwner,
-};
-use tokio::sync::{mpsc, oneshot, watch};
+use runie_core::{declare_reducer_actor, spawn_owned_worker, task_owner::TaskOwner};
+use tokio::sync::watch;
 
 use crate::widgets::{Status, StatusBar, StatusMsg, StatusSnapshot};
-use runie_tui_model::status_messages_for_event;
+use runie_tui_model::project_event;
 
-enum Command {
-    Apply(StatusMsg, oneshot::Sender<()>),
-    ApplyBatch(Vec<StatusMsg>, oneshot::Sender<()>),
-}
+declare_reducer_actor!(StatusReducer, StatusSnapshot, StatusMsg);
 
 /// Handle to the single owner of the status projection.
 #[derive(Clone)]
 pub struct StatusActor {
-    tx: mpsc::Sender<Command>,
-    snapshot: watch::Receiver<StatusSnapshot>,
-    _owner: Arc<TaskOwner>,
-    _bus_owner: Option<Arc<TaskOwner>>,
+    reducer: StatusReducer,
+    _bus_owner: Option<std::sync::Arc<TaskOwner>>,
 }
 
 impl StatusActor {
@@ -32,25 +23,11 @@ impl StatusActor {
             ..StatusSnapshot::default()
         };
         let elapsed_seed = crate::clock::parity_elapsed_ticks();
-        let (snapshot_tx, snapshot) = watch::channel(initial.clone());
-        let (tx, owner) = spawn_actor_worker!(16, |mut rx: mpsc::Receiver<Command>| async move {
-            let mut state = initial;
-            while let Some(command) = rx.recv().await {
-                let (messages, reply) = match command {
-                    Command::Apply(message, reply) => (vec![message], reply),
-                    Command::ApplyBatch(messages, reply) => (messages, reply),
-                };
-                for message in messages {
-                    state.apply(message, elapsed_seed);
-                }
-                let _ = snapshot_tx.send(state.clone());
-                let _ = reply.send(());
-            }
+        let reducer = StatusReducer::new(16, initial, move |state, message| {
+            state.apply(message, elapsed_seed)
         });
         Self {
-            tx,
-            snapshot,
-            _owner: owner,
+            reducer,
             _bus_owner: None,
         }
     }
@@ -61,7 +38,7 @@ impl StatusActor {
     pub fn new_with_bus(bus: &runie_core::events::EventBus) -> Self {
         let mut actor = Self::new();
         let mut events = bus.subscribe();
-        let tx = actor.tx.clone();
+        let reducer = actor.reducer.clone();
         actor._bus_owner = Some(spawn_owned_worker!(async move {
             loop {
                 let event = match events.recv().await {
@@ -70,20 +47,20 @@ impl StatusActor {
                         let messages = vec![StatusMsg::Set(Status::Error(format!(
                             "event stream lagged ({count} events)",
                         )))];
-                        if !mailbox_batch_ack!(tx, messages, |messages, reply| {
-                            Command::ApplyBatch(messages, reply)
-                        }) {
-                            break;
+                        for message in messages {
+                            if !reducer.apply(message).await {
+                                return;
+                            }
                         }
                         continue;
                     }
                     Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
                 };
-                let messages = status_messages_for_event(&event);
-                if !mailbox_batch_ack!(tx, messages, |messages, reply| {
-                    Command::ApplyBatch(messages, reply)
-                }) {
-                    break;
+                let messages = project_event(&event).status;
+                for message in messages {
+                    if !reducer.apply(message).await {
+                        return;
+                    }
                 }
             }
         }));
@@ -91,28 +68,36 @@ impl StatusActor {
     }
 
     pub async fn apply(&self, message: StatusMsg) {
-        let _ = mailbox_ack!(self.tx, |reply| Command::Apply(message, reply));
+        let _ = self.reducer.apply(message).await;
     }
 
     /// Apply all status-owned transitions represented by one core event.
     /// Unknown events are intentionally a no-op for this projection.
     pub async fn apply_event(&self, event: &AgentEvent) {
-        let messages = status_messages_for_event(event);
-        let _ = mailbox_batch_ack!(self.tx, messages, |messages, reply| {
-            Command::ApplyBatch(messages, reply)
-        });
+        let messages = project_event(event).status;
+        for message in messages {
+            let _ = self.reducer.apply(message).await;
+        }
     }
 
     pub fn snapshot(&self) -> StatusBar {
-        StatusBar::from_model_snapshot(self.snapshot.borrow().clone())
+        StatusBar::from_model_snapshot(self.reducer.snapshot())
     }
 
     pub fn model_snapshot(&self) -> StatusSnapshot {
-        self.snapshot.borrow().clone()
+        self.reducer.snapshot()
+    }
+
+    pub fn shared_model_snapshot(&self) -> runie_core::SharedSnapshot<StatusSnapshot> {
+        self.reducer.shared_snapshot()
+    }
+
+    pub fn shared_subscribe(&self) -> watch::Receiver<runie_core::SharedSnapshot<StatusSnapshot>> {
+        self.reducer.shared_subscribe()
     }
 
     pub fn subscribe(&self) -> watch::Receiver<StatusSnapshot> {
-        self.snapshot.clone()
+        self.reducer.subscribe()
     }
 }
 

@@ -47,10 +47,6 @@ fn discover_fixtures() -> Vec<PathBuf> {
 }
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 4)]
-#[allow(
-    clippy::too_many_lines,
-    reason = "the standalone E2E binary is a single deterministic scenario entrypoint"
-)]
 async fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let fixtures = if args.is_empty() {
@@ -64,9 +60,18 @@ async fn main() -> ExitCode {
         return ExitCode::from(2);
     }
 
+    let (passed, failed) = run_fixtures(fixtures).await;
+    println!("\n{passed} passed, {failed} failed");
+    if failed == 0 {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::from(1)
+    }
+}
+
+async fn run_fixtures(fixtures: Vec<PathBuf>) -> (usize, usize) {
     let mut passed = 0usize;
     let mut failed = 0usize;
-
     for path in fixtures {
         let scenario = match load_scenario(&path) {
             Ok(s) => s,
@@ -96,10 +101,5 @@ async fn main() -> ExitCode {
         }
     }
 
-    println!("\n{passed} passed, {failed} failed");
-    if failed == 0 {
-        ExitCode::SUCCESS
-    } else {
-        ExitCode::from(1)
-    }
+    (passed, failed)
 }

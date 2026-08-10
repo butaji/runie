@@ -296,152 +296,12 @@ fn prepare_and_validate(call: &ToolCall, ctx: &ToolExecContext) -> Result<ToolCa
     Ok(prepared)
 }
 
-fn coerce_json_schema(
-    schema: &serde_json::Value,
-    value: serde_json::Value,
-) -> Result<serde_json::Value, String> {
-    if let Some(value) = coerce_combinator(schema, value.clone())? {
-        return Ok(value);
-    }
-    let Some(kind) = schema.get("type").and_then(serde_json::Value::as_str) else {
-        return Ok(value);
-    };
-    match kind {
-        "object" => coerce_object(schema, value),
-        "array" => {
-            let serde_json::Value::Array(items) = value else {
-                return Err("root: expected array".into());
-            };
-            let item_schema = schema.get("items").unwrap_or(&serde_json::Value::Null);
-            items
-                .into_iter()
-                .enumerate()
-                .map(|(index, item)| {
-                    coerce_json_schema(item_schema, item)
-                        .map_err(|error| format!("{index}.{error}"))
-                })
-                .collect::<Result<Vec<_>, _>>()
-                .map(serde_json::Value::Array)
-        }
-        "string" | "number" | "integer" | "boolean" | "null" => coerce_scalar(kind, value),
-        _ => Ok(value),
-    }
-}
-
-fn coerce_combinator(
-    schema: &serde_json::Value,
-    value: serde_json::Value,
-) -> Result<Option<serde_json::Value>, String> {
-    if let Some(schemas) = schema.get("allOf").and_then(serde_json::Value::as_array) {
-        return schemas
-            .iter()
-            .try_fold(value, |value, schema| coerce_json_schema(schema, value))
-            .map(Some);
-    }
-    for keyword in ["anyOf", "oneOf"] {
-        let Some(schemas) = schema.get(keyword).and_then(serde_json::Value::as_array) else {
-            continue;
-        };
-        let matches = schemas
-            .iter()
-            .filter_map(|branch| coerce_json_schema(branch, value.clone()).ok())
-            .collect::<Vec<_>>();
-        if (keyword == "anyOf" && !matches.is_empty()) || (keyword == "oneOf" && matches.len() == 1)
-        {
-            return Ok(Some(
-                matches.into_iter().next().expect("schema match exists"),
-            ));
-        }
-        return Err(format!("root: does not match {keyword}"));
-    }
-    Ok(None)
-}
-
-fn coerce_scalar(kind: &str, value: serde_json::Value) -> Result<serde_json::Value, String> {
-    match kind {
-        "string" => Ok(serde_json::Value::String(match value {
-            serde_json::Value::String(text) => text,
-            serde_json::Value::Null => "null".into(),
-            other => other.to_string(),
-        })),
-        "number" | "integer" => coerce_number(kind, value),
-        "boolean" => coerce_boolean(value),
-        "null"
-            if matches!(
-                value,
-                serde_json::Value::Null | serde_json::Value::Bool(false)
-            ) || value.as_i64() == Some(0)
-                || value.as_str() == Some("") =>
-        {
-            Ok(serde_json::Value::Null)
-        }
-        "null" => Err("root: expected null".into()),
-        _ => Ok(value),
-    }
-}
-
-fn coerce_object(
-    schema: &serde_json::Value,
-    value: serde_json::Value,
-) -> Result<serde_json::Value, String> {
-    let serde_json::Value::Object(mut object) = value else {
-        return Err("root: expected object".into());
-    };
-    let properties = schema
-        .get("properties")
-        .and_then(serde_json::Value::as_object)
-        .cloned()
-        .unwrap_or_default();
-    for (name, property_schema) in properties {
-        if let Some(property) = object.remove(&name) {
-            object.insert(name, coerce_json_schema(&property_schema, property)?);
-        }
-    }
-    if let Some(required) = schema.get("required").and_then(serde_json::Value::as_array) {
-        for name in required.iter().filter_map(serde_json::Value::as_str) {
-            if !object.contains_key(name) {
-                return Err(format!("{name}: is required"));
-            }
-        }
-    }
-    Ok(serde_json::Value::Object(object))
-}
-
-fn coerce_number(kind: &str, value: serde_json::Value) -> Result<serde_json::Value, String> {
-    let number = match value {
-        serde_json::Value::Number(number) => number,
-        serde_json::Value::Bool(value) => serde_json::Number::from(if value { 1 } else { 0 }),
-        serde_json::Value::Null => serde_json::Number::from(0),
-        serde_json::Value::String(value) if kind == "integer" => value
-            .parse::<i64>()
-            .map(serde_json::Number::from)
-            .map_err(|_| "root: expected integer".to_string())?,
-        serde_json::Value::String(value) => value
-            .parse::<f64>()
-            .ok()
-            .and_then(serde_json::Number::from_f64)
-            .ok_or_else(|| format!("root: expected {kind}"))?,
-        _ => return Err(format!("root: expected {kind}")),
-    };
-    if kind == "integer" && number.as_i64().is_none() {
-        return Err("root: expected integer".into());
-    }
-    Ok(serde_json::Value::Number(number))
-}
-
-fn coerce_boolean(value: serde_json::Value) -> Result<serde_json::Value, String> {
-    let value = match value {
-        serde_json::Value::Bool(value) => value,
-        serde_json::Value::Null => false,
-        serde_json::Value::Number(value) => value != serde_json::Number::from(0),
-        serde_json::Value::String(value) if value.eq_ignore_ascii_case("true") => true,
-        serde_json::Value::String(value) if value.eq_ignore_ascii_case("false") => false,
-        _ => return Err("root: expected boolean".into()),
-    };
-    Ok(serde_json::Value::Bool(value))
-}
-
-/// Apply the tool's `prepareArguments`, replacing the args when changed.
+#[path = "executor_schema.rs"]
+mod executor_schema;
+use executor_schema::*;
+#[path = "executor_runtime.rs"]
+mod executor_runtime;
+use executor_runtime::*;
 fn prepared_call(call: &ToolCall, ctx: &ToolExecContext) -> ToolCall {
     if let Some(tool) = ctx.registry.lookup(&call.name) {
         if let Some(new_args) = tool.prepare_arguments(&call.arguments) {
@@ -480,30 +340,7 @@ async fn dispatch_prepared(
         signal.cancel();
     }
 
-    if let Some(ref hook) = ctx.hooks.before_tool_call {
-        let decision = run_before_tool_hook(
-            hook,
-            BeforeToolCallContext {
-                assistant_message: ctx.assistant_message.clone(),
-                tool_call: call.clone(),
-                args: call.arguments.clone(),
-                context: ctx.context.clone(),
-                signal: signal.clone(),
-            },
-            signal.clone(),
-            ctx.abort.clone(),
-        )
-        .await;
-        if signal.is_cancelled() || run_abort_requested(ctx) {
-            signal.cancel();
-            return Err("Operation aborted".into());
-        }
-        if decision.block {
-            return Err(decision
-                .reason
-                .unwrap_or_else(|| "Tool execution was blocked".into()));
-        }
-    }
+    run_before_tool_gate(call, ctx, signal.clone()).await?;
 
     let (result, is_error) = match execute_tool(tool, call, ctx, signal.clone()).await {
         Ok(result) => (result, false),
@@ -511,6 +348,39 @@ async fn dispatch_prepared(
     };
 
     Ok(apply_after_tool_hook(call, ctx, result, signal, is_error).await)
+}
+
+async fn run_before_tool_gate(
+    call: &ToolCall,
+    ctx: &ToolExecContext,
+    signal: tokio_util::sync::CancellationToken,
+) -> Result<(), String> {
+    let Some(ref hook) = ctx.hooks.before_tool_call else {
+        return Ok(());
+    };
+    let decision = run_before_tool_hook(
+        hook,
+        BeforeToolCallContext {
+            assistant_message: ctx.assistant_message.clone(),
+            tool_call: call.clone(),
+            args: call.arguments.clone(),
+            context: ctx.context.clone(),
+            signal: signal.clone(),
+        },
+        signal.clone(),
+        ctx.abort.clone(),
+    )
+    .await;
+    if signal.is_cancelled() || run_abort_requested(ctx) {
+        signal.cancel();
+        return Err("Operation aborted".into());
+    }
+    if decision.block {
+        return Err(decision
+            .reason
+            .unwrap_or_else(|| "Tool execution was blocked".into()));
+    }
+    Ok(())
 }
 
 fn run_abort_requested(ctx: &ToolExecContext) -> bool {
@@ -579,345 +449,7 @@ async fn execute_tool(
         Some(signal.clone()),
         Some(on_update),
     );
-    let result = tokio::select! {
-        result = tool_future => result.map_err(|e| e.to_string()),
-        aborted = wait_for_tool_abort(ctx.abort.clone()) => {
-            signal.cancel();
-            if aborted { Err("aborted".into()) } else { Err("tool execution aborted".into()) }
-        }
-    };
+    let result = await_tool_result(tool_future, ctx.abort.clone(), signal.clone()).await;
     settled.store(true, Ordering::Release);
     result
-}
-
-fn tool_update_is_live(settled: &AtomicBool) -> bool {
-    !settled.load(Ordering::Acquire)
-}
-
-async fn wait_for_tool_abort(mut abort: Option<tokio::sync::watch::Receiver<bool>>) -> bool {
-    let Some(ref mut receiver) = abort else {
-        return std::future::pending::<bool>().await;
-    };
-    loop {
-        if *receiver.borrow() {
-            return true;
-        }
-        if receiver.changed().await.is_err() {
-            return false;
-        }
-    }
-}
-
-fn take_updates(ctx: &ToolExecContext) -> Vec<crate::types::AgentEvent> {
-    ctx.updates
-        .as_ref()
-        .map(|updates| std::mem::take(&mut *updates.lock().expect("tool update event lock")))
-        .unwrap_or_default()
-}
-
-async fn apply_after_tool_hook(
-    call: &ToolCall,
-    ctx: &ToolExecContext,
-    mut result: AgentToolResult,
-    signal: tokio_util::sync::CancellationToken,
-    is_error: bool,
-) -> (AgentToolResult, bool) {
-    let Some(hook) = &ctx.hooks.after_tool_call else {
-        return (result, is_error);
-    };
-    let override_ = hook(AfterToolCallInputs {
-        assistant_message: ctx.assistant_message.clone(),
-        tool_call: call.clone(),
-        args: call.arguments.clone(),
-        result: result.clone(),
-        is_error,
-        context: ctx.context.clone(),
-        signal,
-    })
-    .await;
-    if let Some(content) = override_.content {
-        result.content = content;
-    }
-    if let Some(details) = override_.details {
-        result.details = details;
-    }
-    if let Some(t) = override_.terminate {
-        result.terminate = t;
-    }
-    if let Some(usage) = override_.usage {
-        result.usage = Some(usage);
-    }
-    (result, override_.is_error.unwrap_or(is_error))
-}
-
-fn synthetic_error_result(reason: &str) -> AgentToolResult {
-    AgentToolResult {
-        content: vec![ToolResultContent::Text {
-            text: reason.to_string(),
-        }],
-        details: serde_json::json!({}),
-        usage: None,
-        added_tool_names: vec![],
-        terminate: false,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::types::{AfterToolCallContext, AfterToolCallResult, AgentTool};
-
-    struct CancellationProbe {
-        started: tokio::sync::watch::Sender<bool>,
-    }
-
-    struct AbortAwareTool {
-        executed: Arc<AtomicBool>,
-    }
-
-    #[async_trait::async_trait]
-    impl AgentTool for AbortAwareTool {
-        fn name(&self) -> &str {
-            "abort_aware"
-        }
-        fn label(&self) -> &str {
-            "Abort-aware tool"
-        }
-        fn description(&self) -> &str {
-            "Records whether execution was reached."
-        }
-
-        async fn execute(
-            &self,
-            _tool_call_id: &str,
-            _args: serde_json::Value,
-            _signal: Option<tokio_util::sync::CancellationToken>,
-            _on_update: Option<Box<dyn Fn(serde_json::Value) + Send + Sync>>,
-        ) -> Result<AgentToolResult, String> {
-            self.executed.store(true, Ordering::Release);
-            Ok(AgentToolResult::default())
-        }
-    }
-
-    #[async_trait::async_trait]
-    impl AgentTool for CancellationProbe {
-        fn name(&self) -> &str {
-            "cancel_probe"
-        }
-
-        fn label(&self) -> &str {
-            "Cancellation probe"
-        }
-
-        fn description(&self) -> &str {
-            "Waits for cancellation."
-        }
-
-        async fn execute(
-            &self,
-            _tool_call_id: &str,
-            _args: serde_json::Value,
-            signal: Option<tokio_util::sync::CancellationToken>,
-            on_update: Option<Box<dyn Fn(serde_json::Value) + Send + Sync>>,
-        ) -> Result<AgentToolResult, String> {
-            if let Some(on_update) = on_update {
-                on_update(serde_json::json!({"phase": "started"}));
-            }
-            let _ = self.started.send(true);
-            signal
-                .expect("executor must provide a cancellation token")
-                .cancelled()
-                .await;
-            Err("cancelled by probe".into())
-        }
-    }
-
-    #[test]
-    fn empty_sequential_produces_no_results() {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(async {
-            let registry = Arc::new(ToolRegistry::new());
-            let ctx = ToolExecContext {
-                assistant_message: AssistantMessage {
-                    content: vec![],
-                    stop_reason: None,
-                    model: "test".into(),
-                    timestamp: 0,
-                    ..Default::default()
-                },
-                context: crate::types::AgentContext::default(),
-                abort: None,
-                registry,
-                hooks: ToolExecHooks::default(),
-                bus: None,
-                updates: Some(Arc::new(std::sync::Mutex::new(Vec::new()))),
-                tool_result_timestamp: 0,
-            };
-            let outcome = execute_sequential(vec![], ctx).await;
-            assert!(outcome.tool_results.is_empty());
-            assert!(!outcome.all_terminated);
-        });
-    }
-
-    #[test]
-    fn settled_tool_update_callbacks_are_ignored() {
-        let settled = AtomicBool::new(false);
-        assert!(tool_update_is_live(&settled));
-        settled.store(true, Ordering::Release);
-        assert!(!tool_update_is_live(&settled));
-    }
-
-    #[tokio::test]
-    async fn already_aborted_call_matches_pi_before_tool_boundary() {
-        let executed = Arc::new(AtomicBool::new(false));
-        let mut registry = ToolRegistry::new();
-        registry.register(Arc::new(AbortAwareTool {
-            executed: executed.clone(),
-        }));
-        let (_abort_tx, abort_rx) = tokio::sync::watch::channel(true);
-        let hook_saw_aborted = Arc::new(AtomicBool::new(false));
-        let hook_saw_aborted_clone = hook_saw_aborted.clone();
-        let ctx = ToolExecContext {
-            assistant_message: AssistantMessage::default(),
-            context: crate::types::AgentContext::default(),
-            abort: Some(abort_rx),
-            registry: Arc::new(registry),
-            hooks: ToolExecHooks {
-                before_tool_call: Some(Arc::new(move |input| {
-                    hook_saw_aborted_clone.store(input.signal.is_cancelled(), Ordering::Release);
-                    Box::pin(async { BeforeToolCallResult::default() })
-                })),
-                ..ToolExecHooks::default()
-            },
-            bus: None,
-            tool_result_timestamp: 0,
-            updates: Some(Arc::new(std::sync::Mutex::new(Vec::new()))),
-        };
-        let call = ToolCall {
-            id: "abort-1".into(),
-            name: "abort_aware".into(),
-            arguments: serde_json::json!({}),
-            thought_signature: None,
-        };
-
-        let error = dispatch_one(&call, &ctx).await.expect_err("aborted call");
-        assert_eq!(error, "Operation aborted");
-        assert!(hook_saw_aborted.load(Ordering::Acquire));
-        assert!(!executed.load(Ordering::Acquire));
-    }
-
-    #[allow(
-        clippy::too_many_lines,
-        reason = "the cancellation test keeps setup and awaited assertions together"
-    )]
-    #[tokio::test]
-    async fn abort_during_before_tool_hook_cancels_hook_signal() {
-        let executed = Arc::new(AtomicBool::new(false));
-        let mut registry = ToolRegistry::new();
-        registry.register(Arc::new(AbortAwareTool {
-            executed: executed.clone(),
-        }));
-        let (abort_tx, abort_rx) = tokio::sync::watch::channel(false);
-        let ctx = ToolExecContext {
-            assistant_message: AssistantMessage::default(),
-            context: crate::types::AgentContext::default(),
-            abort: Some(abort_rx),
-            registry: Arc::new(registry),
-            hooks: ToolExecHooks {
-                before_tool_call: Some(Arc::new(move |input| {
-                    let abort_tx = abort_tx.clone();
-                    Box::pin(async move {
-                        abort_tx.send(true).expect("abort receiver is live");
-                        input.signal.cancelled().await;
-                        BeforeToolCallResult::default()
-                    })
-                })),
-                ..ToolExecHooks::default()
-            },
-            bus: None,
-            tool_result_timestamp: 0,
-            updates: Some(Arc::new(std::sync::Mutex::new(Vec::new()))),
-        };
-        let call = ToolCall {
-            id: "abort-hook-1".into(),
-            name: "abort_aware".into(),
-            arguments: serde_json::json!({}),
-            thought_signature: None,
-        };
-
-        let error = tokio::time::timeout(
-            std::time::Duration::from_millis(100),
-            dispatch_one(&call, &ctx),
-        )
-        .await
-        .expect("abort should settle the hook")
-        .expect_err("aborted call");
-        assert_eq!(error, "Operation aborted");
-        assert!(!executed.load(Ordering::Acquire));
-    }
-
-    #[tokio::test]
-    #[allow(
-        clippy::too_many_lines,
-        reason = "the cancellation regression covers live bus delivery and finalization"
-    )]
-    async fn abort_cancels_in_flight_tool_and_emits_error_result() {
-        let (started_tx, mut started_rx) = tokio::sync::watch::channel(false);
-        let mut registry = ToolRegistry::new();
-        registry.register(Arc::new(CancellationProbe {
-            started: started_tx,
-        }));
-        let (abort_tx, abort_rx) = tokio::sync::watch::channel(false);
-        let bus = crate::events::EventBus::new();
-        let mut bus_events = bus.subscribe();
-        let ctx = ToolExecContext {
-            assistant_message: AssistantMessage::default(),
-            context: crate::types::AgentContext::default(),
-            abort: Some(abort_rx),
-            bus: Some(bus),
-            tool_result_timestamp: 0,
-            registry: Arc::new(registry),
-            hooks: ToolExecHooks {
-                after_tool_call: Some(Arc::new(|input| {
-                    Box::pin(async move {
-                        assert!(input.is_error);
-                        crate::types::AfterToolCallResult::default()
-                    })
-                })),
-                ..ToolExecHooks::default()
-            },
-            updates: Some(Arc::new(std::sync::Mutex::new(Vec::new()))),
-        };
-        let call = ToolCall {
-            id: "cancel-1".into(),
-            name: "cancel_probe".into(),
-            arguments: serde_json::json!({}),
-            thought_signature: None,
-        };
-        let abort_when_started = async {
-            while !*started_rx.borrow() {
-                let _ = started_rx.changed().await;
-            }
-            let _ = abort_tx.send(true);
-        };
-        let (outcome, _) = tokio::join!(execute_sequential(vec![call], ctx), abort_when_started);
-        let live_update = bus_events
-            .try_recv()
-            .expect("tool update should publish before completion");
-        assert!(matches!(
-            live_update,
-            crate::types::AgentEvent::ToolExecutionUpdate { .. }
-        ));
-        assert!(outcome.tool_results[0].is_error);
-        assert_eq!(outcome.tool_results[0].details, serde_json::json!({}));
-        assert!(matches!(
-            outcome.tool_results[0].content.first(),
-            Some(ToolResultContent::Text { text }) if text == "aborted"
-        ));
-    }
-
-    #[allow(dead_code)]
-    fn _after_ctx_marker(_c: AfterToolCallContext) -> AfterToolCallResult {
-        AfterToolCallResult::default()
-    }
 }

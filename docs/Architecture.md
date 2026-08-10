@@ -1,7 +1,9 @@
 # Runie Architecture
 
 Runie is a Rust port of pi-agent-core with a Grok-inspired TUI, limited to
-features supplied by the core port.
+features supplied by the core port. The current plan and architecture findings
+live in [`tasks/plan.md`](../tasks/plan.md) and
+[`tasks/findings.md`](../tasks/findings.md).
 
 ## Layered architecture
 
@@ -31,6 +33,11 @@ Rules:
 - **State sync is event-driven.** Handlers emit **intents**; actors consume intents and emit **facts**. The UI projects facts into a read-only `Snapshot`/`AppState`.
 - **The UI layer is pure.** Rendering is `draw(&mut Frame, &Snapshot)`.
 - **Complexity is hidden behind declarative DSLs.** Commands, keybindings, and dialog actions compose as small flows.
+
+Declarative macros are used for repetitive typed data: command registries,
+dialog schemas, keybinding tables, and replay declarations. Actor lifecycles,
+provider streaming, error handling, and complex reducers remain explicit Rust
+so ownership and async control flow stay reviewable.
 
 The interactive binary owns an asynchronous crossterm `EventStream` worker.
 Key events cross a bounded mailbox before reaching `PromptActor` or `UiActor`;

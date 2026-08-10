@@ -3,7 +3,7 @@ default:
 
 # Run the TUI binary.
 tui:
-    cargo run -p runie-tui --bin runie
+    cargo run -p runie-tui --bin tui-watch
 
 # Run the TUI with Grok minimal-mode terminal-native colors.
 tui-native:

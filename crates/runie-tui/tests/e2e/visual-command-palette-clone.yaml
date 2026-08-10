@@ -1,0 +1,20 @@
+name: visual-command-palette-clone
+description: The palette clone form writes a duplicate JSONL session through the storage actor.
+session_restore: |
+  {"kind":"header","version":4,"id":"palette-clone-session","createdAt":5,"cwd":"/workspace"}
+  {"kind":"entry","lane":"main","type":"message","id":"entry-1","parentId":null,"seq":1,"timestamp":7,"terminate":true,"message":{"role":"user","content":[{"type":"text","text":"previous"}],"timestamp":7}}
+events: []
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    steps:
+      - Ctrl+P
+      - "clone"
+      - PaletteEnter
+      - "target/runie-palette-clone.jsonl"
+      - PaletteParameterEnter
+    screen_excludes:
+      - "not supported by Runie"
+    files_exist:
+      - target/runie-palette-clone.jsonl

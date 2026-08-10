@@ -1,296 +1,65 @@
 {
-  "plan": "runie parity sweep: pi-agent-core (core) + grok-build pager (TUI)",
-  "objective": "Close every parity gap so runie-core matches pi-agent-core behavior 1:1 and runie-tui matches the grok-build pager's user-visible surface for all runie-core-driven features, on a clean actors-ssot events-based async architecture.",
-  "completionCriterion": "All parity steps marked done; cargo check/test green on the workspace; the parity harness (task p19) replays pi's exact event sequences and compares runie-tui snapshots against the recorded grok casts with zero diffs; lint-check clean.",
-  "source": "/Users/admin/Code/GitHub/runie-tests/runie/tasks/index.json",
-  "startedAt": "2026-08-05",
-  "startedFrom": "existing",
-  "reference": {
+  "plan": "Runie current delivery plan",
+  "objective": "Maintain actor-owned event state, Pi-compatible core behavior, Grok-shaped TUI parity, and a typed declarative dialog/command surface.",
+  "completionCriterion": "Relevant source, replay/runtime evidence, tests, workspace checks, and structural lint are green for each workstream.",
+  "updatedAt": "2026-08-09",
+  "canonicalDocs": ["tasks/plan.md", "tasks/findings.md"],
+  "references": {
     "pi": "/Users/admin/Code/agents/pi/packages/agent/src",
-    "grok": "/Users/admin/Code/agents/grok-build/crates/codegen/xai-grok-pager/src"
+    "grok": "/Users/admin/Code/agents/grok-build/crates/codegen/xai-grok-pager/src",
+    "parity": "parity/tui/README.md"
   },
-  "steps": [
+  "workstreams": [
     {
-      "id": "p36",
-      "file": "p36-events-state-boundary.md",
-      "status": "in_progress",
-      "title": "Architecture: transfer every observable state change through owned actor events"
+      "id": "dialogs-and-commands",
+      "status": "implemented",
+      "document": "tasks/plan.md",
+      "acceptance": ["typed dialog specs", "nested Esc navigation", "command registry coverage", "120x36 live capture"]
     },
     {
-      "id": "p37",
-      "file": "p37-pi-provider-transport-boundary.md",
-      "status": "in_progress",
-      "title": "Define the transport boundary for remaining Pi provider request options"
+      "id": "core-parity",
+      "status": "active",
+      "document": "tasks/plan.md",
+      "acceptance": ["event ownership audit", "provider/session replay", "workspace tests"]
     },
     {
-      "id": "p38",
-      "file": "p38-loop-control-events.md",
-      "status": "in_progress",
-      "title": "Move loop control state and compatibility rendering behind events and snapshots"
+      "id": "tui-parity",
+      "status": "active",
+      "document": "tasks/plan.md",
+      "acceptance": ["component contracts", "deterministic fixtures", "cell-level snapshots", "tmux captures"]
     },
     {
-      "id": "p39",
-      "file": "p39-event-sequence-dsl.md",
-      "status": "done",
-      "title": "Provide a side-effect-free typed event-sequence DSL beneath YAML fixtures"
+      "id": "maintainability",
+      "status": "active",
+      "document": "tasks/plan.md",
+      "acceptance": ["lint-check clean", "500-line files", "40-line functions", "complexity <= 10"]
     },
     {
-      "id": "p40",
-      "file": "p40-awaited-event-listeners.md",
-      "status": "done",
-      "title": "Await ordered Pi lifecycle listeners before run and idle settlement"
-    },
-    {
-      "id": "p41",
-      "file": "p41-reset-active-run-parity.md",
-      "status": "done",
-      "title": "Reject reset while a Pi-compatible run is active"
-    },
-    {
-      "id": "p42",
-      "file": "p42-async-turn-hooks.md",
-      "status": "done",
-      "title": "Await Pi-compatible asynchronous turn hooks before queue polling"
-    },
-    {
-      "id": "p43",
-      "file": "p43-provider-retry-metadata.md",
-      "status": "done",
-      "title": "Preserve Pi provider retry metadata, delay, abort, and jitter parity"
-    },
-    {
-      "id": "p44",
-      "file": "p44-theme-ack-boundary.md",
-      "status": "done",
-      "title": "Replace application theme snapshot polling with actor acknowledgements"
-    },
-    {
-      "id": "p35",
-      "file": "p35-scrollback-model-reducer.md",
-      "status": "done",
-      "title": "Architecture: extract the Scrollback reducer into the pure TUI model"
-    },
-    {
-      "id": "p34",
-      "file": "grok-tui-source-behavior-audit.md",
-      "status": "in_progress",
-      "title": "Source audit: Grok feed lifecycle, animation clocks, input, palette, hotkeys, statuses, metrics, and Pi mapping"
-    },
-    {
-      "id": "p33",
-      "file": "grok-tui-behavior-inventory.md",
-      "status": "in_progress",
-      "title": "Inventory: source-backed Grok TUI lifecycle, animation, input, palette, hotkeys, metrics, and Pi mapping"
-    },
-    {
-      "id": "p32",
-      "file": "p32-tool-row-ownership.md",
-      "status": "done",
-      "title": "Architecture: actor-owned live tool-row identity across YAML and live adapters"
-    },
-    {
-      "id": "p31",
-      "file": "p31-crate-architecture-pi-core-grok-tui.md",
-      "status": "in_progress",
-      "title": "Split pi core, TUI model, theme, renderer, runtime, and parity boundaries"
-    },
-    {
-      "id": "p30",
-      "file": "p30-pi-core-grok-mapping-inventory.md",
-      "status": "in_progress",
-      "title": "Inventory pi core/AI, map Grok TUI coverage, and maintain scoped parity plan"
-    },
-    {
-      "id": "p01",
-      "file": "p01-core-types-messages.md",
-      "status": "done",
-      "title": "Core types: AssistantMessage / ToolResultMessage / UserMessage field parity"
-    },
-    {
-      "id": "p02",
-      "file": "p02-core-stopreason-pending.md",
-      "status": "done",
-      "title": "Core types: add StopReason::Pending and reconcile stop-reason variants"
-    },
-    {
-      "id": "p03",
-      "file": "p03-core-model-usage.md",
-      "status": "done",
-      "title": "Core types: Model + Usage field parity (cost, input types, headers, cache_write_1h, reasoning)"
-    },
-    {
-      "id": "p04",
-      "file": "p04-core-event-subkinds.md",
-      "status": "done",
-      "title": "Core types: granular AssistantMessageEvent sub-kinds (text/thinking start+end, toolcall start+end)"
-    },
-    {
-      "id": "p05",
-      "file": "p05-core-loop-auto-continue.md",
-      "status": "done",
-      "title": "Core loop: auto-continue after tool batches (hasMoreToolCalls / terminate)"
-    },
-    {
-      "id": "p06",
-      "file": "p06-core-loop-entry-validation.md",
-      "status": "done",
-      "title": "Core loop: prompt() busy guard + continue() validation + run_loop_continue return semantics"
-    },
-    {
-      "id": "p07",
-      "file": "p07-core-hooks-next-turn.md",
-      "status": "done",
-      "title": "Core hooks: prepareNextTurn + shouldStopAfterTurn"
-    },
-    {
-      "id": "p08",
-      "file": "p08-core-hooks-transform-context.md",
-      "status": "done",
-      "title": "Core hooks: transformContext applied before convert_to_llm"
-    },
-    {
-      "id": "p09",
-      "file": "p09-core-tools-prepare-arguments.md",
-      "status": "done",
-      "title": "Core tools: AgentTool.prepareArguments + validateToolArguments parity"
-    },
-    {
-      "id": "p10",
-      "file": "p10-core-tools-dispatch-parity.md",
-      "status": "done",
-      "title": "Core tools: beforeToolCall block, terminate AND semantics, parallel completion-order events"
-    },
-    {
-      "id": "p11",
-      "file": "p11-core-provider-streaming.md",
-      "status": "done",
-      "title": "Core provider: streaming partial reconstruction, error/aborted encoding, abort wiring"
-    },
-    {
-      "id": "p12",
-      "file": "p12-core-state-machine.md",
-      "status": "done",
-      "title": "Core state: AgentState computed fields + transition state machine"
-    },
-    {
-      "id": "p13",
-      "file": "p13-tui-status-machine.md",
-      "status": "done",
-      "title": "TUI: status/footer bar state machine (all variants + spinner frames + hints)"
-    },
-    {
-      "id": "p14",
-      "file": "p14-tui-keybindings.md",
-      "status": "done",
-      "title": "TUI: keybinding parity (Shift+Tab, Ctrl+x, Ctrl+L model selector, history, file-search, multiline)"
-    },
-    {
-      "id": "p15",
-      "file": "p15-tui-prompt-chrome.md",
-      "status": "done",
-      "title": "TUI: prompt widget chrome (model caption, multiline indicator, hints, history, placeholder)"
-    },
-    {
-      "id": "p16",
-      "file": "p16-tui-transcript-parity.md",
-      "status": "in_progress",
-      "title": "TUI: transcript rendering parity (verb-group activity folding, markdown, tool cards, reasoning fold)"
-    },
-    {
-      "id": "p17",
-      "file": "p17-tui-welcome-layout.md",
-      "status": "done",
-      "title": "TUI: welcome screen + layout/resize parity"
-    },
-    {
-      "id": "p18",
-      "file": "p18-architecture-audit.md",
-      "status": "done",
-      "title": "Architecture: actors-ssot audit, event ownership, no orphan spawns, linter rules"
-    },
-    {
-      "id": "p19",
-      "file": "p19-parity-verification.md",
-      "status": "in_progress",
-      "title": "Verification: parity harness (pi event-sequence replay + grok cast snapshot diffs)"
-    },
-    {
-      "id": "p20",
-      "file": "p20-dsl-yaml-tests.md",
-      "status": "done",
-      "title": "Architecture: thin actor DSLs and YAML-first behavior tests"
-    },
-    {
-      "id": "p21",
-      "file": "p21-grok-tui-inventory.md",
-      "status": "in_progress",
-      "title": "TUI: Grok feature/state/theme/animation inventory and parity gap map"
-    },
-    {
-      "id": "p23",
-      "file": "p23-tui-projection-actors.md",
-      "status": "done",
-      "title": "Architecture: migrate TUI status and scrollback projections to actor-owned watch snapshots"
-    },
-    {
-      "id": "p24",
-      "file": "p24-tui-component-parity-docs.md",
-      "status": "in_progress",
-      "title": "TUI: source-backed component parity documentation and manifest"
-    },
-    {
-      "id": "p25",
-      "file": "p25-parity-instrument-audit.md",
-      "status": "in_progress",
-      "title": "Verification: independent parity instrument and frame-selection audit"
-    },
-    {
-      "id": "p26",
-      "file": "p26-tui-view-dsl.md",
-      "status": "in_progress",
-      "title": "Architecture: declarative TUI view tree separated from terminal rendering"
-    },
-    {
-      "id": "p27",
-      "file": "p27-parity-review-loop.md",
-      "status": "in_progress",
-      "title": "Process: independent source-to-fixture parity review loop"
-    },
-    {
-      "id": "p28",
-      "file": "p28-parity-data-contract.md",
-      "status": "in_progress",
-      "title": "Verification: runtime data contract for reliable pi/Grok parity decisions"
-    },
-    {
-      "id": "p29",
-      "file": "p29-parity-acceleration-review.md",
-      "status": "in_progress",
-      "title": "Process: per-run missing-data review and parity acceleration loop"
-    },
-    {
-      "id": "p51",
-      "file": "p51-pi-session-records.md",
-      "status": "in_progress",
-      "title": "Core: Pi session configuration records through actor-owned events"
-    },
-    {
-      "id": "p52",
-      "file": "p52-pi-session-lane-parity.md",
-      "status": "in_progress",
-      "title": "Core: Pi typed session lanes, durable JSONL, and compaction parity"
-    },
-    {
-      "id": "p54",
-      "file": "p54-state-change-event-audit.md",
-      "status": "in_progress",
-      "title": "Architecture: audit every state change through owned actor events"
-    },
-    {
-      "id": "p55",
-      "file": "p55-tool-start-identity-boundary.md",
-      "status": "in_progress",
-      "title": "Core: Pi tool-start identity, reservations, and replay parity"
+      "id": "code-reduction",
+      "status": "active",
+      "document": "tasks/findings.md",
+      "tasks": [
+        "tasks/reduction-01-generic-actor-runtime.md",
+        "tasks/reduction-02-memoized-domain-state.md",
+        "tasks/reduction-03-declarative-scrollback-events.md",
+        "tasks/reduction-04-normalized-feed-state.md",
+        "tasks/reduction-05-declarative-view-tree.md",
+        "tasks/reduction-06-event-projection-registry.md",
+        "tasks/reduction-07-state-widget-separation.md",
+        "tasks/reduction-08-immutable-snapshot-sharing.md",
+        "tasks/reduction-09-declarative-schema-generation.md",
+        "tasks/reduction-10-event-trace-harness.md",
+        "tasks/reduction-11-paint-data-rendering.md",
+        "tasks/reduction-12-semantic-module-consolidation.md"
+      ],
+      "acceptance": [
+        "all twelve findings tracked",
+        "macro-backed declarative metadata",
+        "memoized actor projections",
+        "pure view/paint data",
+        "workspace tests and structural lint"
+      ]
     }
-  ]
+  ],
+  "historicalTasksConsolidated": true
 }

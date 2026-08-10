@@ -72,53 +72,12 @@ enum RegistryCommand {
 }
 
 impl SubscriberRegistry {
-    #[allow(
-        clippy::too_many_lines,
-        reason = "the registry constructor keeps mailbox ownership and ordered dispatch together"
-    )]
     pub fn new() -> Self {
         let (tx, mut commands) = mpsc::channel(32);
         let owner = crate::spawn_owned_worker!(async move {
             let mut state = RegistryInner::default();
             while let Some(command) = commands.recv().await {
-                match command {
-                    RegistryCommand::RegisterApplication(sub, reply) => {
-                        let id = next_id(&mut state);
-                        state.subs.push((id, SubscriberEntry::Application(sub)));
-                        let _ = reply.send(id);
-                    }
-                    RegistryCommand::RegisterPi(sub, reply) => {
-                        let id = next_id(&mut state);
-                        state.subs.push((id, SubscriberEntry::Pi(sub)));
-                        let _ = reply.send(id);
-                    }
-                    RegistryCommand::Unregister(id, reply) => {
-                        state.subs.retain(|(sid, _)| *sid != id);
-                        let _ = reply.send(());
-                    }
-                    RegistryCommand::DispatchApplication(event, abort, reply) => {
-                        for (_, sub) in &mut state.subs {
-                            if let SubscriberEntry::Application(sub) = sub {
-                                sub.handle_with_abort(&event, abort.as_ref()).await;
-                            }
-                        }
-                        let _ = reply.send(());
-                    }
-                    RegistryCommand::DispatchPi(event, reply) => {
-                        for (_, sub) in &mut state.subs {
-                            if let SubscriberEntry::Pi(sub) = sub {
-                                sub.handle_pi(&event).await;
-                            }
-                        }
-                        let _ = reply.send(());
-                    }
-                    RegistryCommand::Len(reply) => {
-                        let _ = reply.send(state.subs.len());
-                    }
-                    RegistryCommand::IsEmpty(reply) => {
-                        let _ = reply.send(state.subs.is_empty());
-                    }
-                }
+                reduce_registry_command(&mut state, command).await;
             }
         });
         Self { tx, _owner: owner }
@@ -216,6 +175,47 @@ impl SubscriberRegistry {
             return true;
         }
         result.await.unwrap_or(true)
+    }
+}
+
+async fn reduce_registry_command(state: &mut RegistryInner, command: RegistryCommand) {
+    match command {
+        RegistryCommand::RegisterApplication(sub, reply) => {
+            let id = next_id(state);
+            state.subs.push((id, SubscriberEntry::Application(sub)));
+            let _ = reply.send(id);
+        }
+        RegistryCommand::RegisterPi(sub, reply) => {
+            let id = next_id(state);
+            state.subs.push((id, SubscriberEntry::Pi(sub)));
+            let _ = reply.send(id);
+        }
+        RegistryCommand::Unregister(id, reply) => {
+            state.subs.retain(|(sid, _)| *sid != id);
+            let _ = reply.send(());
+        }
+        RegistryCommand::DispatchApplication(event, abort, reply) => {
+            for (_, sub) in &mut state.subs {
+                if let SubscriberEntry::Application(sub) = sub {
+                    sub.handle_with_abort(&event, abort.as_ref()).await;
+                }
+            }
+            let _ = reply.send(());
+        }
+        RegistryCommand::DispatchPi(event, reply) => {
+            for (_, sub) in &mut state.subs {
+                if let SubscriberEntry::Pi(sub) = sub {
+                    sub.handle_pi(&event).await;
+                }
+            }
+            let _ = reply.send(());
+        }
+        RegistryCommand::Len(reply) => {
+            let _ = reply.send(state.subs.len());
+        }
+        RegistryCommand::IsEmpty(reply) => {
+            let _ = reply.send(state.subs.is_empty());
+        }
     }
 }
 

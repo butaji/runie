@@ -1,0 +1,16 @@
+name: visual-command-palette-parameter
+description: A parameterized palette entry opens its form and routes the submitted value through the session actor.
+events: []
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    steps:
+      - Ctrl+P
+      - "name"
+      - PaletteEnter
+      - "palette session"
+      - PaletteParameterEnter
+    session_name: palette session
+    screen_text:
+      - "Starting session"

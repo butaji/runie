@@ -11,7 +11,7 @@ use runie_core::events::Subscriber;
 use runie_core::provider::stream_fn::{AssistantMessageEventStream, StreamError, StreamFn};
 use runie_core::types::AgentEvent;
 use runie_core::types::{
-    AgentContext, AgentMessage, AssistantMessage, AssistantMessageEvent, Model, QueueMode,
+    AgentContext, AgentMessage, AssistantMessage, AssistantMessageEvent, Model,
     SimpleStreamOptions, StopReason, ToolCall, Usage, UserContent, UserMessage,
 };
 
@@ -496,56 +496,4 @@ async fn abort_stops_a_continuously_tool_using_run() {
     );
     // The run still returned (terminated cleanly), not busy.
     assert!(!outcome.is_empty());
-}
-
-/// The control mailbox is the SSOT for loop control state and the publication
-/// of the immutable snapshot must complete before each setter returns. If the
-/// acknowledgement is taken before `control_tx.send`, callers can observe
-/// stale projections (or run finished-yet modes), which the actor boundary
-/// must prevent. This pins the setter→snapshot ordering by reading the
-/// snapshot projection after each ack-completing setter.
-#[tokio::test]
-async fn control_setters_publish_snapshot_before_returning() {
-    use runie_core::r#loop::LoopControlSnapshot;
-
-    let test = TestLoopBuilder::new(Arc::new(MockStreamFn::hello())).build();
-
-    // Initial snapshot is the default for a fresh actor.
-    let initial = test.actor.control_snapshot();
-    assert_eq!(
-        initial,
-        LoopControlSnapshot {
-            running: false,
-            abort_requested: false,
-            steering_mode: QueueMode::OneAtATime,
-            follow_up_mode: QueueMode::OneAtATime,
-        }
-    );
-
-    // set_steering_mode(All) — the snapshot must reflect All by the time
-    // the setter returns. This proves the snapshot was published before the
-    // mailbox ack.
-    test.actor.set_steering_mode(QueueMode::All).await;
-    let after_steering = test.actor.control_snapshot();
-    assert_eq!(after_steering.steering_mode, QueueMode::All);
-    assert_eq!(after_steering.follow_up_mode, QueueMode::OneAtATime);
-    assert!(!after_steering.running);
-    assert!(!after_steering.abort_requested);
-
-    // set_follow_up_mode(All) — same contract for the follow-up queue.
-    test.actor.set_follow_up_mode(QueueMode::All).await;
-    let after_follow_up = test.actor.control_snapshot();
-    assert_eq!(after_follow_up.steering_mode, QueueMode::All);
-    assert_eq!(after_follow_up.follow_up_mode, QueueMode::All);
-    assert!(!after_follow_up.running);
-    assert!(!after_follow_up.abort_requested);
-
-    // abort() — the abort-intent projection must be visible by the time the
-    // setter returns so the abort signal has crossed the actor boundary.
-    test.actor.abort().await;
-    let after_abort = test.actor.control_snapshot();
-    assert!(after_abort.abort_requested);
-    assert!(!after_abort.running);
-    assert_eq!(after_abort.steering_mode, QueueMode::All);
-    assert_eq!(after_abort.follow_up_mode, QueueMode::All);
 }

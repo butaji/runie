@@ -183,185 +183,24 @@ impl AgentStateActor {
         reason = "the event reducer keeps every state transition explicit"
     )]
     fn apply_event_to_state(state: &mut AgentStateSnapshot, event: AgentEvent) {
-        match event {
-            AgentEvent::AgentStart => {
-                state.is_streaming = true;
-                state.streaming_message = None;
-                state.pending_tool_calls.clear();
-                state.error_message = None;
-            }
-            AgentEvent::ModelChanged { model } => {
-                state.model = model;
-            }
-            AgentEvent::ActiveToolsChanged { .. } => {
-                // Session configuration is reduced by SessionActor; the
-                // agent message/state projection has no active-tool field.
-            }
-            AgentEvent::SessionLabelChanged { .. } => {
-                // SessionActor owns label journal facts.
-            }
-            AgentEvent::SessionNameChanged { .. } => {
-                // SessionActor owns session metadata facts.
-            }
-            AgentEvent::SessionLaneChanged { .. } => {
-                // SessionActor owns session-tree lane facts.
-            }
-            AgentEvent::SessionEntryAppended { .. } => {
-                // SessionActor owns journal entry append.
-            }
-            AgentEvent::BranchSummaryCreated { .. } => {
-                // SessionActor owns branch-summary journal records.
-            }
-            AgentEvent::CustomSessionEntryCreated { .. } => {
-                // Extension-owned session data belongs to SessionActor.
-            }
-            AgentEvent::CompactionCreated { .. } => {
-                // Compaction journal facts belong to SessionActor.
-            }
-            AgentEvent::OperationRecordCreated { .. } => {
-                // Operation-lane journal facts belong to SessionActor.
-            }
-            AgentEvent::TypedOperationRecordCreated { .. } => {
-                // Operation-lane journal facts belong to SessionActor.
-            }
-            AgentEvent::MessageStart { message } if is_assistant(&message) => {
-                state.is_streaming = true;
-                state.streaming_message = Some(message);
-            }
-            AgentEvent::MessageUpdate { message, .. } => {
-                state.streaming_message = Some(message);
-            }
-            AgentEvent::MessageEnd { message } => {
-                state.messages.push(message.clone());
-                if matches!(message, AgentMessage::Assistant(_)) {
-                    // Pi keeps `isStreaming` true until `agent_end` has
-                    // settled. `message_end` closes the assistant message,
-                    // but the agent may still run turn-end hooks and queue
-                    // work before the run is truly idle.
-                    state.streaming_message = None;
-                }
-            }
-            AgentEvent::ToolExecutionStart { tool_call_id, .. } => {
-                if !state.pending_tool_calls.contains(&tool_call_id) {
-                    state.pending_tool_calls.push(tool_call_id);
-                }
-            }
-            AgentEvent::ToolExecutionEnd { tool_call_id, .. } => {
-                state.pending_tool_calls.retain(|id| id != &tool_call_id);
-            }
-            AgentEvent::WorkflowStarted {
-                run_id,
-                name,
-                objective,
-            } => {
-                state.workflows.insert(
-                    run_id,
-                    WorkflowSnapshot {
-                        name,
-                        objective,
-                        status: "active".into(),
-                        ..WorkflowSnapshot::default()
-                    },
-                );
-            }
-            AgentEvent::WorkflowProgress {
-                run_id,
-                phase,
-                state: phase_state,
-                active_agents,
-            } => {
-                if let Some(workflow) = state.workflows.get_mut(&run_id) {
-                    workflow.phase = Some(phase);
-                    workflow.state = Some(phase_state);
-                    workflow.active_agents = active_agents;
-                }
-            }
-            AgentEvent::WorkflowFinished {
-                run_id,
-                status,
-                elapsed_ms,
-            } => {
-                if let Some(workflow) = state.workflows.get_mut(&run_id) {
-                    workflow.status = status;
-                    workflow.elapsed_ms = elapsed_ms;
-                }
-            }
-            AgentEvent::BackgroundWorkStarted {
-                work_id,
-                description,
-                background,
-            } => {
-                state.background_work.insert(
-                    work_id,
-                    BackgroundWorkSnapshot {
-                        description,
-                        background,
-                        status: "running".into(),
-                        ..BackgroundWorkSnapshot::default()
-                    },
-                );
-            }
-            AgentEvent::BackgroundWorkProgress {
-                work_id,
-                description,
-                activity,
-            } => {
-                let work = state.background_work.entry(work_id).or_default();
-                work.description = description;
-                work.activity = Some(activity);
-                work.status = "running".into();
-            }
-            AgentEvent::BackgroundWorkFinished {
-                work_id,
-                description,
-                is_error,
-                elapsed_ms,
-                error,
-            } => {
-                let work = state.background_work.entry(work_id).or_default();
-                work.description = description;
-                work.status = if is_error { "failed" } else { "done" }.into();
-                work.elapsed_ms = elapsed_ms;
-                work.error = error;
-            }
-            AgentEvent::BackgroundWorkCancelled {
-                work_id,
-                description,
-                elapsed_ms,
-            } => {
-                let work = state.background_work.entry(work_id).or_default();
-                work.description = description;
-                work.status = "cancelled".into();
-                work.elapsed_ms = elapsed_ms;
-            }
-            AgentEvent::Error { message } => {
-                state.is_streaming = false;
-                state.streaming_message = None;
-                state.error_message = Some(message);
-            }
-            AgentEvent::ThinkingLevelChanged { level } => state.thinking_level = level,
-            AgentEvent::TurnEnd { message, .. } => {
-                if let AgentMessage::Assistant(assistant) = message {
-                    if assistant.error_message.is_some() {
-                        state.error_message = assistant.error_message.clone();
-                    }
-                }
-            }
-            AgentEvent::Reset => *state = AgentStateSnapshot::default(),
-            AgentEvent::MessageStart { .. }
-            | AgentEvent::TurnStart
-            | AgentEvent::Waiting { .. }
-            | AgentEvent::ThemeChanged { .. }
-            | AgentEvent::ToolDisplayModeChanged { .. }
-            | AgentEvent::ToolExecutionUpdate { .. } => {}
-            AgentEvent::AgentEnd { .. } => {
-                state.is_streaming = false;
-                state.streaming_message = None;
-                // Pi's run finalizer clears the runtime-owned pending set at
-                // settlement, including interrupted tool batches.
-                state.pending_tool_calls.clear();
-            }
+        if apply_workflow_event(state, &event) {
+            return;
         }
+        if apply_background_event(state, &event) {
+            return;
+        }
+        if apply_message_tool_event(state, &event) {
+            return;
+        }
+        if apply_core_state_event(state, &event) {
+            return;
+        }
+        let _ = Self::apply_unowned_event(&event);
+    }
+
+    /// Keep events owned by other actors explicit at this projection boundary.
+    fn apply_unowned_event(_: &AgentEvent) -> bool {
+        true
     }
 
     /// Borrow the current snapshot. Use this for read-only views.
@@ -375,6 +214,213 @@ impl AgentStateActor {
         // Wait for at least one snapshot after the current view.
         let _ = rx.changed().await;
     }
+}
+
+fn apply_workflow_event(state: &mut AgentStateSnapshot, event: &AgentEvent) -> bool {
+    match event {
+        AgentEvent::WorkflowStarted {
+            run_id,
+            name,
+            objective,
+        } => start_workflow(state, run_id, name, objective),
+        AgentEvent::WorkflowProgress {
+            run_id,
+            phase,
+            state: phase_state,
+            active_agents,
+        } => update_workflow(state, run_id, phase, phase_state, *active_agents),
+        AgentEvent::WorkflowFinished {
+            run_id,
+            status,
+            elapsed_ms,
+        } => finish_workflow(state, run_id, status, *elapsed_ms),
+        _ => return false,
+    }
+    true
+}
+
+fn start_workflow(state: &mut AgentStateSnapshot, run_id: &str, name: &str, objective: &str) {
+    state.workflows.insert(
+        run_id.to_owned(),
+        WorkflowSnapshot {
+            name: name.to_owned(),
+            objective: objective.to_owned(),
+            status: "active".into(),
+            ..WorkflowSnapshot::default()
+        },
+    );
+}
+
+fn update_workflow(
+    state: &mut AgentStateSnapshot,
+    run_id: &str,
+    phase: &str,
+    phase_state: &str,
+    active_agents: u32,
+) {
+    if let Some(workflow) = state.workflows.get_mut(run_id) {
+        workflow.phase = Some(phase.to_owned());
+        workflow.state = Some(phase_state.to_owned());
+        workflow.active_agents = active_agents;
+    }
+}
+
+fn finish_workflow(
+    state: &mut AgentStateSnapshot,
+    run_id: &str,
+    status: &str,
+    elapsed_ms: Option<u64>,
+) {
+    if let Some(workflow) = state.workflows.get_mut(run_id) {
+        workflow.status = status.to_owned();
+        workflow.elapsed_ms = elapsed_ms;
+    }
+}
+
+fn apply_background_event(state: &mut AgentStateSnapshot, event: &AgentEvent) -> bool {
+    match event {
+        AgentEvent::BackgroundWorkStarted {
+            work_id,
+            description,
+            background,
+        } => start_background_work(state, work_id, description, *background),
+        AgentEvent::BackgroundWorkProgress {
+            work_id,
+            description,
+            activity,
+        } => update_background_work(state, work_id, description, activity),
+        AgentEvent::BackgroundWorkFinished {
+            work_id,
+            description,
+            is_error,
+            elapsed_ms,
+            error,
+        } => finish_background_work(state, work_id, description, *is_error, *elapsed_ms, error),
+        AgentEvent::BackgroundWorkCancelled {
+            work_id,
+            description,
+            elapsed_ms,
+        } => cancel_background_work(state, work_id, description, *elapsed_ms),
+        _ => return false,
+    }
+    true
+}
+
+fn start_background_work(
+    state: &mut AgentStateSnapshot,
+    work_id: &str,
+    description: &str,
+    background: bool,
+) {
+    state.background_work.insert(
+        work_id.to_owned(),
+        BackgroundWorkSnapshot {
+            description: description.to_owned(),
+            background,
+            status: "running".into(),
+            ..BackgroundWorkSnapshot::default()
+        },
+    );
+}
+
+fn update_background_work(
+    state: &mut AgentStateSnapshot,
+    work_id: &str,
+    description: &str,
+    activity: &str,
+) {
+    let work = state.background_work.entry(work_id.to_owned()).or_default();
+    work.description = description.to_owned();
+    work.activity = Some(activity.to_owned());
+    work.status = "running".into();
+}
+
+fn finish_background_work(
+    state: &mut AgentStateSnapshot,
+    work_id: &str,
+    description: &str,
+    is_error: bool,
+    elapsed_ms: Option<u64>,
+    error: &Option<String>,
+) {
+    let work = state.background_work.entry(work_id.to_owned()).or_default();
+    work.description = description.to_owned();
+    work.status = if is_error { "failed" } else { "done" }.into();
+    work.elapsed_ms = elapsed_ms;
+    work.error = error.clone();
+}
+
+fn cancel_background_work(
+    state: &mut AgentStateSnapshot,
+    work_id: &str,
+    description: &str,
+    elapsed_ms: Option<u64>,
+) {
+    let work = state.background_work.entry(work_id.to_owned()).or_default();
+    work.description = description.to_owned();
+    work.status = "cancelled".into();
+    work.elapsed_ms = elapsed_ms;
+}
+
+fn apply_message_tool_event(state: &mut AgentStateSnapshot, event: &AgentEvent) -> bool {
+    match event {
+        AgentEvent::MessageStart { message } if is_assistant(message) => {
+            state.is_streaming = true;
+            state.streaming_message = Some(message.clone());
+        }
+        AgentEvent::MessageUpdate { message, .. } => {
+            state.streaming_message = Some(message.clone());
+        }
+        AgentEvent::MessageEnd { message } => {
+            state.messages.push(message.clone());
+            if matches!(message, AgentMessage::Assistant(_)) {
+                state.streaming_message = None;
+            }
+        }
+        AgentEvent::ToolExecutionStart { tool_call_id, .. } => {
+            if !state.pending_tool_calls.contains(tool_call_id) {
+                state.pending_tool_calls.push(tool_call_id.clone());
+            }
+        }
+        AgentEvent::ToolExecutionEnd { tool_call_id, .. } => {
+            state.pending_tool_calls.retain(|id| id != tool_call_id);
+        }
+        _ => return false,
+    }
+    true
+}
+
+fn apply_core_state_event(state: &mut AgentStateSnapshot, event: &AgentEvent) -> bool {
+    match event {
+        AgentEvent::AgentStart => {
+            state.is_streaming = true;
+            state.streaming_message = None;
+            state.pending_tool_calls.clear();
+            state.error_message = None;
+        }
+        AgentEvent::ModelChanged { model } => state.model = model.clone(),
+        AgentEvent::Error { message } => {
+            state.is_streaming = false;
+            state.streaming_message = None;
+            state.error_message = Some(message.clone());
+        }
+        AgentEvent::ThinkingLevelChanged { level } => state.thinking_level = *level,
+        AgentEvent::TurnEnd { message, .. } => {
+            if let AgentMessage::Assistant(assistant) = message {
+                if assistant.error_message.is_some() {
+                    state.error_message = assistant.error_message.clone();
+                }
+            }
+        }
+        AgentEvent::Reset => *state = AgentStateSnapshot::default(),
+        AgentEvent::AgentEnd { .. } => {
+            state.is_streaming = false;
+            state.streaming_message = None;
+            state.pending_tool_calls.clear();
+        }
+        _ => return false,
+    }
+    true
 }
 
 impl Default for AgentStateActor {
@@ -396,332 +442,10 @@ async fn run_worker(
     }
 }
 
-#[allow(
-    clippy::too_many_lines,
-    reason = "the actor command reducer keeps mailbox ownership explicit"
-)]
-fn apply(state: &mut AgentStateSnapshot, cmd: StateCommand) {
-    match cmd {
-        StateCommand::SetSystemPrompt(s, ack) => {
-            state.system_prompt = s;
-            let _ = ack.send(());
-        }
-        StateCommand::SetModel(m, ack) => {
-            state.model = m;
-            let _ = ack.send(());
-        }
-        StateCommand::SetThinkingLevel(t, ack) => {
-            state.thinking_level = t;
-            let _ = ack.send(());
-        }
-        StateCommand::PushMessage(m, ack) => apply_push_message(state, m, ack),
-        StateCommand::ReplaceMessages(msgs, ack) => {
-            state.messages = msgs;
-            let _ = ack.send(());
-        }
-        StateCommand::SetTools(tools, ack) => {
-            state.tools = tools;
-            let _ = ack.send(());
-        }
-        StateCommand::MarkStreaming(on, ack) => {
-            state.is_streaming = on;
-            let _ = ack.send(());
-        }
-        StateCommand::SetStreamingMessage(m, ack) => {
-            state.streaming_message = m;
-            let _ = ack.send(());
-        }
-        StateCommand::SetStreamingState {
-            streaming,
-            message,
-            ack,
-        } => {
-            state.is_streaming = streaming;
-            state.streaming_message = message;
-            let _ = ack.send(());
-        }
-        StateCommand::AddPendingToolCall(id, ack) => {
-            if !state.pending_tool_calls.contains(&id) {
-                state.pending_tool_calls.push(id);
-            }
-            if let Some(ack) = ack {
-                let _ = ack.send(());
-            }
-        }
-        StateCommand::RemovePendingToolCall(id, ack) => {
-            state.pending_tool_calls.retain(|x| x != &id);
-            if let Some(ack) = ack {
-                let _ = ack.send(());
-            }
-        }
-        StateCommand::SetError(e, ack) => {
-            state.error_message = e;
-            if let Some(ack) = ack {
-                let _ = ack.send(());
-            }
-        }
-        StateCommand::ApplyEvent(event, ack) => {
-            AgentStateActor::apply_event_to_state(state, *event);
-            let _ = ack.send(());
-        }
-        StateCommand::Reset(ack) => {
-            *state = AgentStateSnapshot::default();
-            let _ = ack.send(());
-        }
-    }
-}
-
-fn apply_push_message(
-    state: &mut AgentStateSnapshot,
-    message: AgentMessage,
-    ack: Option<oneshot::Sender<()>>,
-) {
-    state.messages.push(message);
-    if let Some(ack) = ack {
-        let _ = ack.send(());
-    }
-}
+#[path = "actor_commands.rs"]
+mod actor_commands;
+use actor_commands::apply;
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::types::{AssistantMessage, StopReason, UserContent, UserMessage};
-
-    #[tokio::test]
-    async fn push_message_visible_in_snapshot() {
-        let actor = AgentStateActor::new();
-        actor
-            .push_message(AgentMessage::User(UserMessage {
-                content: vec![UserContent::Text { text: "hi".into() }],
-                timestamp: 1,
-            }))
-            .await;
-        actor.sync().await;
-        let snap = actor.snapshot();
-        assert_eq!(snap.messages.len(), 1);
-    }
-
-    #[tokio::test]
-    async fn replace_messages_acknowledges_before_returning() {
-        let actor = AgentStateActor::new();
-        actor
-            .replace_messages(vec![AgentMessage::User(UserMessage {
-                content: vec![UserContent::Text {
-                    text: "restored".into(),
-                }],
-                timestamp: 1,
-            })])
-            .await;
-        assert_eq!(actor.snapshot().messages.len(), 1);
-        assert_eq!(actor.snapshot().messages[0].timestamp(), 1);
-    }
-
-    #[tokio::test]
-    async fn model_changed_event_updates_the_owned_model_projection() {
-        let actor = AgentStateActor::new();
-        let model = Model {
-            id: "model-1".into(),
-            context_window: 42_000,
-            ..Model::default()
-        };
-        actor
-            .apply_event(&AgentEvent::ModelChanged {
-                model: model.clone(),
-            })
-            .await;
-        assert_eq!(actor.snapshot().model, model);
-    }
-
-    #[tokio::test]
-    async fn reset_clears_state() {
-        let actor = AgentStateActor::new();
-        actor.set_system_prompt("sys".into()).await;
-        actor.mark_streaming(true).await;
-        actor.reset().await;
-        actor.sync().await;
-        let snap = actor.snapshot();
-        assert_eq!(snap.system_prompt, "");
-        assert!(!snap.is_streaming);
-    }
-
-    #[tokio::test]
-    async fn workflow_lifecycle_is_owned_by_core_snapshot() {
-        let actor = AgentStateActor::new();
-        actor
-            .apply_event(&AgentEvent::WorkflowStarted {
-                run_id: "wf-1".into(),
-                name: "release".into(),
-                objective: "ship it".into(),
-            })
-            .await;
-        actor
-            .apply_event(&AgentEvent::WorkflowProgress {
-                run_id: "wf-1".into(),
-                phase: "tests".into(),
-                state: "active".into(),
-                active_agents: 2,
-            })
-            .await;
-        actor
-            .apply_event(&AgentEvent::WorkflowFinished {
-                run_id: "wf-1".into(),
-                status: "done".into(),
-                elapsed_ms: Some(1_200),
-            })
-            .await;
-        actor.sync().await;
-        let workflow = actor.snapshot().workflows.remove("wf-1").unwrap();
-        assert_eq!(workflow.name, "release");
-        assert_eq!(workflow.phase.as_deref(), Some("tests"));
-        assert_eq!(workflow.active_agents, 2);
-        assert_eq!(workflow.status, "done");
-        assert_eq!(workflow.elapsed_ms, Some(1_200));
-    }
-
-    #[tokio::test]
-    async fn background_work_lifecycle_is_owned_by_core_snapshot() {
-        let actor = AgentStateActor::new();
-        actor
-            .apply_event(&AgentEvent::BackgroundWorkStarted {
-                work_id: "bg-1".into(),
-                description: "index files".into(),
-                background: true,
-            })
-            .await;
-        actor
-            .apply_event(&AgentEvent::BackgroundWorkProgress {
-                work_id: "bg-1".into(),
-                description: "index files".into(),
-                activity: "scanning src".into(),
-            })
-            .await;
-        actor
-            .apply_event(&AgentEvent::BackgroundWorkFinished {
-                work_id: "bg-1".into(),
-                description: "index files".into(),
-                is_error: false,
-                elapsed_ms: Some(900),
-                error: None,
-            })
-            .await;
-        actor.sync().await;
-        let work = actor.snapshot().background_work.remove("bg-1").unwrap();
-        assert_eq!(work.description, "index files");
-        assert_eq!(work.activity.as_deref(), Some("scanning src"));
-        assert!(work.background);
-        assert_eq!(work.status, "done");
-        assert_eq!(work.elapsed_ms, Some(900));
-        assert_eq!(work.error, None);
-    }
-
-    #[tokio::test]
-    async fn pending_tool_calls_deduplicated() {
-        let actor = AgentStateActor::new();
-        actor.add_pending_tool_call("a".into()).await;
-        actor.add_pending_tool_call("a".into()).await;
-        actor.sync().await;
-        assert_eq!(actor.snapshot().pending_tool_calls.len(), 1);
-    }
-
-    #[tokio::test]
-    async fn event_projection_owns_stream_and_terminal_error_transitions() {
-        let actor = AgentStateActor::new();
-        let assistant = AgentMessage::Assistant(AssistantMessage {
-            stop_reason: Some(StopReason::Aborted),
-            error_message: Some("aborted".into()),
-            ..Default::default()
-        });
-        actor
-            .apply_event(&AgentEvent::MessageStart {
-                message: assistant.clone(),
-            })
-            .await;
-        actor.sync().await;
-        assert!(actor.snapshot().is_streaming);
-        actor
-            .apply_event(&AgentEvent::MessageEnd { message: assistant })
-            .await;
-        actor.sync().await;
-        let snapshot = actor.snapshot();
-        assert!(snapshot.is_streaming);
-        assert!(snapshot.error_message.is_none());
-        assert_eq!(snapshot.messages.len(), 1);
-        actor
-            .apply_event(&AgentEvent::TurnEnd {
-                message: AgentMessage::Assistant(AssistantMessage {
-                    error_message: Some("aborted".into()),
-                    ..Default::default()
-                }),
-                tool_results: vec![],
-            })
-            .await;
-        actor.sync().await;
-        assert_eq!(actor.snapshot().error_message.as_deref(), Some("aborted"));
-        actor
-            .apply_event(&AgentEvent::AgentEnd { messages: vec![] })
-            .await;
-        actor.sync().await;
-        assert!(!actor.snapshot().is_streaming);
-    }
-
-    #[tokio::test]
-    async fn agent_start_reopens_stream_and_clears_previous_error() {
-        let actor = AgentStateActor::new();
-        actor.set_error(Some("previous failure".into())).await;
-        actor.apply_event(&AgentEvent::AgentStart).await;
-        actor.sync().await;
-        let snapshot = actor.snapshot();
-        assert!(snapshot.is_streaming);
-        assert!(snapshot.streaming_message.is_none());
-        assert!(snapshot.pending_tool_calls.is_empty());
-        assert!(snapshot.error_message.is_none());
-    }
-
-    #[tokio::test]
-    async fn agent_end_clears_interrupted_pending_tool_calls() {
-        let actor = AgentStateActor::new();
-        actor.add_pending_tool_call("call-1".into()).await;
-        actor
-            .apply_event(&AgentEvent::AgentEnd { messages: vec![] })
-            .await;
-        actor.sync().await;
-        assert!(actor.snapshot().pending_tool_calls.is_empty());
-    }
-
-    #[tokio::test]
-    async fn publish_event_keeps_bus_and_projection_on_one_event_boundary() {
-        let actor = AgentStateActor::new();
-        let bus = EventBus::new();
-        let mut events = bus.subscribe();
-        let message = AgentMessage::User(UserMessage {
-            content: vec![UserContent::Text { text: "hey".into() }],
-            timestamp: 1,
-        });
-
-        actor
-            .publish_event(&bus, AgentEvent::MessageEnd { message })
-            .await;
-        actor.sync().await;
-
-        assert!(matches!(
-            events.try_recv(),
-            Ok(AgentEvent::MessageEnd { .. })
-        ));
-        assert_eq!(actor.snapshot().messages.len(), 1);
-    }
-
-    #[tokio::test]
-    async fn error_event_owns_non_message_error_projection() {
-        let actor = AgentStateActor::new();
-        actor
-            .apply_event(&AgentEvent::Error {
-                message: "provider: no stream".into(),
-            })
-            .await;
-        actor.sync().await;
-        assert_eq!(
-            actor.snapshot().error_message.as_deref(),
-            Some("provider: no stream")
-        );
-    }
-}
+#[path = "actor_tests.rs"]
+mod tests;

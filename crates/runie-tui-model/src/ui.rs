@@ -65,56 +65,7 @@ runie_core::typed_action_registry! {
     }
 }
 
-/// Pure intent emitted by the UI actor for an effect-owning consumer.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum UiCommand {
-    ActivatePaletteEntry(PaletteAction),
-    OpenPaletteParameters(PaletteAction),
-    ExecuteMappable(runie_core::commands::MappableBuiltinCommand),
-    ActivateSkill(String),
-    CopyText(String),
-    SelectTheme(String),
-    ProviderAction {
-        action: PaletteAction,
-        value: String,
-    },
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum UiMsg {
-    HideWelcome,
-    ToggleShortcuts,
-    ToggleCommandPalette,
-    OpenFileDialog,
-    OpenPaletteParameters(PaletteAction),
-    PaletteParameterChar(char),
-    PaletteParameterBackspace,
-    PaletteParameterMove(isize),
-    PaletteParameterPreview,
-    PaletteParameterSubmit,
-    CommandPaletteChar(char),
-    CommandPaletteBackspace,
-    CommandPaletteMove(isize),
-    CommandPaletteEscape,
-    DialogEscape,
-    CloseDialogs,
-    ActivateCommandPalette,
-    ToggleModelSelector,
-    ModelSelectorChar(char),
-    ModelSelectorBackspace,
-    ModelSelectorMove(isize),
-    ModelSelectorEscape,
-    ModelSelectorToggleScope,
-    ActivateModelSelector,
-    SetModelSelectorResultCount(usize),
-    SetModelSelectorRows(Vec<String>),
-    SetSkillRows(Vec<String>),
-    ShowCommandResult(String),
-    ToggleSessionInfo,
-    ToggleChangelog,
-    CopyText(String),
-    Reset,
-}
+include!("ui_messages.rs");
 
 /// Translate core lifecycle events into UI-owned reducer messages.
 /// Unsupported core events intentionally produce no UI transition.

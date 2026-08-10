@@ -102,43 +102,57 @@ impl WelcomeWidget {
     fn render_full(self, area: Rect, buf: &mut Buffer) {
         let bold = Style::default().add_modifier(Modifier::BOLD);
         let x = area.x.saturating_add(13);
-        let action = |label: &str, shortcut: &str| {
-            RatLine::from(vec![
-                Span::styled(label.to_owned(), bold),
-                Span::raw(" ".repeat(45usize.saturating_sub(label.len()))),
-                Span::raw(shortcut.to_owned()),
-            ])
-        };
-        Paragraph::new(vec![
-            action("New worktree", "ctrl+w"),
-            action("Resume session", "ctrl+s"),
-            RatLine::from(Span::styled("Changelog", bold)),
-            // Match Grok's full-mode welcome copy; Ctrl+D remains supported
-            // by the input handler but is intentionally not duplicated here.
-            action("Quit", "ctrl+q"),
+        render_full_actions(x, area, bold, buf);
+        render_full_workflows(x, area, bold, buf);
+        render_full_tip(area, bold, buf);
+        render_full_version(area, buf);
+    }
+}
+
+fn render_full_actions(x: u16, area: Rect, bold: Style, buf: &mut Buffer) {
+    let action = |label: &str, shortcut: &str| {
+        RatLine::from(vec![
+            Span::styled(label.to_owned(), bold),
+            Span::raw(" ".repeat(45usize.saturating_sub(label.len()))),
+            Span::raw(shortcut.to_owned()),
         ])
-        .render(
-            Rect::new(x, area.y + 3, area.width.saturating_sub(13), 4),
-            buf,
-        );
-        Paragraph::new(vec![
-            RatLine::from(Span::styled("Workflows are here!", bold)),
-            RatLine::from("Try them out using /workflows."),
-        ])
-        .render(
-            Rect::new(x, area.y + 8, area.width.saturating_sub(13), 2),
-            buf,
-        );
-        Paragraph::new(RatLine::from(vec![
-            Span::styled("Tip: ", bold),
-            Span::raw("Use Ctrl+Enter to interject messages. Or just Enter to queue messages."),
-        ]))
-        .render(Rect::new(area.x, area.y + 14, area.width, 1), buf);
-        if area.width >= 100 {
-            Paragraph::new(version_badge(VersionBadgeVariant::Full))
-                .alignment(Alignment::Right)
-                .render(Rect::new(area.x, area.y + 1, area.width, 1), buf);
-        }
+    };
+    Paragraph::new(vec![
+        action("New worktree", "ctrl+w"),
+        action("Resume session", "ctrl+s"),
+        RatLine::from(Span::styled("Changelog", bold)),
+        action("Quit", "ctrl+q"),
+    ])
+    .render(
+        Rect::new(x, area.y + 3, area.width.saturating_sub(13), 4),
+        buf,
+    );
+}
+
+fn render_full_workflows(x: u16, area: Rect, bold: Style, buf: &mut Buffer) {
+    Paragraph::new(vec![
+        RatLine::from(Span::styled("Workflows are here!", bold)),
+        RatLine::from("Try them out using /workflows."),
+    ])
+    .render(
+        Rect::new(x, area.y + 8, area.width.saturating_sub(13), 2),
+        buf,
+    );
+}
+
+fn render_full_tip(area: Rect, bold: Style, buf: &mut Buffer) {
+    Paragraph::new(RatLine::from(vec![
+        Span::styled("Tip: ", bold),
+        Span::raw("Use Ctrl+Enter to interject messages. Or just Enter to queue messages."),
+    ]))
+    .render(Rect::new(area.x, area.y + 14, area.width, 1), buf);
+}
+
+fn render_full_version(area: Rect, buf: &mut Buffer) {
+    if area.width >= 100 {
+        Paragraph::new(version_badge(VersionBadgeVariant::Full))
+            .alignment(Alignment::Right)
+            .render(Rect::new(area.x, area.y + 1, area.width, 1), buf);
     }
 }
 

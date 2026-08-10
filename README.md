@@ -68,8 +68,11 @@ complete local gate with `just ci`.
 
 ## Tasks
 
-Implementation tracked under `tasks/` as `index.json` + per-step `NN-name.md`
-files. Status is updated as each step completes.
+The current plan is [`tasks/plan.md`](tasks/plan.md), with durable architectural
+and parity findings in [`tasks/findings.md`](tasks/findings.md). The machine-
+readable summary is [`tasks/index.json`](tasks/index.json). Historical per-step
+task files were consolidated so this directory remains a current plan rather
+than a second issue tracker.
 
 ## Test Performance
 
@@ -103,4 +106,5 @@ The local workspace gate is green. Core parity covers the pi event/state/tool
 loop contract and provider replay; TUI parity covers actor-owned MVU state,
 themes, prompt/scrollback/status/layout states, typed tool cards, workflow
 lifecycle, YAML scenarios, and four-size visual captures. Remaining work is
-tracked in `tasks/p16`, `p19`, `p21`, and the source inventory in `tasks/p30`.
+tracked by workstream in [`tasks/plan.md`](tasks/plan.md); source-backed
+conclusions are recorded in [`tasks/findings.md`](tasks/findings.md).

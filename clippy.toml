@@ -1,2 +1,4 @@
+# Repository-wide structural limits. These are intentionally stricter than
+# Clippy defaults; every Rust source file is expected to stay decomposable.
 too-many-lines-threshold = 40
 cognitive-complexity-threshold = 10

@@ -49,10 +49,6 @@ impl StickyHeaderLayout {
 const HEADER_GAP: u16 = 1;
 pub const MIN_PINNED_HEIGHT: u16 = 4;
 
-#[allow(
-    clippy::too_many_lines,
-    reason = "the source-backed sticky layout keeps the one-dimensional transition together"
-)]
 pub fn compute_sticky_layout(
     scroll_offset: usize,
     prompts: &[PromptDescriptor],
@@ -71,20 +67,12 @@ pub fn compute_sticky_layout(
         .full_height
         .saturating_sub((scroll_offset - prompt.y_virtual) as u16)
         .max(prompt.min_height.max(MIN_PINNED_HEIGHT));
-    let pinned = || StickyHeaderLayout {
-        pushed: None,
-        pinned: Some(RenderedPrompt {
-            entry_idx: prompt.entry_idx,
-            render_height: height,
-            clip_top: 0,
-        }),
-    };
     let Some(next) = prompts.get(index + 1) else {
-        return pinned();
+        return pinned_layout(prompt.entry_idx, height);
     };
     let next_row = next.y_virtual.saturating_sub(scroll_offset);
     if next_row == 0 || next_row > (height + HEADER_GAP) as usize {
-        return pinned();
+        return pinned_layout(prompt.entry_idx, height);
     }
     let visible = (next_row as u16).saturating_sub(HEADER_GAP);
     if visible == 0 {
@@ -98,6 +86,17 @@ pub fn compute_sticky_layout(
             clip_top: render_height.saturating_sub(visible),
         }),
         pinned: None,
+    }
+}
+
+fn pinned_layout(entry_idx: usize, height: u16) -> StickyHeaderLayout {
+    StickyHeaderLayout {
+        pushed: None,
+        pinned: Some(RenderedPrompt {
+            entry_idx,
+            render_height: height,
+            clip_top: 0,
+        }),
     }
 }
 

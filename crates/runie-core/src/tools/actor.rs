@@ -18,7 +18,9 @@ fn unix_timestamp_millis() -> i64 {
         .unwrap_or_default()
 }
 
-use super::executor::{execute_parallel, execute_sequential, DispatchOutcome, ToolExecContext};
+use super::executor::{
+    execute_parallel, execute_sequential, DispatchOutcome, ToolExecContext, ToolExecHooks,
+};
 use super::registry::ToolRegistry;
 
 #[derive(Debug)]
@@ -182,26 +184,16 @@ async fn run_tool_worker(
             reply,
         } = cmd;
 
-        // Promote any per-tool override to sequential mode (README §tool
-        // execution: any sequential tool forces the whole batch).
-        let mut effective_mode = mode;
-        for call in &calls {
-            if let Some(ToolExecutionMode::Sequential) = registry.execution_mode(&call.name) {
-                effective_mode = ToolExecutionMode::Sequential;
-                break;
-            }
-        }
-
-        let ctx = ToolExecContext {
+        let effective_mode = effective_tool_mode(&registry, &calls, mode);
+        let ctx = tool_exec_context(
             assistant_message,
             context,
             abort,
             bus,
-            registry: registry.clone(),
             hooks,
-            updates: None,
-            tool_result_timestamp: tool_result_timestamp.unwrap_or_else(unix_timestamp_millis),
-        };
+            registry.clone(),
+            tool_result_timestamp,
+        );
 
         let outcome: DispatchOutcome = match effective_mode {
             ToolExecutionMode::Sequential => execute_sequential(calls, ctx).await,
@@ -213,6 +205,42 @@ async fn run_tool_worker(
             all_terminated: outcome.all_terminated,
             events: outcome.events,
         });
+    }
+}
+
+fn effective_tool_mode(
+    registry: &ToolRegistry,
+    calls: &[ToolCall],
+    mode: ToolExecutionMode,
+) -> ToolExecutionMode {
+    if calls
+        .iter()
+        .any(|call| registry.execution_mode(&call.name) == Some(ToolExecutionMode::Sequential))
+    {
+        ToolExecutionMode::Sequential
+    } else {
+        mode
+    }
+}
+
+fn tool_exec_context(
+    assistant_message: AssistantMessage,
+    context: AgentContext,
+    abort: Option<tokio::sync::watch::Receiver<bool>>,
+    bus: Option<EventBus>,
+    hooks: ToolExecHooks,
+    registry: Arc<ToolRegistry>,
+    timestamp: Option<i64>,
+) -> ToolExecContext {
+    ToolExecContext {
+        assistant_message,
+        context,
+        abort,
+        bus,
+        registry,
+        hooks,
+        updates: None,
+        tool_result_timestamp: timestamp.unwrap_or_else(unix_timestamp_millis),
     }
 }
 

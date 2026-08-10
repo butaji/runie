@@ -1,7 +1,5 @@
 //! Pure Pi-compatible model catalog and scoped-model selection semantics.
-//!
 //! Refreshing the catalog and committing a selection belong to an owning
-//! actor. This module only reduces immutable catalog inputs, so it is safe to
 //! use from actors, YAML replay, and the TUI's declarative selector.
 
 use crate::task_owner::{mailbox_call, spawn_actor_worker, TaskOwner};
@@ -159,90 +157,13 @@ impl Default for ModelCatalogActor {
     }
 }
 
-#[allow(clippy::too_many_lines)]
 async fn run_model_catalog_worker(
     mut rx: mpsc::Receiver<ModelCatalogCommand>,
     snapshot_tx: watch::Sender<ModelCatalogSnapshot>,
 ) {
     let mut snapshot = ModelCatalogSnapshot::default();
     while let Some(command) = rx.recv().await {
-        let (event, reply) = match command {
-            ModelCatalogCommand::Load(models, reply) => {
-                snapshot.catalog.available = models;
-                snapshot.results = snapshot
-                    .catalog
-                    .search(&snapshot.query, snapshot.scoped_only);
-                (
-                    ModelCatalogEvent::CatalogLoaded {
-                        count: snapshot.catalog.available.len(),
-                    },
-                    Either::Unit(reply),
-                )
-            }
-            ModelCatalogCommand::Refresh(result, reply) => match result {
-                Ok(models) => {
-                    snapshot.catalog.available = models;
-                    snapshot.results = snapshot
-                        .catalog
-                        .search(&snapshot.query, snapshot.scoped_only);
-                    (
-                        ModelCatalogEvent::CatalogLoaded {
-                            count: snapshot.catalog.available.len(),
-                        },
-                        Either::Unit(reply),
-                    )
-                }
-                Err(message) => (
-                    ModelCatalogEvent::RefreshFailed { message },
-                    Either::Unit(reply),
-                ),
-            },
-            ModelCatalogCommand::SetScope(models, reply) => {
-                snapshot.catalog.scoped = models;
-                snapshot.results = snapshot
-                    .catalog
-                    .search(&snapshot.query, snapshot.scoped_only);
-                (
-                    ModelCatalogEvent::ScopeChanged {
-                        count: snapshot.catalog.scoped.len(),
-                    },
-                    Either::Unit(reply),
-                )
-            }
-            ModelCatalogCommand::Search(query, scoped_only, reply) => {
-                snapshot.query = query;
-                snapshot.scoped_only = scoped_only;
-                snapshot.results = snapshot.catalog.search(&snapshot.query, scoped_only);
-                (
-                    ModelCatalogEvent::SearchChanged {
-                        query: snapshot.query.clone(),
-                        result_count: snapshot.results.len(),
-                    },
-                    Either::Unit(reply),
-                )
-            }
-            ModelCatalogCommand::Cycle(direction, reply) => {
-                let selected = snapshot
-                    .catalog
-                    .cycle(snapshot.selected.as_ref(), direction);
-                snapshot.selected = selected.clone().map(|item| item.model);
-                (
-                    ModelCatalogEvent::SelectionChanged {
-                        model: snapshot.selected.clone(),
-                    },
-                    Either::Model(reply, snapshot.selected.clone()),
-                )
-            }
-            ModelCatalogCommand::Select(model, reply) => {
-                snapshot.selected = Some(model.clone());
-                (
-                    ModelCatalogEvent::SelectionChanged {
-                        model: Some(model.clone()),
-                    },
-                    Either::Model(reply, Some(model)),
-                )
-            }
-        };
+        let (event, reply) = reduce_catalog_command(&mut snapshot, command);
         snapshot.last_event = Some(event);
         let _ = snapshot_tx.send(snapshot.clone());
         match reply {
@@ -254,6 +175,122 @@ async fn run_model_catalog_worker(
             }
         }
     }
+}
+
+fn reduce_catalog_command(
+    snapshot: &mut ModelCatalogSnapshot,
+    command: ModelCatalogCommand,
+) -> (ModelCatalogEvent, Either) {
+    match command {
+        ModelCatalogCommand::Load(models, reply) => reduce_load(snapshot, models, reply),
+        ModelCatalogCommand::Refresh(result, reply) => reduce_refresh(snapshot, result, reply),
+        ModelCatalogCommand::SetScope(models, reply) => reduce_scope(snapshot, models, reply),
+        ModelCatalogCommand::Search(query, scoped_only, reply) => {
+            reduce_search(snapshot, query, scoped_only, reply)
+        }
+        ModelCatalogCommand::Cycle(direction, reply) => reduce_cycle(snapshot, direction, reply),
+        ModelCatalogCommand::Select(model, reply) => reduce_select(snapshot, model, reply),
+    }
+}
+
+fn refresh_results(snapshot: &mut ModelCatalogSnapshot) {
+    snapshot.results = snapshot
+        .catalog
+        .search(&snapshot.query, snapshot.scoped_only);
+}
+
+fn reduce_load(
+    snapshot: &mut ModelCatalogSnapshot,
+    models: Vec<Model>,
+    reply: mpsc::Sender<()>,
+) -> (ModelCatalogEvent, Either) {
+    snapshot.catalog.available = models;
+    refresh_results(snapshot);
+    (
+        ModelCatalogEvent::CatalogLoaded {
+            count: snapshot.catalog.available.len(),
+        },
+        Either::Unit(reply),
+    )
+}
+
+fn reduce_refresh(
+    snapshot: &mut ModelCatalogSnapshot,
+    result: Result<Vec<Model>, String>,
+    reply: mpsc::Sender<()>,
+) -> (ModelCatalogEvent, Either) {
+    match result {
+        Ok(models) => reduce_load(snapshot, models, reply),
+        Err(message) => (
+            ModelCatalogEvent::RefreshFailed { message },
+            Either::Unit(reply),
+        ),
+    }
+}
+
+fn reduce_scope(
+    snapshot: &mut ModelCatalogSnapshot,
+    models: Vec<ScopedModel>,
+    reply: mpsc::Sender<()>,
+) -> (ModelCatalogEvent, Either) {
+    snapshot.catalog.scoped = models;
+    refresh_results(snapshot);
+    (
+        ModelCatalogEvent::ScopeChanged {
+            count: snapshot.catalog.scoped.len(),
+        },
+        Either::Unit(reply),
+    )
+}
+
+fn reduce_search(
+    snapshot: &mut ModelCatalogSnapshot,
+    query: String,
+    scoped_only: bool,
+    reply: mpsc::Sender<()>,
+) -> (ModelCatalogEvent, Either) {
+    snapshot.query = query;
+    snapshot.scoped_only = scoped_only;
+    refresh_results(snapshot);
+    (
+        ModelCatalogEvent::SearchChanged {
+            query: snapshot.query.clone(),
+            result_count: snapshot.results.len(),
+        },
+        Either::Unit(reply),
+    )
+}
+
+fn reduce_cycle(
+    snapshot: &mut ModelCatalogSnapshot,
+    direction: CycleDirection,
+    reply: mpsc::Sender<Option<Model>>,
+) -> (ModelCatalogEvent, Either) {
+    snapshot.selected = snapshot
+        .catalog
+        .cycle(snapshot.selected.as_ref(), direction)
+        .map(|item| item.model);
+    let selected = snapshot.selected.clone();
+    (
+        ModelCatalogEvent::SelectionChanged {
+            model: selected.clone(),
+        },
+        Either::Model(reply, selected),
+    )
+}
+
+fn reduce_select(
+    snapshot: &mut ModelCatalogSnapshot,
+    model: Model,
+    reply: mpsc::Sender<Option<Model>>,
+) -> (ModelCatalogEvent, Either) {
+    snapshot.selected = Some(model.clone());
+    (
+        ModelCatalogEvent::SelectionChanged {
+            model: Some(model.clone()),
+        },
+        Either::Model(reply, Some(model)),
+    )
 }
 
 #[allow(clippy::large_enum_variant)]

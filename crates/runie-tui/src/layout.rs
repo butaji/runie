@@ -44,10 +44,6 @@ pub fn chat_layout(area: Rect) -> ChatLayout {
     chat_layout_with_prompt_height(area, PROMPT_HEIGHT)
 }
 
-#[allow(
-    clippy::too_many_lines,
-    reason = "the layout reducer keeps all dependent regions visible together"
-)]
 pub fn chat_layout_with_prompt_height(area: Rect, prompt_height: u16) -> ChatLayout {
     debug_assert_eq!(
         chat_elements().slots().collect::<Vec<_>>(),
@@ -72,6 +68,16 @@ pub fn chat_layout_with_prompt_height(area: Rect, prompt_height: u16) -> ChatLay
     };
     let [header_height, scrollback_height, prompt_height] =
         chat_region_heights(inner.height, prompt_height);
+    build_chat_layout(area, inner, header_height, scrollback_height, prompt_height)
+}
+
+fn build_chat_layout(
+    area: Rect,
+    inner: Rect,
+    header_height: u16,
+    scrollback_height: u16,
+    prompt_height: u16,
+) -> ChatLayout {
     let header = Rect {
         x: inner.x,
         y: inner.y,
@@ -96,18 +102,22 @@ pub fn chat_layout_with_prompt_height(area: Rect, prompt_height: u16) -> ChatLay
         width: inner.width,
         height: STATUS_HEIGHT,
     };
-    let footer_badge = Rect {
-        x: inner.x,
-        y: status.y + status.height,
-        width: inner.width,
-        height: BOTTOM_MARGIN.min(area.height),
-    };
+    let footer_badge = footer_badge(inner, status, area.height);
     ChatLayout {
         header,
         scrollback,
         prompt,
         status,
         footer_badge,
+    }
+}
+
+fn footer_badge(inner: Rect, status: Rect, area_height: u16) -> Rect {
+    Rect {
+        x: inner.x,
+        y: status.y + status.height,
+        width: inner.width,
+        height: BOTTOM_MARGIN.min(area_height),
     }
 }
 

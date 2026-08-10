@@ -1,0 +1,35 @@
+Runie live PTY capture: command palette open, 120x36
+
+   main ~/Code/GitHub/runie-tests/runie                                                                 0 turn / 500K
+
+                              ┌─ Commands ─────────────────────────────── [✗] ─┐
+                              │                                                  │
+                              │  search:                                         │
+                              │──────────────────────────────────────────────────│
+                              │  Session                                          │
+                              │  ◆ New Session                                    │
+                              │  ◆ Keyboard Shortcuts                             │
+                              │  ◆ Quit                                           │
+                              │  ◆ Changelog                                      │
+                              │  Context                                           │
+                              │  ◆ Copy Last Response                             │
+                              │  ◆ Session Info                                   │
+                              │  Model & Input                                    │
+                              │  ◆ Select Model <provider/model>                  │
+                              │  ◆ Scoped Models                                  │
+                              │  ◆ Set Session Name <Session name>                │
+                              │  ◆ Compact Context <Instructions (optional)>      │
+                              │  ◆ Fork Session <Entry id>                        │
+                              │  ◆ Select Tree Entry <Entry id>                  │
+                              │  ◆ Export Session <Path (.jsonl)>                │
+                              │  ◆ Import Session <Path (.jsonl)>                │
+                              │  ◆ Clone Session <Path (.jsonl)>                 │
+                              │  ◆ Resume Session <Path (.jsonl)>                │
+                              │                                                  │
+                              │          ↑/↓ nav  |  Enter select  |  Esc close   │
+                              │                                                  │
+  ╭───────────────────────────│                                                  │───────────────────────────╮
+  │ ❯ Type your message...    └──────────────────────────────────────────────────┘                           │
+  ╰────────────────────────────────────────────────────────────────────────────────── MiniMax-M2.1 · always-approve ─╯
+
+  Shift+Tab:mode  │  Ctrl+x:shortcuts

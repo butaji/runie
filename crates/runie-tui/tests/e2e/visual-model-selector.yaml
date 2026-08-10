@@ -14,5 +14,5 @@ assertions:
       model_selector_index: 0
       model_selector_scoped_only: true
     screen_text:
-      - "Model Selector"
-      - "Models (scoped)"
+      - "Models"
+      - "Select an item"

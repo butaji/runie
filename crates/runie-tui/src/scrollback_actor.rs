@@ -1,19 +1,21 @@
 //! Actor-owned transcript projection.
 
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-};
+use std::sync::Arc;
 
 use tokio::sync::{mpsc, oneshot, watch};
 
 use runie_core::types::AgentEvent;
-use runie_core::{mailbox_ack, spawn_actor_worker, spawn_owned_worker, task_owner::TaskOwner};
+use runie_core::{
+    mailbox_ack, spawn_actor_worker, spawn_owned_worker, task_owner::TaskOwner, EventMemo,
+    SharedSnapshot,
+};
 
-use crate::widgets::{FeedSnapshot, Line, LineKind, Scrollback, ScrollbackMsg};
+use crate::widgets::{FeedSnapshot, Scrollback, ScrollbackMsg};
 use runie_tui_model::FeedState;
 
-enum Command {
+use crate::scrollback_projection::{run_bus_projection, OwnedEventProjection};
+
+pub(crate) enum Command {
     ApplyBatch(Vec<ScrollbackMsg>, oneshot::Sender<()>),
     ApplyEvent(Box<AgentEvent>, oneshot::Sender<()>),
 }
@@ -22,6 +24,7 @@ enum Command {
 pub struct ScrollbackActor {
     tx: mpsc::Sender<Command>,
     snapshot: watch::Receiver<FeedSnapshot>,
+    shared_snapshot: watch::Receiver<SharedSnapshot<FeedSnapshot>>,
     _owner: Arc<TaskOwner>,
     _bus_owner: Option<Arc<TaskOwner>>,
 }
@@ -30,11 +33,10 @@ impl ScrollbackActor {
     #[allow(clippy::too_many_lines)]
     pub fn new() -> Self {
         let (snapshot_tx, snapshot) = watch::channel(FeedState::default().snapshot());
+        let (shared_tx, shared_snapshot) =
+            watch::channel(SharedSnapshot::new(FeedState::default().snapshot()));
         let (tx, owner) = spawn_actor_worker!(32, |mut rx: mpsc::Receiver<Command>| async move {
-            let mut state = FeedState::default();
-            // The reducer remains async/non-blocking: the unavoidable process
-            // cwd query is isolated behind an awaited, actor-owned blocking
-            // boundary before the projection starts consuming events.
+            let mut memo = EventMemo::new(FeedState::default());
             let workspace = tokio::task::spawn_blocking(|| {
                 std::env::current_dir()
                     .ok()
@@ -53,23 +55,23 @@ impl ScrollbackActor {
                     }
                 };
                 for message in messages {
-                    state.reduce(message);
+                    memo = memo.apply(message, |state, message| state.reduce(message.clone()));
                 }
-                let _ = snapshot_tx.send(state.snapshot());
+                let next_snapshot = memo.state().snapshot();
+                let _ = snapshot_tx.send(next_snapshot.clone());
+                let _ = shared_tx.send(SharedSnapshot::new(next_snapshot));
                 let _ = reply.send(());
             }
         });
         Self {
             tx,
             snapshot,
+            shared_snapshot,
             _owner: owner,
             _bus_owner: None,
         }
     }
 
-    /// Construct a live transcript projection that owns its lifecycle-event
-    /// subscription. Complex feed rendering remains an explicit event reducer;
-    /// reset ownership is handled here by the transcript actor itself.
     pub fn new_with_bus(bus: &runie_core::events::EventBus) -> Self {
         let mut actor = Self::new();
         let events = bus.subscribe();
@@ -116,265 +118,18 @@ impl ScrollbackActor {
     }
 }
 
-#[allow(
-    clippy::cognitive_complexity,
-    clippy::too_many_lines,
-    reason = "the bus projection keeps event ordering and actor ownership in one loop"
-)]
-async fn run_bus_projection(
-    mut events: tokio::sync::broadcast::Receiver<AgentEvent>,
-    tx: mpsc::Sender<Command>,
-) {
-    loop {
-        let event = match events.recv().await {
-            Ok(event) => event,
-            Err(tokio::sync::broadcast::error::RecvError::Lagged(count)) => {
-                let (reply, _ack) = oneshot::channel();
-                if tx
-                    .send(Command::ApplyBatch(
-                        vec![ScrollbackMsg::Append(Line::new(
-                            LineKind::System,
-                            format!("event stream lagged ({count} events)"),
-                        ))],
-                        reply,
-                    ))
-                    .await
-                    .is_err()
-                {
-                    break;
-                }
-                continue;
-            }
-            Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
-        };
-        let (reply, _ack) = oneshot::channel();
-        if tx
-            .send(Command::ApplyEvent(Box::new(event), reply))
-            .await
-            .is_err()
-        {
-            break;
-        }
-    }
-}
-
-/// The bus bridge is deliberately stateless. Tool identity, lifecycle, and
-/// activity counters belong to the ScrollbackActor reducer, so every event
-/// changes one SSOT and the bridge cannot diverge from direct commands.
-#[derive(Default)]
-struct OwnedEventProjection {
-    workspace: String,
-    active_tools: HashSet<String>,
-    tool_headers: HashMap<String, String>,
-    tool_args: HashMap<String, serde_json::Value>,
-    tool_names: HashMap<String, String>,
-    active_tool_count: usize,
-    activity_failures: usize,
-    activity_dirs: usize,
-    activity_files: usize,
-    activity_commands: usize,
-    activity_subagents: usize,
-}
-
-impl OwnedEventProjection {
-    fn new(workspace: String) -> Self {
-        Self {
-            workspace,
-            ..Self::default()
-        }
-    }
-
-    #[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
-    fn messages(&mut self, event: AgentEvent) -> Vec<ScrollbackMsg> {
-        if let AgentEvent::ToolExecutionStart {
-            tool_call_id,
-            tool_name,
-            args,
-        } = &event
-        {
-            self.active_tools.insert(tool_call_id.clone());
-            self.tool_headers.insert(
-                tool_call_id.clone(),
-                runie_tui_model::tool_header(tool_name, args, &self.workspace),
-            );
-            self.tool_args.insert(tool_call_id.clone(), args.clone());
-            self.tool_names
-                .insert(tool_call_id.clone(), tool_name.clone());
-            match runie_tui_model::classify_activity_tool(tool_name) {
-                Some(runie_tui_model::ActivityKind::Dir) => self.activity_dirs += 1,
-                Some(runie_tui_model::ActivityKind::File) => self.activity_files += 1,
-                Some(runie_tui_model::ActivityKind::Command) => self.activity_commands += 1,
-                Some(runie_tui_model::ActivityKind::Subagent) => self.activity_subagents += 1,
-                None => {}
-            }
-            self.active_tool_count += 1;
-        }
-        let completion = ordinary_tool_end_messages(
-            &mut self.active_tools,
-            &mut self.tool_headers,
-            &mut self.tool_args,
-            &mut self.tool_names,
-            &mut self.active_tool_count,
-            &mut self.activity_failures,
-            (
-                self.activity_dirs,
-                self.activity_files,
-                self.activity_commands,
-                self.activity_subagents,
-            ),
-            &event,
-        );
-        if !completion.is_empty() {
-            completion
-        } else {
-            let messages = bus_messages_for_event(event.clone());
-            if messages.is_empty() {
-                tool_update_messages(&self.active_tools, &mut self.tool_headers, &event)
-            } else {
-                messages
-            }
-        }
-    }
-}
-
-#[allow(
-    clippy::too_many_lines,
-    reason = "the exhaustive event-to-feed table keeps application no-ops explicit"
-)]
-fn bus_messages_for_event(event: AgentEvent) -> Vec<ScrollbackMsg> {
-    runie_tui_model::bus_messages_for_event(&event)
-}
-
-fn structured_update_messages(
-    active_tools: &HashSet<String>,
-    event: &AgentEvent,
-) -> Vec<ScrollbackMsg> {
-    runie_tui_model::structured_update_messages(active_tools, event)
-}
-
-fn tool_update_messages(
-    active_tools: &HashSet<String>,
-    tool_headers: &mut HashMap<String, String>,
-    event: &AgentEvent,
-) -> Vec<ScrollbackMsg> {
-    let structured = structured_update_messages(active_tools, event);
-    if !structured.is_empty() {
-        return structured;
-    }
-    let AgentEvent::ToolExecutionUpdate {
-        tool_call_id,
-        partial_result,
-        ..
-    } = event
-    else {
-        return Vec::new();
-    };
-    if !active_tools.contains(tool_call_id)
-        || runie_tui_model::is_transport_only_update(partial_result)
-    {
-        return Vec::new();
-    }
-    let Some(header) = tool_headers.get_mut(tool_call_id) else {
-        return Vec::new();
-    };
-    *header = runie_tui_model::tool_update_header_text(header, partial_result);
-    vec![ScrollbackMsg::ToolUpdate {
-        tool_call_id: tool_call_id.clone(),
-        header: Some(header.clone()),
-        output: Vec::new(),
-    }]
-}
-
-#[allow(
-    clippy::too_many_lines,
-    reason = "the pure completion fold keeps card, output, and activity variants atomic"
-)]
-#[allow(clippy::too_many_arguments)]
-fn ordinary_tool_end_messages(
-    active_tools: &mut HashSet<String>,
-    tool_headers: &mut HashMap<String, String>,
-    tool_args: &mut HashMap<String, serde_json::Value>,
-    tool_names: &mut HashMap<String, String>,
-    active_tool_count: &mut usize,
-    activity_failures: &mut usize,
-    (dirs, files, commands, subagents): (usize, usize, usize, usize),
-    event: &AgentEvent,
-) -> Vec<ScrollbackMsg> {
-    let AgentEvent::ToolExecutionEnd {
-        tool_call_id,
-        tool_name,
-        result,
-        is_error,
-        ..
-    } = event
-    else {
-        return Vec::new();
-    };
-    if !active_tools.remove(tool_call_id) {
-        return Vec::new();
-    }
-    *active_tool_count = active_tool_count.saturating_sub(1);
-    let pending = tool_headers.remove(tool_call_id).unwrap_or_default();
-    let args = tool_args.remove(tool_call_id).unwrap_or_default();
-    let name = tool_names
-        .remove(tool_call_id)
-        .unwrap_or_else(|| tool_name.clone());
-    let header = if *is_error {
-        *activity_failures += 1;
-        pending
-    } else {
-        runie_tui_model::completed_tool_header_with_args(&pending, &name, &args, result)
-    };
-    let activity = if *active_tool_count == 0 && dirs + files + commands + subagents > 0 {
-        Some(runie_tui_model::activity_text(
-            dirs,
-            files,
-            commands,
-            subagents,
-            *activity_failures,
-            false,
-        ))
-    } else {
-        None
-    };
-    let output_kind = if runie_tui_model::is_output_tool(&name) {
-        LineKind::ToolOutput
-    } else {
-        LineKind::ToolResult
-    };
-    let result_text = runie_tui_model::tool_result_text(result);
-    let mut output = result_text
-        .lines()
-        .filter(|line| !line.is_empty())
-        .map(|line| (output_kind, line.to_owned()))
-        .collect::<Vec<_>>();
-    if !*is_error && matches!(name.as_str(), "web_search" | "web-search") {
-        if let Some(sources) = runie_tui_model::web_search_sources_line(&result_text) {
-            output.push((LineKind::ToolResult, sources));
-        }
-    }
-    let mut messages = vec![ScrollbackMsg::ToolEnd {
-        tool_call_id: tool_call_id.clone(),
-        header,
-        activity,
-        output,
-    }];
-    if *is_error {
-        messages.push(ScrollbackMsg::MarkToolError(tool_call_id.clone()));
-    }
-    messages
-}
-
 impl Default for ScrollbackActor {
     fn default() -> Self {
         Self::new()
     }
 }
 
+include!("scrollback_shared.rs");
+
 #[cfg(test)]
 mod tests {
     use super::ScrollbackActor;
-    use crate::widgets::{Line, LineKind, ScrollbackMsg};
+    use crate::widgets::{Line, LineKind, Scrollback, ScrollbackMsg};
     use runie_core::types::AgentEvent;
 
     #[tokio::test]
@@ -694,6 +449,15 @@ mod tests {
     #[allow(clippy::too_many_lines)]
     async fn actor_reduces_parallel_tool_rows_by_tool_id() {
         let actor = ScrollbackActor::new();
+        apply_parallel_tool_rows(&actor).await;
+        let lines = actor.snapshot();
+        assert_tool_text(&lines, "a", "Read a.txt (1 lines)");
+        assert_tool_text(&lines, "b", "Read b.txt (1 lines)");
+        assert!(lines.lines().iter().any(|line| line.text == "a"));
+        assert!(lines.lines().iter().any(|line| line.text == "b"));
+    }
+
+    async fn apply_parallel_tool_rows(actor: &ScrollbackActor) {
         actor
             .apply_batch(vec![
                 ScrollbackMsg::ToolStart {
@@ -719,26 +483,17 @@ mod tests {
                 },
             ])
             .await;
-        let lines = actor.snapshot();
+    }
+
+    fn assert_tool_text(lines: &Scrollback, id: &str, expected: &str) {
         assert_eq!(
             lines
                 .lines()
                 .iter()
-                .find(|line| line.tool_call_id.as_deref() == Some("a"))
-                .expect("tool a")
+                .find(|line| line.tool_call_id.as_deref() == Some(id))
+                .expect("tool row")
                 .text,
-            "Read a.txt (1 lines)"
+            expected
         );
-        assert_eq!(
-            lines
-                .lines()
-                .iter()
-                .find(|line| line.tool_call_id.as_deref() == Some("b"))
-                .expect("tool b")
-                .text,
-            "Read b.txt (1 lines)"
-        );
-        assert!(lines.lines().iter().any(|line| line.text == "a"));
-        assert!(lines.lines().iter().any(|line| line.text == "b"));
     }
 }

@@ -1,0 +1,234 @@
+//! Renderer-neutral paint instructions.
+//!
+//! Widgets may project immutable model snapshots into these values without
+//! touching a terminal buffer. The Ratatui adapter can interpret them later,
+//! while tests can assert the view data directly.
+
+use crate::view::{ComponentKind, PaintIntent, Slot};
+use ratatui::{
+    buffer::Buffer,
+    layout::Rect,
+    text::Line,
+    widgets::{Paragraph, Widget},
+};
+use runie_tui_model::{
+    InputMode, PromptSnapshot, StatusSnapshot, ToolCardPaintIntent, ToolCardRow,
+};
+
+impl From<ToolCardPaintIntent> for PaintIntent {
+    fn from(intent: ToolCardPaintIntent) -> Self {
+        match intent {
+            ToolCardPaintIntent::Header | ToolCardPaintIntent::Content => Self::Base,
+            ToolCardPaintIntent::Running => Self::Accent,
+            ToolCardPaintIntent::Success => Self::Success,
+            ToolCardPaintIntent::Error => Self::Error,
+            ToolCardPaintIntent::Muted => Self::Muted,
+        }
+    }
+}
+
+#[macro_export]
+macro_rules! paint {
+    ($(($slot:expr, $component:expr, $text:expr, $intent:expr)),+ $(,)?) => {{
+        let document = $crate::paint::PaintDocument::default();
+        $(let document = document.text($slot, $component, $text, $intent);)*
+        document
+    }};
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PaintText {
+    pub slot: Slot,
+    pub component: ComponentKind,
+    pub text: String,
+    pub intent: PaintIntent,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct PaintDocument {
+    pub text: Vec<PaintText>,
+}
+
+impl PaintDocument {
+    pub fn text(
+        mut self,
+        slot: Slot,
+        component: ComponentKind,
+        text: impl Into<String>,
+        intent: PaintIntent,
+    ) -> Self {
+        self.text.push(PaintText {
+            slot,
+            component,
+            text: text.into(),
+            intent,
+        });
+        self
+    }
+}
+
+/// Pure status projection used by future terminal adapters.
+pub fn status_paint(snapshot: &StatusSnapshot) -> PaintDocument {
+    let intent = if snapshot.state.label().starts_with("error:") {
+        PaintIntent::Error
+    } else if snapshot.animation_demand() {
+        PaintIntent::Accent
+    } else {
+        PaintIntent::Muted
+    };
+    crate::paint![(
+        Slot::Status,
+        ComponentKind::Status,
+        snapshot.state.label(),
+        intent
+    ),]
+}
+
+/// Project semantic tool-card rows into renderer-neutral paint data.
+pub fn tool_card_paint(rows: &[ToolCardRow]) -> PaintDocument {
+    let mut document = PaintDocument::default();
+    for row in rows {
+        document = document.text(
+            Slot::Scrollback,
+            ComponentKind::Scrollback,
+            row.text.clone(),
+            row.paint_intent().into(),
+        );
+    }
+    document
+}
+
+/// Interpret renderer-neutral text instructions at the terminal boundary.
+/// Intent-to-style mapping can evolve here without changing model projections.
+pub fn render_paint_document(document: &PaintDocument, area: Rect, buffer: &mut Buffer) {
+    let lines = document
+        .text
+        .iter()
+        .map(|text| Line::raw(text.text.clone()))
+        .collect::<Vec<_>>();
+    Paragraph::new(lines).render(area, buffer);
+}
+
+/// Minimal Ratatui adapter for the status paint document.
+pub fn render_status_paint(snapshot: &StatusSnapshot, area: Rect, buffer: &mut Buffer) {
+    render_paint_document(&status_paint(snapshot), area, buffer);
+}
+
+pub fn prompt_paint(snapshot: &PromptSnapshot) -> PaintDocument {
+    let mode = match snapshot.mode {
+        InputMode::Normal => snapshot.model_caption.clone(),
+        InputMode::Alternate => format!("alternate · {}", snapshot.model_caption),
+        InputMode::Plan => format!("plan · {}", snapshot.model_caption),
+        InputMode::FileSearch => format!("file search · {}", snapshot.model_caption),
+        InputMode::FileViewer => format!("file viewer · {}", snapshot.model_caption),
+    };
+    let caption = if snapshot.history_search {
+        format!("history search · {mode}")
+    } else if snapshot.history_index.is_some() {
+        format!("history · {mode}")
+    } else {
+        mode
+    };
+    let intent = if snapshot.mode == InputMode::Plan {
+        PaintIntent::Warning
+    } else {
+        PaintIntent::Base
+    };
+    crate::paint![
+        (
+            Slot::Prompt,
+            ComponentKind::Prompt,
+            snapshot.text.clone(),
+            PaintIntent::Base
+        ),
+        (Slot::Prompt, ComponentKind::Prompt, caption, intent),
+    ]
+}
+
+pub fn render_prompt_paint(snapshot: &PromptSnapshot, area: Rect, buffer: &mut Buffer) {
+    render_paint_document(&prompt_paint(snapshot), area, buffer);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn paint_document_is_pure_data() {
+        let document = PaintDocument::default().text(
+            Slot::Status,
+            ComponentKind::Status,
+            "Thinking",
+            PaintIntent::Accent,
+        );
+        assert_eq!(document.text[0].text, "Thinking");
+        assert_eq!(document.text[0].intent, PaintIntent::Accent);
+    }
+
+    #[test]
+    fn status_paint_projects_state_without_a_terminal_buffer() {
+        let snapshot = StatusSnapshot {
+            state: runie_tui_model::Status::Thinking,
+            ..StatusSnapshot::default()
+        };
+        let document = status_paint(&snapshot);
+        assert_eq!(document.text[0].text, "thinking...");
+        assert_eq!(document.text[0].intent, PaintIntent::Accent);
+    }
+
+    #[test]
+    fn paint_adapter_renders_the_projected_text() {
+        let snapshot = StatusSnapshot::default();
+        let mut buffer = Buffer::empty(ratatui::layout::Rect::new(0, 0, 20, 1));
+        render_status_paint(
+            &snapshot,
+            ratatui::layout::Rect::new(0, 0, 20, 1),
+            &mut buffer,
+        );
+        assert_eq!(buffer.cell((0, 0)).map(|cell| cell.symbol()), Some("r"));
+    }
+
+    #[test]
+    fn prompt_paint_projects_mode_caption_as_data() {
+        let snapshot = PromptSnapshot {
+            mode: InputMode::Plan,
+            model_caption: "model".into(),
+            text: "draft".into(),
+            ..PromptSnapshot::default()
+        };
+        let document = prompt_paint(&snapshot);
+        assert_eq!(document.text[0].text, "draft");
+        assert_eq!(document.text[1].text, "plan · model");
+        assert_eq!(document.text[1].intent, PaintIntent::Warning);
+    }
+
+    #[test]
+    fn tool_card_paint_projects_semantic_intents_without_terminal_state() {
+        let row = ToolCardRow {
+            tool_call_id: "tool".into(),
+            tool_row_id: None,
+            member_index: 0,
+            card_kind: runie_tui_model::ToolCardKind::Execute,
+            row_kind: runie_tui_model::ToolCardRowKind::Header,
+            text: "bash".into(),
+            mode: runie_core::types::ToolDisplayMode::Truncated,
+            is_running: true,
+            is_error: false,
+        };
+        let document = tool_card_paint(&[row]);
+        assert_eq!(document.text[0].slot, Slot::Scrollback);
+        assert_eq!(document.text[0].intent, PaintIntent::Accent);
+    }
+
+    #[test]
+    fn prompt_adapter_renders_projected_lines() {
+        let snapshot = PromptSnapshot {
+            text: "draft".into(),
+            model_caption: "model".into(),
+            ..PromptSnapshot::default()
+        };
+        let mut buffer = Buffer::empty(Rect::new(0, 0, 20, 2));
+        render_prompt_paint(&snapshot, Rect::new(0, 0, 20, 2), &mut buffer);
+        assert_eq!(buffer.cell((0, 0)).map(|cell| cell.symbol()), Some("d"));
+    }
+}

@@ -4,6 +4,12 @@ Runie is a keyboard-driven Grok-style terminal interface using
 **Model-View-Update (MVU)** at the UI layer. Its presentation surface follows
 Grok; its behavior is limited to features supplied by pi-agent-core.
 
+The command palette, file picker, model selector, session panels, shortcuts,
+and parameter forms share one typed dialog DSL and renderer. The palette is
+backed by the command registry, so built-in commands and discovered skills use
+the same filtering and activation path. Parameterized entries push a form onto
+the dialog stack; `Esc` pops one level.
+
 ## Interaction model
 
 - **Feed** — scrollable conversation history.

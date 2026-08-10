@@ -98,10 +98,6 @@ fn dimensions(header: &Value) -> Result<(u16, u16)> {
     ))
 }
 
-#[allow(
-    clippy::too_many_lines,
-    reason = "paired metadata validation keeps the complete capture evidence contract together"
-)]
 fn validate_capture_metadata(left: &Path, right: &Path) -> Result<()> {
     let left_path = left.with_extension("meta.json");
     let right_path = right.with_extension("meta.json");
@@ -117,18 +113,25 @@ fn validate_capture_metadata(left: &Path, right: &Path) -> Result<()> {
     if !left_exists {
         return Ok(());
     }
-    let left_meta: Value = serde_json::from_str(
-        &std::fs::read_to_string(&left_path).with_context(|| left_path.display().to_string())?,
-    )?;
-    let right_meta: Value = serde_json::from_str(
-        &std::fs::read_to_string(&right_path).with_context(|| right_path.display().to_string())?,
-    )?;
+    let left_meta = load_capture_metadata(&left_path)?;
+    let right_meta = load_capture_metadata(&right_path)?;
     validate_capture_metadata_shape(&left_meta, &left_path)?;
     validate_capture_metadata_shape(&right_meta, &right_path)?;
     validate_capture_artifacts(&left_meta, &left_path)?;
     validate_capture_artifacts(&right_meta, &right_path)?;
     validate_resize_artifact(&left_meta, &left_path)?;
     validate_resize_artifact(&right_meta, &right_path)?;
+    compare_capture_metadata_fields(&left_meta, &right_meta)
+}
+
+fn load_capture_metadata(path: &Path) -> Result<Value> {
+    serde_json::from_str(
+        &std::fs::read_to_string(path).with_context(|| path.display().to_string())?,
+    )
+    .context("capture metadata JSON")
+}
+
+fn compare_capture_metadata_fields(left_meta: &Value, right_meta: &Value) -> Result<()> {
     for (path, label) in [
         ("probe.prompt", "prompt"),
         ("terminal.cols", "terminal columns"),
@@ -138,8 +141,8 @@ fn validate_capture_metadata(left: &Path, right: &Path) -> Result<()> {
         ("probe.quit_key", "quit key"),
         ("resize_schedule", "resize schedule"),
     ] {
-        let left_value = path.split('.').fold(&left_meta, |value, key| &value[key]);
-        let right_value = path.split('.').fold(&right_meta, |value, key| &value[key]);
+        let left_value = path.split('.').fold(left_meta, |value, key| &value[key]);
+        let right_value = path.split('.').fold(right_meta, |value, key| &value[key]);
         if left_value != right_value {
             bail!("capture metadata mismatch for {label}: left={left_value} right={right_value}");
         }
@@ -198,23 +201,7 @@ fn validate_resize_report(report: &Value, schedule: &str) -> Result<()> {
     if report.get("valid") != Some(&Value::Bool(true)) {
         bail!("resize report is not valid");
     }
-    let expected = schedule
-        .split(';')
-        .filter(|entry| !entry.is_empty())
-        .map(|entry| {
-            let mut parts = entry.split(',');
-            let at_ms = parts
-                .next()
-                .context("resize entry timestamp")?
-                .parse::<u64>()?;
-            let cols = parts
-                .next()
-                .context("resize entry columns")?
-                .parse::<u16>()?;
-            let rows = parts.next().context("resize entry rows")?.parse::<u16>()?;
-            anyhow::Ok((at_ms, format!("{cols},{rows}")))
-        })
-        .collect::<Result<Vec<_>>>()?;
+    let expected = parse_resize_schedule(schedule)?;
     let observed = report
         .get("observed")
         .and_then(Value::as_array)
@@ -236,11 +223,32 @@ fn validate_resize_report(report: &Value, schedule: &str) -> Result<()> {
     Ok(())
 }
 
-#[allow(
-    clippy::too_many_lines,
-    reason = "the provenance contract keeps every required capture field explicit"
-)]
+fn parse_resize_schedule(schedule: &str) -> Result<Vec<(u64, String)>> {
+    schedule
+        .split(';')
+        .filter(|entry| !entry.is_empty())
+        .map(|entry| {
+            let mut parts = entry.split(',');
+            let at_ms = parts
+                .next()
+                .context("resize entry timestamp")?
+                .parse::<u64>()?;
+            let cols = parts
+                .next()
+                .context("resize entry columns")?
+                .parse::<u16>()?;
+            let rows = parts.next().context("resize entry rows")?.parse::<u16>()?;
+            anyhow::Ok((at_ms, format!("{cols},{rows}")))
+        })
+        .collect::<Result<Vec<_>>>()
+}
+
 fn validate_capture_metadata_shape(meta: &Value, path: &Path) -> Result<()> {
+    validate_required_metadata_strings(meta, path)?;
+    validate_terminal_dimensions(meta, path)
+}
+
+fn validate_required_metadata_strings(meta: &Value, path: &Path) -> Result<()> {
     let required_strings = [
         "captured_at",
         "repo_revision",
@@ -271,6 +279,10 @@ fn validate_capture_metadata_shape(meta: &Value, path: &Path) -> Result<()> {
             );
         }
     }
+    Ok(())
+}
+
+fn validate_terminal_dimensions(meta: &Value, path: &Path) -> Result<()> {
     for dotted in ["terminal.cols", "terminal.rows"] {
         let value = dotted
             .split('.')
@@ -317,11 +329,6 @@ fn cells(parser: &vt100::Parser, rows: u16, cols: u16) -> Vec<Cell> {
         .collect()
 }
 
-#[allow(
-    clippy::too_many_lines,
-    clippy::cognitive_complexity,
-    reason = "frame replay keeps marker phase selection and VT state together"
-)]
 fn replay_frames(path: &Path, marker: Option<&str>) -> Result<FrameReplay> {
     let content = std::fs::read_to_string(path).with_context(|| path.display().to_string())?;
     let has_alternate_screen = content.contains("\u{1b}[?1049h");
@@ -329,510 +336,163 @@ fn replay_frames(path: &Path, marker: Option<&str>) -> Result<FrameReplay> {
     let header: Value = serde_json::from_str(lines.next().context("cast header")?)?;
     let (cols, rows) = dimensions(&header)?;
     let mut parser = vt100::Parser::new(rows, cols, 0);
-    let mut frames = Vec::new();
-    let mut previous = None;
-    let (marker_text, marker_occurrence) = marker
-        .and_then(|value| {
-            value
-                .rsplit_once('#')
-                .and_then(|(text, occurrence)| occurrence.parse::<usize>().ok().map(|n| (text, n)))
-        })
-        .unwrap_or((marker.unwrap_or_default(), 1));
+    let (marker_text, marker_occurrence) = parse_marker(marker);
     let marker_texts = marker_text.split("&&").collect::<Vec<_>>();
-    let mut seen_markers = 0;
-    let mut marker_visible = false;
-    let mut started = marker.is_none();
-    let mut entered_alternate_screen = false;
+    let started = marker.is_none();
+    let config = ReplayConfig {
+        has_alternate_screen,
+        rows,
+        cols,
+        marker_texts: &marker_texts,
+        marker_occurrence,
+    };
+    let (frames, started) = collect_replay_frames(&mut lines, &mut parser, config, started)?;
+    ensure_marker_found(marker, started, marker_occurrence, path)?;
+    Ok(((cols, rows), frames))
+}
+
+struct ReplayConfig<'a> {
+    has_alternate_screen: bool,
+    rows: u16,
+    cols: u16,
+    marker_texts: &'a [&'a str],
+    marker_occurrence: usize,
+}
+
+fn collect_replay_frames(
+    lines: &mut std::iter::Peekable<std::str::Lines<'_>>,
+    parser: &mut vt100::Parser,
+    config: ReplayConfig<'_>,
+    mut started: bool,
+) -> Result<(Vec<Vec<Cell>>, bool)> {
+    let (mut frames, mut previous) = (Vec::new(), None);
+    let (mut seen_markers, mut marker_visible, mut entered_alternate_screen) = (0, false, false);
     while let Some(line) = lines.next() {
         let event: Value = serde_json::from_str(line)?;
         if event[1].as_str() != Some("o") {
             continue;
         }
         let output = event[2].as_str().context("output payload")?;
-        if output.contains("\u{1b}[2J") && lines.peek().is_some_and(|next| next.contains("?1049l"))
-        {
-            break;
-        }
-        let exited_alternate_screen = output.contains("\u{1b}[?1049l");
-        let output = output
-            .split_once("\u{1b}[?1049l")
-            .map_or(output, |(before_exit, _)| before_exit);
-        if output.contains("\u{1b}[?1049h") {
-            entered_alternate_screen = true;
-        } else if has_alternate_screen && !entered_alternate_screen {
+        let Some(exited_alternate_screen) = prepare_cast_output(
+            lines,
+            parser,
+            output,
+            config.has_alternate_screen,
+            &mut entered_alternate_screen,
+        ) else {
+            continue;
+        };
+        advance_marker(
+            parser,
+            &config,
+            &mut started,
+            &mut marker_visible,
+            &mut seen_markers,
+        );
+        if !started {
             continue;
         }
-        parser.process(strip_private_modes(&output.replace("\u{1b}[?1049h", "")).as_bytes());
-        if !started {
-            let contains_marker = marker_texts
-                .iter()
-                .all(|text| parser.screen().contents().contains(text));
-            if contains_marker && !marker_visible {
-                seen_markers += 1;
-                started = seen_markers >= marker_occurrence;
-            }
-            marker_visible = contains_marker;
-            if !started {
-                continue;
-            }
-        }
-        let frame = cells(&parser, rows, cols);
-        if previous.as_ref() != Some(&frame) {
-            previous = Some(frame.clone());
-            frames.push(frame);
-        }
+        append_changed_frame(parser, config.rows, config.cols, &mut previous, &mut frames);
         if exited_alternate_screen {
             break;
         }
     }
-    if let Some(marker) = marker {
-        if !started {
-            bail!(
-                "phase marker {marker:?} occurrence {marker_occurrence} was not found in {}",
-                path.display()
-            );
-        }
-    }
-    Ok(((cols, rows), frames))
+    Ok((frames, started))
 }
 
-#[allow(
-    clippy::too_many_lines,
-    reason = "cast replay keeps terminal normalization and cell extraction together"
-)]
-fn replay(path: &Path) -> Result<Replay> {
-    let content = std::fs::read_to_string(path).with_context(|| path.display().to_string())?;
-    let has_alternate_screen = content.contains("\u{1b}[?1049h");
-    let mut lines = content.lines().peekable();
-    let header: Value = serde_json::from_str(lines.next().context("cast header")?)?;
-    let (cols, rows) = dimensions(&header)?;
-    let mut parser = vt100::Parser::new(rows, cols, 0);
-    let mut entered_alternate_screen = false;
-    while let Some(line) = lines.next() {
-        let event: Value = serde_json::from_str(line)?;
-        if event[1].as_str() != Some("o") {
-            continue;
-        }
-        let output = event[2]
-            .as_str()
-            .context("output payload")?
-            // Normalize alternate-screen entry so casts recorded through
-            // nested tmux/asciinema PTYs share one comparable virtual screen.
-            .replace("\u{1b}[?1049h", "");
-        if output.contains("\u{1b}[2J") && lines.peek().is_some_and(|next| next.contains("?1049l"))
-        {
-            break;
-        }
-        // The shell frame after an alternate-screen exit is not part of the
-        // TUI scenario. Preserve any application bytes emitted in the same
-        // PTY event before ending replay at the exit sequence.
-        let exited_alternate_screen = output.contains("\u{1b}[?1049l");
-        let output = match output.split_once("\u{1b}[?1049l") {
-            Some((before_exit, _)) => before_exit.to_owned(),
-            None => output,
-        };
-        if output.contains("\u{1b}[?1049h") {
-            entered_alternate_screen = true;
-        } else if has_alternate_screen && !entered_alternate_screen {
-            continue;
-        }
-        parser.process(strip_private_modes(&output).as_bytes());
-        if exited_alternate_screen {
-            break;
-        }
+fn prepare_cast_output(
+    lines: &mut std::iter::Peekable<std::str::Lines<'_>>,
+    parser: &mut vt100::Parser,
+    output: &str,
+    has_alternate_screen: bool,
+    entered_alternate_screen: &mut bool,
+) -> Option<bool> {
+    if should_stop_before_exit(output, lines) {
+        return None;
     }
-    let screen = parser.screen();
-    let current_cells = cells(&parser, rows, cols);
-    let current_contents = screen.contents().lines().map(str::to_owned).collect();
-    Ok(((cols, rows), current_cells, current_contents))
+    apply_cast_output(
+        parser,
+        output,
+        has_alternate_screen,
+        entered_alternate_screen,
+    )
 }
+
+fn advance_marker(
+    parser: &vt100::Parser,
+    config: &ReplayConfig<'_>,
+    started: &mut bool,
+    marker_visible: &mut bool,
+    seen_markers: &mut usize,
+) {
+    if *started {
+        return;
+    }
+    *started = marker_is_reached(
+        parser,
+        config.marker_texts,
+        marker_visible,
+        seen_markers,
+        config.marker_occurrence,
+    );
+}
+
+fn should_stop_before_exit(
+    output: &str,
+    lines: &mut std::iter::Peekable<std::str::Lines<'_>>,
+) -> bool {
+    output.contains("\u{1b}[2J") && lines.peek().is_some_and(|next| next.contains("?1049l"))
+}
+
+fn ensure_marker_found(
+    marker: Option<&str>,
+    started: bool,
+    occurrence: usize,
+    path: &Path,
+) -> Result<()> {
+    if marker.is_some() && !started {
+        bail!(
+            "phase marker {:?} occurrence {occurrence} was not found in {}",
+            marker,
+            path.display()
+        );
+    }
+    Ok(())
+}
+
+fn apply_cast_output(
+    parser: &mut vt100::Parser,
+    output: &str,
+    has_alternate_screen: bool,
+    entered_alternate_screen: &mut bool,
+) -> Option<bool> {
+    let exited = output.contains("\u{1b}[?1049l");
+    let output = output
+        .split_once("\u{1b}[?1049l")
+        .map_or(output, |(before_exit, _)| before_exit);
+    if output.contains("\u{1b}[?1049h") {
+        *entered_alternate_screen = true;
+    } else if has_alternate_screen && !*entered_alternate_screen {
+        return None;
+    }
+    parser.process(strip_private_modes(&output.replace("\u{1b}[?1049h", "")).as_bytes());
+    Some(exited)
+}
+
+#[path = "cast_compare_support/replay.rs"]
+mod replay_helpers;
+pub(crate) use replay_helpers::*;
 
 #[allow(
     clippy::too_many_lines,
     clippy::cognitive_complexity,
     reason = "the CLI keeps replay, diagnostics, and exact exit semantics together"
 )]
-fn main() -> Result<()> {
-    let mut args = std::env::args().skip(1).collect::<Vec<_>>();
-    let phase_marker = args
-        .first()
-        .and_then(|arg| arg.strip_prefix("--frames-after="))
-        .map(str::to_owned);
-    let frames = phase_marker.is_some() || args.first().is_some_and(|arg| arg == "--frames");
-    let dump = args.first().is_some_and(|arg| arg == "--dump");
-    if frames || dump {
-        args.remove(0);
-    }
-    let mut args = args.into_iter();
-    let left = args.next().context(if dump {
-        "usage: cast_compare [--dump|--frames|--frames-after=MARKER[#N]] LEFT.cast RIGHT.cast"
-    } else {
-        "usage: cast_compare LEFT.cast RIGHT.cast"
-    })?;
-    let right = args
-        .next()
-        .context("usage: cast_compare LEFT.cast RIGHT.cast")?;
-    if args.next().is_some() {
-        bail!(
-            "usage: cast_compare [--dump|--frames|--frames-after=MARKER[#N]] LEFT.cast RIGHT.cast"
-        );
-    }
-    validate_capture_metadata(Path::new(&left), Path::new(&right))?;
-    if frames {
-        let (left_geometry, left_frames) =
-            replay_frames(Path::new(&left), phase_marker.as_deref())?;
-        let (right_geometry, right_frames) =
-            replay_frames(Path::new(&right), phase_marker.as_deref())?;
-        if left_geometry != right_geometry {
-            println!(
-                "{{\"exact\":false,\"error\":\"geometry_mismatch\",\"left\":{{\"cols\":{},\"rows\":{}}},\"right\":{{\"cols\":{},\"rows\":{}}}}}",
-                left_geometry.0,
-                left_geometry.1,
-                right_geometry.0,
-                right_geometry.1
-            );
-            bail!(
-                "cast geometries differ: left {}x{}, right {}x{}",
-                left_geometry.0,
-                left_geometry.1,
-                right_geometry.0,
-                right_geometry.1
-            );
-        }
-        let compared = left_frames.len().min(right_frames.len());
-        let first_difference =
-            (0..compared).find(|&frame| left_frames[frame] != right_frames[frame]);
-        let first_cell_difference = first_difference.and_then(|frame| {
-            left_frames[frame]
-                .iter()
-                .zip(&right_frames[frame])
-                .position(|(left, right)| left != right)
-                .map(|cell| {
-                    serde_json::json!({
-                        "frame": frame + 1,
-                        "x": cell % left_geometry.0 as usize,
-                        "y": cell / left_geometry.0 as usize,
-                        "left": left_frames[frame][cell],
-                        "right": right_frames[frame][cell],
-                    })
-                })
-        });
-        let exact = left_geometry == right_geometry
-            && left_frames.len() == right_frames.len()
-            && first_difference.is_none();
-        let frame_cell_differences = frame_cell_difference_counts(&left_frames, &right_frames);
-        let different_frames = frame_cell_differences
-            .iter()
-            .filter(|count| **count > 0)
-            .count()
-            + left_frames.len().abs_diff(right_frames.len());
-        let ordered_common_frames = ordered_common_frame_count(&left_frames, &right_frames);
-        println!(
-            "{{\"left_frames\":{},\"right_frames\":{},\"compared_frames\":{},\"ordered_common_frames\":{},\"left_unmatched_frames\":{},\"right_unmatched_frames\":{},\"different_frames\":{},\"frame_cell_differences\":{},\"first_difference\":{},\"first_cell_difference\":{},\"exact\":{}}}",
-            left_frames.len(),
-            right_frames.len(),
-            compared,
-            ordered_common_frames,
-            left_frames.len().saturating_sub(ordered_common_frames),
-            right_frames.len().saturating_sub(ordered_common_frames),
-            different_frames,
-            serde_json::to_string(&frame_cell_differences)?,
-            first_difference.map_or_else(
-                || "null".into(),
-                |frame| (frame + 1).to_string(),
-            ),
-            serde_json::to_string(&first_cell_difference)?,
-            exact
-        );
-        if exact {
-            return Ok(());
-        }
-        bail!("indexed cast frames differ");
-    }
-    let (left_geometry, left_cells, left_lines) = replay(Path::new(&left))?;
-    let (right_geometry, right_cells, right_lines) = replay(Path::new(&right))?;
-    if dump {
-        let payload = serde_json::json!({
-            "left": { "path": left, "cols": left_geometry.0, "rows": left_geometry.1, "cells": left_cells },
-            "right": { "path": right, "cols": right_geometry.0, "rows": right_geometry.1, "cells": right_cells },
-        });
-        println!("{}", serde_json::to_string_pretty(&payload)?);
-        return Ok(());
-    }
-    let geometry_equal = left_geometry == right_geometry;
-    if !geometry_equal {
-        println!(
-            "{{\"exact\":false,\"error\":\"geometry_mismatch\",\"left\":{{\"cols\":{},\"rows\":{}}},\"right\":{{\"cols\":{},\"rows\":{}}}}}",
-            left_geometry.0,
-            left_geometry.1,
-            right_geometry.0,
-            right_geometry.1
-        );
-        bail!(
-            "cast geometries differ: left {}x{}, right {}x{}",
-            left_geometry.0,
-            left_geometry.1,
-            right_geometry.0,
-            right_geometry.1
-        );
-    }
-    let compared = left_cells.len().min(right_cells.len());
-    let mut glyphs = 0;
-    let mut widths = 0;
-    let mut colors = 0;
-    let mut styles = 0;
-    let mut other_attributes = 0;
-    let mut attributes = 0;
-    let mut row_differences = vec![0usize; left_geometry.1.max(right_geometry.1) as usize];
-    let mut coordinates = Vec::new();
-    let mut attribute_coordinates = Vec::new();
-    for (index, (left, right)) in left_cells.iter().zip(right_cells.iter()).enumerate() {
-        if left.symbol != right.symbol {
-            glyphs += 1;
-            row_differences[index / left_geometry.0 as usize] += 1;
-            if coordinates.len() < 20 {
-                coordinates.push((
-                    index % left_geometry.0 as usize,
-                    index / left_geometry.0 as usize,
-                ));
-            }
-        } else if left != right {
-            attributes += 1;
-            if left.width != right.width {
-                widths += 1;
-            }
-            if left.fg != right.fg || left.bg != right.bg {
-                colors += 1;
-            }
-            if left.bold != right.bold
-                || left.italic != right.italic
-                || left.underline != right.underline
-                || left.inverse != right.inverse
-            {
-                styles += 1;
-            }
-            if left.width == right.width
-                && left.fg == right.fg
-                && left.bg == right.bg
-                && left.bold == right.bold
-                && left.italic == right.italic
-                && left.underline == right.underline
-                && left.inverse == right.inverse
-            {
-                other_attributes += 1;
-            }
-            row_differences[index / left_geometry.0 as usize] += 1;
-            if attribute_coordinates.len() < 20 {
-                attribute_coordinates.push(serde_json::json!({
-                    "x": index % left_geometry.0 as usize,
-                    "y": index / left_geometry.0 as usize,
-                    "left": left,
-                    "right": right,
-                }));
-            }
-        }
-    }
-    let different = glyphs + attributes + left_cells.len().abs_diff(right_cells.len());
-    let hotspots: Vec<_> = row_differences
-        .iter()
-        .enumerate()
-        .filter(|(_, count)| **count > 0)
-        .map(|(row, count)| format!("{}:{}", row + 1, count))
-        .collect();
-    println!(
-        "{{\"left\":{{\"cols\":{},\"rows\":{}}},\"right\":{{\"cols\":{},\"rows\":{}}},\"compared_cells\":{},\"different_cells\":{},\"different_glyphs\":{},\"different_attributes\":{},\"attribute_breakdown\":{{\"width\":{},\"colors\":{},\"styles\":{},\"other\":{}}},\"row_hotspots\":[{}],\"glyph_coordinates\":{:?},\"attribute_coordinates\":{},\"exact\":{}}}",
-        left_geometry.0,
-        left_geometry.1,
-        right_geometry.0,
-        right_geometry.1,
-        compared,
-        different,
-        glyphs,
-        attributes,
-        widths,
-        colors,
-        styles,
-        other_attributes,
-        hotspots
-            .iter()
-            .map(|hotspot| format!("\"{hotspot}\""))
-            .collect::<Vec<_>>()
-            .join(","),
-        coordinates,
-        serde_json::to_string(&attribute_coordinates)?,
-        geometry_equal && different == 0
-    );
-    for (row, count) in row_differences
-        .iter()
-        .enumerate()
-        .filter(|(_, count)| **count > 0)
-    {
-        println!(
-            "row {} ({} diffs)\n  left:  {:?}\n  right: {:?}",
-            row + 1,
-            count,
-            left_lines.get(row).map(String::as_str).unwrap_or_default(),
-            right_lines.get(row).map(String::as_str).unwrap_or_default(),
-        );
-    }
-    if geometry_equal && different == 0 {
-        Ok(())
-    } else {
-        bail!("casts differ")
-    }
+#[path = "../cast_compare_main.rs"]
+mod cast_compare_main;
+fn main() -> anyhow::Result<()> {
+    cast_compare_main::run()
 }
-
 #[cfg(test)]
-mod tests {
-    use super::{
-        dimensions, frame_cell_difference_counts, ordered_common_frame_count, replay_frames,
-        validate_capture_artifacts, validate_capture_metadata_shape, validate_resize_artifact,
-        validate_resize_report, Cell,
-    };
-    use std::path::{Path, PathBuf};
-
-    fn cast(name: &str) -> PathBuf {
-        Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../..")
-            .join("artifacts")
-            .join(name)
-    }
-
-    fn frame(symbol: &str) -> Vec<Cell> {
-        vec![Cell {
-            symbol: symbol.into(),
-            width: 1,
-            fg: "default".into(),
-            bg: "default".into(),
-            bold: false,
-            italic: false,
-            underline: false,
-            inverse: false,
-        }]
-    }
-
-    #[test]
-    fn dimensions_reject_values_that_do_not_fit_terminal_geometry() {
-        let error = dimensions(&serde_json::json!({"width": 65_536, "height": 24}))
-            .expect_err("oversized cast geometry must be rejected");
-        assert!(error.to_string().contains("width exceeds u16"));
-    }
-
-    #[test]
-    fn ordered_common_frames_distinguish_cadence_from_missing_visual_states() {
-        let left = vec![frame("a"), frame("b"), frame("c")];
-        let right = vec![frame("a"), frame("a"), frame("b"), frame("c")];
-        assert_eq!(ordered_common_frame_count(&left, &right), 3);
-    }
-
-    #[test]
-    fn frame_difference_summary_counts_every_changed_frame_and_cell() {
-        let left = vec![frame("a"), frame("b"), frame("c")];
-        let mut changed = frame("b");
-        changed[0].bold = true;
-        let right = vec![frame("a"), changed, frame("d")];
-        assert_eq!(frame_cell_difference_counts(&left, &right), vec![0, 1, 1]);
-    }
-
-    #[test]
-    fn phase_marker_selects_visible_frames() {
-        let path = cast("grok-rich.cast");
-        let (_, frames) = replay_frames(&path, Some("❯")).expect("recorded prompt marker");
-        assert!(!frames.is_empty());
-    }
-
-    #[test]
-    fn phase_marker_can_select_a_numbered_occurrence() {
-        let path = cast("runie-full.cast");
-        let (_, frames) =
-            replay_frames(&path, Some("session_start#2")).expect("recorded second session marker");
-        assert!(!frames.is_empty());
-    }
-
-    #[test]
-    fn phase_marker_can_require_multiple_visible_markers() {
-        let path = cast("grok-rich.cast");
-        let (_, frames) = replay_frames(&path, Some("Listed 1 dir&&Read 1 file"))
-            .expect("combined markers must select a settled frame");
-        assert!(!frames.is_empty());
-    }
-
-    #[test]
-    fn missing_phase_marker_is_an_error() {
-        let path = cast("grok-rich.cast");
-        let error = replay_frames(&path, Some("__missing_phase_marker__"))
-            .expect_err("missing markers must not produce an empty comparison");
-        assert!(error.to_string().contains("phase marker"));
-        assert!(error.to_string().contains("grok-rich.cast"));
-    }
-
-    #[test]
-    fn capture_metadata_requires_provenance_and_artifacts() {
-        let valid = serde_json::json!({
-            "captured_at": "2026-08-08T00:00:00Z",
-            "repo_revision": "abc123",
-            "command": "target/debug/runie",
-            "grok_path": "/usr/local/bin/grok",
-            "grok_version": "grok 0.2.118",
-            "capture_tools": {"tmux": "tmux 3.7b", "asciinema": "asciinema 3.2.1"},
-            "terminal": {"cols": 80, "rows": 24, "term": "xterm-256color", "colorterm": "truecolor"},
-            "probe": {"prompt": "Hey", "quit_key": "C-q"},
-            "artifacts": {
-                "cast": "/tmp/capture.cast",
-                "raw": "/tmp/capture.raw",
-                "settled_ansi": "/tmp/capture.settled.ansi",
-                "grok_doctor": "/tmp/capture.grok-doctor.json",
-                "resize_report": "/tmp/capture.resize.json"
-            }
-        });
-        validate_capture_metadata_shape(&valid, Path::new("capture.meta.json"))
-            .expect("complete capture metadata");
-
-        let mut incomplete = valid;
-        incomplete["grok_version"] = serde_json::Value::String(String::new());
-        let error = validate_capture_metadata_shape(&incomplete, Path::new("capture.meta.json"))
-            .expect_err("missing provenance must fail");
-        assert!(error.to_string().contains("grok_version"));
-    }
-
-    #[test]
-    fn resize_report_must_observe_declared_schedule() {
-        let report = serde_json::json!({
-            "valid": true,
-            "observed": [
-                {"at_ms": 250, "geometry": "80,12"},
-                {"at_ms": 500, "geometry": "100,24"}
-            ]
-        });
-        validate_resize_report(&report, "250,80,12;500,100,24").expect("valid report");
-        let mut invalid = report;
-        invalid["observed"][1]["geometry"] = serde_json::Value::String("99,24".into());
-        assert!(validate_resize_report(&invalid, "250,80,12;500,100,24").is_err());
-    }
-
-    #[test]
-    fn capture_metadata_rejects_missing_resize_report_artifact() {
-        let metadata = serde_json::json!({
-            "artifacts": {"resize_report": "/tmp/runie-nonexistent-resize-report.json"},
-            "resize_schedule": "250,80,12"
-        });
-        let error = validate_resize_artifact(&metadata, Path::new("capture.meta.json"))
-            .expect_err("missing resize report must invalidate capture evidence");
-        assert!(error.to_string().contains("does not exist"));
-    }
-
-    #[test]
-    fn capture_metadata_rejects_missing_required_capture_artifact() {
-        let metadata = serde_json::json!({
-            "artifacts": {
-                "cast": "/tmp/runie-missing-cast.cast",
-                "raw": "/tmp/runie-missing-cast.raw",
-                "settled_ansi": "/tmp/runie-missing-cast.settled.ansi",
-                "grok_doctor": "/tmp/runie-missing-cast.doctor.json"
-            }
-        });
-        let error = validate_capture_artifacts(&metadata, Path::new("capture.meta.json"))
-            .expect_err("missing capture artifact must invalidate evidence");
-        assert!(error.to_string().contains("artifacts.cast"));
-    }
-}
+#[path = "../cast_compare_tests.rs"]
+mod tests;

@@ -1,5 +1,119 @@
 use super::PaletteAction;
 
+macro_rules! palette_slash_command {
+    ($value:expr) => {
+        match $value {
+            Self::NewSession => "/new",
+            Self::KeyboardShortcuts => "/hotkeys",
+            Self::Quit => "/quit",
+            Self::Changelog => "/changelog",
+            Self::CopyLastResponse => "/copy",
+            Self::SessionInfo => "/session",
+            Self::SelectModel => "/model",
+            Self::SelectTheme => "/theme",
+            Self::ManageProviders => "/providers",
+            Self::ScopedModels => "/scoped-models",
+            Self::SetSessionName => "/name",
+            Self::CompactContext => "/compact",
+            Self::ForkSession => "/fork",
+            Self::SelectTreeEntry => "/tree",
+            Self::ExportSession => "/export",
+            Self::ImportSession => "/import",
+            Self::CloneSession => "/clone",
+            Self::ResumeSession => "/resume",
+            Self::ShareSession => "/share",
+            Self::Help => "/help",
+            Self::ContextInfo => "/context",
+            Self::Settings => "/settings",
+            Self::Doctor => "/doctor",
+            Self::RewindSession => "/rewind",
+            Self::PromptHistory => "/history",
+            Self::FindTranscript => "/find",
+            Self::JumpTranscript => "/jump",
+            Self::Recap => "/recap",
+            Self::SetEffort => "/effort",
+            Self::AlwaysApprove => "/always-approve",
+            Self::AutoApprove => "/auto",
+            Self::PlanMode => "/plan",
+            Self::ViewPlan => "/view-plan",
+            Self::Login => "/login",
+            Self::Logout => "/logout",
+            Self::Reload => "/reload",
+            Self::TrustProject => "/trust",
+            Self::Skills => "/skills",
+            Self::Hooks => "/hooks",
+            Self::Plugins => "/plugins",
+            Self::Mcps => "/mcps",
+            Self::Memory => "/memory",
+            Self::Remember => "/remember",
+            Self::Goal => "/goal",
+            Self::Workflow => "/workflow",
+            Self::Workflows => "/workflows",
+            Self::Loop => "/loop",
+            Self::DeepResearch => "/deep-research",
+            Self::Feedback => "/feedback",
+            Self::Usage => "/usage",
+        }
+    };
+}
+
+macro_rules! palette_description {
+    ($value:expr) => {
+        match $value {
+            Self::NewSession => "Start a fresh session",
+            Self::KeyboardShortcuts => "Show keyboard shortcuts",
+            Self::Quit => "Exit Runie",
+            Self::Changelog => "Show recent changes",
+            Self::CopyLastResponse => "Copy the latest response",
+            Self::SessionInfo => "Show session statistics",
+            Self::SelectModel => "Switch the active model",
+            Self::SelectTheme => "Change the interface theme",
+            Self::ManageProviders => "Manage configured providers",
+            Self::ScopedModels => "Browse scoped models",
+            Self::SetSessionName => "Rename the current session",
+            Self::CompactContext => "Compress conversation history",
+            Self::ForkSession => "Fork at an entry",
+            Self::SelectTreeEntry => "Select a tree entry",
+            Self::ExportSession => "Export a JSONL session",
+            Self::ImportSession => "Import a JSONL session",
+            Self::CloneSession => "Clone a JSONL session",
+            Self::ResumeSession => "Resume a JSONL session",
+            Self::ShareSession => "Create a shareable session link",
+            Self::Help => "Show commands and usage",
+            Self::ContextInfo => "Show context-window usage",
+            Self::Settings => "Open persistent settings",
+            Self::Doctor => "Diagnose runtime integrations",
+            Self::RewindSession => "Restore an earlier conversation state",
+            Self::PromptHistory => "Search previous prompts",
+            Self::FindTranscript => "Search the transcript",
+            Self::JumpTranscript => "Jump to a transcript entry",
+            Self::Recap => "Summarize the current task and state",
+            Self::SetEffort => "Set reasoning effort",
+            Self::AlwaysApprove => "Toggle approval-free execution",
+            Self::AutoApprove => "Automatically approve safe tools",
+            Self::PlanMode => "Enter plan mode",
+            Self::ViewPlan => "Show the current plan",
+            Self::Login => "Authenticate a provider",
+            Self::Logout => "Remove provider credentials",
+            Self::Reload => "Reload configuration and resources",
+            Self::TrustProject => "Trust or revoke a project",
+            Self::Skills => "List or invoke skills",
+            Self::Hooks => "Manage project hooks",
+            Self::Plugins => "Manage plugins",
+            Self::Mcps => "Manage MCP servers",
+            Self::Memory => "Browse or configure memory",
+            Self::Remember => "Save a note immediately",
+            Self::Goal => "Create or manage an autonomous goal",
+            Self::Workflow => "Launch or manage a workflow",
+            Self::Workflows => "Show active workflow runs",
+            Self::Loop => "Schedule recurring work",
+            Self::DeepResearch => "Run bounded research",
+            Self::Feedback => "Submit feedback",
+            Self::Usage => "Show usage or billing information",
+        }
+    };
+}
+
 pub fn palette_display_rows(query: &str, skills: &[String]) -> Vec<String> {
     let labels = super::palette_labels(query, skills);
     let grouped = query.trim().is_empty();
@@ -23,52 +137,71 @@ pub fn palette_display_rows(query: &str, skills: &[String]) -> Vec<String> {
         .collect()
 }
 
-#[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
 fn palette_section(action: PaletteAction) -> &'static str {
-    if matches!(
+    if is_context_action(&action) {
+        "Context"
+    } else if is_session_action(&action) {
+        "Session"
+    } else if is_information_action(&action) {
+        "Information"
+    } else if is_extension_action(&action) {
+        "Extensions"
+    } else if is_automation_action(&action) {
+        "Automation"
+    } else {
+        "Model & Input"
+    }
+}
+
+const fn is_context_action(action: &PaletteAction) -> bool {
+    matches!(
         action,
         PaletteAction::CopyLastResponse | PaletteAction::SessionInfo
-    ) {
-        "Context"
-    } else if matches!(
+    )
+}
+
+const fn is_session_action(action: &PaletteAction) -> bool {
+    matches!(
         action,
         PaletteAction::NewSession
             | PaletteAction::KeyboardShortcuts
             | PaletteAction::Quit
             | PaletteAction::Changelog
             | PaletteAction::ShareSession
-    ) {
-        "Session"
-    } else if matches!(
+    )
+}
+
+const fn is_information_action(action: &PaletteAction) -> bool {
+    matches!(
         action,
         PaletteAction::Help
             | PaletteAction::ContextInfo
             | PaletteAction::Doctor
             | PaletteAction::Feedback
             | PaletteAction::Usage
-    ) {
-        "Information"
-    } else if matches!(
+    )
+}
+
+const fn is_extension_action(action: &PaletteAction) -> bool {
+    matches!(
         action,
         PaletteAction::Skills
             | PaletteAction::Hooks
             | PaletteAction::Plugins
             | PaletteAction::Mcps
             | PaletteAction::Memory
-    ) {
-        "Extensions"
-    } else if matches!(
+    )
+}
+
+const fn is_automation_action(action: &PaletteAction) -> bool {
+    matches!(
         action,
         PaletteAction::Goal
             | PaletteAction::Workflow
             | PaletteAction::Workflows
             | PaletteAction::Loop
             | PaletteAction::DeepResearch
-    ) {
-        "Automation"
-    } else {
-        "Model & Input"
-    }
+    )
 }
 
 fn palette_row(label: &str) -> String {
@@ -126,60 +259,8 @@ impl PaletteAction {
         )
     }
 
-    #[allow(clippy::too_many_lines)]
     pub const fn slash_command(&self) -> &'static str {
-        match self {
-            Self::NewSession => "/new",
-            Self::KeyboardShortcuts => "/hotkeys",
-            Self::Quit => "/quit",
-            Self::Changelog => "/changelog",
-            Self::CopyLastResponse => "/copy",
-            Self::SessionInfo => "/session",
-            Self::SelectModel => "/model",
-            Self::SelectTheme => "/theme",
-            Self::ManageProviders => "/providers",
-            Self::ScopedModels => "/scoped-models",
-            Self::SetSessionName => "/name",
-            Self::CompactContext => "/compact",
-            Self::ForkSession => "/fork",
-            Self::SelectTreeEntry => "/tree",
-            Self::ExportSession => "/export",
-            Self::ImportSession => "/import",
-            Self::CloneSession => "/clone",
-            Self::ResumeSession => "/resume",
-            Self::ShareSession => "/share",
-            Self::Help => "/help",
-            Self::ContextInfo => "/context",
-            Self::Settings => "/settings",
-            Self::Doctor => "/doctor",
-            Self::RewindSession => "/rewind",
-            Self::PromptHistory => "/history",
-            Self::FindTranscript => "/find",
-            Self::JumpTranscript => "/jump",
-            Self::Recap => "/recap",
-            Self::SetEffort => "/effort",
-            Self::AlwaysApprove => "/always-approve",
-            Self::AutoApprove => "/auto",
-            Self::PlanMode => "/plan",
-            Self::ViewPlan => "/view-plan",
-            Self::Login => "/login",
-            Self::Logout => "/logout",
-            Self::Reload => "/reload",
-            Self::TrustProject => "/trust",
-            Self::Skills => "/skills",
-            Self::Hooks => "/hooks",
-            Self::Plugins => "/plugins",
-            Self::Mcps => "/mcps",
-            Self::Memory => "/memory",
-            Self::Remember => "/remember",
-            Self::Goal => "/goal",
-            Self::Workflow => "/workflow",
-            Self::Workflows => "/workflows",
-            Self::Loop => "/loop",
-            Self::DeepResearch => "/deep-research",
-            Self::Feedback => "/feedback",
-            Self::Usage => "/usage",
-        }
+        palette_slash_command!(self)
     }
 
     pub const fn parameter_hint(&self) -> &'static str {
@@ -214,9 +295,19 @@ impl PaletteAction {
         }
     }
 
-    #[allow(clippy::too_many_lines)]
     pub const fn description(&self) -> &'static str {
-        match self {
+        palette_description!(self)
+    }
+
+    pub const fn source(&self) -> &'static str {
+        "builtin"
+    }
+}
+
+#[allow(unused_macros)]
+macro_rules! legacy_palette_slash_command {
+    ($value:expr) => {
+        match $value {
             Self::NewSession => "Start a fresh session",
             Self::KeyboardShortcuts => "Show keyboard shortcuts",
             Self::Quit => "Exit Runie",
@@ -268,11 +359,65 @@ impl PaletteAction {
             Self::Feedback => "Submit feedback",
             Self::Usage => "Show usage or billing information",
         }
-    }
+    };
+}
 
-    pub const fn source(&self) -> &'static str {
-        "builtin"
-    }
+#[allow(unused_macros)]
+macro_rules! legacy_palette_description {
+    ($value:expr) => {
+        match $value {
+            Self::NewSession => "Start a fresh session",
+            Self::KeyboardShortcuts => "Show keyboard shortcuts",
+            Self::Quit => "Exit Runie",
+            Self::Changelog => "Show recent changes",
+            Self::CopyLastResponse => "Copy the latest response",
+            Self::SessionInfo => "Show session statistics",
+            Self::SelectModel => "Switch the active model",
+            Self::SelectTheme => "Change the interface theme",
+            Self::ManageProviders => "Manage configured providers",
+            Self::ScopedModels => "Browse scoped models",
+            Self::SetSessionName => "Rename the current session",
+            Self::CompactContext => "Compress conversation history",
+            Self::ForkSession => "Fork at an entry",
+            Self::SelectTreeEntry => "Select a tree entry",
+            Self::ExportSession => "Export a JSONL session",
+            Self::ImportSession => "Import a JSONL session",
+            Self::CloneSession => "Clone a JSONL session",
+            Self::ResumeSession => "Resume a JSONL session",
+            Self::ShareSession => "Create a shareable session link",
+            Self::Help => "Show commands and usage",
+            Self::ContextInfo => "Show context-window usage",
+            Self::Settings => "Open persistent settings",
+            Self::Doctor => "Diagnose runtime integrations",
+            Self::RewindSession => "Restore an earlier conversation state",
+            Self::PromptHistory => "Search previous prompts",
+            Self::FindTranscript => "Search the transcript",
+            Self::JumpTranscript => "Jump to a transcript entry",
+            Self::Recap => "Summarize the current task and state",
+            Self::SetEffort => "Set reasoning effort",
+            Self::AlwaysApprove => "Toggle approval-free execution",
+            Self::AutoApprove => "Automatically approve safe tools",
+            Self::PlanMode => "Enter plan mode",
+            Self::ViewPlan => "Show the current plan",
+            Self::Login => "Authenticate a provider",
+            Self::Logout => "Remove provider credentials",
+            Self::Reload => "Reload configuration and resources",
+            Self::TrustProject => "Trust or revoke a project",
+            Self::Skills => "List or invoke skills",
+            Self::Hooks => "Manage project hooks",
+            Self::Plugins => "Manage plugins",
+            Self::Mcps => "Manage MCP servers",
+            Self::Memory => "Browse or configure memory",
+            Self::Remember => "Save a note immediately",
+            Self::Goal => "Create or manage an autonomous goal",
+            Self::Workflow => "Launch or manage a workflow",
+            Self::Workflows => "Show active workflow runs",
+            Self::Loop => "Schedule recurring work",
+            Self::DeepResearch => "Run bounded research",
+            Self::Feedback => "Submit feedback",
+            Self::Usage => "Show usage or billing information",
+        }
+    };
 }
 
 const THEME_LABELS: &[&str] = &[

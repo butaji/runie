@@ -1,0 +1,16 @@
+---
+source: crates/runie-tui/tests/visual_snapshots_status_worked_more.rs
+assertion_line: 291
+expression: screen
+---
+                                        
+   main ~/Code/GitHub/runie-tests/run  
+     ❯ resize                           
+                                        
+                                        
+  ┃A response that wraps at the narrow  
+  ╭──────────────────────────────────╮  
+  │ ❯ Type your message...           │  
+  ╰──────────────── Grok 4.5 (high) ─╯  
+                                        
+  Enter:send  │  Shift+Tab:mode  │  Ct

@@ -7,6 +7,7 @@
 use crate::view::PaintIntent;
 use opaline::{load_from_str, Theme};
 use ratatui::style::{Color, Modifier, Style};
+use ratatui::text::Span;
 use runie_core::types::ThemeKind;
 use runie_tui_model::ThemeToken;
 
@@ -125,11 +126,60 @@ pub fn load(theme: ThemeKind) -> Theme {
     match theme {
         ThemeKind::GrokNight => load_from_str(GROK_NIGHT, None).expect("valid GrokNight theme"),
         ThemeKind::GrokDay => load_from_str(GROK_DAY, None).expect("valid GrokDay theme"),
+        ThemeKind::Auto => load(ThemeKind::GrokNight),
+        ThemeKind::TerminalNative => load(ThemeKind::GrokNight),
+        _ => load_builtin(theme),
+    }
+}
+
+fn load_builtin(theme: ThemeKind) -> Theme {
+    match theme {
         ThemeKind::TokyoNight => builtin("tokyo-night"),
         ThemeKind::RosePineMoon => builtin("rose-pine-moon"),
         ThemeKind::OscuraMidnight => builtin("night-owl"),
-        ThemeKind::Auto => load(ThemeKind::GrokNight),
-        ThemeKind::TerminalNative => load(ThemeKind::GrokNight),
+        ThemeKind::AyuDark => builtin("ayu-dark"),
+        ThemeKind::AyuLight => builtin("ayu-light"),
+        ThemeKind::AyuMirage => builtin("ayu-mirage"),
+        ThemeKind::CatppuccinFrappe => builtin("catppuccin-frappe"),
+        ThemeKind::CatppuccinLatte => builtin("catppuccin-latte"),
+        ThemeKind::CatppuccinMacchiato => builtin("catppuccin-macchiato"),
+        ThemeKind::CatppuccinMocha => builtin("catppuccin-mocha"),
+        ThemeKind::Dracula => builtin("dracula"),
+        ThemeKind::EverforestDark => builtin("everforest-dark"),
+        ThemeKind::EverforestLight => builtin("everforest-light"),
+        ThemeKind::FlexokiDark => builtin("flexoki-dark"),
+        ThemeKind::FlexokiLight => builtin("flexoki-light"),
+        _ => load_builtin_tail(theme),
+    }
+}
+
+fn load_builtin_tail(theme: ThemeKind) -> Theme {
+    match theme {
+        ThemeKind::GithubDarkDimmed => builtin("github-dark-dimmed"),
+        ThemeKind::GithubLight => builtin("github-light"),
+        ThemeKind::GruvboxDark => builtin("gruvbox-dark"),
+        ThemeKind::GruvboxLight => builtin("gruvbox-light"),
+        ThemeKind::KanagawaDragon => builtin("kanagawa-dragon"),
+        ThemeKind::KanagawaLotus => builtin("kanagawa-lotus"),
+        ThemeKind::KanagawaWave => builtin("kanagawa-wave"),
+        ThemeKind::LightOwl => builtin("light-owl"),
+        ThemeKind::MonokaiPro => builtin("monokai-pro"),
+        ThemeKind::Nord => builtin("nord"),
+        ThemeKind::OneDark => builtin("one-dark"),
+        ThemeKind::OneLight => builtin("one-light"),
+        ThemeKind::Palenight => builtin("palenight"),
+        ThemeKind::RosePine => builtin("rose-pine"),
+        ThemeKind::RosePineDawn => builtin("rose-pine-dawn"),
+        ThemeKind::SilkCircuitDawn => builtin("silkcircuit-dawn"),
+        ThemeKind::SilkCircuitGlow => builtin("silkcircuit-glow"),
+        ThemeKind::SilkCircuitNeon => builtin("silkcircuit-neon"),
+        ThemeKind::SilkCircuitSoft => builtin("silkcircuit-soft"),
+        ThemeKind::SilkCircuitVibrant => builtin("silkcircuit-vibrant"),
+        ThemeKind::SolarizedDark => builtin("solarized-dark"),
+        ThemeKind::SolarizedLight => builtin("solarized-light"),
+        ThemeKind::TokyoNightMoon => builtin("tokyo-night-moon"),
+        ThemeKind::TokyoNightStorm => builtin("tokyo-night-storm"),
+        _ => unreachable!("special themes handled by load"),
     }
 }
 
@@ -224,6 +274,39 @@ pub fn prompt_border_style_for(theme: ThemeKind) -> Style {
 
 pub fn footer_key_style_for(theme: ThemeKind) -> Style {
     base_style_for(theme).fg(token_color(theme, ThemeToken::TextFooterKey))
+}
+
+/// Shared app hotkey component used by both the main footer and modal
+/// footers. Keeping the bold/accent treatment here prevents widget-specific
+/// variants from drifting apart.
+pub fn footer_hotkey_span(theme: ThemeKind, label: impl Into<String>) -> Span<'static> {
+    Span::styled(
+        label.into(),
+        footer_key_style_for(theme).add_modifier(Modifier::BOLD),
+    )
+}
+
+/// Shared non-key text paired with [`footer_hotkey_span`].
+pub fn footer_text_span(theme: ThemeKind, label: impl Into<String>) -> Span<'static> {
+    Span::styled(label.into(), muted_style_for(theme))
+}
+
+/// Complete footer hotkey/action component shared by the app footer and all
+/// dialog footers. This owns punctuation and separators as well as styles so
+/// the two surfaces render identically.
+pub fn footer_hotkey_actions(
+    theme: ThemeKind,
+    actions: impl IntoIterator<Item = (&'static str, &'static str)>,
+) -> Vec<Span<'static>> {
+    let mut spans = Vec::new();
+    for (index, (key, action)) in actions.into_iter().enumerate() {
+        if index > 0 {
+            spans.push(footer_text_span(theme, "  │  "));
+        }
+        spans.push(footer_hotkey_span(theme, key));
+        spans.push(footer_text_span(theme, format!(":{action}")));
+    }
+    spans
 }
 
 pub fn assistant_body_style_for(theme: ThemeKind) -> Style {

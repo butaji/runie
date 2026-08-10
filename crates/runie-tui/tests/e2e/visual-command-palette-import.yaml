@@ -1,0 +1,17 @@
+name: visual-command-palette-import
+description: The palette import form loads a JSONL session through SessionStorageActor.
+events: []
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    steps:
+      - Ctrl+P
+      - "import"
+      - PaletteEnter
+      - "target/runie-palette-session.jsonl"
+      - PaletteParameterEnter
+    screen_excludes:
+      - "not supported by Runie"
+    files_exist:
+      - target/runie-palette-session.jsonl

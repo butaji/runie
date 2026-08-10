@@ -114,15 +114,14 @@ fn reduce(state: &mut CommandState, name: &str, raw_args: &str) {
     let args = raw_args.trim();
     state.last_command = Some(name.to_owned());
     state.invocation_count = state.invocation_count.saturating_add(1);
+    reduce_command(state, name, args);
+}
+
+fn reduce_command(state: &mut CommandState, name: &str, args: &str) {
+    if reduce_command_collection(state, name, args) {
+        return;
+    }
     match name {
-        "settings" => update_setting(state, args),
-        "share" => state.shared_sessions = state.shared_sessions.saturating_add(1),
-        "feedback" if !args.is_empty() => state.feedback.push(args.into()),
-        "history" if !args.is_empty() => state.history_queries.push(args.into()),
-        "find" | "jump" if !args.is_empty() => state.transcript_queries.push(args.into()),
-        "rewind" if !args.is_empty() => state.rewind_requests.push(args.into()),
-        "usage" => state.usage_requests = state.usage_requests.saturating_add(1),
-        "effort" => update_effort(state, args),
         "always-approve" => state.approval = approval(args, ApprovalMode::Always),
         "auto" => state.approval = approval(args, ApprovalMode::Auto),
         "plan" => state.plan = (!args.is_empty()).then(|| args.into()),
@@ -155,6 +154,21 @@ fn reduce(state: &mut CommandState, name: &str, raw_args: &str) {
         }
         _ => {}
     }
+}
+
+fn reduce_command_collection(state: &mut CommandState, name: &str, args: &str) -> bool {
+    match name {
+        "settings" => update_setting(state, args),
+        "share" => state.shared_sessions = state.shared_sessions.saturating_add(1),
+        "feedback" if !args.is_empty() => state.feedback.push(args.into()),
+        "history" if !args.is_empty() => state.history_queries.push(args.into()),
+        "find" | "jump" if !args.is_empty() => state.transcript_queries.push(args.into()),
+        "rewind" if !args.is_empty() => state.rewind_requests.push(args.into()),
+        "usage" => state.usage_requests = state.usage_requests.saturating_add(1),
+        "effort" => update_effort(state, args),
+        _ => return false,
+    }
+    true
 }
 
 fn update_setting(state: &mut CommandState, args: &str) {

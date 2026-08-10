@@ -1,5 +1,6 @@
 //! Explicit ownership for actor worker tasks.
 
+use tokio::sync::{mpsc, oneshot, watch};
 use tokio::task::JoinHandle;
 
 /// Thin actor DSL for the recurring owned-worker construction.
@@ -76,6 +77,134 @@ macro_rules! mailbox_batch_ack {
 
 pub use crate::mailbox_batch_ack;
 
+/// Declare a thin domain handle around [`ReducerActor`]. The macro generates
+/// only mechanical forwarding; the reducer itself remains an ordinary pure
+/// function at the call site.
+#[macro_export]
+macro_rules! declare_reducer_actor {
+    ($name:ident, $state:ty, $event:ty) => {
+        #[derive(Clone, Debug)]
+        pub struct $name($crate::task_owner::ReducerActor<$state, $event>);
+
+        impl $name {
+            pub fn new(
+                capacity: usize,
+                initial: $state,
+                reduce: impl Fn(&mut $state, $event) + Send + 'static,
+            ) -> Self {
+                Self($crate::task_owner::ReducerActor::new(
+                    capacity, initial, reduce,
+                ))
+            }
+
+            pub async fn apply(&self, event: $event) -> bool {
+                self.0.apply(event).await
+            }
+
+            pub fn snapshot(&self) -> $state {
+                self.0.snapshot()
+            }
+
+            pub fn borrow(&self) -> tokio::sync::watch::Ref<'_, $state> {
+                self.0.borrow()
+            }
+
+            pub fn subscribe(&self) -> tokio::sync::watch::Receiver<$state> {
+                self.0.subscribe()
+            }
+
+            pub fn shared_snapshot(&self) -> $crate::SharedSnapshot<$state> {
+                self.0.shared_snapshot()
+            }
+
+            pub fn shared_subscribe(
+                &self,
+            ) -> tokio::sync::watch::Receiver<$crate::SharedSnapshot<$state>> {
+                self.0.shared_subscribe()
+            }
+        }
+    };
+}
+
+pub use crate::declare_reducer_actor;
+
+/// Generic single-owner reducer actor.
+///
+/// Domain code supplies only the state and pure transition function. The
+/// mailbox, acknowledgement, snapshot publication, and task ownership are
+/// shared by all reducer actors.
+#[derive(Clone)]
+pub struct ReducerActor<S, E> {
+    tx: mpsc::Sender<(E, oneshot::Sender<()>)>,
+    snapshot: watch::Receiver<S>,
+    shared_snapshot: watch::Receiver<crate::SharedSnapshot<S>>,
+    _owner: std::sync::Arc<TaskOwner>,
+}
+
+impl<S, E> ReducerActor<S, E>
+where
+    S: Clone + Send + Sync + 'static,
+    E: Send + 'static,
+{
+    pub fn new(capacity: usize, initial: S, reduce: impl Fn(&mut S, E) + Send + 'static) -> Self {
+        let (snapshot_tx, snapshot) = watch::channel(initial.clone());
+        let (shared_tx, shared_snapshot) =
+            watch::channel(crate::SharedSnapshot::new(initial.clone()));
+        let (tx, mut rx) = mpsc::channel::<(E, oneshot::Sender<()>)>(capacity);
+        let owner = spawn_owned_worker!(async move {
+            let mut state = initial;
+            while let Some((event, reply)) = rx.recv().await {
+                reduce(&mut state, event);
+                let _ = snapshot_tx.send(state.clone());
+                let _ = shared_tx.send(crate::SharedSnapshot::new(state.clone()));
+                let _ = reply.send(());
+            }
+        });
+        Self {
+            tx,
+            snapshot,
+            shared_snapshot,
+            _owner: owner,
+        }
+    }
+
+    pub async fn apply(&self, event: E) -> bool {
+        let (reply, acknowledged) = oneshot::channel();
+        if self.tx.send((event, reply)).await.is_err() {
+            return false;
+        }
+        acknowledged.await.is_ok()
+    }
+
+    pub fn snapshot(&self) -> S {
+        self.snapshot.borrow().clone()
+    }
+
+    pub fn borrow(&self) -> watch::Ref<'_, S> {
+        self.snapshot.borrow()
+    }
+
+    pub fn subscribe(&self) -> watch::Receiver<S> {
+        self.snapshot.clone()
+    }
+
+    pub fn shared_snapshot(&self) -> crate::SharedSnapshot<S> {
+        self.shared_snapshot.borrow().clone()
+    }
+
+    pub fn shared_subscribe(&self) -> watch::Receiver<crate::SharedSnapshot<S>> {
+        self.shared_snapshot.clone()
+    }
+}
+
+impl<S, E> std::fmt::Debug for ReducerActor<S, E> {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("ReducerActor")
+            .finish_non_exhaustive()
+    }
+}
+
 /// Keeps an actor's worker task attached to the actor's lifetime.
 ///
 /// The handle is shared because public actor handles are cheap clones. The
@@ -98,7 +227,10 @@ impl Drop for TaskOwner {
 
 #[cfg(test)]
 mod tests {
+    use super::ReducerActor;
     use tokio::sync::mpsc;
+
+    crate::declare_reducer_actor!(TestReducerActor, u32, u32);
 
     #[tokio::test]
     async fn worker_macro_returns_shared_owner() {
@@ -144,5 +276,24 @@ mod tests {
         // the worker can prove it observed no command.
         drop(tx);
         worker.await.expect("empty batch does not enqueue");
+    }
+
+    #[tokio::test]
+    async fn reducer_actor_serializes_events_and_publishes_snapshots() {
+        let actor = ReducerActor::new(4, 0_u32, |state, event| *state += event);
+        assert!(actor.apply(2).await);
+        assert!(actor.apply(3).await);
+        assert_eq!(actor.snapshot(), 5);
+    }
+
+    #[tokio::test]
+    async fn reducer_actor_macro_keeps_domain_handle_mechanical() {
+        let actor = TestReducerActor::new(2, 4, |state, event| *state *= event);
+        assert!(actor.apply(3).await);
+        assert_eq!(actor.snapshot(), 12);
+        assert_eq!(*actor.borrow(), 12);
+        assert_eq!(*actor.shared_snapshot(), 12);
+        assert_eq!(**actor.shared_subscribe().borrow(), 12);
+        let _ = actor.subscribe();
     }
 }

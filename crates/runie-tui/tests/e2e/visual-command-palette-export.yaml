@@ -1,0 +1,18 @@
+name: visual-command-palette-export
+description: The palette export form routes a path to session storage and completes without an error.
+events: []
+assertions:
+  visual:
+    cols: 80
+    rows: 24
+    steps:
+      - Ctrl+P
+      - "export"
+      - PaletteEnter
+      - "target/runie-palette-session.jsonl"
+      - PaletteParameterEnter
+    screen_excludes:
+      - "not supported by Runie"
+      - "session storage error"
+    files_exist:
+      - target/runie-palette-session.jsonl

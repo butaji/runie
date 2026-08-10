@@ -40,52 +40,59 @@ pub fn is_quit_command(text: &str) -> bool {
 ///
 /// `prompt_non_empty` reflects whether the user has typed anything. `streaming`
 /// tells us whether the loop is currently processing.
-#[allow(
-    clippy::cognitive_complexity,
-    clippy::too_many_lines,
-    reason = "the key map keeps the declarative normal-mode bindings together"
-)]
 pub fn map_key(key: KeyEvent, prompt_non_empty: bool, streaming: bool) -> Action {
     if key.modifiers.contains(KeyModifiers::CONTROL) {
-        return match key.code {
-            KeyCode::Char('c') => ctrl_c_action(prompt_non_empty, streaming),
-            KeyCode::Char('d' | 'q') => Action::Quit,
-            KeyCode::Char('l') => Action::OpenModelSelector,
-            KeyCode::Char('x') => Action::OpenShortcuts,
-            KeyCode::Char('p') => Action::OpenCommandPalette,
-            KeyCode::Char('k') => Action::ScrollUp,
-            KeyCode::Char('j') => Action::ScrollDown,
-            _ => Action::Noop,
-        };
+        return map_control_key(key, prompt_non_empty, streaming);
+    }
+    map_plain_key(key, prompt_non_empty)
+}
+
+fn map_control_key(key: KeyEvent, prompt_non_empty: bool, streaming: bool) -> Action {
+    match key.code {
+        KeyCode::Char('c') => ctrl_c_action(prompt_non_empty, streaming),
+        KeyCode::Char('d' | 'q') => Action::Quit,
+        KeyCode::Char('l') => Action::OpenModelSelector,
+        KeyCode::Char('x') => Action::OpenShortcuts,
+        KeyCode::Char('p') => Action::OpenCommandPalette,
+        KeyCode::Char('k') => Action::ScrollUp,
+        KeyCode::Char('j') => Action::ScrollDown,
+        _ => Action::Noop,
+    }
+}
+
+fn map_plain_key(key: KeyEvent, prompt_non_empty: bool) -> Action {
+    if prompt_non_empty {
+        return map_prompt_key(key);
     }
     match key.code {
-        KeyCode::Up if !prompt_non_empty && key.modifiers.contains(KeyModifiers::SHIFT) => {
+        // Typed command/file sigils are dialog triggers and never become
+        // prompt text. Paste events are handled at the terminal boundary.
+        KeyCode::Char('/') => Action::OpenCommandPalette,
+        KeyCode::Char('@') => Action::OpenFileSearch,
+        KeyCode::Up if key.modifiers.contains(KeyModifiers::SHIFT) => {
             Action::ExtendSelectionPrevious
         }
-        KeyCode::Down if !prompt_non_empty && key.modifiers.contains(KeyModifiers::SHIFT) => {
-            Action::ExtendSelectionNext
-        }
-        KeyCode::Up if !prompt_non_empty => Action::SelectPreviousTool,
-        KeyCode::Down if !prompt_non_empty => Action::SelectNextTool,
-        KeyCode::Char('j') if !prompt_non_empty => Action::SelectNextEntry,
-        KeyCode::Char('k') if !prompt_non_empty => Action::SelectPreviousEntry,
-        KeyCode::Char('e') if !prompt_non_empty => Action::ToggleFold,
-        KeyCode::Char('?') if !prompt_non_empty => Action::OpenCommandPalette,
-        KeyCode::Enter if key.modifiers == KeyModifiers::NONE => {
-            if prompt_non_empty {
-                Action::FocusPrompt
-            } else {
-                Action::Noop
-            }
-        }
+        KeyCode::Down if key.modifiers.contains(KeyModifiers::SHIFT) => Action::ExtendSelectionNext,
+        KeyCode::Up => Action::SelectPreviousTool,
+        KeyCode::Down => Action::SelectNextTool,
+        KeyCode::Char('j') => Action::SelectNextEntry,
+        KeyCode::Char('k') => Action::SelectPreviousEntry,
+        KeyCode::Char('e') => Action::ToggleFold,
+        KeyCode::Char('?') => Action::OpenCommandPalette,
+        KeyCode::Enter => Action::Noop,
         KeyCode::Tab if key.modifiers.contains(KeyModifiers::SHIFT) => Action::ModeCycle,
-        KeyCode::Esc => {
-            if prompt_non_empty {
-                Action::ClearPrompt
-            } else {
-                Action::Noop
-            }
-        }
+        KeyCode::Esc => Action::Noop,
+        _ => Action::Noop,
+    }
+}
+
+fn map_prompt_key(key: KeyEvent) -> Action {
+    match key.code {
+        KeyCode::Char('/') => Action::OpenCommandPalette,
+        KeyCode::Char('@') => Action::OpenFileSearch,
+        KeyCode::Enter if key.modifiers == KeyModifiers::NONE => Action::FocusPrompt,
+        KeyCode::Esc => Action::ClearPrompt,
+        KeyCode::Tab if key.modifiers.contains(KeyModifiers::SHIFT) => Action::ModeCycle,
         _ => Action::Noop,
     }
 }
@@ -226,6 +233,18 @@ mod tests {
         assert_eq!(
             map_key(k(KeyCode::Char('?'), KeyModifiers::NONE), false, false),
             Action::OpenCommandPalette
+        );
+    }
+
+    #[test]
+    fn typed_slash_and_at_open_dialogs_without_prompt_text() {
+        assert_eq!(
+            map_key(k(KeyCode::Char('/'), KeyModifiers::NONE), true, false),
+            Action::OpenCommandPalette
+        );
+        assert_eq!(
+            map_key(k(KeyCode::Char('@'), KeyModifiers::NONE), true, false),
+            Action::OpenFileSearch
         );
     }
 

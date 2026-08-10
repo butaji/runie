@@ -71,43 +71,15 @@ fn display_memory_path(path: &str) -> String {
     path.rsplit('/').next().unwrap_or(path).to_owned()
 }
 
-#[allow(
-    clippy::too_many_lines,
-    reason = "the Grok markdown protocol parser keeps one result grammar together"
-)]
 fn parse_section(section: &str) -> Option<MemoryResult> {
     let mut lines = section.lines();
     let header = lines.next()?;
     if !header.starts_with(|c: char| c.is_ascii_digit()) {
         return None;
     }
-    let score = header
-        .split_once("score: ")
-        .and_then(|(_, rest)| rest.split(',').next())
-        .and_then(|value| value.parse().ok())
-        .unwrap_or(0.0);
-    let source = header
-        .split_once("source: ")
-        .and_then(|(_, rest)| rest.split(')').next())
-        .unwrap_or_default()
-        .to_owned();
+    let (score, source) = parse_memory_header(header);
     let body: Vec<&str> = lines.collect();
-    let mut path = String::new();
-    let mut start_line = 0;
-    let mut end_line = 0;
-    for line in &body {
-        if let Some(rest) = line.strip_prefix("**File:** ") {
-            if let Some((file, range)) = rest.split_once(" (lines ") {
-                path = file.to_owned();
-                if let Some((start, end)) = range.trim_end_matches(')').split_once('-') {
-                    start_line = start.parse().unwrap_or(0);
-                    end_line = end.parse().unwrap_or(0);
-                }
-            } else {
-                path = rest.to_owned();
-            }
-        }
-    }
+    let (path, start_line, end_line) = parse_memory_location(&body);
     let joined = body.join("\n");
     let snippet = joined
         .split_once("```\n")
@@ -125,6 +97,39 @@ fn parse_section(section: &str) -> Option<MemoryResult> {
         end_line,
         snippet,
     })
+}
+
+fn parse_memory_header(header: &str) -> (f64, String) {
+    let score = header
+        .split_once("score: ")
+        .and_then(|(_, rest)| rest.split(',').next())
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(0.0);
+    let source = header
+        .split_once("source: ")
+        .and_then(|(_, rest)| rest.split(')').next())
+        .unwrap_or_default()
+        .to_owned();
+    (score, source)
+}
+
+fn parse_memory_location(body: &[&str]) -> (String, usize, usize) {
+    let mut location = (String::new(), 0, 0);
+    for line in body {
+        let Some(rest) = line.strip_prefix("**File:** ") else {
+            continue;
+        };
+        let Some((file, range)) = rest.split_once(" (lines ") else {
+            location.0 = rest.to_owned();
+            continue;
+        };
+        location.0 = file.to_owned();
+        if let Some((start, end)) = range.trim_end_matches(')').split_once('-') {
+            location.1 = start.parse().unwrap_or(0);
+            location.2 = end.parse().unwrap_or(0);
+        }
+    }
+    location
 }
 
 #[cfg(test)]

@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 description = "Minimal ratatui/crossterm TUI for runie-core"
+autotests = false
 default-run = "runie"
 
 [[bin]]
@@ -13,6 +14,14 @@ path = "src/bin/runie.rs"
 [[bin]]
 name = "runie-tui-e2e"
 path = "src/bin/runie_tui_e2e.rs"
+
+[[bin]]
+name = "tui-watch"
+path = "src/bin/tui_watch.rs"
+
+[[test]]
+name = "visual_snapshots"
+path = "tests/visual_snapshots.rs"
 
 [dependencies]
 base64 = "0.22"

@@ -22,7 +22,7 @@ pub const DOT_SPINNER_FRAMES: [&str; 4] = ["⋅", ":", "⸬", "⁙"];
 /// here so the renderer agrees with the model on the quiet fallback.
 pub const DOT_SPINNER_FALLBACK: [&str; 3] = [".", ":", "·"];
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub enum Status {
     #[default]
     Ready,
@@ -48,7 +48,7 @@ impl Status {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum StatusMsg {
     Set(Status),
     Reset,
@@ -224,6 +224,46 @@ mod tests {
             Some(17),
         );
         assert!(state.turn_usage.is_some());
+    }
+
+    #[test]
+    fn status_trace_replays_to_the_same_snapshot() {
+        let events = [
+            StatusMsg::BeginTurn,
+            StatusMsg::Set(Status::Thinking),
+            StatusMsg::AdvanceAnimation,
+            StatusMsg::SetThinkingElapsed(Some(900)),
+        ];
+        let memo = runie_core::EventMemo::replay(
+            StatusSnapshot::default(),
+            events.clone(),
+            |state, event| state.apply(event.clone(), Some(17)),
+        );
+        let traced = runie_core::event_trace!(
+            StatusSnapshot::default(),
+            |state, event| state.apply(event.clone(), Some(17)),
+            [
+                StatusMsg::BeginTurn,
+                StatusMsg::Set(Status::Thinking),
+                StatusMsg::AdvanceAnimation,
+                StatusMsg::SetThinkingElapsed(Some(900)),
+            ]
+        );
+        assert_eq!(memo.state(), traced.state());
+        assert_eq!(memo.events(), traced.events());
+    }
+
+    #[test]
+    fn status_yaml_trace_uses_the_shared_replay_harness() {
+        let trace = runie_core::replay_yaml(
+            "- BeginTurn\n- !Set Thinking\n- AdvanceAnimation\n",
+            StatusSnapshot::default(),
+            |state, event: &StatusMsg| state.apply(event.clone(), Some(17)),
+        )
+        .expect("status YAML trace");
+        assert_eq!(trace.events().len(), 3);
+        assert_eq!(trace.state().state, Status::Thinking);
+        assert_eq!(trace.state().animation_frame, 1);
     }
 
     #[test]

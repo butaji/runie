@@ -19,6 +19,9 @@ use walkdir::WalkDir;
 
 const SCAN_ROOT: &str = "crates";
 const TEST_DIR_MARKER: &str = "/tests/";
+const MAX_RUST_FILE_LINES: usize = 500;
+const MAX_FUNCTION_LINES: usize = 40;
+const MAX_FUNCTION_COMPLEXITY: usize = 10;
 
 fn main() -> ExitCode {
     let findings = scan_project();
@@ -40,7 +43,34 @@ fn scan_project() -> Vec<String> {
             .filter_map(|entry| scan_entry(entry.path()))
             .flatten(),
     );
+    findings.extend(scan_rust_file_sizes());
     findings
+}
+
+fn scan_rust_file_sizes() -> Vec<String> {
+    WalkDir::new(".")
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|entry| {
+            entry.file_type().is_file()
+                && entry.path().extension().and_then(|ext| ext.to_str()) == Some("rs")
+                && !entry
+                    .path()
+                    .components()
+                    .any(|component| component.as_os_str() == "target")
+        })
+        .filter_map(|entry| {
+            let path = entry.path();
+            let contents = fs::read_to_string(path).ok()?;
+            let lines = contents.lines().count();
+            (lines > MAX_RUST_FILE_LINES).then(|| {
+                format!(
+                    "{}: file has {lines} lines; maximum is {MAX_RUST_FILE_LINES}",
+                    path.display()
+                )
+            })
+        })
+        .collect()
 }
 
 fn scan_dependency_boundaries() -> Vec<String> {
@@ -89,10 +119,100 @@ fn scan_entry(path: &Path) -> Option<Vec<String>> {
 }
 
 fn scan_source(path: &str, src: &str) -> Vec<String> {
-    src.lines()
-        .enumerate()
-        .flat_map(|(idx, line)| scan_line(path, src, idx, line))
-        .collect()
+    let mut findings = scan_function_limits(path, src);
+    findings.extend(
+        src.lines()
+            .enumerate()
+            .flat_map(|(idx, line)| scan_line(path, src, idx, line))
+            .collect::<Vec<_>>(),
+    );
+    findings
+}
+
+fn scan_function_limits(path: &str, src: &str) -> Vec<String> {
+    let lines: Vec<_> = src.lines().collect();
+    let mut findings = Vec::new();
+    let mut index = 0;
+    while index < lines.len() {
+        if !lines[index].contains("fn ") {
+            index += 1;
+            continue;
+        }
+        let start = index;
+        let mut depth = 0isize;
+        let mut opened = false;
+        let mut complexity = 1usize;
+        let mut in_string = false;
+        while index < lines.len() {
+            let line = lines[index];
+            let (opens, closes) = structural_braces(line, &mut in_string);
+            depth += opens - closes;
+            opened |= opens > 0;
+            complexity += line.matches("if ").count()
+                + line.matches("match ").count()
+                + line.matches("&&").count()
+                + line.matches("||").count();
+            index += 1;
+            if opened && depth <= 0 {
+                break;
+            }
+        }
+        let length = index - start;
+        if length > MAX_FUNCTION_LINES {
+            findings.push(format!(
+                "{path}:{}: function has {length} lines; maximum is {MAX_FUNCTION_LINES}",
+                start + 1
+            ));
+        }
+        if complexity > MAX_FUNCTION_COMPLEXITY {
+            findings.push(format!("{path}:{}: function complexity is {complexity}; maximum is {MAX_FUNCTION_COMPLEXITY}", start + 1));
+        }
+    }
+    findings
+}
+
+fn structural_braces(line: &str, in_string: &mut bool) -> (isize, isize) {
+    let mut opens = 0;
+    let mut closes = 0;
+    let mut escaped = false;
+    let mut in_char = false;
+    let mut chars = line.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if !*in_string && !in_char && ch == '/' && chars.peek() == Some(&'/') {
+            break;
+        }
+        if in_char {
+            if ch == '\'' && !escaped {
+                in_char = false;
+            }
+        } else if ch == '\'' && !*in_string && !escaped && is_char_literal(&chars) {
+            in_char = true;
+        } else if ch == '"' && !escaped {
+            *in_string = !*in_string;
+        } else if !*in_string {
+            match ch {
+                '{' => opens += 1,
+                '}' => closes += 1,
+                _ => {}
+            }
+        }
+        escaped = ch == '\\' && !escaped;
+        if ch != '\\' {
+            escaped = false;
+        }
+    }
+    (opens, closes)
+}
+
+fn is_char_literal(chars: &std::iter::Peekable<std::str::Chars<'_>>) -> bool {
+    let mut lookahead = chars.clone();
+    let Some(first) = lookahead.next() else {
+        return false;
+    };
+    if first == '\\' {
+        lookahead.next();
+    }
+    lookahead.next() == Some('\'')
 }
 
 fn scan_line(path: &str, src: &str, idx: usize, line: &str) -> Vec<String> {

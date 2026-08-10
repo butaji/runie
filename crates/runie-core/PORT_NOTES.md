@@ -34,5 +34,6 @@ contracts are implemented and covered by local tests. `AgentStateActor` also
 owns workflow lifecycle snapshots used by the TUI projection. The remaining
 port boundary is deliberate: pi's provider catalog, OAuth, session/harness,
 skills, compaction, and browser proxy packages are not part of `runie-core`.
-Parity work and any future boundary expansion are tracked in `tasks/p30` and
+Parity work and any future boundary expansion are tracked in the canonical
+[`tasks/plan.md`](../../tasks/plan.md) and [`tasks/findings.md`](../../tasks/findings.md),
 the owning p01–p12 tasks.
