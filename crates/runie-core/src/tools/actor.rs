@@ -253,45 +253,47 @@ async fn run_tool_worker(
         apply_scheduler(&mut scheduler, SchedulerEvent::Enqueued { interactive });
         apply_scheduler(&mut scheduler, SchedulerEvent::Started);
         let (reply, outcome) = run_tool_command(cmd, &registry, tool_result_timestamp).await;
-        let cancelled = matches!(
-            &outcome,
-            ToolOutcome::Completed {
-                cancelled: true,
-                ..
-            }
-        );
-        if cancelled {
-            apply_scheduler(
-                &mut scheduler,
-                SchedulerEvent::CancelledWithReason {
-                    reason: super::executor::SchedulerCancellationReason::Abort,
-                },
-            );
-        } else {
-            let success = matches!(
-            &outcome,
-            ToolOutcome::Completed { tool_results, .. }
-                if tool_results.iter().all(|result| !result.is_error)
-            );
-            apply_scheduler(&mut scheduler, SchedulerEvent::Finished { success });
+        settle_scheduler(&mut scheduler, &outcome);
+        let _ = reply.send(attach_scheduler(outcome, &scheduler));
+    }
+}
+
+fn settle_scheduler(scheduler: &mut SchedulerMetrics, outcome: &ToolOutcome) {
+    if matches!(
+        outcome,
+        ToolOutcome::Completed {
+            cancelled: true,
+            ..
         }
-        let outcome = match outcome {
-            ToolOutcome::Completed {
-                tool_results,
-                all_terminated,
-                events,
-                cancelled: _cancelled,
-                ..
-            } => ToolOutcome::Completed {
-                tool_results,
-                all_terminated,
-                events,
-                scheduler: scheduler.clone(),
-                cancelled: _cancelled,
+    ) {
+        apply_scheduler(
+            scheduler,
+            SchedulerEvent::CancelledWithReason {
+                reason: super::executor::SchedulerCancellationReason::Abort,
             },
-            aborted => aborted,
-        };
-        let _ = reply.send(outcome);
+        );
+    } else {
+        let success = matches!(outcome, ToolOutcome::Completed { tool_results, .. } if tool_results.iter().all(|result| !result.is_error));
+        apply_scheduler(scheduler, SchedulerEvent::Finished { success });
+    }
+}
+
+fn attach_scheduler(outcome: ToolOutcome, scheduler: &SchedulerMetrics) -> ToolOutcome {
+    match outcome {
+        ToolOutcome::Completed {
+            tool_results,
+            all_terminated,
+            events,
+            cancelled,
+            ..
+        } => ToolOutcome::Completed {
+            tool_results,
+            all_terminated,
+            events,
+            scheduler: scheduler.clone(),
+            cancelled,
+        },
+        aborted => aborted,
     }
 }
 

@@ -65,3 +65,5 @@ the worker loop below the structural function threshold.
 Replay terminal-marker reduction and compaction threshold assertions now use
 small semantic helpers, keeping event/state tests focused on data tables and
 boundaries.
+Tool executor worker settlement now separates scheduler event reduction from
+outcome projection, keeping cancellation/success semantics in typed helpers.
