@@ -99,6 +99,12 @@ pub struct PluginRuntimeSnapshot {
     pub active: BTreeSet<String>,
 }
 
+#[path = "plugin_runtime.rs"]
+mod runtime;
+pub use runtime::{
+    reduce_plugin_runtime, PluginRuntimeEvent, PluginRuntimeState, PluginRuntimeStatus,
+};
+
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum PluginInstallationEvent {
     Installed { name: String, root: PathBuf },
