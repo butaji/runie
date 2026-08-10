@@ -15,7 +15,7 @@ evidence prove the item.
 9. `harness-09-web` — typed bounded `web_search` contract and executor hook; transport, fetch, citations, and source cards remain.
 10. `harness-10-mcp` — **partial** — typed server/tool data, atomic qualified registry registration, and owner-supplied call hook exist; discovery, stdio/HTTP transports, auth, and cleanup remain.
 11. `harness-11-plugins` — installable skills, commands, tools, and hooks.
-12. `harness-12-git` — status, diff, patch review, worktrees, and safe commit preparation.
+12. `harness-12-git` — **partial** — bounded read-only `git_status` and `git_diff` tools are registered and tested; patch review, worktrees, and safe commit preparation remain.
 13. `harness-13-sessions` — resume, fork, rename, undo, export, and session search UX.
 14. `harness-14-provider-contract` — normalized usage, finish reasons, retries, IDs, and errors.
 15. `harness-15-user-questions` — **partial** — structured validation, owned broker, live selector, and multi-select answers are implemented; replay fixtures remain.
