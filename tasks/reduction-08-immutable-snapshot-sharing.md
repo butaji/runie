@@ -55,3 +55,6 @@ snapshots, preserving the existing lifecycle reducer while removing duplicate
 publication wiring from start, cancel, and completion paths.
 `PluginHost` now exposes the `ReducerActor`'s immutable runtime projection,
 keeping plugin lifecycle state on the existing event reducer boundary.
+`LoopActor` now publishes an immutable shared control projection alongside its
+compatibility watch state, keeping abort/run/queue mode transitions on one
+reducer-owned data boundary.

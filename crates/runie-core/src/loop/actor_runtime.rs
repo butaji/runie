@@ -22,8 +22,14 @@ impl LoopActor {
             follow_up_mode: deps.follow_up_mode,
         };
         let (control_tx, control_rx) = watch::channel(initial_snapshot.clone());
-        let (control_commands, control_owner) =
-            spawn_control_worker(initial_snapshot, abort_tx.clone(), control_tx.clone());
+        let (shared_control_tx, shared_control_rx) =
+            watch::channel(crate::SharedSnapshot::new(initial_snapshot.clone()));
+        let (control_commands, control_owner) = spawn_control_worker(
+            initial_snapshot,
+            abort_tx.clone(),
+            control_tx.clone(),
+            shared_control_tx,
+        );
         Self {
             inner: Arc::new(Inner {
                 deps,
@@ -31,6 +37,7 @@ impl LoopActor {
                 running: Arc::new(Semaphore::new(1)),
                 control_commands,
                 control_rx,
+                shared_control_rx,
                 _control_owner: control_owner,
             }),
         }
@@ -383,6 +390,16 @@ impl LoopActor {
 
     pub fn control_snapshot(&self) -> LoopControlSnapshot {
         self.inner.control_rx.borrow().clone()
+    }
+
+    pub fn shared_control_snapshot(&self) -> crate::SharedSnapshot<LoopControlSnapshot> {
+        self.inner.shared_control_rx.borrow().clone()
+    }
+
+    pub fn shared_control_subscribe(
+        &self,
+    ) -> watch::Receiver<crate::SharedSnapshot<LoopControlSnapshot>> {
+        self.inner.shared_control_rx.clone()
     }
 
     pub async fn wait_for_idle(&self) {

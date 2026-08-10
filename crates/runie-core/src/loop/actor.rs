@@ -150,6 +150,7 @@ struct Inner {
     /// Abort channel sender (pi `Agent.abort()`).
     control_commands: mpsc::Sender<LoopControlCommand>,
     control_rx: watch::Receiver<LoopControlSnapshot>,
+    shared_control_rx: watch::Receiver<crate::SharedSnapshot<LoopControlSnapshot>>,
     _control_owner: Arc<TaskOwner>,
 }
 
@@ -160,6 +161,7 @@ fn spawn_control_worker(
     initial_snapshot: LoopControlSnapshot,
     abort_tx: watch::Sender<bool>,
     control_tx: watch::Sender<LoopControlSnapshot>,
+    shared_control_tx: watch::Sender<crate::SharedSnapshot<LoopControlSnapshot>>,
 ) -> (mpsc::Sender<LoopControlCommand>, Arc<TaskOwner>) {
     spawn_actor_worker!(
         32,
@@ -176,7 +178,7 @@ fn spawn_control_worker(
                     let _ = abort_tx.send(abort_requested);
                 }
                 reduce_control(&mut snapshot, event);
-                let _ = control_tx.send(snapshot.clone());
+                crate::publish_shared_snapshot(&control_tx, &shared_control_tx, snapshot.clone());
                 let _ = reply.send(());
             }
         }
