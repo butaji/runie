@@ -26,6 +26,7 @@ pub mod background;
 pub mod command_actor;
 pub mod commands;
 pub mod convert;
+pub mod diagnostics;
 mod event_dsl;
 pub mod event_memo;
 pub mod event_trace_yaml;
