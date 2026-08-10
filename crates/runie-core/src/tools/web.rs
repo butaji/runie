@@ -17,6 +17,35 @@ pub struct WebSearchResponse {
     pub results: Vec<WebSearchResult>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct WebSourceCard {
+    pub rank: u32,
+    pub title: String,
+    pub url: String,
+    pub snippet: String,
+}
+
+/// Build renderer-neutral source cards from the provider-neutral result set.
+/// Cards are data; TUI and noninteractive consumers choose their own layout.
+pub fn source_cards(response: &WebSearchResponse) -> Vec<WebSourceCard> {
+    response
+        .results
+        .iter()
+        .enumerate()
+        .filter(|(_, result)| !result.url.trim().is_empty())
+        .map(|(index, result)| WebSourceCard {
+            rank: index as u32 + 1,
+            title: if result.title.trim().is_empty() {
+                result.url.clone()
+            } else {
+                result.title.clone()
+            },
+            url: result.url.clone(),
+            snippet: result.snippet.clone(),
+        })
+        .collect()
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WebSearchHttpClient {
     pub endpoint: String,
@@ -160,6 +189,33 @@ mod tests {
         assert!(tool
             .validate_arguments(&serde_json::json!({"query":"x","max_results":21}))
             .is_err());
+    }
+
+    #[test]
+    fn source_cards_are_stable_ranked_data() {
+        let cards = source_cards(&WebSearchResponse {
+            results: vec![
+                WebSearchResult {
+                    title: "".into(),
+                    url: "https://one.test".into(),
+                    snippet: "first".into(),
+                },
+                WebSearchResult {
+                    title: "ignored".into(),
+                    url: " ".into(),
+                    snippet: String::new(),
+                },
+                WebSearchResult {
+                    title: "Three".into(),
+                    url: "https://three.test".into(),
+                    snippet: "third".into(),
+                },
+            ],
+        });
+        assert_eq!(cards.len(), 2);
+        assert_eq!(cards[0].rank, 1);
+        assert_eq!(cards[0].title, "https://one.test");
+        assert_eq!(cards[1].rank, 3);
     }
 
     #[tokio::test]

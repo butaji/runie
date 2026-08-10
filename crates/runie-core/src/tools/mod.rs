@@ -32,8 +32,8 @@ pub use background::{
 pub use executor::{execute_parallel, execute_sequential, ToolExecContext, ToolExecHooks};
 pub use git::{
     classify_conflicts, GitCommitPrepareRequest, GitCommitPrepareTool, GitCommitTool,
-    GitConflictSummary, GitDiffTool, GitPushRequest, GitPushTool, GitRevertRequest,
-    GitRevertTool, GitReviewTool, GitStatusTool, GitWorktreeTool,
+    GitConflictSummary, GitDiffTool, GitPushRequest, GitPushTool, GitRevertRequest, GitRevertTool,
+    GitReviewTool, GitStatusTool, GitWorktreeTool,
 };
 pub use mcp::{
     McpCallHook, McpCallRequest, McpHttpClient, McpHttpSession, McpServer, McpStdioClient, McpTool,
@@ -50,6 +50,7 @@ pub use subagent::{
 };
 pub use todo::{TodoActor, TodoItem, TodoSnapshot, TodoStatus, TodoWriteTool};
 pub use web::{
-    WebSearchHttpClient, WebSearchRequest, WebSearchResponse, WebSearchResult, WebSearchTool,
+    source_cards, WebSearchHttpClient, WebSearchRequest, WebSearchResponse, WebSearchResult,
+    WebSearchTool, WebSourceCard,
 };
 pub use workspace::{BashTool, EditFileTool, GlobTool, GrepTool, ReadFileTool, WriteFileTool};
