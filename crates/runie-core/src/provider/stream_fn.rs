@@ -124,14 +124,28 @@ pub enum StreamError {
     Invalid(String),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ProviderFailureKind {
-    Network,
-    Api,
-    Provider,
-    Aborted,
-    Invalid,
+macro_rules! provider_failure_kinds {
+    ($(($variant:ident, $wire:literal)),+ $(,)?) => {
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+        #[serde(rename_all = "snake_case")]
+        pub enum ProviderFailureKind {
+            $($variant),+
+        }
+
+        impl ProviderFailureKind {
+            pub const fn wire_name(self) -> &'static str {
+                match self { $(Self::$variant => $wire),+ }
+            }
+        }
+    };
+}
+
+provider_failure_kinds! {
+    (Network, "network"),
+    (Api, "api"),
+    (Provider, "provider"),
+    (Aborted, "aborted"),
+    (Invalid, "invalid"),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -149,8 +163,11 @@ impl ProviderFailure {
             .map(|value| format!(" status={value}"))
             .unwrap_or_default();
         format!(
-            "{:?}{} retryable={} · {}",
-            self.kind, status, self.retryable, self.message
+            "{}{} retryable={} · {}",
+            self.kind.wire_name(),
+            status,
+            self.retryable,
+            self.message
         )
     }
 }
@@ -328,7 +345,7 @@ mod tests {
         };
         assert_eq!(
             failure.terminal_line(),
-            "Provider status=503 retryable=true · busy"
+            "provider status=503 retryable=true · busy"
         );
     }
 
