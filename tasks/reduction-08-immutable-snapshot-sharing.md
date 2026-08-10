@@ -50,3 +50,6 @@ duplicating event reduction logic.
 `TodoActor` now publishes an immutable shared todo projection alongside its
 owned compatibility snapshot, keeping validation and replacement reduction
 unchanged.
+`BackgroundProcessActor` now uses one publisher value for owned and shared job
+snapshots, preserving the existing lifecycle reducer while removing duplicate
+publication wiring from start, cancel, and completion paths.

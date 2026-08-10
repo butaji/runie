@@ -60,6 +60,7 @@ enum Message {
 pub struct BackgroundProcessActor {
     tx: mpsc::Sender<Message>,
     snapshot: watch::Receiver<Vec<BackgroundJob>>,
+    shared_snapshot: watch::Receiver<crate::SharedSnapshot<Vec<BackgroundJob>>>,
     _owner: Arc<TaskOwner>,
 }
 
@@ -71,15 +72,23 @@ impl Default for BackgroundProcessActor {
 
 impl BackgroundProcessActor {
     pub fn new() -> Self {
-        let (snapshot_tx, snapshot) = watch::channel(Vec::new());
-        let (tx, owner) =
-            spawn_actor_worker!(
-                32,
-                move |rx| async move { run_worker(rx, snapshot_tx).await }
-            );
+        let initial = Vec::new();
+        let (snapshot_tx, snapshot) = watch::channel(initial.clone());
+        let (shared_tx, shared_snapshot) = watch::channel(crate::SharedSnapshot::new(initial));
+        let (tx, owner) = spawn_actor_worker!(32, move |rx| async move {
+            run_worker(
+                rx,
+                BackgroundSnapshotPublisher {
+                    snapshot_tx,
+                    shared_tx,
+                },
+            )
+            .await
+        });
         Self {
             tx,
             snapshot,
+            shared_snapshot,
             _owner: owner,
         }
     }
@@ -117,12 +126,29 @@ impl BackgroundProcessActor {
     pub fn subscribe(&self) -> watch::Receiver<Vec<BackgroundJob>> {
         self.snapshot.clone()
     }
+
+    pub fn shared_snapshot(&self) -> crate::SharedSnapshot<Vec<BackgroundJob>> {
+        self.shared_snapshot.borrow().clone()
+    }
+
+    pub fn shared_subscribe(&self) -> watch::Receiver<crate::SharedSnapshot<Vec<BackgroundJob>>> {
+        self.shared_snapshot.clone()
+    }
 }
 
-async fn run_worker(
-    mut rx: mpsc::Receiver<Message>,
+#[derive(Clone)]
+struct BackgroundSnapshotPublisher {
     snapshot_tx: watch::Sender<Vec<BackgroundJob>>,
-) {
+    shared_tx: watch::Sender<crate::SharedSnapshot<Vec<BackgroundJob>>>,
+}
+
+impl BackgroundSnapshotPublisher {
+    fn send(&self, jobs: Vec<BackgroundJob>) {
+        crate::publish_shared_snapshot(&self.snapshot_tx, &self.shared_tx, jobs);
+    }
+}
+
+async fn run_worker(mut rx: mpsc::Receiver<Message>, snapshot_tx: BackgroundSnapshotPublisher) {
     let mut jobs = BTreeMap::<String, BackgroundJob>::new();
     let mut handles = BTreeMap::new();
     let mut tasks = JoinSet::new();
@@ -177,8 +203,8 @@ fn cancel_job(
     true
 }
 
-fn publish(tx: &watch::Sender<Vec<BackgroundJob>>, jobs: &BTreeMap<String, BackgroundJob>) {
-    let _ = tx.send(jobs.values().cloned().collect());
+fn publish(tx: &BackgroundSnapshotPublisher, jobs: &BTreeMap<String, BackgroundJob>) {
+    tx.send(jobs.values().cloned().collect());
 }
 
 async fn run_command(
@@ -229,6 +255,8 @@ mod tests {
             if let Some(job) = actor.snapshot().into_iter().find(|job| job.id == id) {
                 if job.status == BackgroundStatus::Completed {
                     assert_eq!(job.output, "done");
+                    assert_eq!(actor.shared_snapshot().get()[0].output, "done");
+                    assert_eq!(actor.shared_snapshot().strong_count(), 2);
                     break;
                 }
             }
