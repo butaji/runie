@@ -45,3 +45,5 @@ Plugin capability kinds and their package directories now share one
 macro-backed declaration, keeping plugin entrypoint routing data-shaped.
 Session journal record types now use one macro-backed wire-name table,
 including the typed/generic operation aliases.
+Session-lane operation variants, typed kinds, and wire names now share one
+macro-backed table for decode, reverse projection, and parsing.

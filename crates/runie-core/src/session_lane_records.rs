@@ -17,46 +17,17 @@ pub enum SessionLaneRecord {
 impl SessionLaneRecord {
     pub fn decode(record_type: &str, data: &serde_json::Value) -> Result<Self, String> {
         let payload = data.clone();
-        match session_lane_record_kind(record_type) {
-            Some(SessionLaneRecordKind::OperationStarted) => Ok(Self::OperationStarted(payload)),
-            Some(SessionLaneRecordKind::AbortRequested) => Ok(Self::AbortRequested(payload)),
-            Some(SessionLaneRecordKind::OperationFinished) => Ok(Self::OperationFinished(payload)),
-            Some(SessionLaneRecordKind::StepAttempt) => Ok(Self::StepAttempt(payload)),
-            Some(SessionLaneRecordKind::ToolStarted) => Ok(Self::ToolStarted(payload)),
-            Some(SessionLaneRecordKind::QueueEnqueued) => Ok(Self::QueueEnqueued(payload)),
-            Some(SessionLaneRecordKind::QueueCancelled) => Ok(Self::QueueCancelled(payload)),
-            Some(SessionLaneRecordKind::WriteDeferred) => Ok(Self::WriteDeferred(payload)),
-            Some(SessionLaneRecordKind::Usage) => Ok(Self::Usage(payload)),
-            None => Err(format!("unknown session lane record type {record_type:?}")),
-        }
+        session_lane_record_kind(record_type)
+            .map(|kind| Self::from_kind(kind, payload))
+            .ok_or_else(|| format!("unknown session lane record type {record_type:?}"))
     }
 
     pub fn kind(&self) -> SessionLaneRecordKind {
-        match self {
-            Self::OperationStarted(_) => SessionLaneRecordKind::OperationStarted,
-            Self::AbortRequested(_) => SessionLaneRecordKind::AbortRequested,
-            Self::OperationFinished(_) => SessionLaneRecordKind::OperationFinished,
-            Self::StepAttempt(_) => SessionLaneRecordKind::StepAttempt,
-            Self::ToolStarted(_) => SessionLaneRecordKind::ToolStarted,
-            Self::QueueEnqueued(_) => SessionLaneRecordKind::QueueEnqueued,
-            Self::QueueCancelled(_) => SessionLaneRecordKind::QueueCancelled,
-            Self::WriteDeferred(_) => SessionLaneRecordKind::WriteDeferred,
-            Self::Usage(_) => SessionLaneRecordKind::Usage,
-        }
+        session_lane_record_kind_of(self)
     }
 
     pub fn wire_name(&self) -> &'static str {
-        match self.kind() {
-            SessionLaneRecordKind::OperationStarted => "operation_started",
-            SessionLaneRecordKind::AbortRequested => "abort_requested",
-            SessionLaneRecordKind::OperationFinished => "operation_finished",
-            SessionLaneRecordKind::StepAttempt => "step_attempt",
-            SessionLaneRecordKind::ToolStarted => "tool_started",
-            SessionLaneRecordKind::QueueEnqueued => "queue_enqueued",
-            SessionLaneRecordKind::QueueCancelled => "queue_cancelled",
-            SessionLaneRecordKind::WriteDeferred => "write_deferred",
-            SessionLaneRecordKind::Usage => "usage",
-        }
+        session_lane_record_wire_name(self.kind())
     }
 
     pub fn data(&self) -> &serde_json::Value {
@@ -131,18 +102,41 @@ fn operation_record_parts(record: &SessionConfigRecord) -> Option<(&str, &serde_
 }
 
 pub fn session_lane_record_kind(record_type: &str) -> Option<SessionLaneRecordKind> {
-    Some(match record_type {
-        "operation_started" => SessionLaneRecordKind::OperationStarted,
-        "abort_requested" => SessionLaneRecordKind::AbortRequested,
-        "operation_finished" => SessionLaneRecordKind::OperationFinished,
-        "step_attempt" => SessionLaneRecordKind::StepAttempt,
-        "tool_started" => SessionLaneRecordKind::ToolStarted,
-        "queue_enqueued" => SessionLaneRecordKind::QueueEnqueued,
-        "queue_cancelled" => SessionLaneRecordKind::QueueCancelled,
-        "write_deferred" => SessionLaneRecordKind::WriteDeferred,
-        "usage" => SessionLaneRecordKind::Usage,
-        _ => return None,
-    })
+    session_lane_record_kind_from_wire(record_type)
+}
+
+macro_rules! session_lane_records {
+    ($(($variant:ident, $wire_name:literal)),+ $(,)?) => {
+        impl SessionLaneRecord {
+            fn from_kind(kind: SessionLaneRecordKind, data: serde_json::Value) -> Self {
+                match kind { $(SessionLaneRecordKind::$variant => Self::$variant(data),)+ }
+            }
+        }
+
+        fn session_lane_record_kind_of(record: &SessionLaneRecord) -> SessionLaneRecordKind {
+            match record { $(SessionLaneRecord::$variant(_) => SessionLaneRecordKind::$variant,)+ }
+        }
+
+        fn session_lane_record_wire_name(kind: SessionLaneRecordKind) -> &'static str {
+            match kind { $(SessionLaneRecordKind::$variant => $wire_name,)+ }
+        }
+
+        fn session_lane_record_kind_from_wire(value: &str) -> Option<SessionLaneRecordKind> {
+            Some(match value { $($wire_name => SessionLaneRecordKind::$variant,)+ _ => return None })
+        }
+    };
+}
+
+session_lane_records! {
+    (OperationStarted, "operation_started"),
+    (AbortRequested, "abort_requested"),
+    (OperationFinished, "operation_finished"),
+    (StepAttempt, "step_attempt"),
+    (ToolStarted, "tool_started"),
+    (QueueEnqueued, "queue_enqueued"),
+    (QueueCancelled, "queue_cancelled"),
+    (WriteDeferred, "write_deferred"),
+    (Usage, "usage"),
 }
 
 /// Validate the identity/admission rules that can be checked without IO.
