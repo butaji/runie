@@ -4,7 +4,6 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
-
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct PluginManifest {
     pub name: String,
@@ -42,20 +41,21 @@ impl PluginManifest {
         Ok(manifest)
     }
 }
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PluginPackage {
     pub root: PathBuf,
     pub manifest: PluginManifest,
 }
-
 #[path = "plugin_entrypoint.rs"]
 mod entrypoint;
+#[path = "plugin_host.rs"]
+mod host;
 pub use entrypoint::resolve_plugin_entrypoint;
 pub use entrypoint::{
     execute_plugin, validate_execution_request, PluginExecutionRequest, PluginExecutionResult,
     DEFAULT_PLUGIN_TIMEOUT_MS, MAX_PLUGIN_ARGUMENTS, MAX_PLUGIN_OUTPUT_BYTES,
 };
+pub use host::PluginHost;
 pub fn load_manifest(path: impl AsRef<Path>) -> Result<PluginManifest, String> {
     let path = path.as_ref();
     let input = std::fs::read_to_string(path)
