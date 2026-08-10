@@ -225,12 +225,11 @@ impl McpStdioActor {
 
     fn new_with_persistence(client: McpStdioClient, persistent: bool) -> Self {
         let (status_tx, status) = tokio::sync::watch::channel(McpStdioStatus::Ready);
-        let (tx, owner) =
-            crate::spawn_actor_worker!(32, move |rx: tokio::sync::mpsc::Receiver<
-                McpStdioCommand,
-            >| async move {
-                run_stdio_worker(rx, client, persistent, status_tx).await
-            });
+        let (tx, owner) = crate::spawn_actor_worker!(32, move |rx: tokio::sync::mpsc::Receiver<
+            McpStdioCommand,
+        >| async move {
+            run_stdio_worker(rx, client, persistent, status_tx).await
+        });
         Self {
             tx,
             status,
@@ -309,14 +308,22 @@ async fn run_stdio_worker(
                 let _ = reply.send(result);
             }
             McpStdioCommand::Close { reply } => {
-                let _ = status_tx.send(McpStdioStatus::Closed);
-                let _ = reply.send(());
-                if let Some(session) = session.take() {
-                    let _ = session.close().await;
-                }
-                break;
+                close_stdio(reply, &mut session, &status_tx).await;
+                return;
             }
         }
+    }
+}
+
+async fn close_stdio(
+    reply: tokio::sync::oneshot::Sender<()>,
+    session: &mut Option<McpStdioSession>,
+    status_tx: &tokio::sync::watch::Sender<McpStdioStatus>,
+) {
+    let _ = status_tx.send(McpStdioStatus::Closed);
+    let _ = reply.send(());
+    if let Some(session) = session.take() {
+        let _ = session.close().await;
     }
 }
 

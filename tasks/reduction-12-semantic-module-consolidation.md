@@ -60,3 +60,5 @@ the actor lifecycle remains unchanged.
 Tool-card summary facts now live with the semantic feed tail projection rather
 than the large tool-type fragment, reducing the structural module without
 changing the public feed API.
+MCP stdio close handling is now a separate owned transition helper, keeping
+the worker loop below the structural function threshold.
