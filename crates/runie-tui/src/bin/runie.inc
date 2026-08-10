@@ -37,7 +37,7 @@ use runie_core::state::AgentStateActor;
 use runie_core::tools::executor::ToolExecHooks;
 use runie_core::tools::ToolExecutorActor;
 use runie_core::tools::ToolRegistry;
-use runie_core::tools::{EditFileTool, GlobTool, GrepTool, ReadFileTool, WriteFileTool};
+use runie_core::tools::{BashTool, EditFileTool, GlobTool, GrepTool, ReadFileTool, WriteFileTool};
 use runie_core::types::{
     AgentContext, AgentTool, AgentToolResult, AssistantMessage, AssistantMessageEvent, Model,
     QueueMode, SimpleStreamOptions, StopReason, ThemeKind, ToolCall, ToolExecutionMode,
@@ -1219,6 +1219,7 @@ async fn build_live_app() -> App {
     tools.register(std::sync::Arc::new(EditFileTool));
     tools.register(std::sync::Arc::new(GrepTool));
     tools.register(std::sync::Arc::new(GlobTool));
+    tools.register(std::sync::Arc::new(BashTool));
     tools.register(std::sync::Arc::new(ListDirectoryTool));
     if std::env::var("MINIMAX_ENABLE_ECHO_TOOL").is_ok_and(|value| value == "1") {
         tools.register(std::sync::Arc::new(MinimaxEchoTool));

@@ -12,7 +12,7 @@ too_many_lines = "deny"
 cognitive_complexity = "deny"
 
 [workspace.dependencies]
-tokio = { version = "1", features = ["sync", "rt-multi-thread", "rt", "macros", "time", "fs", "net"] }
+tokio = { version = "1", features = ["sync", "rt-multi-thread", "rt", "macros", "time", "fs", "net", "process"] }
 async-trait = "0.1"
 async-stream = "0.3"
 anyhow = "1"

@@ -15,7 +15,10 @@ use std::{
 
 use futures::StreamExt;
 
-use super::registry::ToolRegistry;
+use super::{
+    policy::{decide, ApprovalDecision, ApprovalMode},
+    registry::ToolRegistry,
+};
 use crate::types::{
     AgentContext, AgentToolResult, AssistantMessage, BeforeToolCallContext, BeforeToolCallResult,
     ToolCall, ToolResultContent, ToolResultMessage,
@@ -25,6 +28,7 @@ use crate::types::{
 /// default (allow / no override)".
 #[derive(Default, Clone)]
 pub struct ToolExecHooks {
+    pub approval_mode: ApprovalMode,
     pub before_tool_call: Option<BeforeToolCallHook>,
     pub after_tool_call: Option<AfterToolCallHook>,
 }
@@ -355,6 +359,12 @@ async fn run_before_tool_gate(
     ctx: &ToolExecContext,
     signal: tokio_util::sync::CancellationToken,
 ) -> Result<(), String> {
+    if let ApprovalDecision::Ask { reason } = decide(ctx.hooks.approval_mode, &call.name) {
+        let interactive = ctx.hooks.before_tool_call.is_some();
+        if !interactive {
+            return Err(format!("Approval required for {}: {reason}", call.name));
+        }
+    }
     let Some(ref hook) = ctx.hooks.before_tool_call else {
         return Ok(());
     };
