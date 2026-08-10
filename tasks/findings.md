@@ -71,6 +71,8 @@ Session journal record-type names now use a declarative table with session
 tests covering the projection; the full 55-case TUI smoke suite remains green.
 Session-lane decode and wire-name round trips now use one shared typed table;
 workspace verification and the live 55-case TUI smoke suite remain green.
+Provider effort wire keys now use a macro-backed typed table; provider tests,
+workspace verification, and the live 55-case TUI smoke suite remain green.
 
 As of 2026-08-09, the reduction work has these verified results:
 

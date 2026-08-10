@@ -36,19 +36,24 @@ pub struct HttpRequest {
 /// Provider-owned spelling for a model-declared reasoning level. Keeping the
 /// finite adapter vocabulary typed prevents call sites from inventing wire
 /// keys while retaining a single data-driven mapping function.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum EffortWireField {
-    ReasoningEffort,
-    Reasoning,
+macro_rules! effort_wire_fields {
+    ($(($field:ident, $key:literal)),+ $(,)?) => {
+        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+        pub enum EffortWireField {
+            $($field),+
+        }
+
+        impl EffortWireField {
+            pub const fn key(self) -> &'static str {
+                match self { $(Self::$field => $key,)+ }
+            }
+        }
+    };
 }
 
-impl EffortWireField {
-    pub const fn key(self) -> &'static str {
-        match self {
-            Self::ReasoningEffort => "reasoning_effort",
-            Self::Reasoning => "reasoning",
-        }
-    }
+effort_wire_fields! {
+    (ReasoningEffort, "reasoning_effort"),
+    (Reasoning, "reasoning"),
 }
 
 #[async_trait::async_trait]

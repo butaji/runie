@@ -47,3 +47,5 @@ Session journal record types now use one macro-backed wire-name table,
 including the typed/generic operation aliases.
 Session-lane operation variants, typed kinds, and wire names now share one
 macro-backed table for decode, reverse projection, and parsing.
+Provider effort wire fields now use one macro-backed key table, keeping
+adapter-specific spellings explicit without duplicating the enum mapping.
