@@ -18,6 +18,15 @@ pub struct McpStreamSnapshot {
     pub notifications: Vec<serde_json::Value>,
 }
 
+impl McpStreamSnapshot {
+    pub fn terminal_lines(&self) -> Vec<String> {
+        vec![
+            format!("responses: {}", self.responses.len()),
+            format!("notifications: {}", self.notifications.len()),
+        ]
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct McpNotificationQueue {
     pub capacity: usize,
@@ -271,6 +280,10 @@ mod tests {
         }
         assert_eq!(snapshot.responses["2"]["result"]["ok"], true);
         assert_eq!(snapshot.notifications.len(), 1);
+        assert_eq!(
+            snapshot.terminal_lines(),
+            ["responses: 1", "notifications: 1"]
+        );
     }
 
     #[test]
