@@ -353,23 +353,12 @@ impl StatusBar {
     }
 
     pub fn render(&self, area: Rect, buf: &mut Buffer) {
-        Widget::render(Paragraph::new(self.footer_line()), area, buf);
-    }
-
-    fn footer_line(&self) -> Line<'static> {
-        use ratatui::text::Span;
-        let spans = match self.state {
-            Status::Ready => ready_footer_spans(self.theme()),
-            Status::Loading => loading_footer_spans(self.animation_frame, self.theme()),
-            Status::Thinking | Status::Streaming | Status::Waiting(_) => {
-                active_footer_spans(self.theme())
-            }
-            _ => vec![Span::styled(
-                self.state.label(),
-                self.state.style_for(self.theme()),
-            )],
-        };
-        Line::from(spans).style(appearance::muted_style_for(self.theme))
+        crate::paint::render_paint_document(
+            &crate::paint::status_footer_paint(&self.model_snapshot()),
+            self.theme,
+            area,
+            buf,
+        );
     }
 }
 
@@ -401,45 +390,6 @@ fn format_trimmed_decimal(value: f64, suffix: char) -> String {
         .trim_end_matches('.')
         .to_owned();
     format!("{rendered}{suffix}")
-}
-
-fn ready_footer_spans(theme: ThemeKind) -> Vec<ratatui::text::Span<'static>> {
-    appearance::footer_hotkey_actions(
-        theme,
-        [
-            ("Enter", "send"),
-            ("Shift+Tab", "mode"),
-            ("Ctrl+x", "shortcuts"),
-        ],
-    )
-}
-
-fn loading_footer_spans(frame: usize, theme: ThemeKind) -> Vec<ratatui::text::Span<'static>> {
-    let frames = dot_spinner_frames();
-    let spinner = frames[frame % frames.len()];
-    vec![ratatui::text::Span::styled(
-        format!("{spinner} Loading..."),
-        footer_muted_style(theme).add_modifier(Modifier::DIM),
-    )]
-}
-
-fn active_footer_spans(theme: ThemeKind) -> Vec<ratatui::text::Span<'static>> {
-    appearance::footer_hotkey_actions(
-        theme,
-        [
-            ("Shift+Tab", "mode"),
-            ("Esc", "cancel"),
-            ("Ctrl+.", "shortcuts"),
-        ],
-    )
-}
-
-fn footer_muted_style(theme: ThemeKind) -> Style {
-    if theme == ThemeKind::GrokNight {
-        Style::default()
-    } else {
-        appearance::muted_style_for(theme)
-    }
 }
 
 #[cfg(test)]

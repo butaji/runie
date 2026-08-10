@@ -99,6 +99,8 @@ As of 2026-08-09, the reduction work has these verified results:
   metadata path and reducing dead registry code.
 - Slash command names and descriptions now share one macro-backed palette
   metadata table, removing a second exhaustive action match.
+- Paint data now supports inline styled spans, and the status footer uses that
+  renderer-neutral projection for hotkeys, separators, and actions.
 - Transcript-selectability is now a `LineKind` predicate shared by feed
   navigation, completing the central line-classification vocabulary.
 - Five numbered feed fragments covering tool-row lifecycle and selection are

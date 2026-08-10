@@ -214,6 +214,7 @@ pub fn style_for_intent(theme: ThemeKind, intent: PaintIntent) -> Style {
         PaintIntent::SelectionBorder => selected_border_style_for(theme),
         PaintIntent::DiffInsert => diff_insert_style_for(theme),
         PaintIntent::DiffDelete => diff_delete_style_for(theme),
+        PaintIntent::FooterKey => footer_key_style_for(theme),
     }
 }
 

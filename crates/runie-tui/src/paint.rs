@@ -48,9 +48,18 @@ pub struct PaintText {
     pub intent: PaintIntent,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct PaintSpan {
+    pub text: String,
+    pub intent: PaintIntent,
+    pub bold: bool,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub struct PaintDocument {
     pub text: Vec<PaintText>,
+    #[serde(default)]
+    pub inline: Vec<PaintSpan>,
 }
 
 impl PaintDocument {
@@ -66,6 +75,15 @@ impl PaintDocument {
             component,
             text: text.into(),
             intent,
+        });
+        self
+    }
+
+    pub fn span(mut self, text: impl Into<String>, intent: PaintIntent, bold: bool) -> Self {
+        self.inline.push(PaintSpan {
+            text: text.into(),
+            intent,
+            bold,
         });
         self
     }
@@ -110,7 +128,7 @@ pub fn render_paint_document(
     area: Rect,
     buffer: &mut Buffer,
 ) {
-    let lines = document
+    let mut lines = document
         .text
         .iter()
         .map(|text| {
@@ -120,6 +138,20 @@ pub fn render_paint_document(
             ))
         })
         .collect::<Vec<_>>();
+    if !document.inline.is_empty() {
+        let spans = document
+            .inline
+            .iter()
+            .map(|span| {
+                let mut style = appearance::style_for_intent(theme, span.intent);
+                if span.bold {
+                    style = style.add_modifier(ratatui::style::Modifier::BOLD);
+                }
+                Span::styled(span.text.clone(), style)
+            })
+            .collect::<Vec<_>>();
+        lines.push(Line::from(spans));
+    }
     Paragraph::new(lines).render(area, buffer);
 }
 
@@ -152,6 +184,66 @@ pub fn prompt_paint(snapshot: &PromptSnapshot) -> PaintDocument {
 
 pub fn render_prompt_paint(snapshot: &PromptSnapshot, area: Rect, buffer: &mut Buffer) {
     render_paint_document(&prompt_paint(snapshot), snapshot.theme, area, buffer);
+}
+
+pub fn status_footer_paint(snapshot: &StatusSnapshot) -> PaintDocument {
+    let mut document = PaintDocument::default();
+    match &snapshot.state {
+        runie_tui_model::Status::Ready => footer_spans(
+            &mut document,
+            [
+                ("Enter", "send"),
+                ("Shift+Tab", "mode"),
+                ("Ctrl+x", "shortcuts"),
+            ],
+        ),
+        runie_tui_model::Status::Loading => document.span(
+            format!(
+                "{} Loading...",
+                runie_tui_model::DOT_SPINNER_FRAMES
+                    [snapshot.animation_frame % runie_tui_model::DOT_SPINNER_FRAMES.len()]
+            ),
+            PaintIntent::Muted,
+            false,
+        ),
+        runie_tui_model::Status::Thinking
+        | runie_tui_model::Status::Streaming
+        | runie_tui_model::Status::Waiting(_) => footer_spans(
+            &mut document,
+            [
+                ("Shift+Tab", "mode"),
+                ("Esc", "cancel"),
+                ("Ctrl+.", "shortcuts"),
+            ],
+        ),
+        state => document.span(state.label(), PaintIntent::Muted, false),
+    }
+}
+
+fn footer_spans<const N: usize>(
+    document: &mut PaintDocument,
+    actions: [(&'static str, &'static str); N],
+) -> PaintDocument {
+    for (index, (key, action)) in actions.into_iter().enumerate() {
+        if index > 0 {
+            document.inline.push(PaintSpan {
+                text: "  │  ".into(),
+                intent: PaintIntent::Muted,
+                bold: false,
+            });
+        }
+        document.inline.push(PaintSpan {
+            text: key.into(),
+            intent: PaintIntent::FooterKey,
+            bold: true,
+        });
+        document.inline.push(PaintSpan {
+            text: format!(":{action}"),
+            intent: PaintIntent::Muted,
+            bold: false,
+        });
+    }
+    std::mem::take(document)
 }
 
 #[cfg(test)]
@@ -193,6 +285,23 @@ mod tests {
         let document = status_paint(&snapshot);
         assert_eq!(document.text[0].text, "thinking...");
         assert_eq!(document.text[0].intent, PaintIntent::Accent);
+    }
+
+    #[test]
+    fn status_footer_paint_keeps_inline_hotkey_structure_as_data() {
+        let document = status_footer_paint(&StatusSnapshot::default());
+        let rendered = document
+            .inline
+            .iter()
+            .map(|span| span.text.as_str())
+            .collect::<String>();
+
+        assert_eq!(
+            rendered,
+            "Enter:send  │  Shift+Tab:mode  │  Ctrl+x:shortcuts"
+        );
+        assert!(document.inline[0].bold);
+        assert_eq!(document.inline[0].intent, PaintIntent::FooterKey);
     }
 
     #[test]

@@ -31,3 +31,6 @@ consumed by both paint data and the interactive widget, removing duplicated
 mode/history/multiline state logic.
 Prompt state itself is now serde-backed and replayed from a YAML fixture before
 paint projection, making the prompt IR boundary inspectable as data.
+The paint IR now supports inline semantic spans with bold metadata, and the
+status footer is projected and rendered through that span data instead of a
+widget-local Ratatui span builder.

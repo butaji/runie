@@ -269,6 +269,7 @@ pub enum PaintIntent {
     SelectionBorder,
     DiffInsert,
     DiffDelete,
+    FooterKey,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
