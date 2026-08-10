@@ -1,4 +1,5 @@
 use super::{MCP_HTTP_MAX_RESPONSE_BYTES, MCP_MAX_STREAM_EVENTS};
+use std::collections::BTreeMap;
 
 /// One server-sent MCP event. The JSON-RPC envelope remains data so callers
 /// can project responses, notifications, and errors without losing fields.
@@ -6,6 +7,36 @@ use super::{MCP_HTTP_MAX_RESPONSE_BYTES, MCP_MAX_STREAM_EVENTS};
 pub struct McpStreamEvent {
     pub event: Option<String>,
     pub data: serde_json::Value,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct McpStreamSnapshot {
+    pub responses: BTreeMap<String, serde_json::Value>,
+    pub notifications: Vec<serde_json::Value>,
+}
+
+/// Reduce MCP JSON-RPC envelopes into a replayable response/notification
+/// projection. Unknown JSON-RPC fields remain intact in the stored values.
+pub fn reduce_mcp_stream_event(
+    snapshot: &mut McpStreamSnapshot,
+    event: &McpStreamEvent,
+) -> Result<(), String> {
+    let Some(object) = event.data.as_object() else {
+        return Err("MCP stream data must be a JSON object".into());
+    };
+    if let Some(id) = object.get("id") {
+        let key = match id {
+            serde_json::Value::String(value) => value.clone(),
+            serde_json::Value::Number(value) => value.to_string(),
+            _ => return Err("MCP response id must be a string or number".into()),
+        };
+        snapshot.responses.insert(key, event.data.clone());
+    } else if object.get("method").is_some() {
+        snapshot.notifications.push(event.data.clone());
+    } else {
+        return Err("MCP stream envelope needs an id or method".into());
+    }
+    Ok(())
 }
 
 /// Parse a bounded MCP `text/event-stream` body into ordered events.
@@ -98,5 +129,19 @@ mod tests {
             .map(|_| "data: {}\n\n")
             .collect::<String>();
         assert!(parse_mcp_event_stream(body.as_bytes()).is_err());
+    }
+
+    #[test]
+    fn stream_projection_correlates_responses_and_preserves_notifications() {
+        let events = parse_mcp_event_stream(
+            b"data: {\"id\":2,\"result\":{\"ok\":true}}\n\ndata: {\"method\":\"notifications/progress\",\"params\":{\"n\":1}}\n",
+        )
+        .unwrap();
+        let mut snapshot = McpStreamSnapshot::default();
+        for event in &events {
+            reduce_mcp_stream_event(&mut snapshot, event).unwrap();
+        }
+        assert_eq!(snapshot.responses["2"]["result"]["ok"], true);
+        assert_eq!(snapshot.notifications.len(), 1);
     }
 }
