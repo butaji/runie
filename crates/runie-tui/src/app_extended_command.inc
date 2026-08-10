@@ -249,7 +249,12 @@ impl App {
                     "reload" => format!("Resources reloaded {} time(s)", state.reload_count),
                     "skills" => "Skills enabled".into(),
                     "hooks" => "Hooks loaded".into(),
-                    "plugins" => "Plugins loaded".into(),
+                    "plugins" => self
+                        .plugin_host
+                        .as_ref()
+                        .map(|host| host.snapshot().terminal_lines().join("\n"))
+                        .filter(|lines| !lines.is_empty())
+                        .unwrap_or_else(|| "Plugins loaded".into()),
                     "mcps" => "MCP servers loaded".into(),
                     "doctor" => state
                         .diagnostic_report
