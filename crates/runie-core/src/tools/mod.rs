@@ -2,6 +2,7 @@
 
 pub mod actor;
 pub mod executor;
+pub mod path_policy;
 pub mod policy;
 pub mod registry;
 pub mod workspace;

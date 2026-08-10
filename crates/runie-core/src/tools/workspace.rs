@@ -1,5 +1,6 @@
 //! Bounded, read-only workspace tools.
 
+use super::path_policy::{validate, PathOperation};
 use crate::types::{AgentTool, AgentToolResult, ToolResultContent};
 use std::path::Path;
 use tokio::io::AsyncReadExt;
@@ -8,7 +9,14 @@ pub const READ_MAX_LINES: usize = 1_000;
 pub const READ_MAX_BYTES: usize = 100 * 1024;
 
 macro_rules! workspace_types { ($($name:ident),+ $(,)?) => { $(#[derive(Default)] pub struct $name;)+ }; }
-workspace_types!(ReadFileTool, WriteFileTool, EditFileTool, GrepTool, GlobTool, BashTool);
+workspace_types!(
+    ReadFileTool,
+    WriteFileTool,
+    EditFileTool,
+    GrepTool,
+    GlobTool,
+    BashTool
+);
 
 macro_rules! workspace_tool {
     ($name:literal, $label:literal, $description:literal, $schema:expr) => {
@@ -60,7 +68,8 @@ impl AgentTool for ReadFileTool {
             .get("path")
             .and_then(serde_json::Value::as_str)
             .ok_or_else(|| "read requires a string `path` argument".to_owned())?;
-        let content = tokio::fs::read_to_string(Path::new(path))
+        let path = validate(path, PathOperation::Read)?;
+        let content = tokio::fs::read_to_string(Path::new(&path))
             .await
             .map_err(|error| format!("read {path:?}: {error}"))?;
         let start = args
@@ -97,7 +106,10 @@ impl AgentTool for WriteFileTool {
         _signal: Option<tokio_util::sync::CancellationToken>,
         _update: Option<Box<dyn Fn(serde_json::Value) + Send + Sync>>,
     ) -> Result<AgentToolResult, String> {
-        let path = required_string(&args, "path", "write")?;
+        let path = validate(
+            required_string(&args, "path", "write")?,
+            PathOperation::Write,
+        )?;
         let content = required_string(&args, "content", "write")?;
         tokio::fs::write(path, content)
             .await
@@ -121,10 +133,19 @@ impl AgentTool for EditFileTool {
         _signal: Option<tokio_util::sync::CancellationToken>,
         _update: Option<Box<dyn Fn(serde_json::Value) + Send + Sync>>,
     ) -> Result<AgentToolResult, String> {
-        let path = required_string(&args, "path", "edit")?;
+        let path = validate(
+            required_string(&args, "path", "edit")?,
+            PathOperation::Write,
+        )?;
         let old = required_string(&args, "old_string", "edit")?;
         let new = required_string(&args, "new_string", "edit")?;
-        apply_edit(path, old, new, replace_all(&args)).await?;
+        apply_edit(
+            path.to_str().unwrap_or_default(),
+            old,
+            new,
+            replace_all(&args),
+        )
+        .await?;
         text_result("edited")
     }
 }
@@ -179,7 +200,8 @@ impl AgentTool for GrepTool {
             .get("path")
             .and_then(serde_json::Value::as_str)
             .unwrap_or(".");
-        let matches = grep_matches(root, pattern);
+        let root = validate(root, PathOperation::Search)?;
+        let matches = grep_matches(root.to_str().unwrap_or("."), pattern);
         text_result(&matches.join("\n"))
     }
 }
@@ -228,6 +250,7 @@ impl AgentTool for GlobTool {
             .get("path")
             .and_then(serde_json::Value::as_str)
             .unwrap_or(".");
+        let root = validate(root, PathOperation::Search)?;
         let mut paths: Vec<_> = walkdir::WalkDir::new(root)
             .into_iter()
             .filter_map(Result::ok)
@@ -370,127 +393,5 @@ fn bounded_lines(content: &str, start: usize, requested: usize) -> String {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    #[tokio::test]
-    async fn read_returns_requested_line_range() {
-        let path = std::env::temp_dir().join(format!("runie-read-{}.txt", std::process::id()));
-        tokio::fs::write(&path, "one\ntwo\nthree\n").await.unwrap();
-        let result = ReadFileTool
-            .execute(
-                "read-1",
-                serde_json::json!({"path": path, "line_offset": 2, "n_lines": 1}),
-                None,
-                None,
-            )
-            .await
-            .unwrap();
-        let ToolResultContent::Text { text } = &result.content[0] else {
-            panic!("expected text")
-        };
-        assert_eq!(text, "two\n[output truncated]");
-        tokio::fs::remove_file(path).await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn read_rejects_missing_path() {
-        let error = ReadFileTool
-            .execute("read-1", serde_json::json!({}), None, None)
-            .await
-            .unwrap_err();
-        assert!(error.contains("requires"));
-    }
-
-    #[tokio::test]
-    async fn write_and_edit_preserve_exact_match_safety() {
-        let path = std::env::temp_dir().join(format!("runie-edit-{}.txt", std::process::id()));
-        WriteFileTool
-            .execute(
-                "w",
-                serde_json::json!({"path": path, "content": "old\nold"}),
-                None,
-                None,
-            )
-            .await
-            .unwrap();
-        let error = EditFileTool
-            .execute(
-                "e",
-                serde_json::json!({"path": path, "old_string": "old", "new_string": "new"}),
-                None,
-                None,
-            )
-            .await
-            .unwrap_err();
-        assert!(error.contains("matched 2"));
-        EditFileTool.execute("e", serde_json::json!({"path": path, "old_string": "old", "new_string": "new", "replace_all": true}), None, None).await.unwrap();
-        assert_eq!(tokio::fs::read_to_string(&path).await.unwrap(), "new\nnew");
-        tokio::fs::remove_file(path).await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn grep_and_glob_return_deterministic_matches() {
-        let root = std::env::temp_dir().join(format!("runie-search-{}", std::process::id()));
-        tokio::fs::create_dir_all(&root).await.unwrap();
-        tokio::fs::write(root.join("a.rs"), "needle\n")
-            .await
-            .unwrap();
-        tokio::fs::write(root.join("b.txt"), "other\n")
-            .await
-            .unwrap();
-        let grep = GrepTool
-            .execute(
-                "g",
-                serde_json::json!({"path": root, "pattern": "needle"}),
-                None,
-                None,
-            )
-            .await
-            .unwrap();
-        let ToolResultContent::Text { text } = &grep.content[0] else {
-            panic!("expected text")
-        };
-        assert!(text.ends_with(":1:needle"));
-        let glob = GlobTool
-            .execute(
-                "f",
-                serde_json::json!({"path": root, "pattern": "*.rs"}),
-                None,
-                None,
-            )
-            .await
-            .unwrap();
-        let ToolResultContent::Text { text } = &glob.content[0] else {
-            panic!("expected text")
-        };
-        assert!(text.ends_with("a.rs"));
-        tokio::fs::remove_dir_all(root).await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn bash_returns_output_and_surfaces_failures() {
-        let updates = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
-        let updates_seen = updates.clone();
-        let result = BashTool
-            .execute(
-                "b",
-                serde_json::json!({"command": "printf ok"}),
-                None,
-                Some(Box::new(move |value| {
-                    updates_seen.lock().unwrap().push(value)
-                })),
-            )
-            .await
-            .unwrap();
-        let ToolResultContent::Text { text } = &result.content[0] else {
-            panic!("expected text")
-        };
-        assert_eq!(text, "ok");
-        assert_eq!(updates.lock().unwrap()[0]["text"], "ok");
-        let error = BashTool
-            .execute("b", serde_json::json!({"command": "exit 3"}), None, None)
-            .await
-            .unwrap_err();
-        assert!(error.contains("exited"));
-    }
-}
+#[path = "workspace_tests.rs"]
+mod tests;
