@@ -27,3 +27,6 @@ macro, including explicit clone fields and the derived selected-member field,
 so the projection schema is data-shaped instead of repeated assignments.
 Activity-tool aliases now use a typed grouped alias macro, keeping the
 classifier vocabulary declarative and exhaustively mapped to `ActivityKind`.
+Builtin theme names now use one typed macro table that generates both the
+loader dispatch and its test inventory, eliminating the split hand-written
+match while keeping every theme mapping inspectable as data.

@@ -85,6 +85,8 @@ As of 2026-08-09, the reduction work has these verified results:
   settled error rows.
 - Activity-tool aliases now come from one grouped typed macro, keeping the
   classifier as a data declaration while preserving all existing aliases.
+- Builtin theme names now use one typed macro table for loader dispatch and
+  test inventory, removing a split hand-written theme match.
 - Transcript-selectability is now a `LineKind` predicate shared by feed
   navigation, completing the central line-classification vocabulary.
 - Five numbered feed fragments covering tool-row lifecycle and selection are

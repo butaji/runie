@@ -122,6 +122,64 @@ keyword = { fg = "accent.primary", bold = true }
 muted = { fg = "text.muted" }
 "##;
 
+macro_rules! builtin_themes {
+    ($($variant:ident => $name:literal),+ $(,)?) => {
+        fn load_builtin(theme: ThemeKind) -> Theme {
+            match theme {
+                $(ThemeKind::$variant => builtin($name),)+
+                _ => unreachable!("special themes handled by load"),
+            }
+        }
+
+        #[cfg(test)]
+        const BUILTIN_THEMES: &[(ThemeKind, &str)] = &[
+            $((ThemeKind::$variant, $name),)+
+        ];
+    };
+}
+
+builtin_themes! {
+    TokyoNight => "tokyo-night",
+    RosePineMoon => "rose-pine-moon",
+    OscuraMidnight => "night-owl",
+    AyuDark => "ayu-dark",
+    AyuLight => "ayu-light",
+    AyuMirage => "ayu-mirage",
+    CatppuccinFrappe => "catppuccin-frappe",
+    CatppuccinLatte => "catppuccin-latte",
+    CatppuccinMacchiato => "catppuccin-macchiato",
+    CatppuccinMocha => "catppuccin-mocha",
+    Dracula => "dracula",
+    EverforestDark => "everforest-dark",
+    EverforestLight => "everforest-light",
+    FlexokiDark => "flexoki-dark",
+    FlexokiLight => "flexoki-light",
+    GithubDarkDimmed => "github-dark-dimmed",
+    GithubLight => "github-light",
+    GruvboxDark => "gruvbox-dark",
+    GruvboxLight => "gruvbox-light",
+    KanagawaDragon => "kanagawa-dragon",
+    KanagawaLotus => "kanagawa-lotus",
+    KanagawaWave => "kanagawa-wave",
+    LightOwl => "light-owl",
+    MonokaiPro => "monokai-pro",
+    Nord => "nord",
+    OneDark => "one-dark",
+    OneLight => "one-light",
+    Palenight => "palenight",
+    RosePine => "rose-pine",
+    RosePineDawn => "rose-pine-dawn",
+    SilkCircuitDawn => "silkcircuit-dawn",
+    SilkCircuitGlow => "silkcircuit-glow",
+    SilkCircuitNeon => "silkcircuit-neon",
+    SilkCircuitSoft => "silkcircuit-soft",
+    SilkCircuitVibrant => "silkcircuit-vibrant",
+    SolarizedDark => "solarized-dark",
+    SolarizedLight => "solarized-light",
+    TokyoNightMoon => "tokyo-night-moon",
+    TokyoNightStorm => "tokyo-night-storm",
+}
+
 pub fn load(theme: ThemeKind) -> Theme {
     match theme {
         ThemeKind::GrokNight => load_from_str(GROK_NIGHT, None).expect("valid GrokNight theme"),
@@ -129,57 +187,6 @@ pub fn load(theme: ThemeKind) -> Theme {
         ThemeKind::Auto => load(ThemeKind::GrokNight),
         ThemeKind::TerminalNative => load(ThemeKind::GrokNight),
         _ => load_builtin(theme),
-    }
-}
-
-fn load_builtin(theme: ThemeKind) -> Theme {
-    match theme {
-        ThemeKind::TokyoNight => builtin("tokyo-night"),
-        ThemeKind::RosePineMoon => builtin("rose-pine-moon"),
-        ThemeKind::OscuraMidnight => builtin("night-owl"),
-        ThemeKind::AyuDark => builtin("ayu-dark"),
-        ThemeKind::AyuLight => builtin("ayu-light"),
-        ThemeKind::AyuMirage => builtin("ayu-mirage"),
-        ThemeKind::CatppuccinFrappe => builtin("catppuccin-frappe"),
-        ThemeKind::CatppuccinLatte => builtin("catppuccin-latte"),
-        ThemeKind::CatppuccinMacchiato => builtin("catppuccin-macchiato"),
-        ThemeKind::CatppuccinMocha => builtin("catppuccin-mocha"),
-        ThemeKind::Dracula => builtin("dracula"),
-        ThemeKind::EverforestDark => builtin("everforest-dark"),
-        ThemeKind::EverforestLight => builtin("everforest-light"),
-        ThemeKind::FlexokiDark => builtin("flexoki-dark"),
-        ThemeKind::FlexokiLight => builtin("flexoki-light"),
-        _ => load_builtin_tail(theme),
-    }
-}
-
-fn load_builtin_tail(theme: ThemeKind) -> Theme {
-    match theme {
-        ThemeKind::GithubDarkDimmed => builtin("github-dark-dimmed"),
-        ThemeKind::GithubLight => builtin("github-light"),
-        ThemeKind::GruvboxDark => builtin("gruvbox-dark"),
-        ThemeKind::GruvboxLight => builtin("gruvbox-light"),
-        ThemeKind::KanagawaDragon => builtin("kanagawa-dragon"),
-        ThemeKind::KanagawaLotus => builtin("kanagawa-lotus"),
-        ThemeKind::KanagawaWave => builtin("kanagawa-wave"),
-        ThemeKind::LightOwl => builtin("light-owl"),
-        ThemeKind::MonokaiPro => builtin("monokai-pro"),
-        ThemeKind::Nord => builtin("nord"),
-        ThemeKind::OneDark => builtin("one-dark"),
-        ThemeKind::OneLight => builtin("one-light"),
-        ThemeKind::Palenight => builtin("palenight"),
-        ThemeKind::RosePine => builtin("rose-pine"),
-        ThemeKind::RosePineDawn => builtin("rose-pine-dawn"),
-        ThemeKind::SilkCircuitDawn => builtin("silkcircuit-dawn"),
-        ThemeKind::SilkCircuitGlow => builtin("silkcircuit-glow"),
-        ThemeKind::SilkCircuitNeon => builtin("silkcircuit-neon"),
-        ThemeKind::SilkCircuitSoft => builtin("silkcircuit-soft"),
-        ThemeKind::SilkCircuitVibrant => builtin("silkcircuit-vibrant"),
-        ThemeKind::SolarizedDark => builtin("solarized-dark"),
-        ThemeKind::SolarizedLight => builtin("solarized-light"),
-        ThemeKind::TokyoNightMoon => builtin("tokyo-night-moon"),
-        ThemeKind::TokyoNightStorm => builtin("tokyo-night-storm"),
-        _ => unreachable!("special themes handled by load"),
     }
 }
 
@@ -374,6 +381,13 @@ mod tests {
         assert!(load(ThemeKind::GrokNight).has_token("accent.primary"));
         assert!(load(ThemeKind::GrokDay).is_light());
         assert!(load(ThemeKind::TokyoNight).has_token("code.keyword"));
+    }
+
+    #[test]
+    fn every_declared_builtin_theme_resolves_from_the_schema() {
+        for &(theme, _) in BUILTIN_THEMES {
+            assert!(load(theme).has_token("code.keyword"), "{theme:?}");
+        }
     }
 
     #[test]
