@@ -87,7 +87,8 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    payload/finish-reason conformance matrix,
    including unsupported-effort behavior and normalized failures.
 2. Tool output and background lifecycle UX — `harness-01` and `harness-03`.
-   Add renderer-neutral bounded output cards and owned lifecycle controls,
+   `/jobs cancel all` now reduces every running job through the actor mailbox;
+   add renderer-neutral bounded output cards and richer owned lifecycle controls,
    with failure/cancellation replay traces.
 3. Model-aware context policy — `harness-05` (live usage boundary implemented).
    Recovery and `/context` now use the active model’s declared window;

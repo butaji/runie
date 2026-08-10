@@ -54,6 +54,9 @@ enum Message {
         id: String,
         reply: oneshot::Sender<bool>,
     },
+    CancelAll {
+        reply: oneshot::Sender<usize>,
+    },
 }
 
 #[derive(Clone)]
@@ -120,6 +123,14 @@ impl BackgroundProcessActor {
         }
         result.await.unwrap_or(false)
     }
+
+    pub async fn cancel_all(&self) -> usize {
+        let (reply, result) = oneshot::channel();
+        if self.tx.send(Message::CancelAll { reply }).await.is_err() {
+            return 0;
+        }
+        result.await.unwrap_or_default()
+    }
     pub fn snapshot(&self) -> Vec<BackgroundJob> {
         self.snapshot.borrow().clone()
     }
@@ -166,6 +177,19 @@ async fn run_worker(mut rx: mpsc::Receiver<Message>, snapshot_tx: BackgroundSnap
                 Some(Message::Cancel { id, reply }) => {
                     let cancelled = cancel_job(&id, &mut jobs, &mut handles);
                     if cancelled { publish(&snapshot_tx, &jobs); }
+                    let _ = reply.send(cancelled);
+                }
+                Some(Message::CancelAll { reply }) => {
+                    let ids = jobs
+                        .values()
+                        .filter(|job| job.status == BackgroundStatus::Running)
+                        .map(|job| job.id.clone())
+                        .collect::<Vec<_>>();
+                    let cancelled = ids
+                        .iter()
+                        .filter(|id| cancel_job(id, &mut jobs, &mut handles))
+                        .count();
+                    if cancelled > 0 { publish(&snapshot_tx, &jobs); }
                     let _ = reply.send(cancelled);
                 }
                 None => break,
@@ -299,6 +323,26 @@ mod tests {
                 }
             }
             tokio::task::yield_now().await;
+        }
+    }
+
+    #[tokio::test]
+    async fn cancel_all_reduces_every_running_job_to_cancelled() {
+        let actor = BackgroundProcessActor::new();
+        let first = actor.start("yes running").await.unwrap();
+        let second = actor.start("yes running").await.unwrap();
+        tokio::task::yield_now().await;
+        assert_eq!(actor.cancel_all().await, 2);
+        for id in [first, second] {
+            assert_eq!(
+                actor
+                    .snapshot()
+                    .into_iter()
+                    .find(|job| job.id == id)
+                    .unwrap()
+                    .status,
+                BackgroundStatus::Cancelled
+            );
         }
     }
 }

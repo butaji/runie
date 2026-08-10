@@ -211,6 +211,11 @@ pub fn parse_background_job_command(args: &str) -> Option<&str> {
         .then(|| args.split_whitespace().nth(1).unwrap())
 }
 
+/// Parse the lifecycle-wide background cancellation control.
+pub fn parse_background_job_cancel_all(args: &str) -> bool {
+    args.split_whitespace().eq(["cancel", "all"])
+}
+
 /// Parse an optional single background-job ID used by the inspection view.
 /// Control verbs such as `cancel` stay owned by their dedicated parser.
 pub fn parse_background_job_query(args: &str) -> Option<&str> {

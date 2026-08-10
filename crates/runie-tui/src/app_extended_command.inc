@@ -52,6 +52,15 @@ impl App {
             return true;
         }
         if name == "jobs" {
+            if runie_core::commands::parse_background_job_cancel_all(args) {
+                let cancelled = self.background_actor.cancel_all().await;
+                self.ui
+                    .send(UiMsg::ShowCommandResult(format!(
+                        "Cancelled {cancelled} running background job(s)"
+                    )))
+                    .await;
+                return true;
+            }
             if let Some(id) = runie_core::commands::parse_background_job_command(args) {
                 let cancelled = self.background_actor.cancel(id).await;
                 self.ui
