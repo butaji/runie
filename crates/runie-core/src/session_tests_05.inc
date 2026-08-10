@@ -126,6 +126,25 @@
         let _ = tokio::fs::remove_dir_all(root).await;
     }
 
+    #[tokio::test]
+    async fn storage_discovery_rows_are_queryable_at_the_actor_boundary() {
+        let root = std::env::temp_dir().join(format!("runie-discover-rows-{}", std::process::id()));
+        let _ = tokio::fs::remove_dir_all(&root).await;
+        tokio::fs::create_dir_all(&root).await.expect("directory");
+        let storage = SessionStorageActor::new();
+        storage
+            .publish_snapshot(root.join("deploy.jsonl").to_string_lossy(), &storage_snapshot(), "deploy", 1, "/work/release")
+            .await
+            .expect("publish");
+        let rows = storage
+            .discover_rows(root.to_string_lossy(), 8, "release")
+            .await
+            .expect("discover rows");
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].session_id, "deploy");
+        let _ = tokio::fs::remove_dir_all(root).await;
+    }
+
     #[test]
     fn storage_entries_project_to_serializable_picker_rows() {
         let entry = SessionStorageEntry {

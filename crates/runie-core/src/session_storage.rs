@@ -278,6 +278,22 @@ impl SessionStorageActor {
             .map_err(|_| "session storage response was dropped".to_owned())?
     }
 
+    /// Discover and query renderer-neutral picker rows through the storage
+    /// owner. Filesystem access and row filtering remain outside UI state.
+    pub async fn discover_rows(
+        &self,
+        root: impl Into<String>,
+        limit: usize,
+        query: &str,
+    ) -> Result<Vec<SessionStorageRow>, String> {
+        let entries = self.discover(root, limit).await?;
+        let rows = entries
+            .into_iter()
+            .map(|entry| entry.row())
+            .collect::<Vec<_>>();
+        Ok(crate::filter_storage_rows(&rows, query))
+    }
+
     pub async fn load_snapshot(
         &self,
         path: impl Into<String>,
