@@ -269,6 +269,10 @@ fn duplicate_call_ids_keep_live_row_member_ordinals_distinct() {
         rows.iter().map(|row| row.member_index).collect::<Vec<_>>(),
         [0, 0, 1, 1]
     );
+    assert_eq!(
+        super::logical_tool_member_indices(&lines),
+        [Some(0), Some(0), Some(1), Some(1)]
+    );
     assert_eq!(super::logical_tool_member_index_at(&lines, 2), Some(1));
 }
 

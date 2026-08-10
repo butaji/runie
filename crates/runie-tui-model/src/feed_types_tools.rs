@@ -73,27 +73,34 @@ pub fn logical_tool_member_index(lines: &[Line], tool_call_id: &str) -> Option<u
 /// use the actor-issued row identity, while compatibility-seeded rows retain
 /// the historical call-ID grouping.
 pub fn logical_tool_member_index_at(lines: &[Line], line_index: usize) -> Option<usize> {
-    let target = lines.get(line_index)?;
+    logical_tool_member_indices(lines)
+        .get(line_index)
+        .copied()
+        .flatten()
+}
+
+/// Project transcript positions into stable logical tool-member ordinals.
+/// Consumers share this one derived index instead of rebuilding maps while
+/// independently walking the same transcript.
+pub fn logical_tool_member_indices(lines: &[Line]) -> Vec<Option<usize>> {
     let mut indices = HashMap::new();
     let mut next = 0usize;
-    for (index, line) in lines.iter().enumerate() {
-        if line.tool_call_id.is_none() {
-            continue;
-        }
-        let key = tool_member_key(lines, index);
-        let index = if let Some(index) = indices.get(&key) {
-            *index
-        } else {
-            let index = next;
-            next += 1;
-            indices.insert(key, index);
-            index
-        };
-        if std::ptr::eq(line, target) {
-            return Some(index);
-        }
-    }
-    None
+    lines
+        .iter()
+        .enumerate()
+        .map(|(line_index, line)| {
+            let Some(_) = line.tool_call_id else {
+                return None;
+            };
+            let key = tool_member_key(lines, line_index);
+            let member_index = *indices.entry(key).or_insert_with(|| {
+                let index = next;
+                next += 1;
+                index
+            });
+            Some(member_index)
+        })
+        .collect()
 }
 
 fn tool_member_key(lines: &[Line], line_index: usize) -> (String, Option<u64>) {
@@ -150,17 +157,14 @@ pub fn project_tool_card_rows(
     tool_modes: &HashMap<String, ToolDisplayMode>,
 ) -> Vec<ToolCardRow> {
     let mut rows = Vec::new();
-    let mut member_indices: HashMap<(String, Option<u64>), usize> = HashMap::new();
-    let mut next_member_index = 0usize;
+    let member_indices = logical_tool_member_indices(lines);
     for (line_index, line) in lines.iter().enumerate() {
         if let Some(row) = project_tool_card_row(
             line,
             line_index,
-            lines,
             tool_names,
             tool_modes,
-            &mut member_indices,
-            &mut next_member_index,
+            &member_indices,
         ) {
             rows.push(row);
         }
@@ -171,22 +175,15 @@ pub fn project_tool_card_rows(
 fn project_tool_card_row(
     line: &Line,
     line_index: usize,
-    lines: &[Line],
     tool_names: &dyn ToolNameLookup,
     tool_modes: &HashMap<String, ToolDisplayMode>,
-    member_indices: &mut HashMap<(String, Option<u64>), usize>,
-    next_member_index: &mut usize,
+    member_indices: &[Option<usize>],
 ) -> Option<ToolCardRow> {
     let tool_call_id = line.tool_call_id.as_deref()?;
     let header = tool_names.tool_name(tool_call_id).unwrap_or(&line.text);
     let card_kind = ToolCardKind::from_header(header);
     let row_kind = card_row_kind(line, card_kind)?;
-    let member_key = tool_member_key(lines, line_index);
-    let member_index = *member_indices.entry(member_key).or_insert_with(|| {
-        let index = *next_member_index;
-        *next_member_index += 1;
-        index
-    });
+    let member_index = member_indices.get(line_index).copied().flatten()?;
     Some(ToolCardRow {
         tool_call_id: tool_call_id.to_owned(),
         tool_row_id: line.tool_row_id,

@@ -51,6 +51,9 @@ Append/reset, layout measurement, and scroll transitions now share the
 semantic `feed_view_state.rs` boundary.
 An interleaved lifecycle regression now verifies tool-card ordering and stale
 row absence across update, settle, and concurrent insert events.
+Logical tool-member ordinals are now one pure transcript projection shared by
+navigation lookup and tool-card rows, removing duplicate temporary index maps
+and keeping selection/card identity on the same derived data.
 
 Acceptance: snapshot parity, replay parity, and no stale derived index after
 insert/update/remove sequences.
