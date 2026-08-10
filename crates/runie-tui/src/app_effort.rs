@@ -1,5 +1,19 @@
 use super::App;
 
+macro_rules! declared_effort_levels {
+    ($map:expr) => {
+        [
+            ("off", $map.off.as_ref()),
+            ("minimal", $map.minimal.as_ref()),
+            ("low", $map.low.as_ref()),
+            ("medium", $map.medium.as_ref()),
+            ("high", $map.high.as_ref()),
+            ("xhigh", $map.xhigh.as_ref()),
+            ("max", $map.max.as_ref()),
+        ]
+    };
+}
+
 impl App {
     pub(super) async fn open_effort_picker(&self, model: &runie_core::types::Model) {
         self.ui
@@ -18,33 +32,17 @@ impl App {
         let Some(map) = model.thinking_level_map.as_ref() else {
             return Vec::new();
         };
-        [
-            ("off", &map.off),
-            ("minimal", &map.minimal),
-            ("low", &map.low),
-            ("medium", &map.medium),
-            ("high", &map.high),
-            ("xhigh", &map.xhigh),
-            ("max", &map.max),
-        ]
-        .into_iter()
-        .filter_map(|(name, wire)| wire.as_ref().map(|_| name.to_owned()))
-        .collect()
+        declared_effort_levels!(map)
+            .into_iter()
+            .filter_map(|(name, wire)| wire.map(|_| name.to_owned()))
+            .collect()
     }
 
     pub(super) fn model_has_declared_effort(model: &runie_core::types::Model) -> bool {
         model.thinking_level_map.as_ref().is_some_and(|map| {
-            [
-                &map.off,
-                &map.minimal,
-                &map.low,
-                &map.medium,
-                &map.high,
-                &map.xhigh,
-                &map.max,
-            ]
-            .into_iter()
-            .any(Option::is_some)
+            declared_effort_levels!(map)
+                .into_iter()
+                .any(|(_, wire)| wire.is_some())
         })
     }
 
@@ -57,17 +55,11 @@ impl App {
         else {
             return false;
         };
-        [
-            ("minimal", map.minimal),
-            ("low", map.low),
-            ("medium", map.medium),
-            ("high", map.high),
-            ("xhigh", map.xhigh),
-            ("max", map.max),
-        ]
-        .into_iter()
-        .any(|(level, wire)| level == effort && wire.is_some())
-            || (effort == "off" && map.off.is_some())
+        let levels = declared_effort_levels!(map);
+        let supported = levels
+            .into_iter()
+            .any(|(level, wire)| level == effort && wire.is_some());
+        supported
     }
 }
 

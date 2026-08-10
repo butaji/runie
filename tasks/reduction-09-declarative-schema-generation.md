@@ -18,3 +18,5 @@ large function bodies; `declare_reducer_actor!` generates the remaining
 typed actor handle boilerplate.
 Palette slash-command and description metadata now use declarative Rust
 macros, keeping the `PaletteAction` methods as thin typed accessors.
+Model-declared effort levels now use one macro-backed data table for picker
+options, selection validation, and model capability checks.
