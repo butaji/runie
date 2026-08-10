@@ -424,4 +424,20 @@ mod tests {
         .is_err());
         assert_eq!(state.usage.turns, 4);
     }
+
+    #[test]
+    fn execution_result_keeps_host_aggregate_separate_from_output_shape() {
+        let execution = SubagentExecution {
+            output: serde_json::json!({"messages": ["turn-1", "turn-2"]}),
+            usage: SubagentResourceUsage {
+                turns: 2,
+                output_bytes: 64,
+                tool_calls: 3,
+            },
+        };
+        let restored: SubagentExecution =
+            serde_json::from_value(serde_json::to_value(execution).unwrap()).unwrap();
+        assert_eq!(restored.usage.turns, 2);
+        assert_eq!(restored.usage.tool_calls, 3);
+    }
 }
