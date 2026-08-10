@@ -50,3 +50,7 @@ Assistant-turn settlement is consolidated in `feed_assistant.rs`.
 Obsolete legacy palette metadata declarations were removed from the semantic
 palette module after call-site audit, reducing dead indirection without
 changing its public API.
+
+Background job mailbox reduction now delegates start/cancel/cancel-all events
+to small owned handlers while `run_worker` retains the async completion select;
+the actor lifecycle remains unchanged.

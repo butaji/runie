@@ -191,34 +191,7 @@ async fn run_worker(mut rx: mpsc::Receiver<Message>, snapshot_tx: BackgroundSnap
     let mut next_id = 0_u64;
     loop {
         tokio::select! {
-            message = rx.recv() => match message {
-                Some(Message::Start { command, reply }) => {
-                    let id = next_id.to_string(); next_id += 1;
-                    jobs.insert(id.clone(), BackgroundJob { id: id.clone(), command: command.clone(), status: BackgroundStatus::Running, output: String::new(), exit_code: None });
-                    handles.insert(id.clone(), tasks.spawn(run_command(id.clone(), command)));
-                    publish(&snapshot_tx, &jobs);
-                    let _ = reply.send(Ok(id));
-                }
-                Some(Message::Cancel { id, reply }) => {
-                    let cancelled = cancel_job(&id, &mut jobs, &mut handles);
-                    if cancelled { publish(&snapshot_tx, &jobs); }
-                    let _ = reply.send(cancelled);
-                }
-                Some(Message::CancelAll { reply }) => {
-                    let ids = jobs
-                        .values()
-                        .filter(|job| job.status == BackgroundStatus::Running)
-                        .map(|job| job.id.clone())
-                        .collect::<Vec<_>>();
-                    let cancelled = ids
-                        .iter()
-                        .filter(|id| cancel_job(id, &mut jobs, &mut handles))
-                        .count();
-                    if cancelled > 0 { publish(&snapshot_tx, &jobs); }
-                    let _ = reply.send(cancelled);
-                }
-                None => break,
-            },
+            message = rx.recv() => if !handle_message(message, &mut jobs, &mut handles, &mut tasks, &snapshot_tx, &mut next_id) { break },
             result = tasks.join_next(), if !tasks.is_empty() => {
                 if let Some(Ok((id, result))) = result {
                     handles.remove(&id);
@@ -230,6 +203,86 @@ async fn run_worker(mut rx: mpsc::Receiver<Message>, snapshot_tx: BackgroundSnap
             }
         }
     }
+}
+
+fn handle_message(
+    message: Option<Message>,
+    jobs: &mut BTreeMap<String, BackgroundJob>,
+    handles: &mut BTreeMap<String, tokio::task::AbortHandle>,
+    tasks: &mut JoinSet<(String, Result<(String, Option<i32>), (String, Option<i32>)>)>,
+    publisher: &BackgroundSnapshotPublisher,
+    next_id: &mut u64,
+) -> bool {
+    match message {
+        Some(Message::Start { command, reply }) => {
+            handle_start(command, reply, jobs, handles, tasks, publisher, next_id)
+        }
+        Some(Message::Cancel { id, reply }) => handle_cancel(id, reply, jobs, handles, publisher),
+        Some(Message::CancelAll { reply }) => handle_cancel_all(reply, jobs, handles, publisher),
+        None => return false,
+    }
+    true
+}
+
+fn handle_start(
+    command: String,
+    reply: oneshot::Sender<Result<String, String>>,
+    jobs: &mut BTreeMap<String, BackgroundJob>,
+    handles: &mut BTreeMap<String, tokio::task::AbortHandle>,
+    tasks: &mut JoinSet<(String, Result<(String, Option<i32>), (String, Option<i32>)>)>,
+    publisher: &BackgroundSnapshotPublisher,
+    next_id: &mut u64,
+) {
+    let id = next_id.to_string();
+    *next_id += 1;
+    jobs.insert(
+        id.clone(),
+        BackgroundJob {
+            id: id.clone(),
+            command: command.clone(),
+            status: BackgroundStatus::Running,
+            output: String::new(),
+            exit_code: None,
+        },
+    );
+    handles.insert(id.clone(), tasks.spawn(run_command(id.clone(), command)));
+    publish(publisher, jobs);
+    let _ = reply.send(Ok(id));
+}
+
+fn handle_cancel(
+    id: String,
+    reply: oneshot::Sender<bool>,
+    jobs: &mut BTreeMap<String, BackgroundJob>,
+    handles: &mut BTreeMap<String, tokio::task::AbortHandle>,
+    publisher: &BackgroundSnapshotPublisher,
+) {
+    let cancelled = cancel_job(&id, jobs, handles);
+    if cancelled {
+        publish(publisher, jobs);
+    }
+    let _ = reply.send(cancelled);
+}
+
+fn handle_cancel_all(
+    reply: oneshot::Sender<usize>,
+    jobs: &mut BTreeMap<String, BackgroundJob>,
+    handles: &mut BTreeMap<String, tokio::task::AbortHandle>,
+    publisher: &BackgroundSnapshotPublisher,
+) {
+    let ids = jobs
+        .values()
+        .filter(|job| job.status == BackgroundStatus::Running)
+        .map(|job| job.id.clone())
+        .collect::<Vec<_>>();
+    let cancelled = ids
+        .iter()
+        .filter(|id| cancel_job(id, jobs, handles))
+        .count();
+    if cancelled > 0 {
+        publish(publisher, jobs);
+    }
+    let _ = reply.send(cancelled);
 }
 
 fn cancel_job(
