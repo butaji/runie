@@ -711,6 +711,11 @@ impl Scrollback {
         let mut selected_non_tool_row = None;
         let mut selected_tool_rows = Vec::new();
         let mut selected_tool_wrap_active = false;
+        let tool_card_rows = project_tool_card_rows(
+            &self.lines,
+            &self.navigation.facts.tools,
+            &self.navigation.tool_modes,
+        );
         for (row, (kind, text, code_row)) in physical_rows[start..end].iter().enumerate() {
             let line = if *code_row {
                 styled_code_line(text, self.navigation.theme)
@@ -724,7 +729,7 @@ impl Scrollback {
                     previous_kind == kind && previous_text == text
                 })
                 .count();
-            if let Some(intent) = self.tool_paint_intent(*kind, text, occurrence) {
+            if let Some(intent) = self.tool_paint_intent(*kind, text, occurrence, &tool_card_rows) {
                 let paint = match intent {
                     ToolCardPaintIntent::Header => PaintIntent::Base,
                     ToolCardPaintIntent::Running => PaintIntent::Accent,
@@ -1142,6 +1147,7 @@ impl Scrollback {
         kind: LineKind,
         text: &str,
         occurrence: usize,
+        rows: &[runie_tui_model::ToolCardRow],
     ) -> Option<ToolCardPaintIntent> {
         if !matches!(
             kind,
@@ -1150,11 +1156,6 @@ impl Scrollback {
             return None;
         }
         let (id, tool_row_id, member_index) = self.tool_row_identity(kind, text, occurrence)?;
-        let rows = project_tool_card_rows(
-            &self.lines,
-            &self.navigation.facts.tools,
-            &self.navigation.tool_modes,
-        );
         rows.into_iter()
             .find(|row| {
                 row.tool_call_id == id

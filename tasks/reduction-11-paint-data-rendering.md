@@ -23,3 +23,6 @@ The shared renderer now resolves each semantic intent through the selected
 theme, so paint data controls terminal styling instead of being discarded.
 The paint vocabulary and documents are now serde-backed, with YAML round-trip
 coverage so renderer-neutral projections can participate in replay fixtures.
+The scrollback renderer now computes semantic tool-card rows once per render
+and reuses that immutable projection for every physical terminal row, removing
+the previous per-row projection rebuild.
