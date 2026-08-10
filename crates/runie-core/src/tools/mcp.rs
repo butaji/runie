@@ -11,6 +11,7 @@ pub struct McpToolSpec {
     #[serde(default)]
     pub description: String,
     #[serde(default = "empty_schema")]
+    #[serde(rename = "inputSchema", alias = "input_schema")]
     pub input_schema: serde_json::Value,
 }
 
@@ -70,6 +71,34 @@ impl McpStdioClient {
         let _ = child.kill().await;
         let _ = child.wait().await;
         result
+    }
+
+    pub async fn discover(&self) -> Result<McpServer, String> {
+        let responses = self
+            .request(&[
+                serde_json::json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"runie","version":"0.1.0"}}}),
+                serde_json::json!({"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}),
+            ])
+            .await?;
+        let initialize = responses.first().and_then(|value| value.get("result"));
+        let server_name = initialize
+            .and_then(|value| value.get("serverInfo"))
+            .and_then(|value| value.get("name"))
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or(&self.command)
+            .to_owned();
+        let tools = responses
+            .get(1)
+            .and_then(|value| value.get("result"))
+            .and_then(|value| value.get("tools"))
+            .cloned()
+            .ok_or("MCP tools/list response has no tools")?;
+        let tools = serde_json::from_value(tools)
+            .map_err(|error| format!("invalid MCP tool list: {error}"))?;
+        Ok(McpServer {
+            name: server_name,
+            tools,
+        })
     }
 
     async fn exchange(
@@ -248,5 +277,20 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(responses[0]["result"]["ok"], true);
+    }
+
+    #[tokio::test]
+    async fn stdio_discovery_reduces_initialize_and_tool_list_to_server_data() {
+        let script = "while IFS= read -r line; do case \"$line\" in *\\\"id\\\":1*) echo '{\"id\":1,\"result\":{\"serverInfo\":{\"name\":\"demo\"}}}';; *\\\"id\\\":2*) echo '{\"id\":2,\"result\":{\"tools\":[{\"name\":\"echo\",\"description\":\"Echo\",\"inputSchema\":{\"type\":\"object\"}}]}}';; esac; done";
+        let client = McpStdioClient::new(
+            "sh",
+            vec!["-c".into(), script.into()],
+            Duration::from_secs(1),
+        )
+        .unwrap();
+        let server = client.discover().await.unwrap();
+        assert_eq!(server.name, "demo");
+        assert_eq!(server.tools[0].name, "echo");
+        assert_eq!(server.tools[0].input_schema["type"], "object");
     }
 }
