@@ -2,7 +2,7 @@
 
 use std::path::Path;
 
-use super::stream_fn::StreamError;
+use super::stream_fn::{provider_retryable, StreamError};
 use crate::types::{
     CacheRetention, Model, ProviderResponse, ProviderTransport, SimpleStreamOptions,
 };
@@ -359,7 +359,7 @@ pub fn provider_retry_delay_ms_with_jitter_at(
     else {
         return None;
     };
-    if !is_retryable(status, headers) {
+    if !provider_retryable(*status, headers) {
         return Some(Err(error.clone()));
     }
     let server_delay = server_retry_delay(headers, now);
@@ -377,16 +377,6 @@ pub fn provider_retry_delay_ms_with_jitter_at(
         }));
     }
     Some(Ok(delay))
-}
-
-fn is_retryable(status: &Option<u16>, headers: &std::collections::HashMap<String, String>) -> bool {
-    match header_value(headers, "x-should-retry") {
-        Some(value) if value.eq_ignore_ascii_case("true") => true,
-        Some(value) if value.eq_ignore_ascii_case("false") => false,
-        _ => {
-            status.is_none_or(|value| value == 408 || value == 409 || value == 429 || value >= 500)
-        }
-    }
 }
 
 fn server_retry_delay(

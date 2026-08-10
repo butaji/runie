@@ -186,7 +186,7 @@ pub fn classify_failure(error: &StreamError) -> ProviderFailure {
             ProviderFailureKind::Provider,
             message.clone(),
             *status,
-            provider_failure_retryable(*status, headers),
+            provider_retryable(*status, headers),
         ),
         StreamError::Aborted => (ProviderFailureKind::Aborted, "aborted".into(), None, false),
         StreamError::Invalid(message) => {
@@ -201,7 +201,7 @@ pub fn classify_failure(error: &StreamError) -> ProviderFailure {
     }
 }
 
-fn provider_failure_retryable(
+pub(crate) fn provider_retryable(
     status: Option<u16>,
     headers: &std::collections::HashMap<String, String>,
 ) -> bool {
@@ -366,5 +366,32 @@ mod tests {
                 .collect(),
         };
         assert!(!classify_failure(&explicit_no_retry).retryable);
+    }
+
+    #[test]
+    fn retry_status_matrix_is_shared_by_provider_boundaries() {
+        for (status, expected) in [
+            (Some(408), true),
+            (Some(409), true),
+            (Some(425), true),
+            (Some(429), true),
+            (Some(500), true),
+            (Some(404), false),
+            (None, false),
+        ] {
+            assert_eq!(provider_retryable(status, &Default::default()), expected);
+        }
+        assert!(!provider_retryable(
+            Some(500),
+            &[("X-Should-Retry".into(), "false".into())]
+                .into_iter()
+                .collect()
+        ));
+        assert!(provider_retryable(
+            Some(400),
+            &[("x-should-retry".into(), "true".into())]
+                .into_iter()
+                .collect()
+        ));
     }
 }
