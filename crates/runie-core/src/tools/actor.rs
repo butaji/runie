@@ -390,6 +390,38 @@ fn tool_exec_context(
 mod tests {
     use super::*;
 
+    struct ActorCancellationProbe {
+        started: tokio::sync::watch::Sender<bool>,
+    }
+
+    #[async_trait::async_trait]
+    impl crate::types::AgentTool for ActorCancellationProbe {
+        fn name(&self) -> &str {
+            "actor_cancel_probe"
+        }
+        fn label(&self) -> &str {
+            "actor_cancel_probe"
+        }
+        fn description(&self) -> &str {
+            "actor cancellation test tool"
+        }
+
+        async fn execute(
+            &self,
+            _: &str,
+            _: serde_json::Value,
+            signal: Option<tokio_util::sync::CancellationToken>,
+            _: Option<Box<dyn Fn(serde_json::Value) + Send + Sync>>,
+        ) -> Result<crate::types::AgentToolResult, String> {
+            let _ = self.started.send(true);
+            signal
+                .expect("actor supplies cancellation")
+                .cancelled()
+                .await;
+            Err("cancelled by actor probe".into())
+        }
+    }
+
     #[tokio::test]
     async fn execute_empty_batch_completes() {
         let registry = Arc::new(ToolRegistry::new());
@@ -453,6 +485,48 @@ mod tests {
         let snapshot = actor.scheduler_metrics().await;
         assert_eq!(snapshot.completed, 1);
         assert_eq!(snapshot.failed, 1);
+    }
+
+    #[tokio::test]
+    async fn aborting_actor_execution_projects_scheduler_cancellation() {
+        let (started_tx, mut started_rx) = tokio::sync::watch::channel(false);
+        let mut registry = ToolRegistry::new();
+        registry.register(Arc::new(ActorCancellationProbe {
+            started: started_tx,
+        }));
+        let actor = ToolExecutorActor::new(Arc::new(registry));
+        let (abort_tx, abort_rx) = tokio::sync::watch::channel(false);
+        let execute = actor.execute(
+            crate::types::AssistantMessage::default(),
+            crate::types::AgentContext::default(),
+            Some(abort_rx),
+            None,
+            vec![ToolCall {
+                id: "cancel-1".into(),
+                name: "actor_cancel_probe".into(),
+                arguments: serde_json::json!({}),
+                thought_signature: None,
+            }],
+            ToolExecutionMode::Sequential,
+            super::super::executor::ToolExecHooks::default(),
+        );
+        let abort = async {
+            while !*started_rx.borrow() {
+                let _ = started_rx.changed().await;
+            }
+            let _ = abort_tx.send(true);
+        };
+        let (outcome, ()) = tokio::join!(execute, abort);
+        assert!(matches!(
+            outcome,
+            ToolOutcome::Completed {
+                cancelled: true,
+                ..
+            }
+        ));
+        let snapshot = actor.scheduler_metrics().await;
+        assert_eq!(snapshot.cancelled, 1);
+        assert_eq!(snapshot.running, 0);
     }
 
     #[test]
