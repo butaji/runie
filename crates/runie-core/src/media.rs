@@ -7,6 +7,7 @@ pub enum MediaWireFormat {
     Pi,
     OpenAiChat,
     OpenAiResponses,
+    Gemini,
 }
 
 /// Encode validated user media at the provider boundary.
@@ -25,6 +26,10 @@ pub fn encode_user_content(
         (UserContent::Image { data, mime_type }, MediaWireFormat::OpenAiResponses) => Ok(
             serde_json::json!({"type":"input_image","image_url":format!("data:{mime_type};base64,{data}")}),
         ),
+        (UserContent::Image { data, mime_type }, MediaWireFormat::Gemini)
+        | (UserContent::Video { data, mime_type }, MediaWireFormat::Gemini) => {
+            Ok(serde_json::json!({"inline_data":{"mime_type":mime_type,"data":data}}))
+        }
         (UserContent::Video { .. }, MediaWireFormat::Pi) => serde_json::to_value(content)
             .map_err(|error| format!("encode Pi video content: {error}")),
         (UserContent::Video { .. }, _) => {
@@ -118,6 +123,26 @@ mod tests {
             encode_user_content(&content, MediaWireFormat::Pi).unwrap()["type"],
             "video"
         );
+        assert_eq!(
+            encode_user_content(&content, MediaWireFormat::Gemini).unwrap()["inline_data"],
+            serde_json::json!({"mime_type":"video/mp4","data":"aGVsbG8="})
+        );
+    }
+
+    #[test]
+    fn gemini_media_encoding_keeps_mixed_content_order() {
+        let contents = vec![
+            UserContent::Text {
+                text: "look".into(),
+            },
+            UserContent::Image {
+                data: "aGVsbG8=".into(),
+                mime_type: "image/png".into(),
+            },
+        ];
+        let encoded = encode_user_contents(&contents, MediaWireFormat::Gemini).unwrap();
+        assert_eq!(encoded[0]["type"], "text");
+        assert_eq!(encoded[1]["inline_data"]["mime_type"], "image/png");
     }
 
     #[test]
