@@ -129,14 +129,7 @@ impl Scrollback {
         scrollback.navigation.copy_selection = snapshot.copy_selection;
         scrollback.navigation.revealed_dense_groups = snapshot.revealed_dense_groups;
         scrollback.navigation.center_revealed_entry = snapshot.center_revealed_entry;
-        scrollback.navigation.facts.workflow_headers = snapshot.facts.workflow_headers;
-        scrollback.navigation.facts.workflow_phases = snapshot.facts.workflow_phases;
-        scrollback.navigation.facts.tools = snapshot.facts.tools;
-        scrollback.navigation.facts.settled_no_tool_phase = snapshot.facts.settled_no_tool_phase;
-        scrollback.navigation.facts.live_grok_layout = snapshot.facts.live_grok_layout;
-        scrollback.navigation.facts.next_tool_row_id = snapshot.facts.next_tool_row_id;
-        scrollback.navigation.facts.turn_started = snapshot.facts.turn_started;
-        scrollback.navigation.facts.assistant_stream_open = snapshot.facts.assistant_stream_open;
+        scrollback.navigation.facts = snapshot.facts;
         scrollback.navigation.measured_content_rows = snapshot.measured_content_rows;
         scrollback.navigation.measured_viewport_rows = snapshot.measured_viewport_rows;
         scrollback.navigation.measured_anchor_row = snapshot.measured_anchor_row;

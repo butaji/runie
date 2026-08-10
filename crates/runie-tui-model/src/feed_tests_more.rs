@@ -1,4 +1,18 @@
 use super::*;
+
+#[test]
+fn snapshot_facts_are_the_complete_navigation_facts_projection() {
+    let mut state = super::FeedState::default();
+    state.reduce(super::ScrollbackMsg::TurnStart);
+    state.reduce(super::ScrollbackMsg::SetToolName(
+        "tool-1".into(),
+        "read".into(),
+    ));
+    let snapshot = state.snapshot();
+
+    assert_eq!(snapshot.facts, state.navigation.facts);
+}
+
 #[test]
 fn line_kind_prefix_pins_user_and_assistant_rails() {
     // Pin the user/assistant prefix shapes: the user gutter is

@@ -54,6 +54,9 @@ row absence across update, settle, and concurrent insert events.
 Logical tool-member ordinals are now one pure transcript projection shared by
 navigation lookup and tool-card rows, removing duplicate temporary index maps
 and keeping selection/card identity on the same derived data.
+The TUI snapshot handoff now transfers the canonical `FeedFacts` aggregate in
+one value operation instead of copying synchronized fields individually; an
+event-based test pins snapshot facts to reducer navigation facts.
 
 Acceptance: snapshot parity, replay parity, and no stale derived index after
 insert/update/remove sequences.
