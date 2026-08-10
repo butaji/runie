@@ -1,5 +1,10 @@
 use super::*;
 enum StorageCommand {
+    Discover {
+        root: String,
+        limit: usize,
+        reply: oneshot::Sender<Result<Vec<SessionStorageEntry>, String>>,
+    },
     Publish {
         path: String,
         contents: String,
@@ -21,6 +26,14 @@ enum StorageCommand {
     },
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SessionStorageEntry {
+    pub path: String,
+    pub session_id: String,
+    pub created_at: i64,
+    pub cwd: String,
+}
+
 /// Actor-owned atomic JSONL publication. Serialization stays outside this
 /// actor; no caller can observe a partially written destination file.
 pub struct SessionStorageActor {
@@ -36,6 +49,9 @@ async fn run_storage_worker(mut rx: mpsc::Receiver<StorageCommand>) {
 
 async fn dispatch_storage_command(command: StorageCommand) {
     match command {
+        StorageCommand::Discover { root, limit, reply } => {
+            let _ = reply.send(discover_storage_files(&root, limit).await);
+        }
         StorageCommand::Publish {
             path,
             contents,
@@ -70,6 +86,73 @@ async fn dispatch_storage_command(command: StorageCommand) {
             );
         }
     }
+}
+
+async fn discover_storage_files(
+    root: &str,
+    limit: usize,
+) -> Result<Vec<SessionStorageEntry>, String> {
+    let mut entries = tokio::fs::read_dir(root)
+        .await
+        .map_err(|error| format!("discover session directory: {error}"))?;
+    let mut found = Vec::new();
+    while let Some(entry) = entries
+        .next_entry()
+        .await
+        .map_err(|error| format!("read session directory entry: {error}"))?
+    {
+        if !entry
+            .file_type()
+            .await
+            .map(|t| t.is_file())
+            .unwrap_or(false)
+        {
+            continue;
+        }
+        let path = entry.path();
+        if path.extension().and_then(|value| value.to_str()) != Some("jsonl") {
+            continue;
+        }
+        if let Some(metadata) = read_storage_header(&path).await? {
+            found.push(metadata);
+        }
+    }
+    found.sort_by(|left, right| left.path.cmp(&right.path));
+    found.truncate(limit);
+    Ok(found)
+}
+
+async fn read_storage_header(
+    path: &std::path::Path,
+) -> Result<Option<SessionStorageEntry>, String> {
+    let contents = tokio::fs::read_to_string(path)
+        .await
+        .map_err(|error| format!("read session header: {error}"))?;
+    let Some(line) = contents.lines().next() else {
+        return Ok(None);
+    };
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(line) else {
+        return Ok(None);
+    };
+    if value.get("kind").and_then(|v| v.as_str()) != Some("header") {
+        return Ok(None);
+    }
+    let Some(session_id) = value.get("id").and_then(|v| v.as_str()) else {
+        return Ok(None);
+    };
+    Ok(Some(SessionStorageEntry {
+        path: path.to_string_lossy().into_owned(),
+        session_id: session_id.to_owned(),
+        created_at: value
+            .get("createdAt")
+            .and_then(|v| v.as_i64())
+            .unwrap_or_default(),
+        cwd: value
+            .get("cwd")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default()
+            .to_owned(),
+    }))
 }
 
 async fn publish_storage_file(path: &str, contents: String) -> Result<(), String> {
@@ -141,6 +224,27 @@ impl SessionStorageActor {
             .send(StorageCommand::Publish {
                 path: path.into(),
                 contents: snapshot.to_jsonl(session_id, created_at, cwd),
+                reply: reply_tx,
+            })
+            .await
+            .map_err(|_| "session storage actor is closed".to_owned())?;
+        reply_rx
+            .await
+            .map_err(|_| "session storage response was dropped".to_owned())?
+    }
+
+    /// Discover bounded, valid session headers through the storage owner.
+    /// Filesystem traversal and parsing never enter the TUI actor.
+    pub async fn discover(
+        &self,
+        root: impl Into<String>,
+        limit: usize,
+    ) -> Result<Vec<SessionStorageEntry>, String> {
+        let (reply_tx, reply_rx) = oneshot::channel();
+        self.tx
+            .send(StorageCommand::Discover {
+                root: root.into(),
+                limit,
                 reply: reply_tx,
             })
             .await

@@ -100,6 +100,31 @@
         let _ = tokio::fs::remove_file(fork_path).await;
         let _ = tokio::fs::remove_file(feature_fork_path).await;
     }
+
+    #[tokio::test]
+    async fn storage_discovery_is_bounded_sorted_and_header_validated() {
+        let root = std::env::temp_dir().join(format!("runie-discover-{}", std::process::id()));
+        let _ = tokio::fs::remove_dir_all(&root).await;
+        tokio::fs::create_dir_all(&root).await.expect("directory");
+        let storage = SessionStorageActor::new();
+        let snapshot = storage_snapshot();
+        storage
+            .publish_snapshot(root.join("b.jsonl").to_string_lossy(), &snapshot, "b", 2, "/b")
+            .await
+            .expect("publish b");
+        storage
+            .publish_snapshot(root.join("a.jsonl").to_string_lossy(), &snapshot, "a", 1, "/a")
+            .await
+            .expect("publish a");
+        tokio::fs::write(root.join("invalid.jsonl"), "not-json\n")
+            .await
+            .expect("invalid fixture");
+        let found = storage.discover(root.to_string_lossy(), 1).await.expect("discover");
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].session_id, "a");
+        assert_eq!(found[0].cwd, "/a");
+        let _ = tokio::fs::remove_dir_all(root).await;
+    }
     #[test]
     fn navigation_validation_checks_target_and_summary_ids() {
         let mut snapshot = SessionSnapshot {
