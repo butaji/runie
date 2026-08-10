@@ -10,6 +10,16 @@ pub enum SubagentRole {
     Code,
 }
 
+impl SubagentRole {
+    pub fn system_prompt(self) -> &'static str {
+        match self {
+            Self::Explore => "You are an isolated exploration subagent. Inspect and report facts; do not edit files.",
+            Self::Plan => "You are an isolated planning subagent. Return a bounded event-based plan; do not edit files.",
+            Self::Code => "You are an isolated coding subagent. Make only the requested implementation changes and verify them.",
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct SubagentRequest {
     pub role: SubagentRole,
@@ -97,5 +107,14 @@ mod tests {
                 "role": "unknown", "task": "inspect"
             }))
             .is_err());
+    }
+
+    #[test]
+    fn roles_have_distinct_system_boundaries() {
+        assert_ne!(
+            SubagentRole::Explore.system_prompt(),
+            SubagentRole::Code.system_prompt()
+        );
+        assert!(SubagentRole::Plan.system_prompt().contains("planning"));
     }
 }

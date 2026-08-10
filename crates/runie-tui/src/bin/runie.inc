@@ -1297,7 +1297,7 @@ async fn build_live_app() -> App {
                                     content: vec![runie_core::types::UserContent::Text { text: prompt }],
                                     timestamp: 0,
                                 })],
-                                AgentContext::default(),
+                                AgentContext { system_prompt: request.role.clone().system_prompt().into(), ..AgentContext::default() },
                             )
                             .await
                             .map_err(|error| error.to_string())?;
