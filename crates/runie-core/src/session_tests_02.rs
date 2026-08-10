@@ -146,7 +146,7 @@
     }
 
     #[test]
-    fn session_lane_metadata_requires_a_complete_positive_storage_tuple() {
+fn session_lane_metadata_requires_a_complete_positive_storage_tuple() {
         let valid = serde_json::json!({
             "id": "op-1", "lane": "main", "seq": 1, "timestamp": 7
         });
@@ -163,7 +163,36 @@
             })
         )
         .is_err());
-    }
+}
+
+#[test]
+fn lane_sequence_projection_rejects_reordered_or_future_records() {
+    let mut snapshot = SessionSnapshot {
+        sequence: 3,
+        ..SessionSnapshot::default()
+    };
+    snapshot.lane_records = vec![
+        SessionLaneRecordSnapshot {
+            record_type: "usage".into(),
+            id: "run-1".into(),
+            lane: Some("main".into()),
+            seq: Some(1),
+            timestamp: Some(1),
+            data: serde_json::json!({}),
+        },
+        SessionLaneRecordSnapshot {
+            record_type: "usage".into(),
+            id: "run-1".into(),
+            lane: Some("main".into()),
+            seq: Some(3),
+            timestamp: Some(2),
+            data: serde_json::json!({}),
+        },
+    ];
+    assert!(snapshot.validate_lane_sequences().is_ok());
+    snapshot.lane_records[1].seq = Some(1);
+    assert!(snapshot.validate_lane_sequences().is_err());
+}
 
     fn lane_record_is_valid(snapshot: &SessionSnapshot, kind: &str, data: serde_json::Value) -> bool {
         validate_session_lane_record(snapshot, kind, &data).is_ok()

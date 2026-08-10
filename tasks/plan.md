@@ -28,7 +28,7 @@ Status: implemented; keep extending through the shared registry.
 
 Status: active.
 
-- Finish remaining provider transport options and session/lane persistence
+- Finish remaining provider transport options and session/lane persistence; lane snapshots now expose strict sequence validation for replay/storage callers.
   boundaries.
 - Audit every observable mutable state transition for an owning actor event.
 - Preserve streaming, retry, abort, tool identity, and lifecycle semantics.

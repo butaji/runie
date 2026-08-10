@@ -1,4 +1,26 @@
 impl SessionSnapshot {
+    pub fn validate_lane_sequences(&self) -> Result<(), String> {
+        let mut previous = 0_u64;
+        for record in &self.lane_records {
+            let Some(sequence) = record.seq else {
+                continue;
+            };
+            if sequence <= previous {
+                return Err(format!(
+                    "session lane sequence {sequence} is not after {previous}"
+                ));
+            }
+            if sequence > self.sequence {
+                return Err(format!(
+                    "session lane sequence {sequence} exceeds snapshot sequence {}",
+                    self.sequence
+                ));
+            }
+            previous = sequence;
+        }
+        Ok(())
+    }
+
     pub fn entry_lane(&self, entry_id: &str) -> Option<&str> {
         self.entries
             .iter()
@@ -414,4 +436,3 @@ impl SessionSnapshot {
         self.entries.iter().enumerate().filter(|(_, entry)| entry.seq > sequence && !matches!(&entry.message, AgentMessage::Assistant(message) if message.stop_reason == Some(StopReason::Deferred))).map(|(index, _)| index).collect()
     }
 }
-
