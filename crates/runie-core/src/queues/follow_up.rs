@@ -84,6 +84,12 @@ impl FollowUpQueueActor {
     pub fn shared_snapshot(&self) -> crate::SharedSnapshot<FollowUpQueueSnapshot> {
         self.shared_snapshot.borrow().clone()
     }
+
+    pub fn shared_subscribe(
+        &self,
+    ) -> watch::Receiver<crate::SharedSnapshot<FollowUpQueueSnapshot>> {
+        self.shared_snapshot.clone()
+    }
 }
 
 fn spawn_follow_up_runtime() -> (
@@ -220,5 +226,6 @@ mod tests {
         q.drain_one().await;
         assert_eq!(q.shared_snapshot().get().len, 0);
         assert_eq!(q.shared_snapshot().strong_count(), 2);
+        assert_eq!(q.shared_subscribe().borrow().get().len, 0);
     }
 }
