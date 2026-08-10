@@ -421,6 +421,25 @@ fn tool_block_output_stays_with_duplicate_live_card_identity() {
 }
 
 #[test]
+fn tool_card_summary_reduces_output_metadata_as_data() {
+    let lines = vec![
+        Line::new(LineKind::Tool, "Read").for_tool("read-1"),
+        Line::new(LineKind::ToolOutput, "alpha").for_tool("read-1"),
+        Line::new(LineKind::ToolOutput, "beta").for_tool("read-1"),
+        Line::new(LineKind::ToolResult, "[output truncated]").for_tool("read-1"),
+    ];
+    let names = HashMap::from([("read-1".to_owned(), "read".to_owned())]);
+    let summaries = super::tool_card_summaries(&lines, &names);
+    assert_eq!(summaries.len(), 1);
+    assert_eq!(summaries[0].output_lines, 3);
+    assert_eq!(
+        summaries[0].output_bytes,
+        "alpha".len() + "beta".len() + "[output truncated]".len()
+    );
+    assert!(summaries[0].truncated);
+}
+
+#[test]
 fn memory_card_rows_separate_metadata_from_snippet_content() {
     let lines = vec![
         Line::new(LineKind::Tool, "Memory Search actors").for_tool("memory-1"),

@@ -52,7 +52,8 @@ pub use feed::{
     Line, LineKind, ScrollbackContentEvent, ScrollbackDomain, ScrollbackEvent,
     ScrollbackLifecycleEvent, ScrollbackMsg, ScrollbackNavigationEvent, ScrollbackToolEvent,
     ScrollbackWorkflowEvent, ToolBlock, ToolCardKind, ToolCardPaintIntent, ToolCardRow,
-    ToolCardRowKind, ToolNameLookup, ToolRecord, VersionBadgeVariant, DEFAULT_THINKING_ELAPSED_MS,
+    ToolCardRowKind, ToolCardSummary, ToolNameLookup, ToolRecord, VersionBadgeVariant,
+    tool_card_summaries, DEFAULT_THINKING_ELAPSED_MS,
     GROK_AUTO_COMPACT_MAX_ROWS, GROK_SMALL_SCREEN_TIP_MAX_ROWS, PROMPT_TIMESTAMP_LIVE_THRESHOLD,
     RUNNING_BULLETS, USER_PREFIX_INDENT,
 };
