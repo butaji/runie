@@ -29,3 +29,5 @@ the previous per-row projection rebuild.
 Prompt caption composition is now a pure `PromptSnapshot::caption` projection
 consumed by both paint data and the interactive widget, removing duplicated
 mode/history/multiline state logic.
+Prompt state itself is now serde-backed and replayed from a YAML fixture before
+paint projection, making the prompt IR boundary inspectable as data.

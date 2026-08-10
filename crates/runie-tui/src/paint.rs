@@ -243,6 +243,15 @@ mod tests {
     }
 
     #[test]
+    fn prompt_snapshot_fixture_replays_as_renderer_neutral_data() {
+        let snapshot: PromptSnapshot =
+            serde_yaml::from_str(include_str!("fixtures/prompt-snapshot.yaml"))
+                .expect("prompt snapshot YAML restore");
+        assert_eq!(snapshot.caption(), "plan · model");
+        assert_eq!(prompt_paint(&snapshot).text[0].text, "draft");
+    }
+
+    #[test]
     fn tool_card_paint_projects_semantic_intents_without_terminal_state() {
         let row = ToolCardRow {
             tool_call_id: "tool".into(),

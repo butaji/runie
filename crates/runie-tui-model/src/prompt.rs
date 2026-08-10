@@ -9,7 +9,8 @@ pub enum PromptOutcome {
     Ignored,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum InputMode {
     #[default]
     Normal,
@@ -19,7 +20,7 @@ pub enum InputMode {
     FileViewer,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub struct PromptSnapshot {
     pub text: String,
     pub focused: bool,
