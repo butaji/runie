@@ -269,6 +269,14 @@ pub fn parse_session_picker_query(args: &str) -> Option<String> {
     (parts.next() == Some("pick")).then(|| parts.collect::<Vec<_>>().join(" "))
 }
 
+/// Parse a single actor-owned history selection without making the TUI parse
+/// journal identifiers itself.
+pub fn parse_session_history_selection(args: &str) -> Option<&str> {
+    let mut parts = args.split_whitespace();
+    (parts.next() == Some("history") && parts.next().is_some() && parts.next().is_none())
+        .then(|| args.split_whitespace().nth(1).unwrap())
+}
+
 #[allow(clippy::too_many_lines)]
 fn parse_parameterized_command(value: &str) -> Option<MappableBuiltinCommand> {
     if let Some(command) = parse_compact_command(value) {

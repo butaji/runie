@@ -220,6 +220,15 @@ fn background_job_command_accepts_only_cancel_and_one_id() {
         Some("deploy".into())
     );
     assert_eq!(parse_session_picker_query("browse deploy"), None);
+    assert_eq!(
+        parse_session_history_selection("history entry-2"),
+        Some("entry-2")
+    );
+    assert_eq!(parse_session_history_selection("history"), None);
+    assert_eq!(
+        parse_session_history_selection("history entry-2 extra"),
+        None
+    );
 }
 
 #[test]

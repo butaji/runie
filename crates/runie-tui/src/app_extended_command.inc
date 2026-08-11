@@ -83,6 +83,16 @@ impl App {
             return true;
         }
         if name == "sessions" {
+            if let Some(target_id) = runie_core::commands::parse_session_history_selection(args) {
+                let result = self
+                    .session_actor
+                    .select_tree(target_id.to_owned())
+                    .await
+                    .map(|()| format!("Selected session history entry {target_id}"))
+                    .unwrap_or_else(|error| format!("Session history selection failed: {error}"));
+                self.ui.send(UiMsg::ShowCommandResult(result)).await;
+                return true;
+            }
             if args.trim().eq_ignore_ascii_case("history") {
                 let result = self
                     .session_actor
