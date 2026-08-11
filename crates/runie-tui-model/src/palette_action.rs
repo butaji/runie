@@ -2,7 +2,7 @@ runie_core::typed_action_registry! {
     pub enum PaletteAction {
         NewSession => "New Session", KeyboardShortcuts => "Keyboard Shortcuts", Quit => "Quit",
         Changelog => "Changelog", CopyLastResponse => "Copy Last Response", SessionInfo => "Session Info",
-        SessionHistory => "Session History", UndoSession => "Undo Session", SelectModel => "Select Model",
+        SessionHistory => "Session History", SessionHistoryQuery => "Session History Query", UndoSession => "Undo Session", SelectModel => "Select Model",
         SelectTheme => "Select Theme", ManageProviders => "Manage Providers", ScopedModels => "Scoped Models",
         SetSessionName => "Set Session Name", CompactContext => "Compact Context", ForkSession => "Fork Session",
         SelectTreeEntry => "Select Tree Entry", ExportSession => "Export Session", ImportSession => "Import Session",

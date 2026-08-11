@@ -71,6 +71,15 @@ fn parameterized_palette_session_flows_emit_typed_commands() {
 }
 
 #[test]
+fn session_history_query_palette_action_emits_extended_command() {
+    assert_parameter_flow(
+        super::PaletteAction::SessionHistoryQuery,
+        "active_tools",
+        "/sessions history query active_tools",
+    );
+}
+
+#[test]
 fn parameterized_palette_storage_flows_emit_typed_commands() {
     for (action, input, expected) in [
         (

@@ -28,6 +28,7 @@ declare_palette_metadata! {
     (CopyLastResponse, "/copy", "Copy the latest response"),
     (SessionInfo, "/session", "Show session statistics"),
     (SessionHistory, "/sessions history", "Show session branch history"),
+    (SessionHistoryQuery, "/sessions history query", "Search session branch history"),
     (UndoSession, "/undo", "Undo the latest session entry"),
     (SelectModel, "/model", "Switch the active model"),
     (SelectTheme, "/theme", "Change the interface theme"),
@@ -131,7 +132,7 @@ macro_rules! palette_sections {
 
 palette_sections! {
     ("Context" => [CopyLastResponse, SessionInfo]),
-    ("Session" => [NewSession, KeyboardShortcuts, Quit, Changelog, ShareSession, SessionHistory, UndoSession]),
+    ("Session" => [NewSession, KeyboardShortcuts, Quit, Changelog, ShareSession, SessionHistory, SessionHistoryQuery, UndoSession]),
     ("Information" => [Help, ContextInfo, Doctor, Feedback, Usage, GitStatus, GitDiff, GitReview, GitWorktrees, GitConflicts]),
     ("Extensions" => [Skills, Hooks, Plugins, Mcps, McpReady, McpFailed, McpBusy, McpClosed, McpStdio, McpHttp, Memory]),
     ("Automation" => [Goal, Workflow, Workflows, Loop, DeepResearch, Jobs, ActiveJobs, CancelAllJobs, ClearFinishedJobs, CompletedJobs, FailedJobs, CancelledJobs]),
@@ -161,6 +162,7 @@ impl PaletteAction {
             self,
             Self::SetSessionName
                 | Self::UndoSession
+                | Self::SessionHistoryQuery
                 | Self::SelectTheme
                 | Self::CompactContext
                 | Self::ForkSession
@@ -203,6 +205,7 @@ impl PaletteAction {
     pub const fn parameter_hint(&self) -> &'static str {
         match self {
             Self::SetSessionName => "Session name",
+            Self::SessionHistoryQuery => "Query",
             Self::UndoSession => "Count (optional)",
             Self::CompactContext => "Instructions (optional)",
             Self::ForkSession | Self::SelectTreeEntry => "Entry id",

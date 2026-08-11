@@ -85,7 +85,7 @@ these do not invalidate the finite matrix evidence.
 
 Each extension follows the same loop: add a failing event/replay test, add the
 smallest actor-owned data boundary (use a declaration macro only for repeated
-closed vocabulary), run `just ci`, run the 76-case TUI smoke, update the
+closed vocabulary), run `just ci`, run the 78-case TUI smoke, update the
 finding, and push one focused commit.
 
 Priority order:
@@ -103,7 +103,7 @@ Priority order:
 
 Completion evidence is: every finite matrix row has source + replay/unit test
  + live TUI evidence, the extension queue has no unverified claim, `just ci`
- is green, the fresh smoke summary is `passed=76 failed=0`, and `git status`
+ is green, the fresh smoke summary is `passed=78 failed=0`, and `git status`
  is clean after push.
 
 The reduction backlog is now backed by declarative tables for the major closed

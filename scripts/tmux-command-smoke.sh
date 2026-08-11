@@ -11,7 +11,7 @@ labels=(
   "Doctor" "Rewind Session" "Prompt History" "Find Transcript" "Jump Transcript" "Recap"
   "Set Reasoning Effort" "Always Approve" "Automatic Approval" "Plan Mode" "View Plan"
   "Login" "Logout" "Reload" "Trust Project" "Skills" "Hooks" "Plugins" "MCP Servers"
-  "Memory" "Remember" "Goal" "Workflow" "Workflows" "Sessions" "Session History" "Undo Session" "Questions" "Active Jobs" "Cancel All Jobs" "Clear Finished Jobs" "Completed Jobs" "Failed Jobs" "Cancelled Jobs" "Git Status" "Git Diff" "Git Review" "Git Worktrees" "Git Conflicts" "Ready MCP Servers" "Failed MCP Servers" "Busy MCP Servers" "Closed MCP Servers" "Stdio MCP Servers" "HTTP MCP Servers" "Loop" "Deep Research" "Feedback" "Usage"
+  "Memory" "Remember" "Goal" "Workflow" "Workflows" "Sessions" "Session History" "Session History Query" "Undo Session" "Questions" "Active Jobs" "Cancel All Jobs" "Clear Finished Jobs" "Completed Jobs" "Failed Jobs" "Cancelled Jobs" "Git Status" "Git Diff" "Git Review" "Git Worktrees" "Git Conflicts" "Ready MCP Servers" "Failed MCP Servers" "Busy MCP Servers" "Closed MCP Servers" "Stdio MCP Servers" "HTTP MCP Servers" "Loop" "Deep Research" "Feedback" "Usage"
   "Background Jobs" "Jobs" "Job Output"
 )
 parameterized=(
@@ -19,7 +19,7 @@ parameterized=(
   "Export Session" "Import Session" "Clone Session" "Resume Session" "Help" "Settings" "Doctor"
   "Rewind Session" "Prompt History" "Find Transcript" "Jump Transcript" "Set Reasoning Effort"
   "Always Approve" "Automatic Approval" "Plan Mode" "Login" "Logout" "Trust Project" "Remember" "Undo Session"
-  "Goal" "Workflow" "Loop" "Deep Research" "Feedback" "Usage" "Background Jobs" "Questions" "Jobs" "Completed Jobs" "Failed Jobs" "Cancelled Jobs" "Busy MCP Servers" "Closed MCP Servers" "Stdio MCP Servers" "HTTP MCP Servers" "Git Status" "Git Diff" "Git Review" "Git Worktrees" "Git Conflicts" "Job Output"
+  "Goal" "Workflow" "Loop" "Deep Research" "Feedback" "Usage" "Background Jobs" "Questions" "Jobs" "Completed Jobs" "Failed Jobs" "Cancelled Jobs" "Busy MCP Servers" "Closed MCP Servers" "Stdio MCP Servers" "HTTP MCP Servers" "Git Status" "Git Diff" "Git Review" "Git Worktrees" "Git Conflicts" "Job Output" "Session History Query"
 )
 
 is_parameterized() {
@@ -85,6 +85,8 @@ for label in "${labels[@]}"; do
       argument=(s c h e d u l e r)
     elif [[ "$label" == "Git Conflicts" ]]; then
       argument=(c o n f l i c t s)
+    elif [[ "$label" == "Session History Query" ]]; then
+      argument=(a c t i v e _ t o o l s)
     elif [[ "$label" == "Job Output" ]]; then
       argument=(o u t p u t 0)
     fi
@@ -129,6 +131,11 @@ for label in "${labels[@]}"; do
       ((failed += 1))
       continue
     fi
+    if [[ "$label" == "Session History Query" ]] && ! wait_for 'No matching session history'; then
+      echo "FAIL $label: expected-query-result"
+      ((failed += 1))
+      continue
+    fi
     if [[ "$label" == "Cancel All Jobs" ]] && ! wait_for 'Cancelled 0 running background job'; then
       echo "FAIL $label: expected-cancel-result"
       ((failed += 1))
@@ -169,6 +176,7 @@ while IFS='|' read -r label command expected; do
 done <<'CASES'
 Resume Picker|/resume|Command Parameters
 Context Summary|/context|compaction: none
+Session History Rows|/sessions history|No session history
 CASES
 
 # The quit path is a TUI-only terminal case: it must end the session rather
