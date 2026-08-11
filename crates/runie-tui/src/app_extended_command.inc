@@ -139,6 +139,20 @@ impl App {
                     .await;
                 return true;
             }
+            if runie_core::commands::parse_background_scheduler_active_query(args) {
+                let lines = self
+                    .loop_actor
+                    .scheduler_metrics()
+                    .await
+                    .active_terminal_lines()
+                    .into_iter()
+                    .map(|line| format!("scheduler {line}"))
+                    .collect::<Vec<_>>();
+                self.ui
+                    .send(UiMsg::ShowCommandResult(lines.join("\n")))
+                    .await;
+                return true;
+            }
             if runie_core::commands::parse_background_scheduler_query(args) {
                 let lines = self
                     .loop_actor

@@ -105,6 +105,8 @@ boundaries instead of silently retaining only the last row.
 Context reports now retain and render the compaction policy inputs alongside
 their token and threshold decision, keeping the control projection complete.
 The context policy projection also has a checked-in YAML fixture replay test.
+Scheduler metrics now expose a pure active-work projection through
+`/jobs scheduler active`, with parser/reducer coverage.
 
 As of 2026-08-09, the reduction work has these verified results:
 
