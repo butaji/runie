@@ -137,22 +137,18 @@ impl App {
                 return true;
             }
             if let Some(id) = runie_core::commands::parse_background_job_query(args) {
-                let result = runie_core::background::background_job_summaries(
+                let result = match runie_core::background::background_job_summaries(
                     &self.background_actor.snapshot(),
                 )
-                    .into_iter()
-                    .find(|job| job.id == id)
-                    .map(|job| format!(
-                        "{} · {:?} · {} exit={:?} · output={} lines/{} bytes{}",
-                        job.id,
-                        job.status,
-                        job.command,
-                        job.exit_code,
-                        job.output_lines,
-                        job.output_bytes,
-                        if job.truncated { " truncated" } else { "" },
-                    ))
-                    .unwrap_or_else(|| format!("Background job {id} not found"));
+                .into_iter()
+                .find(|job| job.id == id)
+                {
+                    Some(job) => {
+                        let output = self.background_actor.read_output(id).await.unwrap_or_default();
+                        format!("{}\noutput:\n{}", background_job_line(&job), output)
+                    }
+                    None => format!("Background job {id} not found"),
+                };
                 self.ui.send(UiMsg::ShowCommandResult(result)).await;
                 return true;
             }
@@ -435,4 +431,17 @@ impl App {
         }
         true
     }
+}
+
+fn background_job_line(job: &runie_core::background::BackgroundJobSummary) -> String {
+    format!(
+        "{} · {:?} · {} exit={:?} · output={} lines/{} bytes{}",
+        job.id,
+        job.status,
+        job.command,
+        job.exit_code,
+        job.output_lines,
+        job.output_bytes,
+        if job.truncated { " truncated" } else { "" },
+    )
 }
