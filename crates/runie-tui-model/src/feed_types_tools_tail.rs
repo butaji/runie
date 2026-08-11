@@ -14,6 +14,31 @@ pub struct ToolCardSummary {
     pub is_error: bool,
 }
 
+impl ToolCardSummary {
+    /// Stable terminal projection for non-renderer consumers and replay tools.
+    pub fn terminal_line(&self) -> String {
+        let state = if self.is_running {
+            "running"
+        } else if self.is_error {
+            "error"
+        } else {
+            "completed"
+        };
+        format!(
+            "{} · {:?} · {state} · output={} lines/{} bytes{}{}",
+            self.tool_call_id,
+            self.card_kind,
+            self.output_lines,
+            self.output_bytes,
+            if self.truncated { " truncated" } else { "" },
+            self.output_preview
+                .as_deref()
+                .map(|preview| format!(" · preview={preview:?}"))
+                .unwrap_or_default(),
+        )
+    }
+}
+
 pub fn tool_card_summaries(lines: &[Line], tool_names: &dyn ToolNameLookup) -> Vec<ToolCardSummary> {
     let rows = project_tool_card_rows(lines, tool_names, &HashMap::new());
     let mut summaries = Vec::new();

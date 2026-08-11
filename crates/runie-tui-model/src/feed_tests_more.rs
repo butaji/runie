@@ -417,6 +417,10 @@ fn tool_card_summary_reduces_output_metadata_as_data() {
         Some("alpha\nbeta\n[output truncated]")
     );
     assert_eq!(summaries[0].card_kind, ToolCardKind::Read);
+    assert_eq!(
+        summaries[0].terminal_line(),
+        "read-1 · Read · completed · output=3 lines/27 bytes truncated · preview=\"alpha\\nbeta\\n[output truncated]\""
+    );
 }
 #[test]
 fn memory_card_rows_separate_metadata_from_snippet_content() {
