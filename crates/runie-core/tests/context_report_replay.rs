@@ -22,3 +22,17 @@ fn yaml_context_policy_replays_to_the_renderer_neutral_report() {
     );
     assert_eq!(report.terminal_lines(), fixture.expected);
 }
+
+#[test]
+fn yaml_unknown_context_window_replays_to_disabled_recovery() {
+    let fixture: ContextReportFixture =
+        serde_yaml::from_str(include_str!("fixtures/context-recovery-disabled.yaml"))
+            .expect("disabled context report fixture");
+    let report = context_report(
+        fixture.context_tokens,
+        fixture.context_window,
+        fixture.settings,
+        None,
+    );
+    assert_eq!(report.terminal_lines(), fixture.expected);
+}
