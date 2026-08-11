@@ -107,4 +107,13 @@ fn model_provider_effort_uses_the_profile_wire_field() {
         }),
     );
     assert_eq!(payload["reasoning"], "high-wire");
+    let explicit = with_model_provider_effort(
+        serde_json::json!({"reasoning":"explicit"}),
+        &model,
+        Some(&SimpleStreamOptions {
+            reasoning: Some(ThinkingLevel::High),
+            ..Default::default()
+        }),
+    );
+    assert_eq!(explicit["reasoning"], "explicit");
 }

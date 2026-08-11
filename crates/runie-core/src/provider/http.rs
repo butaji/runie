@@ -214,7 +214,9 @@ pub fn with_model_effort(
 ) -> serde_json::Value {
     if let Some(effort) = mapped_reasoning(model, options) {
         if let Some(object) = payload.as_object_mut() {
-            object.insert(wire_key.to_owned(), serde_json::Value::String(effort));
+            object
+                .entry(wire_key.to_owned())
+                .or_insert_with(|| serde_json::Value::String(effort));
         }
     }
     payload

@@ -91,7 +91,7 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    explicit errors; a model-derived provider request profile now centralizes
    OpenAI, Anthropic, Gemini, MiniMax, and generic effort-field selection;
    the shared HTTP request boundary and live MiniMax request body consume that
-   profile, whose wire identity is
+   profile without overwriting explicit payload fields, whose wire identity is
    now serializable and reverse-parsable for replay;
    typed failures now preserve bounded server retry guidance alongside status and
    retryability; complete the finite provider payload/finish-reason conformance matrix,
