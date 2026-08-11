@@ -1,19 +1,5 @@
 use super::App;
 
-macro_rules! declared_effort_levels {
-    ($map:expr) => {
-        [
-            ("off", $map.off.as_ref()),
-            ("minimal", $map.minimal.as_ref()),
-            ("low", $map.low.as_ref()),
-            ("medium", $map.medium.as_ref()),
-            ("high", $map.high.as_ref()),
-            ("xhigh", $map.xhigh.as_ref()),
-            ("max", $map.max.as_ref()),
-        ]
-    };
-}
-
 impl App {
     pub(super) async fn open_effort_picker(&self, model: &runie_core::types::Model) {
         self.ui
@@ -32,18 +18,16 @@ impl App {
         let Some(map) = model.thinking_level_map.as_ref() else {
             return Vec::new();
         };
-        declared_effort_levels!(map)
-            .into_iter()
-            .filter_map(|(name, wire)| wire.map(|_| name.to_owned()))
+        map.declared()
+            .filter_map(|(level, wire)| wire.map(|_| level.name().to_owned()))
             .collect()
     }
 
     pub(super) fn model_has_declared_effort(model: &runie_core::types::Model) -> bool {
-        model.thinking_level_map.as_ref().is_some_and(|map| {
-            declared_effort_levels!(map)
-                .into_iter()
-                .any(|(_, wire)| wire.is_some())
-        })
+        model
+            .thinking_level_map
+            .as_ref()
+            .is_some_and(|map| map.declared().any(|(_, wire)| wire.is_some()))
     }
 
     pub(super) fn model_supports_effort(&self, effort: &str) -> bool {
@@ -55,11 +39,10 @@ impl App {
         else {
             return false;
         };
-        let levels = declared_effort_levels!(map);
-        let supported = levels
-            .into_iter()
-            .any(|(level, wire)| level == effort && wire.is_some());
-        supported
+        let Some(level) = runie_core::types::ThinkingLevel::from_name(effort) else {
+            return false;
+        };
+        map.value(level).is_some()
     }
 
     pub(super) fn default_effort_for_model(
@@ -68,24 +51,9 @@ impl App {
         let Some(map) = model.thinking_level_map.as_ref() else {
             return runie_core::types::ThinkingLevel::Off;
         };
-        [
-            (runie_core::types::ThinkingLevel::Off, map.off.is_some()),
-            (
-                runie_core::types::ThinkingLevel::Minimal,
-                map.minimal.is_some(),
-            ),
-            (runie_core::types::ThinkingLevel::Low, map.low.is_some()),
-            (
-                runie_core::types::ThinkingLevel::Medium,
-                map.medium.is_some(),
-            ),
-            (runie_core::types::ThinkingLevel::High, map.high.is_some()),
-            (runie_core::types::ThinkingLevel::XHigh, map.xhigh.is_some()),
-            (runie_core::types::ThinkingLevel::Max, map.max.is_some()),
-        ]
-        .into_iter()
-        .find_map(|(level, supported)| supported.then_some(level))
-        .unwrap_or(runie_core::types::ThinkingLevel::Off)
+        map.declared()
+            .find_map(|(level, wire)| wire.map(|_| level))
+            .unwrap_or(runie_core::types::ThinkingLevel::Off)
     }
 
     pub(super) async fn reset_effort_for_model(&self, model: &runie_core::types::Model) {

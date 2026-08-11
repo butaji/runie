@@ -1011,15 +1011,7 @@ fn parse_theme(theme: &str) -> runie_core::types::ThemeKind {
 }
 
 fn parse_thinking_level(level: &str) -> ThinkingLevel {
-    match level.to_ascii_lowercase().as_str() {
-        "minimal" => ThinkingLevel::Minimal,
-        "low" => ThinkingLevel::Low,
-        "medium" => ThinkingLevel::Medium,
-        "high" => ThinkingLevel::High,
-        "xhigh" | "x-high" => ThinkingLevel::XHigh,
-        "max" => ThinkingLevel::Max,
-        _ => ThinkingLevel::Off,
-    }
+    ThinkingLevel::from_name(&level.to_ascii_lowercase()).unwrap_or(ThinkingLevel::Off)
 }
 
 #[derive(Debug, Deserialize, Default)]

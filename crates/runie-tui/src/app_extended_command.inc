@@ -317,16 +317,8 @@ impl App {
                 self.ui.send(UiMsg::ToggleSessionInfo).await;
             }
             "effort" if self.model_supports_effort(args.trim()) => {
-                let level = match args.trim() {
-                    "off" => runie_core::types::ThinkingLevel::Off,
-                    "minimal" => runie_core::types::ThinkingLevel::Minimal,
-                    "low" => runie_core::types::ThinkingLevel::Low,
-                    "medium" => runie_core::types::ThinkingLevel::Medium,
-                    "high" => runie_core::types::ThinkingLevel::High,
-                    "xhigh" => runie_core::types::ThinkingLevel::XHigh,
-                    "max" => runie_core::types::ThinkingLevel::Max,
-                    _ => unreachable!(),
-                };
+                let level = runie_core::types::ThinkingLevel::from_name(args.trim())
+                    .expect("validated effort");
                 self.loop_actor.set_thinking_level(level).await;
                 self.ui
                     .send(UiMsg::ShowCommandResult(format!("Reasoning effort: {}", args.trim())))
