@@ -1,5 +1,4 @@
 //! MCP is represented as data; transports and discovery stay with the host.
-
 use crate::types::{AgentTool, AgentToolResult, ToolResultContent};
 use std::sync::Arc;
 use std::time::Duration;
@@ -15,6 +14,10 @@ macro_rules! mcp_status_wire_names {
                 match self {
                     $(Self::$variant => $wire),+
                 }
+            }
+
+            pub fn from_wire_name(name: &str) -> Option<Self> {
+                match name { $($wire => Some(Self::$variant),)+ _ => None }
             }
         }
     };

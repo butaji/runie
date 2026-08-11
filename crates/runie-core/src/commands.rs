@@ -255,9 +255,7 @@ pub fn parse_mcp_transport_query(args: &str) -> Option<&str> {
 
 pub fn parse_mcp_status_query(args: &str) -> Option<&str> {
     let status = args.trim();
-    ["ready", "busy", "failed", "closed"]
-        .contains(&status)
-        .then_some(status)
+    crate::tools::McpStdioStatus::from_wire_name(status).map(|_| status)
 }
 
 /// Parse the explicit session-picker form while keeping ordinary `/sessions`

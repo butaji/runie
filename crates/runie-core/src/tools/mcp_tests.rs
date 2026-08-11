@@ -27,6 +27,18 @@ fn status_rows_own_their_terminal_projection() {
     );
 }
 
+#[test]
+fn mcp_lifecycle_wire_names_round_trip_for_both_transports() {
+    for name in ["ready", "busy", "failed", "closed"] {
+        let stdio = McpStdioStatus::from_wire_name(name).expect("stdio status");
+        let http = McpHttpStatus::from_wire_name(name).expect("http status");
+        assert_eq!(stdio.wire_name(), name);
+        assert_eq!(http.wire_name(), name);
+    }
+    assert_eq!(McpStdioStatus::from_wire_name("unknown"), None);
+    assert_eq!(McpHttpStatus::from_wire_name("unknown"), None);
+}
+
 #[tokio::test]
 async fn mcp_tool_forwards_a_typed_call_to_its_owner() {
     let tool = McpTool::new(
