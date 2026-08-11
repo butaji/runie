@@ -43,6 +43,12 @@ pub struct SubagentUsageState {
     pub usage: SubagentResourceUsage,
 }
 
+#[path = "subagent_lifecycle.rs"]
+mod subagent_lifecycle;
+pub use subagent_lifecycle::{
+    reduce_subagent_event, SubagentEvent, SubagentLifecycleState, SubagentLifecycleStatus,
+};
+
 pub fn reduce_subagent_turn(
     role: SubagentRole,
     state: &mut SubagentUsageState,
@@ -423,6 +429,46 @@ mod tests {
         )
         .is_err());
         assert_eq!(state.usage.turns, 4);
+    }
+
+    #[test]
+    fn lifecycle_events_replay_role_usage_and_terminal_result() {
+        let mut state = SubagentLifecycleState::default();
+        let events = vec![
+            SubagentEvent::Started {
+                role: SubagentRole::Plan,
+                capabilities: vec![SubagentCapability::ProducePlan],
+            },
+            SubagentEvent::Turn(SubagentTurnEvent {
+                output_bytes: 12,
+                tool_calls: 1,
+            }),
+            SubagentEvent::Completed {
+                output: serde_json::json!({"steps": ["test"]}),
+            },
+        ];
+        for event in events {
+            let encoded = serde_json::to_string(&event).unwrap();
+            reduce_subagent_event(&mut state, serde_json::from_str(&encoded).unwrap()).unwrap();
+        }
+        assert_eq!(state.status, SubagentLifecycleStatus::Completed);
+        assert_eq!(state.usage.turns, 1);
+        assert_eq!(state.output.as_ref().unwrap()["steps"][0], "test");
+    }
+
+    #[test]
+    fn lifecycle_rejects_capability_escalation_and_keeps_state() {
+        let mut state = SubagentLifecycleState::default();
+        let error = reduce_subagent_event(
+            &mut state,
+            SubagentEvent::Started {
+                role: SubagentRole::Explore,
+                capabilities: vec![SubagentCapability::WriteWorkspace],
+            },
+        )
+        .unwrap_err();
+        assert!(error.contains("WriteWorkspace"));
+        assert_eq!(state.status, SubagentLifecycleStatus::Idle);
     }
 
     #[test]
