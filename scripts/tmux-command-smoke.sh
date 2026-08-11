@@ -136,7 +136,7 @@ for label in "${labels[@]}"; do
       ((failed += 1))
       continue
     fi
-    if [[ "$label" == "Cancel All Jobs" ]] && ! wait_for 'Cancelled 0 running background job'; then
+    if [[ "$label" == "Cancel All Jobs" ]] && ! wait_for 'Cancelled 0 all background job'; then
       echo "FAIL $label: expected-cancel-result"
       ((failed += 1))
       continue

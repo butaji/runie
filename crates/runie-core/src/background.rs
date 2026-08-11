@@ -12,6 +12,7 @@ mod controls;
 #[path = "background_status.rs"]
 mod status;
 
+pub use controls::BackgroundCancelScope;
 pub use status::BackgroundStatus;
 
 pub const BACKGROUND_OUTPUT_MAX_BYTES: usize = 100 * 1024;
@@ -157,7 +158,8 @@ enum Message {
         id: String,
         reply: oneshot::Sender<bool>,
     },
-    CancelAll {
+    CancelScope {
+        scope: BackgroundCancelScope,
         reply: oneshot::Sender<usize>,
     },
     ClearFinished {
@@ -233,15 +235,24 @@ impl BackgroundProcessActor {
         }
         result.await.unwrap_or(false)
     }
-
     pub async fn cancel_all(&self) -> usize {
+        self.cancel_scope(BackgroundCancelScope::All).await
+    }
+    pub async fn cancel_running(&self) -> usize {
+        self.cancel_scope(BackgroundCancelScope::Running).await
+    }
+    pub async fn cancel_scope(&self, scope: BackgroundCancelScope) -> usize {
         let (reply, result) = oneshot::channel();
-        if self.tx.send(Message::CancelAll { reply }).await.is_err() {
+        if self
+            .tx
+            .send(Message::CancelScope { scope, reply })
+            .await
+            .is_err()
+        {
             return 0;
         }
         result.await.unwrap_or_default()
     }
-
     pub async fn clear_finished(&self) -> usize {
         let (reply, result) = oneshot::channel();
         if self
@@ -276,11 +287,9 @@ impl BackgroundProcessActor {
     pub fn subscribe(&self) -> watch::Receiver<Vec<BackgroundJob>> {
         self.snapshot.clone()
     }
-
     pub fn shared_snapshot(&self) -> crate::SharedSnapshot<Vec<BackgroundJob>> {
         self.shared_snapshot.borrow().clone()
     }
-
     pub fn shared_subscribe(&self) -> watch::Receiver<crate::SharedSnapshot<Vec<BackgroundJob>>> {
         self.shared_snapshot.clone()
     }
@@ -332,7 +341,9 @@ fn handle_message(
             handle_start(command, reply, jobs, handles, tasks, publisher, next_id)
         }
         Some(Message::Cancel { id, reply }) => handle_cancel(id, reply, jobs, handles, publisher),
-        Some(Message::CancelAll { reply }) => handle_cancel_all(reply, jobs, handles, publisher),
+        Some(Message::CancelScope { scope, reply }) => {
+            handle_cancel_scope(scope, reply, jobs, handles, publisher)
+        }
         Some(Message::ClearFinished { reply }) => controls::clear_finished(reply, jobs, publisher),
         Some(Message::ReadOutput { id, reply }) => {
             let output = jobs.get(&id).map(|job| {
@@ -396,7 +407,8 @@ fn handle_cancel(
     let _ = reply.send(cancelled);
 }
 
-fn handle_cancel_all(
+fn handle_cancel_scope(
+    scope: BackgroundCancelScope,
     reply: oneshot::Sender<usize>,
     jobs: &mut BTreeMap<String, BackgroundJob>,
     handles: &mut BTreeMap<String, tokio::task::AbortHandle>,
@@ -404,7 +416,11 @@ fn handle_cancel_all(
 ) {
     let ids = jobs
         .values()
-        .filter(|job| job.status == BackgroundStatus::Running)
+        .filter(|job| match scope {
+            BackgroundCancelScope::All | BackgroundCancelScope::Running => {
+                job.status == BackgroundStatus::Running
+            }
+        })
         .map(|job| job.id.clone())
         .collect::<Vec<_>>();
     let cancelled = ids

@@ -221,10 +221,17 @@ impl App {
                 return true;
             }
             if let Some(scope) = runie_core::commands::parse_background_job_cancel_scope(args) {
-                let cancelled = self.background_actor.cancel_all().await;
+                let cancelled = match scope {
+                    runie_core::commands::BackgroundCancelScope::All => {
+                        self.background_actor.cancel_all().await
+                    }
+                    runie_core::commands::BackgroundCancelScope::Running => {
+                        self.background_actor.cancel_running().await
+                    }
+                };
                 let scope = match scope {
-                    runie_core::commands::BackgroundCancelScope::All
-                    | runie_core::commands::BackgroundCancelScope::Running => "running",
+                    runie_core::commands::BackgroundCancelScope::All => "all",
+                    runie_core::commands::BackgroundCancelScope::Running => "running",
                 };
                 self.ui
                     .send(UiMsg::ShowCommandResult(format!(

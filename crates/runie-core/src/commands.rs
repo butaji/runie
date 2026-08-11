@@ -212,11 +212,7 @@ pub fn parse_background_job_command(args: &str) -> Option<&str> {
 }
 
 /// Parse the lifecycle-wide background cancellation control.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum BackgroundCancelScope {
-    All,
-    Running,
-}
+pub use crate::background::BackgroundCancelScope;
 
 pub fn parse_background_job_cancel_scope(args: &str) -> Option<BackgroundCancelScope> {
     match args.split_whitespace().collect::<Vec<_>>().as_slice() {

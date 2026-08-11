@@ -121,6 +121,15 @@ async fn cancel_all_reduces_every_running_job_to_cancelled() {
 }
 
 #[tokio::test]
+async fn cancel_running_uses_the_typed_scope_mailbox() {
+    let actor = BackgroundProcessActor::new();
+    let id = actor.start("yes running").await.unwrap();
+    tokio::task::yield_now().await;
+    assert_eq!(actor.cancel_running().await, 1);
+    assert_eq!(actor.snapshot().into_iter().find(|job| job.id == id).unwrap().status, BackgroundStatus::Cancelled);
+}
+
+#[tokio::test]
 async fn clear_finished_removes_terminal_rows_but_preserves_running_jobs() {
     let actor = BackgroundProcessActor::new();
     let completed = actor.start("printf done").await.unwrap();

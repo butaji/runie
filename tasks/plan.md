@@ -147,6 +147,8 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    reads now share one pure output-metadata projection for facts, previews,
    and truncation; background job status queries now consume the domain
    status wire vocabulary instead of a duplicate command-local table.
+   `/jobs cancel all|running` now routes through one typed actor mailbox and
+   preserves the selected scope in the TUI result; queued cancellation remains.
 3. Model-aware context policy — `harness-05` (live usage boundary implemented).
    Recovery and `/context` now use the active model’s declared window, and
    `/context` consumes a serializable `ContextReport` projection for its

@@ -1,5 +1,11 @@
 use super::*;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BackgroundCancelScope {
+    All,
+    Running,
+}
+
 pub(super) fn clear_finished(
     reply: oneshot::Sender<usize>,
     jobs: &mut BTreeMap<String, BackgroundJob>,
