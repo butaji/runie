@@ -74,6 +74,15 @@ impl App {
             return true;
         }
         if name == "jobs" {
+            if runie_core::commands::parse_background_job_clear_finished(args) {
+                let cleared = self.background_actor.clear_finished().await;
+                self.ui
+                    .send(UiMsg::ShowCommandResult(format!(
+                        "Cleared {cleared} finished background job(s)"
+                    )))
+                    .await;
+                return true;
+            }
             if runie_core::commands::parse_background_job_cancel_all(args) {
                 let cancelled = self.background_actor.cancel_all().await;
                 self.ui

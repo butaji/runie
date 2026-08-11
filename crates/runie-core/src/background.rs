@@ -7,6 +7,9 @@ use std::{collections::BTreeMap, sync::Arc};
 use tokio::sync::{mpsc, oneshot, watch};
 use tokio::task::JoinSet;
 
+#[path = "background_controls.rs"]
+mod controls;
+
 pub const BACKGROUND_OUTPUT_MAX_BYTES: usize = 100 * 1024;
 const OUTPUT_TRUNCATION_MARKER: &str = "\n[output truncated]";
 
@@ -86,6 +89,9 @@ enum Message {
     CancelAll {
         reply: oneshot::Sender<usize>,
     },
+    ClearFinished {
+        reply: oneshot::Sender<usize>,
+    },
 }
 
 #[derive(Clone)]
@@ -160,6 +166,19 @@ impl BackgroundProcessActor {
         }
         result.await.unwrap_or_default()
     }
+
+    pub async fn clear_finished(&self) -> usize {
+        let (reply, result) = oneshot::channel();
+        if self
+            .tx
+            .send(Message::ClearFinished { reply })
+            .await
+            .is_err()
+        {
+            return 0;
+        }
+        result.await.unwrap_or_default()
+    }
     pub fn snapshot(&self) -> Vec<BackgroundJob> {
         self.snapshot.borrow().clone()
     }
@@ -223,6 +242,7 @@ fn handle_message(
         }
         Some(Message::Cancel { id, reply }) => handle_cancel(id, reply, jobs, handles, publisher),
         Some(Message::CancelAll { reply }) => handle_cancel_all(reply, jobs, handles, publisher),
+        Some(Message::ClearFinished { reply }) => controls::clear_finished(reply, jobs, publisher),
         None => return false,
     }
     true
@@ -449,5 +469,26 @@ mod tests {
                 BackgroundStatus::Cancelled
             );
         }
+    }
+
+    #[tokio::test]
+    async fn clear_finished_removes_terminal_rows_but_preserves_running_jobs() {
+        let actor = BackgroundProcessActor::new();
+        let completed = actor.start("printf done").await.unwrap();
+        let running = actor.start("yes running").await.unwrap();
+        loop {
+            if actor
+                .snapshot()
+                .iter()
+                .any(|job| job.id == completed && job.status == BackgroundStatus::Completed)
+            {
+                break;
+            }
+            tokio::task::yield_now().await;
+        }
+        assert_eq!(actor.clear_finished().await, 1);
+        assert!(actor.snapshot().iter().all(|job| job.id != completed));
+        assert!(actor.snapshot().iter().any(|job| job.id == running));
+        actor.cancel_all().await;
     }
 }
