@@ -47,7 +47,6 @@
         assert_eq!(record.data["resultEntryId"], "entry-2");
         assert_eq!(record.data["replay"], "never");
     }
-
     #[test]
     fn queue_lane_records_require_a_linked_provisioned_target() {
         let mut snapshot = SessionSnapshot::default();
@@ -457,6 +456,7 @@
         let encoded = serde_json::to_string(&plan).unwrap();
         let decoded: CompactionRecoveryPlan = serde_json::from_str(&encoded).unwrap();
         assert_eq!(decoded, plan);
+        assert!(encoded.contains("required") && encoded.contains("prepare"));
     }
 
     #[test]

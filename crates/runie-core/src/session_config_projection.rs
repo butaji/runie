@@ -32,6 +32,7 @@ impl Default for CompactionSettings {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum CompactionDecision {
     Disabled,
     WithinBudget {
@@ -47,6 +48,7 @@ pub enum CompactionDecision {
 /// session and provider actors still own preparation, summarization, and
 /// publication respectively.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum CompactionRecoveryAction {
     Continue,
     Prepare { keep_recent_tokens: u64 },
