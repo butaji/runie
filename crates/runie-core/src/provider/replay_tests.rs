@@ -114,6 +114,16 @@ fn provider_finish_reason_conformance_covers_responses_and_stream_shapes() {
     }
 }
 
+#[test]
+fn failed_responses_without_incomplete_details_preserve_terminal_reason() {
+    let payload = serde_json::json!({"response": {"status": "failed"}});
+    assert_eq!(
+        super::response_finish_reason(&payload),
+        Some(StopReason::Error)
+    );
+    assert_eq!(super::raw_response_finish_reason(&payload), Some("failed"));
+}
+
 #[tokio::test]
 async fn deferred_replay_uses_provider_scoped_event_fixture() {
     let handle = crate::types::DeferredHandle {
