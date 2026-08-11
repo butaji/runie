@@ -66,10 +66,10 @@ pub fn source_cards(response: &WebSearchResponse) -> Vec<WebSourceCard> {
     response
         .results
         .iter()
+        .filter(|result| !result.url.trim().is_empty())
         .enumerate()
-        .filter(|(_, result)| !result.url.trim().is_empty())
         .map(|(index, result)| WebSourceCard {
-            rank: index as u32 + 1,
+            rank: index.saturating_add(1) as u32,
             title: if result.title.trim().is_empty() {
                 result.url.clone()
             } else {
@@ -329,7 +329,7 @@ mod tests {
         assert_eq!(cards.len(), 2);
         assert_eq!(cards[0].rank, 1);
         assert_eq!(cards[0].title, "https://one.test");
-        assert_eq!(cards[1].rank, 3);
+        assert_eq!(cards[1].rank, 2);
     }
 
     #[test]
