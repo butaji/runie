@@ -100,6 +100,8 @@ fn revert_requires_a_hex_commit_reference() {
 fn conflict_projection_is_lossless_and_ignores_clean_changes() {
     let summary = classify_conflicts(" M clean.rs\nUU src/main.rs\nAA src/new.rs\n");
     assert_eq!(summary.conflicted_paths, ["src/main.rs", "src/new.rs"]);
+    assert_eq!(summary.entries[0].code, "UU");
+    assert_eq!(summary.entries[1].code, "AA");
     assert!(summary.recoverable);
     assert!(!classify_conflicts(" M clean.rs\n").recoverable);
 }
@@ -111,8 +113,8 @@ fn conflict_summary_owns_renderer_neutral_terminal_rows() {
         summary.terminal_lines(),
         [
             "Git conflicts: 2 recoverable=true",
-            "Conflict: src/main.rs",
-            "Conflict: src/new.rs"
+            "Conflict: UU src/main.rs",
+            "Conflict: AA src/new.rs"
         ]
     );
 }

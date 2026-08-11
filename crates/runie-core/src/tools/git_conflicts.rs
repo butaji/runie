@@ -1,7 +1,15 @@
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct GitConflictEntry {
+    pub code: String,
+    pub path: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct GitConflictSummary {
     pub conflicted_paths: Vec<String>,
     pub recoverable: bool,
+    #[serde(default)]
+    pub entries: Vec<GitConflictEntry>,
 }
 
 impl GitConflictSummary {
@@ -11,11 +19,19 @@ impl GitConflictSummary {
             self.conflicted_paths.len(),
             self.recoverable
         )];
-        lines.extend(
-            self.conflicted_paths
-                .iter()
-                .map(|path| format!("Conflict: {path}")),
-        );
+        if self.entries.is_empty() {
+            lines.extend(
+                self.conflicted_paths
+                    .iter()
+                    .map(|path| format!("Conflict: {path}")),
+            );
+        } else {
+            lines.extend(
+                self.entries
+                    .iter()
+                    .map(|entry| format!("Conflict: {} {}", entry.code, entry.path)),
+            );
+        }
         lines
     }
 }
@@ -137,18 +153,21 @@ impl GitConflictRecoveryPlan {
 }
 
 pub fn classify_conflicts(status: &str) -> GitConflictSummary {
-    let conflicted_paths = status
+    let entries = status
         .lines()
         .filter_map(|line| {
             let bytes = line.as_bytes();
-            (bytes.len() > 3 && is_conflict_code(bytes[0], bytes[1]))
-                .then(|| line[3..].trim().to_owned())
+            (bytes.len() > 3 && is_conflict_code(bytes[0], bytes[1])).then(|| GitConflictEntry {
+                code: line[..2].to_owned(),
+                path: line[3..].trim().to_owned(),
+            })
         })
-        .filter(|path| !path.is_empty())
+        .filter(|entry| !entry.path.is_empty())
         .collect::<Vec<_>>();
     GitConflictSummary {
-        recoverable: !conflicted_paths.is_empty(),
-        conflicted_paths,
+        recoverable: !entries.is_empty(),
+        conflicted_paths: entries.iter().map(|entry| entry.path.clone()).collect(),
+        entries,
     }
 }
 

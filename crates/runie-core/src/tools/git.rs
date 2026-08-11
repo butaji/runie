@@ -7,8 +7,8 @@ const GIT_OUTPUT_MAX_BYTES: usize = 100 * 1024;
 mod conflicts;
 pub use conflicts::{
     begin_conflict_recovery, classify_conflicts, plan_conflict_recovery, reduce_conflict_recovery,
-    GitConflictAction, GitConflictRecoveryEvent, GitConflictRecoveryPlan, GitConflictRecoveryState,
-    GitConflictRecoveryStatus, GitConflictSummary,
+    GitConflictAction, GitConflictEntry, GitConflictRecoveryEvent, GitConflictRecoveryPlan,
+    GitConflictRecoveryState, GitConflictRecoveryStatus, GitConflictSummary,
 };
 
 macro_rules! git_tool_types { ($($name:ident),+ $(,)?) => { $(#[derive(Default)] pub struct $name;)+ }; }

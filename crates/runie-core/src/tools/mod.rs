@@ -36,10 +36,10 @@ pub use executor::{
 };
 pub use git::{
     begin_conflict_recovery, classify_conflicts, reduce_conflict_recovery, GitCommitPrepareRequest,
-    GitCommitPrepareTool, GitCommitTool, GitConflictRecoveryEvent, GitConflictRecoveryPlan,
-    GitConflictRecoveryState, GitConflictRecoveryStatus, GitConflictSummary, GitDiffTool,
-    GitPushRequest, GitPushTool, GitRevertRequest, GitRevertTool, GitReviewTool, GitStatusTool,
-    GitWorktreeTool,
+    GitCommitPrepareTool, GitCommitTool, GitConflictEntry, GitConflictRecoveryEvent,
+    GitConflictRecoveryPlan, GitConflictRecoveryState, GitConflictRecoveryStatus,
+    GitConflictSummary, GitDiffTool, GitPushRequest, GitPushTool, GitRevertRequest, GitRevertTool,
+    GitReviewTool, GitStatusTool, GitWorktreeTool,
 };
 pub use mcp::{
     McpCallHook, McpCallRequest, McpConnectionStatus, McpHttpActor, McpHttpClient, McpHttpSession,
