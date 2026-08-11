@@ -26,6 +26,23 @@ fn failure_projection_preserves_bounded_retry_guidance() {
     assert_eq!(decoded.retry_after, None);
 }
 
+#[test]
+fn unsupported_effort_failures_are_typed_replay_data() {
+    let failure = crate::provider::classify_failure(&StreamError::Provider {
+        message: "reasoning effort is unsupported".into(),
+        status: Some(400),
+        headers: Default::default(),
+    });
+    assert_eq!(
+        failure.kind,
+        crate::provider::ProviderFailureKind::UnsupportedEffort
+    );
+    assert_eq!(
+        failure.terminal_line(),
+        "unsupported_effort status=400 retryable=false · reasoning effort is unsupported"
+    );
+}
+
 #[tokio::test]
 async fn responses_trace_maps_text_delta_and_completion_to_pi_events() {
     let provider = ReplayProvider::from_sse_body(

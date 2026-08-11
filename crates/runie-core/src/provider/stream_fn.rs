@@ -149,6 +149,7 @@ provider_failure_kinds! {
     (Api, "api"),
     (Provider, "provider"),
     (RateLimited, "rate_limited"),
+    (UnsupportedEffort, "unsupported_effort"),
     (Aborted, "aborted"),
     (Invalid, "invalid"),
 }
@@ -236,7 +237,9 @@ fn classify_provider_failure(
     Option<String>,
 ) {
     (
-        if status == Some(429) {
+        if status != Some(429) && unsupported_effort(message) {
+            ProviderFailureKind::UnsupportedEffort
+        } else if status == Some(429) {
             ProviderFailureKind::RateLimited
         } else {
             ProviderFailureKind::Provider
@@ -246,6 +249,14 @@ fn classify_provider_failure(
         provider_retryable(status, headers),
         retry_after_header(headers),
     )
+}
+
+fn unsupported_effort(message: &str) -> bool {
+    let message = message.to_ascii_lowercase();
+    message.contains("effort")
+        && ["unsupported", "invalid", "not support", "unknown"]
+            .iter()
+            .any(|marker| message.contains(marker))
 }
 
 fn retry_after_header(headers: &std::collections::HashMap<String, String>) -> Option<String> {
