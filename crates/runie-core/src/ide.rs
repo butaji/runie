@@ -7,6 +7,13 @@ use std::collections::BTreeMap;
 pub const IDE_INVALID_REQUEST_CODE: i64 = -32_600;
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(untagged)]
+pub enum IdeRpcId {
+    Number(u64),
+    String(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct IdeDocument {
     pub uri: String,
     pub language_id: String,
@@ -157,7 +164,7 @@ impl IdeSnapshot {
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct IdeRpcRequest {
     pub jsonrpc: String,
-    pub id: u64,
+    pub id: IdeRpcId,
     pub method: String,
     #[serde(default)]
     pub params: serde_json::Value,
@@ -172,7 +179,7 @@ pub struct IdeRpcError {
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct IdeRpcResponse {
     pub jsonrpc: String,
-    pub id: u64,
+    pub id: IdeRpcId,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub result: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -400,7 +407,7 @@ mod tests {
             r#"{"jsonrpc":"2.0","id":7,"method":"textDocument/didOpen","params":{"uri":"file:///a"}}"#,
         )
         .expect("request");
-        assert_eq!(request.id, 7);
+        assert_eq!(request.id, IdeRpcId::Number(7));
         let encoded = encode_ide_response(&IdeRpcResponse {
             jsonrpc: "2.0".into(),
             id: request.id,
@@ -412,6 +419,10 @@ mod tests {
         })
         .expect("response");
         assert!(encoded.contains(&IDE_INVALID_REQUEST_CODE.to_string()));
+        let string_id =
+            decode_ide_request(r#"{"jsonrpc":"2.0","id":"editor-7","method":"shutdown"}"#)
+                .expect("string id");
+        assert_eq!(string_id.id, IdeRpcId::String("editor-7".into()));
     }
 
     #[test]
