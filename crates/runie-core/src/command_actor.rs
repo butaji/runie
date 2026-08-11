@@ -23,6 +23,17 @@ pub struct DiagnosticReport {
 }
 
 impl DiagnosticReport {
+    pub fn rows(&self) -> Vec<DiagnosticReportRow> {
+        std::iter::once(DiagnosticReportRow::Summary {
+            fix_requested: self.fix_requested,
+            checks: self.checks.len(),
+        })
+        .chain(self.checks.iter().cloned().map(|check| {
+            DiagnosticReportRow::Check { check }
+        }))
+        .collect()
+    }
+
     pub fn summary(&self) -> String {
         format!(
             "{} ({} checks)",
@@ -36,9 +47,35 @@ impl DiagnosticReport {
     }
 
     pub fn terminal_lines(&self) -> Vec<String> {
-        let mut lines = vec![self.summary()];
-        lines.extend(self.checks.iter().map(|check| format!("check: {check}")));
-        lines
+        self.rows()
+            .into_iter()
+            .map(DiagnosticReportRow::terminal_line)
+            .collect()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum DiagnosticReportRow {
+    Summary { fix_requested: bool, checks: usize },
+    Check { check: String },
+}
+
+impl DiagnosticReportRow {
+    fn terminal_line(self) -> String {
+        match self {
+            Self::Summary {
+                fix_requested,
+                checks,
+            } => format!(
+                "{} ({checks} checks)",
+                if fix_requested {
+                    "fix requested"
+                } else {
+                    "diagnostic requested"
+                }
+            ),
+            Self::Check { check } => format!("check: {check}"),
+        }
     }
 }
 
@@ -294,6 +331,14 @@ mod tests {
         let report = state.diagnostic_report.expect("diagnostic report");
         assert!(report.fix_requested);
         assert_eq!(report.checks, ["workspace", "provider", "session"]);
+        assert_eq!(report.rows().len(), 4);
+        assert!(matches!(
+            report.rows()[0],
+            DiagnosticReportRow::Summary {
+                fix_requested: true,
+                checks: 3
+            }
+        ));
         assert_eq!(
             state.last_diagnostic.as_deref(),
             Some("fix requested (3 checks)")

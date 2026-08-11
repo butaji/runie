@@ -123,5 +123,6 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    socket/editor and terminal metadata adapters over the typed event
    protocols, with deterministic abort/error replay.
 8. Diagnostics and media completeness — `harness-16` and `harness-19`.
-   Add remaining provider media formats and interactive diagnostic controls
-   only after their renderer-neutral data contracts are covered.
+   A serializable diagnostic report-row projection now drives `/doctor`; add
+   remaining provider media formats and interactive diagnostic controls only
+   after their renderer-neutral data contracts are covered.
