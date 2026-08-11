@@ -43,6 +43,8 @@ fn provider_profiles_are_stable_replay_data() {
             Some(profile)
         );
     }
+    assert!(super::ProviderRequestProfile::Anthropic.nested_effort());
+    assert!(!super::ProviderRequestProfile::OpenAiChat.nested_effort());
     assert_eq!(
         super::ProviderRequestProfile::from_wire_name("unknown"),
         None

@@ -82,3 +82,6 @@ vocabulary instead of a command-local string list, and the transport enum is
 serde-replayable data with round-trip coverage.
 Scheduler terminal metric fields now use one macro-backed declaration for
 stable names and row projection, while event reduction remains explicit.
+Provider request profiles now also declare whether effort is nested, so
+request shaping consumes the profile data instead of a provider-specific
+conditional.
