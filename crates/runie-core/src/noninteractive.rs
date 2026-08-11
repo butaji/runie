@@ -14,6 +14,7 @@ pub enum JsonlEvent {
         provider: Option<String>,
         model: Option<String>,
         context_window: Option<u64>,
+        thinking_level: Option<crate::types::ThinkingLevel>,
     },
     Text {
         text: String,
@@ -139,6 +140,7 @@ mod tests {
                 provider: Some("minimax".into()),
                 model: Some("model-1".into()),
                 context_window: Some(128_000),
+                thinking_level: Some(crate::types::ThinkingLevel::High),
             },
             JsonlEvent::Text {
                 text: "done".into(),

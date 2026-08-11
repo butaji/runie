@@ -1256,12 +1256,14 @@ async fn run_noninteractive(config: NonInteractiveConfig) -> RunOutcome {
     }
     let run_id = format!("run-{}", std::process::id());
     let selected_model = app.model_catalog.snapshot().selected;
+    let thinking_level = Some(app.loop_actor.state_snapshot().thinking_level);
     let mut events = vec![
         JsonlEvent::Started { run_id },
         JsonlEvent::Metadata {
             provider: selected_model.as_ref().map(|model| model.provider.clone()),
             model: selected_model.as_ref().map(|model| model.id.clone()),
             context_window: selected_model.as_ref().map(|model| model.context_window),
+            thinking_level,
         },
     ];
     let messages = vec![runie_core::types::AgentMessage::User(
