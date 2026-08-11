@@ -20,6 +20,13 @@ macro_rules! scheduler_cancellation_wire_names {
                     $(Self::$variant => $wire,)+
                 }
             }
+
+            pub fn from_wire_name(name: &str) -> Option<Self> {
+                match name {
+                    $($wire => Some(Self::$variant),)+
+                    _ => None,
+                }
+            }
         }
     };
 }
@@ -330,6 +337,23 @@ mod tests {
             1
         );
         assert_eq!(metrics.terminal_lines()[9], "cancelled_user: 1");
+    }
+
+    #[test]
+    fn cancellation_reason_wire_names_round_trip() {
+        for reason in [
+            SchedulerCancellationReason::Unspecified,
+            SchedulerCancellationReason::User,
+            SchedulerCancellationReason::Abort,
+            SchedulerCancellationReason::Dependency,
+            SchedulerCancellationReason::Shutdown,
+        ] {
+            assert_eq!(
+                SchedulerCancellationReason::from_wire_name(reason.wire_name()),
+                Some(reason)
+            );
+        }
+        assert_eq!(SchedulerCancellationReason::from_wire_name("unknown"), None);
     }
 
     #[test]
