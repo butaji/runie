@@ -36,7 +36,9 @@ impl App {
             self.ui.send(UiMsg::ShowCommandResult(result)).await;
             return true;
         }
-        if name == "git" && args.trim().eq_ignore_ascii_case("conflicts") {
+        if name == "git"
+            && matches!(args.trim().to_ascii_lowercase().as_str(), "status" | "conflicts")
+        {
             let result = match runie_core::tools::GitStatusTool
                 .execute("git-conflicts", serde_json::json!({}), None, None)
                 .await
@@ -48,7 +50,15 @@ impl App {
                         runie_core::types::ToolResultContent::Text { text } => Some(text),
                         runie_core::types::ToolResultContent::Image { .. } => None,
                     })
-                    .map(|status| runie_core::tools::classify_conflicts(&status).terminal_lines().join("\n"))
+                    .map(|status| {
+                        if args.trim().eq_ignore_ascii_case("conflicts") {
+                            runie_core::tools::classify_conflicts(&status)
+                                .terminal_lines()
+                                .join("\n")
+                        } else {
+                            status
+                        }
+                    })
                     .unwrap_or_else(|| "Git status returned no text".into()),
                 Err(error) => format!("Git status failed: {error}"),
             };

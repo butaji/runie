@@ -125,6 +125,8 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    lifecycle names use the shared lowercase wire vocabulary; palette actions
    now expose ready and failed status filters.
 6. Session and Git interactive UX — `harness-12` and `harness-13`.
+   `/git status` is now palette-discoverable and projects the actor-owned
+   bounded status result through the same command-result dialog as conflicts.
    `/sessions` now preserves each row’s source path, `/sessions history` is
    palette-discoverable, and `/sessions pick [text]` opens the actor-owned
    resume picker; complete picker/undo history (including the palette-discoverable `/undo` action) and Git conflict interactions over the existing

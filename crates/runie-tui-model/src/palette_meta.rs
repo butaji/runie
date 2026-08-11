@@ -80,6 +80,7 @@ declare_palette_metadata! {
     (CancelAllJobs, "/jobs cancel all", "Cancel all running jobs"),
     (ClearFinishedJobs, "/jobs clear finished", "Clear finished job rows"),
     (JobOutput, "/jobs output", "Inspect bounded job output"),
+    (GitStatus, "/git status", "Inspect repository status"),
     (GitConflicts, "/git conflicts", "Inspect unresolved Git conflicts"),
     (Questions, "/questions", "Browse user-question history"),
 }
@@ -121,7 +122,7 @@ macro_rules! palette_sections {
 palette_sections! {
     ("Context" => [CopyLastResponse, SessionInfo]),
     ("Session" => [NewSession, KeyboardShortcuts, Quit, Changelog, ShareSession, SessionHistory, UndoSession]),
-    ("Information" => [Help, ContextInfo, Doctor, Feedback, Usage, GitConflicts]),
+    ("Information" => [Help, ContextInfo, Doctor, Feedback, Usage, GitStatus, GitConflicts]),
     ("Extensions" => [Skills, Hooks, Plugins, Mcps, McpReady, McpFailed, Memory]),
     ("Automation" => [Goal, Workflow, Workflows, Loop, DeepResearch, Jobs, ActiveJobs, CancelAllJobs, ClearFinishedJobs]),
 }
