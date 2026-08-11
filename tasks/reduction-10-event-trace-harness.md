@@ -38,6 +38,8 @@ Navigation events now have YAML replay coverage for scroll, reveal-latest, and
 selection clearing through the same feed state machine.
 Content events now also have a checked-in YAML fixture covering user and
 assistant transcript lines plus assistant finalization through `FeedState`.
+Dialog-kind vocabulary now replays from a checked-in YAML fixture through the
+same public helper, extending fixture coverage to renderer-neutral dialog data.
 
 Acceptance: representative core, feed, status, and TUI tests use the harness;
 no sleeps are introduced.

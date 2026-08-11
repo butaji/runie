@@ -4,7 +4,8 @@ use std::fmt::Debug;
 
 macro_rules! dialog_kinds {
     ($(($kind:ident, $hint:literal)),+ $(,)?) => {
-        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+        #[serde(rename_all = "snake_case")]
         pub enum DialogKind { $($kind),+ }
 
         impl DialogKind {
@@ -193,6 +194,28 @@ mod tests {
         assert_eq!(COMMANDS.kind, DialogKind::List);
         assert_eq!(COMMANDS.actions[0].hotkey, Some("n"));
         assert_eq!(COMMANDS.actions[1].hotkey, None);
+    }
+
+    #[test]
+    fn dialog_kinds_replay_from_yaml_data() {
+        let kinds = runie_core::replay_yaml_state(
+            include_str!("../fixtures/dialog-kinds.yaml"),
+            Vec::<DialogKind>::new(),
+            |state, kind: &DialogKind| {
+                state.push(*kind);
+            },
+        )
+        .expect("dialog kind fixture");
+        assert_eq!(
+            kinds,
+            [
+                DialogKind::List,
+                DialogKind::Selector,
+                DialogKind::Form,
+                DialogKind::Confirm,
+                DialogKind::TextInput
+            ]
+        );
     }
 
     #[test]
