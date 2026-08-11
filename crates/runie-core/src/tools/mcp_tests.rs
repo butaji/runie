@@ -13,6 +13,20 @@ fn server_and_tool_are_data_with_stable_names() {
     assert_eq!(server.tools[0].name, "list");
 }
 
+#[test]
+fn status_rows_own_their_terminal_projection() {
+    let row = McpStatusRow {
+        transport: "http".into(),
+        index: 2,
+        status: "busy".into(),
+    };
+    assert_eq!(row.terminal_line(), "http[2] status=busy");
+    assert_eq!(
+        serde_json::from_value::<McpStatusRow>(serde_json::to_value(&row).unwrap()).unwrap(),
+        row
+    );
+}
+
 #[tokio::test]
 async fn mcp_tool_forwards_a_typed_call_to_its_owner() {
     let tool = McpTool::new(

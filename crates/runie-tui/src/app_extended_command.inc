@@ -29,7 +29,7 @@ impl App {
             } else {
                 statuses
                     .into_iter()
-                    .map(|row| format!("{}[{}] status={}", row.transport, row.index, row.status))
+                    .map(|row| row.terminal_line())
                     .collect::<Vec<_>>()
                     .join("\n")
             };

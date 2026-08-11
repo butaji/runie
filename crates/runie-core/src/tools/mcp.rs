@@ -19,12 +19,9 @@ macro_rules! mcp_status_wire_names {
         }
     };
 }
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct McpStatusRow {
-    pub transport: String,
-    pub index: usize,
-    pub status: String,
-}
+#[path = "mcp_status.rs"]
+mod status;
+pub use status::McpStatusRow;
 #[path = "mcp_http_session.rs"]
 mod http_session;
 pub use http_session::{McpHttpActor, McpHttpSession, McpHttpStatus};
