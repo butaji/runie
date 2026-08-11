@@ -212,3 +212,38 @@ fn tool_card_summaries_index_duplicate_call_ids_by_member() {
         [3, 3]
     );
 }
+
+#[test]
+fn remove_kind_prunes_tool_facts_and_modes_without_touching_live_tools() {
+    let mut state = super::FeedState::default();
+    state.reduce(super::ScrollbackMsg::SetToolName(
+        "live".into(),
+        "bash".into(),
+    ));
+    state.reduce(super::ScrollbackMsg::ToolStart {
+        tool_call_id: "live".into(),
+        header: "Bash".into(),
+        activity: None,
+    });
+    state.reduce(super::ScrollbackMsg::SetToolName(
+        "orphan".into(),
+        "Read".into(),
+    ));
+    state.reduce(super::ScrollbackMsg::SetToolMode(
+        "orphan".into(),
+        runie_core::types::ToolDisplayMode::Expanded,
+    ));
+    state.reduce(super::ScrollbackMsg::Append(super::Line::new(
+        super::LineKind::Assistant,
+        "answer",
+    )));
+    state.reduce(super::ScrollbackMsg::RemoveKind(super::LineKind::Assistant));
+
+    let snapshot = state.snapshot();
+    assert!(snapshot.facts.tools.contains_key("live"));
+    assert!(!snapshot.facts.tools.contains_key("orphan"));
+    assert!(snapshot
+        .tool_blocks
+        .iter()
+        .any(|block| block.tool_call_id == "live"));
+}

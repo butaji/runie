@@ -65,5 +65,9 @@ quadratic derived-card lookup.
 The activity counter projection now reads the normalized facts tuple directly,
 removing an obsolete private forwarding layer.
 
+`RemoveKind` now prunes tool facts and row-keyed display modes against the live
+transcript identity set. A reducer regression covers orphan removal while
+retaining a live tool card, closing the stale-derived-index failure mode.
+
 Acceptance: snapshot parity, replay parity, and no stale derived index after
 insert/update/remove sequences.

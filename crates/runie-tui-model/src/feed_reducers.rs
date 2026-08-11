@@ -22,7 +22,7 @@ impl FeedState {
             ScrollbackMsg::ActivityToolStart(name) => self.start_activity_tool(&name),
             ScrollbackMsg::ActivityToolEnd { is_error } => self.finish_activity_tool(is_error),
             ScrollbackMsg::AdvanceAnimation => self.navigation.advance_animation(),
-            ScrollbackMsg::RemoveKind(kind) => self.lines.retain(|line| line.kind != kind),
+            ScrollbackMsg::RemoveKind(kind) => self.remove_kind(kind),
             ScrollbackMsg::NormalizeLiveCompletedAssistants => self.normalize_assistants(),
             ScrollbackMsg::AddLiveAssistantTimestamp(_) => {}
             ScrollbackMsg::RemoveEmptyAfter(kind) => self.remove_empty_after(kind),
@@ -35,6 +35,24 @@ impl FeedState {
             message => return Err(message),
         }
         Ok(())
+    }
+    fn remove_kind(&mut self, kind: LineKind) {
+        self.lines.retain(|line| line.kind != kind);
+        self.prune_tool_facts();
+    }
+    fn prune_tool_facts(&mut self) {
+        let live_ids = self
+            .lines
+            .iter()
+            .filter_map(|line| line.tool_call_id.as_ref())
+            .cloned()
+            .collect::<std::collections::HashSet<_>>();
+        let live_mode_keys = self.lines.iter().filter_map(|line| {
+            let row_id = line.tool_row_id?;
+            Some(format!("#row:{row_id}"))
+        }).chain(live_ids.iter().cloned()).collect::<std::collections::HashSet<_>>();
+        self.navigation.facts.tools.retain(|id, _| live_ids.contains(id));
+        self.navigation.tool_modes.retain(|id, _| live_mode_keys.contains(id));
     }
     fn set_tool_args(&mut self, id: String, args: serde_json::Value) { self.navigation.facts.tools.entry(id).or_default().set_args(args); }
     fn remove_tool_args(&mut self, id: &str) { if let Some(record) = self.navigation.facts.tools.get_mut(id) { record.clear_args(); } }
