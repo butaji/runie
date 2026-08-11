@@ -47,7 +47,7 @@ pub enum RunOutcome {
     Failed,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct NonInteractiveConfig {
     pub jsonl: bool,
     pub auto_approve: bool,
@@ -167,6 +167,18 @@ mod tests {
         assert_eq!(RunOutcome::Completed.exit_code(), 0);
         assert_eq!(RunOutcome::Aborted.exit_code(), 130);
         assert_eq!(RunOutcome::Failed.exit_code(), 1);
+    }
+
+    #[test]
+    fn noninteractive_config_round_trips_as_replay_data() {
+        let config = NonInteractiveConfig {
+            jsonl: true,
+            auto_approve: true,
+            prompt: Some("inspect workspace".into()),
+        };
+        let encoded = serde_json::to_string(&config).unwrap();
+        let decoded: NonInteractiveConfig = serde_json::from_str(&encoded).unwrap();
+        assert_eq!(decoded, config);
     }
 
     #[test]
