@@ -136,6 +136,10 @@ impl ToolExecutorActor {
         self.registry.close_mcps().await
     }
 
+    pub async fn reconnect_mcps(&self) -> usize {
+        self.registry.reconnect_mcps().await
+    }
+
     #[allow(
         clippy::too_many_arguments,
         reason = "actor command mirrors the explicit async tool execution contract"

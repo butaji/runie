@@ -18,6 +18,15 @@ impl App {
                     .await;
                 return true;
             }
+            if runie_core::commands::parse_mcp_reconnect_command(args) {
+                let reconnected = self.loop_actor.reconnect_mcps().await;
+                self.ui
+                    .send(UiMsg::ShowCommandResult(format!(
+                        "Reconnected {reconnected} MCP server(s)"
+                    )))
+                    .await;
+                return true;
+            }
             let transport = runie_core::commands::parse_mcp_transport_query(args);
             let status = runie_core::commands::parse_mcp_status_query(args);
             let statuses = self

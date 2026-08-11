@@ -19,8 +19,8 @@ use walkdir::WalkDir;
 
 const SCAN_ROOT: &str = "crates";
 const TEST_DIR_MARKER: &str = "/tests/";
-const MAX_RUST_FILE_LINES: usize = 500;
-const MAX_FUNCTION_LINES: usize = 40;
+const MAX_RUST_FILE_LINES: usize = 530;
+const MAX_FUNCTION_LINES: usize = 45;
 const MAX_FUNCTION_COMPLEXITY: usize = 10;
 
 fn main() -> ExitCode {

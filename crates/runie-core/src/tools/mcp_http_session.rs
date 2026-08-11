@@ -23,6 +23,9 @@ enum McpHttpCommand {
     Close {
         reply: tokio::sync::oneshot::Sender<Result<(), String>>,
     },
+    Reconnect {
+        reply: tokio::sync::oneshot::Sender<()>,
+    },
 }
 
 #[derive(Clone)]
@@ -58,6 +61,11 @@ impl McpHttpActor {
                             let _ = reply.send(session.close().await);
                             let _ = status_tx.send(McpHttpStatus::Closed);
                             break;
+                        }
+                        McpHttpCommand::Reconnect { reply } => {
+                            session = McpHttpSession::new(session.client.clone());
+                            let _ = status_tx.send(McpHttpStatus::Ready);
+                            let _ = reply.send(());
                         }
                     }
                 }
@@ -103,12 +111,23 @@ impl McpHttpActor {
             .await
             .map_err(|_| "MCP HTTP actor close response was dropped".to_owned())?
     }
+
+    pub async fn reconnect(&self) -> Result<(), String> {
+        let (reply, response) = tokio::sync::oneshot::channel();
+        self.tx
+            .send(McpHttpCommand::Reconnect { reply })
+            .await
+            .map_err(|_| "MCP HTTP actor is closed".to_owned())?;
+        response
+            .await
+            .map_err(|_| "MCP HTTP actor reconnect response was dropped".to_owned())
+    }
 }
 
 /// Stateful streamable-HTTP MCP session. Session ownership is explicit and
 /// closure is awaited by the caller, so cleanup is not detached.
 pub struct McpHttpSession {
-    client: McpHttpClient,
+    pub(crate) client: McpHttpClient,
     session_id: Option<String>,
 }
 

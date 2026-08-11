@@ -238,6 +238,12 @@ fn mcp_close_command_requires_an_exact_argument() {
 }
 
 #[test]
+fn mcp_reconnect_command_requires_an_exact_argument() {
+    assert!(parse_mcp_reconnect_command("reconnect"));
+    assert!(!parse_mcp_reconnect_command("reconnect now"));
+}
+
+#[test]
 fn session_history_query_requires_explicit_query_mode() {
     assert_eq!(
         parse_session_history_query("history query tool"),

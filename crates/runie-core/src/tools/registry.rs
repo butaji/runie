@@ -130,6 +130,17 @@ impl ToolRegistry {
         closed
     }
 
+    pub async fn reconnect_mcps(&self) -> usize {
+        let mut reconnected = 0;
+        for owner in &self.mcp_stdio {
+            reconnected += owner.reconnect().await.is_ok() as usize;
+        }
+        for owner in &self.mcp_http {
+            reconnected += owner.reconnect().await.is_ok() as usize;
+        }
+        reconnected
+    }
+
     pub fn lookup(&self, name: &str) -> Option<Arc<dyn AgentTool>> {
         self.tools.get(name).cloned()
     }

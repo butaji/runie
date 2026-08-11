@@ -20,6 +20,10 @@ impl LoopActor {
         self.inner.deps.tool_executor.close_mcps().await
     }
 
+    pub async fn reconnect_mcps(&self) -> usize {
+        self.inner.deps.tool_executor.reconnect_mcps().await
+    }
+
     /// Project the next context-recovery operation without mutating any
     /// actor. Callers can route `Prepare` through the session owner and keep
     /// summarization in the provider owner.

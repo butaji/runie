@@ -92,6 +92,9 @@ enum McpStdioCommand {
     Close {
         reply: tokio::sync::oneshot::Sender<()>,
     },
+    Reconnect {
+        reply: tokio::sync::oneshot::Sender<()>,
+    },
 }
 #[derive(Clone)]
 pub struct McpStdioActor {
@@ -165,6 +168,17 @@ impl McpStdioActor {
             .await
             .map_err(|_| "MCP stdio actor close response was dropped".to_owned())
     }
+
+    pub async fn reconnect(&self) -> Result<(), String> {
+        let (reply, response) = tokio::sync::oneshot::channel();
+        self.tx
+            .send(McpStdioCommand::Reconnect { reply })
+            .await
+            .map_err(|_| "MCP stdio actor is closed".to_owned())?;
+        response
+            .await
+            .map_err(|_| "MCP stdio actor reconnect response was dropped".to_owned())
+    }
 }
 
 async fn run_stdio_worker(
@@ -202,8 +216,23 @@ async fn run_stdio_worker(
                 close_stdio(reply, &mut session, &status_tx).await;
                 return;
             }
+            McpStdioCommand::Reconnect { reply } => {
+                reconnect_stdio(&mut session, &status_tx, reply).await
+            }
         }
     }
+}
+
+async fn reconnect_stdio(
+    session: &mut Option<McpStdioSession>,
+    status_tx: &tokio::sync::watch::Sender<McpStdioStatus>,
+    reply: tokio::sync::oneshot::Sender<()>,
+) {
+    if let Some(session) = session.take() {
+        let _ = session.close().await;
+    }
+    let _ = status_tx.send(McpStdioStatus::Ready);
+    let _ = reply.send(());
 }
 
 async fn close_stdio(
