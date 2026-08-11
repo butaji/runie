@@ -39,12 +39,16 @@ impl App {
         if name == "git"
             && matches!(
                 args.trim().to_ascii_lowercase().as_str(),
-                "status" | "diff" | "conflicts"
+                "status" | "diff" | "review" | "conflicts"
             )
         {
             let result = match if args.trim().eq_ignore_ascii_case("diff") {
                 runie_core::tools::GitDiffTool
                     .execute("git-diff", serde_json::json!({}), None, None)
+                    .await
+            } else if args.trim().eq_ignore_ascii_case("review") {
+                runie_core::tools::GitReviewTool
+                    .execute("git-review", serde_json::json!({}), None, None)
                     .await
             } else {
                 runie_core::tools::GitStatusTool

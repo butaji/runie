@@ -82,6 +82,7 @@ declare_palette_metadata! {
     (JobOutput, "/jobs output", "Inspect bounded job output"),
     (GitStatus, "/git status", "Inspect repository status"),
     (GitDiff, "/git diff", "Inspect the unstaged Git diff"),
+    (GitReview, "/git review", "Review the unstaged Git patch"),
     (GitConflicts, "/git conflicts", "Inspect unresolved Git conflicts"),
     (Questions, "/questions", "Browse user-question history"),
 }
@@ -123,7 +124,7 @@ macro_rules! palette_sections {
 palette_sections! {
     ("Context" => [CopyLastResponse, SessionInfo]),
     ("Session" => [NewSession, KeyboardShortcuts, Quit, Changelog, ShareSession, SessionHistory, UndoSession]),
-    ("Information" => [Help, ContextInfo, Doctor, Feedback, Usage, GitStatus, GitDiff, GitConflicts]),
+    ("Information" => [Help, ContextInfo, Doctor, Feedback, Usage, GitStatus, GitDiff, GitReview, GitConflicts]),
     ("Extensions" => [Skills, Hooks, Plugins, Mcps, McpReady, McpFailed, Memory]),
     ("Automation" => [Goal, Workflow, Workflows, Loop, DeepResearch, Jobs, ActiveJobs, CancelAllJobs, ClearFinishedJobs]),
 }

@@ -73,6 +73,7 @@ runie_core::typed_action_registry! {
         JobOutput => "Job Output",
         GitStatus => "Git Status",
         GitDiff => "Git Diff",
+        GitReview => "Git Review",
         GitConflicts => "Git Conflicts",
         Questions => "User Questions",
     }
@@ -81,7 +82,6 @@ runie_core::typed_action_registry! {
 include!("ui_messages.rs");
 
 /// Translate core lifecycle events into UI-owned reducer messages.
-/// Unsupported core events intentionally produce no UI transition.
 pub fn ui_messages_for_event(event: &AgentEvent) -> Vec<UiMsg> {
     match event {
         AgentEvent::Reset => vec![UiMsg::Reset],
