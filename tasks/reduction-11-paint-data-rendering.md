@@ -1,6 +1,6 @@
 # Reduction 11: paint-data rendering
 
-Status: partial
+Status: adopted
 
 Introduce a small declarative paint/layout intermediate representation for
 widgets where it materially reduces repeated terminal rendering code.
@@ -45,3 +45,9 @@ The obsolete appearance-level hotkey span helper was then removed; tests now
 assert the semantic `FooterKey` intent directly.
 Dialog hint text is now projected from the renderer-neutral `DialogKind` data
 table, so the widget consumes the model contract directly.
+
+Completion evidence: pure paint projections, YAML round-trip/replay tests,
+semantic theme-intent rendering tests, and the unchanged cell-level visual
+suite all pass. Widgets that do not materially benefit from the IR remain
+ordinary pure renderers by design; the acceptance criterion does not require
+mechanical migration of every widget.
