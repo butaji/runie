@@ -10,6 +10,11 @@ pub enum JsonlEvent {
     Started {
         run_id: String,
     },
+    Metadata {
+        provider: Option<String>,
+        model: Option<String>,
+        context_window: Option<u64>,
+    },
     Text {
         text: String,
     },
@@ -129,6 +134,11 @@ mod tests {
         let events = vec![
             JsonlEvent::Started {
                 run_id: "r1".into(),
+            },
+            JsonlEvent::Metadata {
+                provider: Some("minimax".into()),
+                model: Some("model-1".into()),
+                context_window: Some(128_000),
             },
             JsonlEvent::Text {
                 text: "done".into(),

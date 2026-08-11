@@ -1255,7 +1255,15 @@ async fn run_noninteractive(config: NonInteractiveConfig) -> RunOutcome {
         app.approval_mode.set(runie_core::tools::ApprovalMode::Auto);
     }
     let run_id = format!("run-{}", std::process::id());
-    let mut events = vec![JsonlEvent::Started { run_id }];
+    let selected_model = app.model_catalog.snapshot().selected;
+    let mut events = vec![
+        JsonlEvent::Started { run_id },
+        JsonlEvent::Metadata {
+            provider: selected_model.as_ref().map(|model| model.provider.clone()),
+            model: selected_model.as_ref().map(|model| model.id.clone()),
+            context_window: selected_model.as_ref().map(|model| model.context_window),
+        },
+    ];
     let messages = vec![runie_core::types::AgentMessage::User(
         runie_core::types::UserMessage {
             content: vec![runie_core::types::UserContent::Text { text: prompt }],
