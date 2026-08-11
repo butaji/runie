@@ -26,7 +26,7 @@ media_wire_formats! {
     (OpenAiChat, "openai-chat", false),
     (OpenAiResponses, "openai-responses", false),
     (Gemini, "gemini", true),
-    (Anthropic, "anthropic", false),
+    (Anthropic, "anthropic", true),
 }
 
 /// Encode validated user media at the provider boundary.
@@ -51,6 +51,9 @@ pub fn encode_user_content(
         }
         (UserContent::Image { data, mime_type }, MediaWireFormat::Anthropic) => Ok(
             serde_json::json!({"type":"image","source":{"type":"base64","media_type":mime_type,"data":data}}),
+        ),
+        (UserContent::Video { data, mime_type }, MediaWireFormat::Anthropic) => Ok(
+            serde_json::json!({"type":"video","source":{"type":"base64","media_type":mime_type,"data":data}}),
         ),
         (UserContent::Video { .. }, MediaWireFormat::Pi) => serde_json::to_value(content)
             .map_err(|error| format!("encode Pi video content: {error}")),
@@ -186,12 +189,15 @@ mod tests {
     }
 
     #[test]
-    fn anthropic_video_encoding_remains_explicitly_unsupported() {
+    fn anthropic_video_encoding_uses_base64_source_data() {
         let content = UserContent::Video {
             data: "aGVsbG8=".into(),
             mime_type: "video/mp4".into(),
         };
-        assert!(encode_user_content(&content, MediaWireFormat::Anthropic).is_err());
+        let encoded = encode_user_content(&content, MediaWireFormat::Anthropic).unwrap();
+        assert_eq!(encoded["type"], "video");
+        assert_eq!(encoded["source"]["media_type"], "video/mp4");
+        assert!(MediaWireFormat::Anthropic.supports_video());
     }
 
     #[test]
