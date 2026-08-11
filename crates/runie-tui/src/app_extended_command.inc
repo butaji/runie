@@ -251,12 +251,7 @@ impl App {
         }
         let state = self.command_actor.invoke(name, args).await;
         if matches!(name, "always-approve" | "auto" | "deny") {
-            self.approval_mode.set(match state.approval {
-                runie_core::command_actor::ApprovalMode::Always => runie_core::tools::ApprovalMode::Yolo,
-                runie_core::command_actor::ApprovalMode::Auto => runie_core::tools::ApprovalMode::Auto,
-                runie_core::command_actor::ApprovalMode::Deny => runie_core::tools::ApprovalMode::Deny,
-                runie_core::command_actor::ApprovalMode::Ask => runie_core::tools::ApprovalMode::Ask,
-            });
+            self.approval_mode.set(state.approval.clone().into());
         }
         match name {
         "help" => {

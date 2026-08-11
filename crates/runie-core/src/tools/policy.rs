@@ -32,6 +32,17 @@ approval_mode_wire_names! {
     (Yolo, "yolo"),
 }
 
+impl From<crate::command_actor::ApprovalMode> for ApprovalMode {
+    fn from(mode: crate::command_actor::ApprovalMode) -> Self {
+        match mode {
+            crate::command_actor::ApprovalMode::Ask => Self::Ask,
+            crate::command_actor::ApprovalMode::Deny => Self::Deny,
+            crate::command_actor::ApprovalMode::Auto => Self::Auto,
+            crate::command_actor::ApprovalMode::Always => Self::Yolo,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ApprovalModeEvent {
     Set(ApprovalMode),
@@ -246,6 +257,18 @@ mod tests {
             assert_eq!(ApprovalMode::from_wire_name(mode.wire_name()), Some(mode));
         }
         assert_eq!(ApprovalMode::from_wire_name("unknown"), None);
+    }
+
+    #[test]
+    fn command_approval_modes_lower_into_tool_policy_once() {
+        assert_eq!(
+            ApprovalMode::from(crate::command_actor::ApprovalMode::Always),
+            ApprovalMode::Yolo
+        );
+        assert_eq!(
+            ApprovalMode::from(crate::command_actor::ApprovalMode::Ask),
+            ApprovalMode::Ask
+        );
     }
 
     #[test]
