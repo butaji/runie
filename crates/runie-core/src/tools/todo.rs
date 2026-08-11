@@ -43,6 +43,15 @@ pub struct TodoPlanSummary {
     pub in_progress: usize,
 }
 
+impl TodoPlanSummary {
+    pub fn terminal_line(&self) -> String {
+        format!(
+            "Todo plan: {:?} · completed={} pending={} in_progress={}",
+            self.status, self.completed, self.pending, self.in_progress
+        )
+    }
+}
+
 pub fn summarize_todo_plan(snapshot: &TodoSnapshot) -> TodoPlanSummary {
     let completed = snapshot
         .items
@@ -289,6 +298,10 @@ mod tests {
         assert_eq!(
             (summary.completed, summary.in_progress, summary.pending),
             (1, 1, 0)
+        );
+        assert_eq!(
+            summary.terminal_line(),
+            "Todo plan: InProgress · completed=1 pending=0 in_progress=1"
         );
     }
 

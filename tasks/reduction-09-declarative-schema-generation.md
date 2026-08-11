@@ -59,3 +59,6 @@ Web-search provider snippet fields now use one typed wire-format table for
 Generic, Brave, and Tavily normalization.
 Dialog kinds now generate their renderer hint strings from one model-owned
 table, removing the widget-local duplicate.
+Todo plan summaries now own their terminal projection, so `/plan` and
+`/view-plan` consume the same data-shaped formatter instead of rebuilding the
+status row in the TUI route.
