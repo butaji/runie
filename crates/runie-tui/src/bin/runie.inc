@@ -366,11 +366,13 @@ fn minimax_usage(payload: &serde_json::Value) -> Usage {
         .and_then(serde_json::Value::as_u64)
         .unwrap_or_default();
     let output = read(&["completion_tokens", "output_tokens"]);
+    let cache_write = read(&["cache_creation_input_tokens", "cache_write_tokens"]);
     let total_tokens = read(&["total_tokens"]);
     Usage {
         input: input.saturating_sub(cache_read),
         output,
         cache_read,
+        cache_write,
         reasoning: read(&["reasoning_tokens"]),
         total_tokens: if total_tokens == 0 {
             input.saturating_add(output)
@@ -2940,12 +2942,14 @@ mod tests {
                 "prompt_tokens": 120,
                 "completion_tokens": 30,
                 "cached_tokens": 80,
+                "cache_creation_input_tokens": 20,
                 "reasoning_tokens": 4
             }
         }));
         assert_eq!(usage.input, 40);
         assert_eq!(usage.output, 30);
         assert_eq!(usage.cache_read, 80);
+        assert_eq!(usage.cache_write, 20);
         assert_eq!(usage.reasoning, 4);
         assert_eq!(usage.total_tokens, 150);
     }
