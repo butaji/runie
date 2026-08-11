@@ -311,6 +311,22 @@ impl App {
             return true;
         }
         if name == "questions" {
+            if args.trim().eq_ignore_ascii_case("pending") {
+                let result = self
+                    .question_broker
+                    .pending()
+                    .into_iter()
+                    .map(|question| question.terminal_line())
+                    .collect::<Vec<_>>();
+                self.ui
+                    .send(UiMsg::ShowCommandResult(if result.is_empty() {
+                        "No pending user questions".into()
+                    } else {
+                        result.join("\n")
+                    }))
+                    .await;
+                return true;
+            }
             if args.trim().eq_ignore_ascii_case("clear") {
                 self.question_broker.clear_traces();
                 self.ui

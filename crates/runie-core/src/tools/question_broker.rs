@@ -7,6 +7,8 @@ pub struct PendingUserQuestion {
     pub id: String,
     pub request: UserQuestionRequest,
 }
+
+include!("question_pending.inc");
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct UserQuestionTrace {
     pub id: String,
@@ -370,10 +372,18 @@ mod tests {
             }
             tokio::task::yield_now().await;
         };
+        assert_pending_line(&broker);
         broker
             .answer(&pending.id, serde_json::json!({"answer": "yes"}))
             .unwrap();
         assert_eq!(waiter.await.unwrap().unwrap()["answer"], "yes");
+    }
+
+    fn assert_pending_line(broker: &UserQuestionBroker) {
+        assert_eq!(
+            broker.pending()[0].terminal_line(),
+            "0 · pending · Continue?"
+        );
     }
     #[tokio::test]
     async fn broker_cancellation_is_a_typed_terminal_answer() {
