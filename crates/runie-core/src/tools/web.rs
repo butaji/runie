@@ -4,6 +4,7 @@ use crate::types::{AgentTool, AgentToolResult, ToolResultContent};
 use std::time::Duration;
 
 const MAX_WEB_SEARCH_RESPONSE_BYTES: usize = 1_048_576;
+const MAX_WEB_SEARCH_ANSWER_BYTES: usize = 16 * 1024;
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct WebSearchResult {
@@ -17,6 +18,8 @@ pub struct WebSearchResult {
 pub struct WebSearchResponse {
     #[serde(default)]
     pub results: Vec<WebSearchResult>,
+    #[serde(default)]
+    pub answer: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -175,7 +178,15 @@ fn decode_provider_response(
             })
         })
         .collect();
-    Ok(WebSearchResponse { results })
+    let answer = value
+        .get("answer")
+        .and_then(serde_json::Value::as_str)
+        .map(bounded_answer);
+    Ok(WebSearchResponse { results, answer })
+}
+
+fn bounded_answer(answer: &str) -> String {
+    answer.chars().take(MAX_WEB_SEARCH_ANSWER_BYTES).collect()
 }
 
 fn validate_response_size(bytes: usize) -> Result<(), String> {
@@ -292,6 +303,7 @@ mod tests {
                     snippet: "third".into(),
                 },
             ],
+            answer: None,
         });
         assert_eq!(cards.len(), 2);
         assert_eq!(cards[0].rank, 1);
@@ -313,12 +325,29 @@ mod tests {
         )
         .unwrap();
         let tavily = decode_provider_response(
-            r#"{"results":[{"title":"Rust","url":"https://rust-lang.org","content":"tavily"}]}"#,
+            r#"{"answer":"Rust is a systems language","results":[{"title":"Rust","url":"https://rust-lang.org","content":"tavily"}]}"#,
             WebSearchWireFormat::Tavily,
         )
         .unwrap();
         assert_eq!(brave.results[0].snippet, "brave");
         assert_eq!(tavily.results[0].snippet, "tavily");
+        assert_eq!(tavily.answer.as_deref(), Some("Rust is a systems language"));
+    }
+
+    #[test]
+    fn provider_answer_is_bounded_data() {
+        let response = decode_provider_response(
+            &format!(
+                r#"{{"answer":"{}","results":[]}}"#,
+                "x".repeat(MAX_WEB_SEARCH_ANSWER_BYTES + 1)
+            ),
+            WebSearchWireFormat::Tavily,
+        )
+        .unwrap();
+        assert_eq!(
+            response.answer.as_ref().unwrap().len(),
+            MAX_WEB_SEARCH_ANSWER_BYTES
+        );
     }
 
     #[tokio::test]
