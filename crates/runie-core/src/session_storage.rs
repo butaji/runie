@@ -143,7 +143,12 @@ async fn discover_storage_files(
             found.push(metadata);
         }
     }
-    found.sort_by(|left, right| left.path.cmp(&right.path));
+    found.sort_by(|left, right| {
+        right
+            .created_at
+            .cmp(&left.created_at)
+            .then_with(|| left.path.cmp(&right.path))
+    });
     found.truncate(limit);
     Ok(found)
 }

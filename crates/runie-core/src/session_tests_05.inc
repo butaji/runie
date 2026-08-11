@@ -121,8 +121,8 @@
             .expect("invalid fixture");
         let found = storage.discover(root.to_string_lossy(), 1).await.expect("discover");
         assert_eq!(found.len(), 1);
-        assert_eq!(found[0].session_id, "a");
-        assert_eq!(found[0].cwd, "/a");
+        assert_eq!(found[0].session_id, "b");
+        assert_eq!(found[0].cwd, "/b");
         let _ = tokio::fs::remove_dir_all(root).await;
     }
 
@@ -142,6 +142,26 @@
             .expect("discover rows");
         assert_eq!(rows.len(), 1);
         assert_eq!(rows[0].session_id, "deploy");
+        let _ = tokio::fs::remove_dir_all(root).await;
+    }
+
+    #[tokio::test]
+    async fn storage_discovery_returns_newest_sessions_first() {
+        let root = std::env::temp_dir().join(format!("runie-discover-order-{}", std::process::id()));
+        let _ = tokio::fs::remove_dir_all(&root).await;
+        tokio::fs::create_dir_all(&root).await.expect("directory");
+        let storage = SessionStorageActor::new();
+        storage
+            .publish_snapshot(root.join("old.jsonl").to_string_lossy(), &storage_snapshot(), "old", 10, "/work/old")
+            .await
+            .expect("publish old");
+        storage
+            .publish_snapshot(root.join("new.jsonl").to_string_lossy(), &storage_snapshot(), "new", 20, "/work/new")
+            .await
+            .expect("publish new");
+
+        let rows = storage.discover_rows(root.to_string_lossy(), 8, "").await.expect("discover rows");
+        assert_eq!(rows.iter().map(|row| row.session_id.as_str()).collect::<Vec<_>>(), ["new", "old"]);
         let _ = tokio::fs::remove_dir_all(root).await;
     }
 
