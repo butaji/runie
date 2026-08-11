@@ -3,7 +3,7 @@ use super::{ImageContent, UserContent, VideoContent};
 const MAX_MEDIA_BASE64_BYTES: usize = 16 * 1024 * 1024;
 
 macro_rules! media_wire_formats {
-    ($(($variant:ident, $wire:literal, $video:literal)),+ $(,)?) => {
+    ($(($variant:ident, $wire:literal, $video:literal, $audio:literal)),+ $(,)?) => {
         #[derive(Debug, Clone, Copy, PartialEq, Eq)]
         pub enum MediaWireFormat {
             $($variant),+
@@ -17,16 +17,20 @@ macro_rules! media_wire_formats {
             pub const fn supports_video(self) -> bool {
                 match self { $(Self::$variant => $video),+ }
             }
+
+            pub const fn supports_audio(self) -> bool {
+                match self { $(Self::$variant => $audio),+ }
+            }
         }
     };
 }
 
 media_wire_formats! {
-    (Pi, "pi", true),
-    (OpenAiChat, "openai-chat", true),
-    (OpenAiResponses, "openai-responses", false),
-    (Gemini, "gemini", true),
-    (Anthropic, "anthropic", true),
+    (Pi, "pi", true, true),
+    (OpenAiChat, "openai-chat", true, true),
+    (OpenAiResponses, "openai-responses", false, false),
+    (Gemini, "gemini", true, true),
+    (Anthropic, "anthropic", true, false),
 }
 
 /// Encode validated user media at the provider boundary.
@@ -45,6 +49,9 @@ pub fn encode_user_content(
         (UserContent::Video { data, mime_type }, MediaWireFormat::OpenAiChat) => Ok(
             serde_json::json!({"type":"video_url","video_url":{"url":format!("data:{mime_type};base64,{data}")}}),
         ),
+        (UserContent::Audio { data, mime_type }, MediaWireFormat::OpenAiChat) => Ok(
+            serde_json::json!({"type":"audio_url","audio_url":{"url":format!("data:{mime_type};base64,{data}")}}),
+        ),
         (UserContent::Image { data, mime_type }, MediaWireFormat::OpenAiResponses) => Ok(
             serde_json::json!({"type":"input_image","image_url":format!("data:{mime_type};base64,{data}")}),
         ),
@@ -59,14 +66,17 @@ pub fn encode_user_content(
         (UserContent::Video { data, mime_type }, MediaWireFormat::Anthropic) => Ok(
             serde_json::json!({"type":"video","source":{"type":"base64","media_type":mime_type,"data":data}}),
         ),
-        (UserContent::Video { .. }, MediaWireFormat::Pi) => serde_json::to_value(content)
-            .map_err(|error| format!("encode Pi video content: {error}")),
-        (UserContent::Audio { .. }, MediaWireFormat::Pi) => serde_json::to_value(content)
-            .map_err(|error| format!("encode Pi audio content: {error}")),
+        (UserContent::Video { .. } | UserContent::Audio { .. }, MediaWireFormat::Pi) => {
+            encode_pi_media(content)
+        }
         (UserContent::Audio { .. } | UserContent::Video { .. }, _) => {
             Err("selected provider wire format does not support this media content".into())
         }
     }
+}
+
+fn encode_pi_media(content: &UserContent) -> Result<serde_json::Value, String> {
+    serde_json::to_value(content).map_err(|error| format!("encode Pi media content: {error}"))
 }
 
 /// Encode an entire user turn as an ordered provider payload. Keeping the
@@ -177,6 +187,21 @@ mod tests {
         let encoded = encode_user_content(&content, MediaWireFormat::Gemini).unwrap();
         assert_eq!(encoded["inline_data"]["mime_type"], "audio/mpeg");
         assert_eq!(encoded["inline_data"]["data"], "aGVsbG8=");
+    }
+
+    #[test]
+    fn openai_chat_audio_encoding_uses_audio_url_data() {
+        let content = UserContent::Audio {
+            data: "aGVsbG8=".into(),
+            mime_type: "audio/mpeg".into(),
+        };
+        let encoded = encode_user_content(&content, MediaWireFormat::OpenAiChat).unwrap();
+        assert_eq!(encoded["type"], "audio_url");
+        assert_eq!(
+            encoded["audio_url"]["url"],
+            "data:audio/mpeg;base64,aGVsbG8="
+        );
+        assert!(MediaWireFormat::OpenAiChat.supports_audio());
     }
 
     #[test]
