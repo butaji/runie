@@ -9,15 +9,21 @@ impl App {
         }
         if name == "mcps" {
             let transport = runie_core::commands::parse_mcp_transport_query(args);
+            let status = runie_core::commands::parse_mcp_status_query(args);
             let statuses = self
                 .loop_actor
                 .mcp_status_rows()
                 .into_iter()
                 .filter(|row| transport.is_none_or(|transport| row.transport == transport))
+                .filter(|row| status.is_none_or(|status| row.status == status))
                 .collect::<Vec<_>>();
             let result = if statuses.is_empty() {
-                transport
+                status
+                    .map(|status| format!("No MCP {status} servers"))
+                    .or_else(|| {
+                        transport
                     .map(|transport| format!("No MCP {transport} servers"))
+                    })
                     .unwrap_or_else(|| "No MCP stdio servers".into())
             } else {
                 statuses

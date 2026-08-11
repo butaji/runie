@@ -194,6 +194,9 @@ fn background_job_command_accepts_only_cancel_and_one_id() {
     assert_eq!(parse_background_job_status_query("queued"), None);
     assert_eq!(parse_mcp_transport_query("http"), Some("http"));
     assert_eq!(parse_mcp_transport_query("websocket"), None);
+    assert_eq!(parse_mcp_status_query("ready"), Some("ready"));
+    assert_eq!(parse_mcp_status_query("closed"), Some("closed"));
+    assert_eq!(parse_mcp_status_query("unknown"), None);
     assert_eq!(parse_session_picker_query("pick"), Some("".into()));
     assert_eq!(
         parse_session_picker_query("pick deploy"),

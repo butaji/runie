@@ -244,6 +244,13 @@ pub fn parse_mcp_transport_query(args: &str) -> Option<&str> {
     ["stdio", "http"].contains(&transport).then_some(transport)
 }
 
+pub fn parse_mcp_status_query(args: &str) -> Option<&str> {
+    let status = args.trim();
+    ["ready", "busy", "failed", "closed"]
+        .contains(&status)
+        .then_some(status)
+}
+
 /// Parse the explicit session-picker form while keeping ordinary `/sessions`
 /// output backward compatible.
 pub fn parse_session_picker_query(args: &str) -> Option<String> {
