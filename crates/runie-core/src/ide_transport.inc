@@ -109,3 +109,54 @@ async fn async_write<W: tokio::io::AsyncWrite + Unpin>(writer: &mut W, bytes: &[
     use tokio::io::AsyncWriteExt;
     writer.write_all(bytes).await.map_err(|error| format!("IDE writer failed: {error}"))
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum IdeEndpoint {
+    Tcp { host: String, port: u16 },
+    Unix { path: String },
+}
+
+impl IdeEndpoint {
+    pub fn parse(value: &str) -> Result<Self, String> {
+        if let Some(address) = value.strip_prefix("tcp://") {
+            let (host, port) = address.rsplit_once(':').ok_or("IDE TCP endpoint needs host:port")?;
+            let port = port.parse().map_err(|_| "IDE TCP endpoint has an invalid port")?;
+            if host.trim().is_empty() { return Err("IDE TCP endpoint needs a host".into()); }
+            return Ok(Self::Tcp { host: host.into(), port });
+        }
+        if let Some(path) = value.strip_prefix("unix://").filter(|path| !path.trim().is_empty()) {
+            return Ok(Self::Unix { path: path.into() });
+        }
+        Err("IDE endpoint must use tcp:// or unix://".into())
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct IdeReconnectPolicy {
+    pub max_attempts: u32,
+    pub base_delay_ms: u64,
+    pub max_delay_ms: u64,
+}
+
+impl IdeReconnectPolicy {
+    pub const fn bounded() -> Self { Self { max_attempts: 3, base_delay_ms: 250, max_delay_ms: 4_000 } }
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct IdeReconnectState { pub attempts: u32 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum IdeReconnectDecision { RetryAfter { delay_ms: u64 }, Exhausted }
+
+impl IdeReconnectState {
+    pub const fn new() -> Self { Self { attempts: 0 } }
+    pub fn disconnected(mut self, policy: IdeReconnectPolicy) -> (Self, IdeReconnectDecision) {
+        if self.attempts >= policy.max_attempts { return (self, IdeReconnectDecision::Exhausted); }
+        self.attempts += 1;
+        let exponent = self.attempts.saturating_sub(1).min(31);
+        let delay_ms = policy.base_delay_ms.saturating_mul(1u64 << exponent).min(policy.max_delay_ms);
+        (self, IdeReconnectDecision::RetryAfter { delay_ms })
+    }
+    pub const fn reconnected() -> Self { Self::new() }
+}

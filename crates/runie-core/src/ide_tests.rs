@@ -1,5 +1,7 @@
 use super::*;
 
+const TEST_IDE_PORT: u16 = 9_000;
+
 #[test]
 fn replayed_ide_events_reduce_to_documents_and_diagnostics() {
     let events = [
@@ -306,4 +308,28 @@ async fn ide_transport_owns_bidirectional_stream_and_close_event() {
         actor.snapshot().await.unwrap().connection,
         IdeConnectionStatus::Disconnected
     );
+}
+
+#[test]
+fn ide_endpoints_and_reconnect_decisions_are_serializable_data() {
+    assert_eq!(
+        IdeEndpoint::parse(&format!("tcp://127.0.0.1:{TEST_IDE_PORT}")).unwrap(),
+        IdeEndpoint::Tcp {
+            host: "127.0.0.1".into(),
+            port: TEST_IDE_PORT
+        }
+    );
+    assert_eq!(
+        IdeEndpoint::parse("unix:///tmp/runie.sock").unwrap(),
+        IdeEndpoint::Unix {
+            path: "/tmp/runie.sock".into()
+        }
+    );
+    assert!(IdeEndpoint::parse(&format!("http://127.0.0.1:{TEST_IDE_PORT}")).is_err());
+    let policy = IdeReconnectPolicy::bounded();
+    let (state, retry) = IdeReconnectState::new().disconnected(policy);
+    assert_eq!(retry, IdeReconnectDecision::RetryAfter { delay_ms: 250 });
+    let (_, exhausted) =
+        (0..policy.max_attempts).fold((state, retry), |(state, _), _| state.disconnected(policy));
+    assert_eq!(exhausted, IdeReconnectDecision::Exhausted);
 }
