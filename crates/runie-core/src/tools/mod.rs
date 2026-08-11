@@ -52,9 +52,9 @@ pub use policy::{
     ApprovalDecision, ApprovalMode, ApprovalModeEvent, ApprovalModeStore, ApprovalTrace,
 };
 pub use question_broker::{
-    decode_question_traces, encode_question_traces, question_history_rows,
-    question_history_rows_page, PendingUserQuestion, UserQuestionBroker, UserQuestionHistoryRow,
-    UserQuestionTrace,
+    decode_question_traces, encode_question_traces, question_history_page, question_history_rows,
+    question_history_rows_page, PendingUserQuestion, UserQuestionBroker, UserQuestionHistoryPage,
+    UserQuestionHistoryRow, UserQuestionTrace,
 };
 pub use question_query::{parse_question_history_query, QuestionHistoryQuery};
 pub use registry::ToolRegistry;

@@ -207,14 +207,17 @@ impl App {
                 return true;
             }
             let query = runie_core::tools::parse_question_history_query(args);
-            let rows = runie_core::tools::question_history_rows_page(
+            let page = runie_core::tools::question_history_page(
                 &self.question_broker.traces(),
                 &query.text,
                 query.outcome.as_deref(),
                 query.offset,
                 query.limit,
             );
-            let result = rows
+            let has_more = page.has_more;
+            let has_rows = !page.rows.is_empty();
+            let mut result = page
+                .rows
                 .into_iter()
                 .map(|row| {
                     format!(
@@ -228,6 +231,12 @@ impl App {
                     )
                 })
                 .collect::<Vec<_>>();
+            if has_rows {
+                result.push(format!(
+                    "history offset={} limit={} more={}",
+                    query.offset, query.limit, has_more
+                ));
+            }
             self.ui
                 .send(UiMsg::ShowCommandResult(if result.is_empty() {
                     "No matching user questions".into()

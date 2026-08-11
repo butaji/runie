@@ -126,12 +126,14 @@ pub fn status_paint(snapshot: &StatusSnapshot) -> PaintDocument {
 
 /// Project semantic tool-card rows into renderer-neutral paint data.
 pub fn tool_card_paint(rows: &[ToolCardRow]) -> PaintDocument {
-    PaintDocument::from_text(rows.iter().map(|row| (
+    PaintDocument::from_text(rows.iter().map(|row| {
+        (
             Slot::Scrollback,
             ComponentKind::Scrollback,
             row.text.clone(),
             row.paint_intent().into(),
-        )))
+        )
+    }))
 }
 
 /// Interpret renderer-neutral text instructions at the terminal boundary.
@@ -313,10 +315,27 @@ mod tests {
     #[test]
     fn paint_document_from_text_preserves_declared_order() {
         let document = PaintDocument::from_text([
-            (Slot::Status, ComponentKind::Status, "one".into(), PaintIntent::Base),
-            (Slot::FooterBadge, ComponentKind::FooterBadge, "two".into(), PaintIntent::Muted),
+            (
+                Slot::Status,
+                ComponentKind::Status,
+                "one".into(),
+                PaintIntent::Base,
+            ),
+            (
+                Slot::FooterBadge,
+                ComponentKind::FooterBadge,
+                "two".into(),
+                PaintIntent::Muted,
+            ),
         ]);
-        assert_eq!(document.text.iter().map(|row| row.text.as_str()).collect::<Vec<_>>(), ["one", "two"]);
+        assert_eq!(
+            document
+                .text
+                .iter()
+                .map(|row| row.text.as_str())
+                .collect::<Vec<_>>(),
+            ["one", "two"]
+        );
         assert!(document.inline.is_empty());
     }
 

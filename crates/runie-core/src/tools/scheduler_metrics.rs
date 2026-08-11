@@ -57,12 +57,14 @@ impl SchedulerMetrics {
             value,
         })
         .collect::<Vec<_>>();
-        rows.extend(self.cancelled_by_reason.iter().map(|(reason, value)| {
-            SchedulerMetricRow {
-                name: format!("cancelled_{reason:?}"),
-                value: *value,
-            }
-        }));
+        rows.extend(
+            self.cancelled_by_reason
+                .iter()
+                .map(|(reason, value)| SchedulerMetricRow {
+                    name: format!("cancelled_{reason:?}"),
+                    value: *value,
+                }),
+        );
         rows
     }
 

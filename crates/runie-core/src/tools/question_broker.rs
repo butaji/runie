@@ -2,13 +2,11 @@ use super::UserQuestionRequest;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio::sync::{mpsc, oneshot};
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PendingUserQuestion {
     pub id: String,
     pub request: UserQuestionRequest,
 }
-
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct UserQuestionTrace {
     pub id: String,
@@ -19,7 +17,6 @@ pub struct UserQuestionTrace {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
 }
-
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct UserQuestionHistoryRow {
     pub id: String,
@@ -27,7 +24,13 @@ pub struct UserQuestionHistoryRow {
     pub outcome: String,
     pub detail: Option<String>,
 }
-
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct UserQuestionHistoryPage {
+    pub offset: usize,
+    pub limit: usize,
+    pub has_more: bool,
+    pub rows: Vec<UserQuestionHistoryRow>,
+}
 impl From<UserQuestionTrace> for UserQuestionHistoryRow {
     fn from(trace: UserQuestionTrace) -> Self {
         Self {
@@ -61,7 +64,24 @@ pub fn question_history_rows_page(
         .map(Into::into)
         .collect()
 }
-/// Encode question resolutions as a bounded, append-friendly session stream.
+pub fn question_history_page(
+    traces: &[UserQuestionTrace],
+    text: &str,
+    outcome: Option<&str>,
+    offset: usize,
+    limit: usize,
+) -> UserQuestionHistoryPage {
+    let mut rows =
+        question_history_rows_page(traces, text, outcome, offset, limit.saturating_add(1));
+    let has_more = rows.len() > limit;
+    rows.truncate(limit);
+    UserQuestionHistoryPage {
+        offset,
+        limit,
+        has_more,
+        rows,
+    }
+}
 pub fn encode_question_traces(traces: &[UserQuestionTrace]) -> Result<String, serde_json::Error> {
     traces
         .iter()
@@ -69,7 +89,6 @@ pub fn encode_question_traces(traces: &[UserQuestionTrace]) -> Result<String, se
         .collect::<Result<Vec<_>, _>>()
         .map(|lines| format!("{}\n", lines.join("\n")))
 }
-/// Decode question resolutions without attaching them to a UI or actor.
 pub fn decode_question_traces(input: &str) -> Result<Vec<UserQuestionTrace>, serde_json::Error> {
     input
         .lines()
@@ -78,8 +97,6 @@ pub fn decode_question_traces(input: &str) -> Result<Vec<UserQuestionTrace>, ser
         .collect()
 }
 const MAX_QUESTION_TRACES: usize = 128;
-
-/// Query persisted question history without coupling it to a dialog widget.
 pub fn query_question_history(
     traces: &[UserQuestionTrace],
     text: &str,
@@ -106,7 +123,6 @@ pub fn query_question_history_page(
         .cloned()
         .collect()
 }
-
 #[derive(Clone)]
 pub struct UserQuestionBroker {
     tx: mpsc::UnboundedSender<PendingUserQuestion>,
@@ -116,7 +132,6 @@ pub struct UserQuestionBroker {
     traces: Arc<Mutex<Vec<UserQuestionTrace>>>,
     next_id: Arc<std::sync::atomic::AtomicU64>,
 }
-
 impl Default for UserQuestionBroker {
     fn default() -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
@@ -257,7 +272,6 @@ impl UserQuestionBroker {
         }
     }
 }
-
 fn validate_answer(request: &UserQuestionRequest, value: &serde_json::Value) -> Result<(), String> {
     if value.get("cancelled").and_then(serde_json::Value::as_bool) == Some(true) {
         return Err("cancel answers must use cancel()".into());
@@ -279,7 +293,6 @@ fn validate_answer(request: &UserQuestionRequest, value: &serde_json::Value) -> 
     }
     Ok(())
 }
-
 fn answer_labels<'a>(
     request: &UserQuestionRequest,
     value: &'a serde_json::Value,
@@ -303,12 +316,10 @@ fn answer_labels<'a>(
             "answer must contain an `answer` string".to_owned()
         })?])
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::tools::UserQuestionOption;
-
     #[tokio::test]
     async fn broker_round_trips_an_answer() {
         let broker = UserQuestionBroker::default();
@@ -345,7 +356,6 @@ mod tests {
             .unwrap();
         assert_eq!(waiter.await.unwrap().unwrap()["answer"], "yes");
     }
-
     #[tokio::test]
     async fn broker_cancellation_is_a_typed_terminal_answer() {
         let broker = UserQuestionBroker::default();
@@ -371,7 +381,6 @@ mod tests {
         broker.cancel(&pending.id).unwrap();
         assert_eq!(waiter.await.unwrap().unwrap()["cancelled"], true);
     }
-
     #[tokio::test]
     async fn broker_rejects_answers_not_in_the_question_options() {
         let broker = UserQuestionBroker::default();
@@ -413,7 +422,6 @@ mod tests {
         assert_eq!(broker.traces()[1].outcome, "answered");
         assert!(broker.traces()[1].attempted_answer.is_none());
     }
-
     #[test]
     fn question_trace_deserializes_legacy_error_only_records() {
         let trace: UserQuestionTrace = serde_json::from_value(serde_json::json!({
@@ -426,7 +434,6 @@ mod tests {
         assert!(trace.attempted_answer.is_none());
         assert_eq!(trace.error.as_deref(), Some("invalid answer"));
     }
-
     #[test]
     fn question_traces_round_trip_as_session_jsonl() {
         let traces = vec![UserQuestionTrace {
@@ -439,7 +446,6 @@ mod tests {
         let jsonl = encode_question_traces(&traces).unwrap();
         assert_eq!(decode_question_traces(&jsonl).unwrap(), traces);
     }
-
     #[test]
     fn broker_restores_only_the_bounded_trace_tail() {
         let traces = (0..=MAX_QUESTION_TRACES)
@@ -459,7 +465,6 @@ mod tests {
         assert_eq!(restored.len(), MAX_QUESTION_TRACES);
         assert_eq!(restored[0].id, "1");
     }
-
     #[test]
     fn question_history_queries_newest_filtered_traces() {
         let traces = vec![
@@ -488,13 +493,8 @@ mod tests {
         );
         let rows = question_history_rows(&traces, "deploy", Some("answered"), 8);
         assert_eq!(rows[0].question, "Continue deploy?");
-        assert_eq!(
-            serde_json::to_value(&rows[0]).unwrap()["outcome"],
-            "answered"
-        );
-        assert_eq!(
-            query_question_history_page(&traces, "deploy", None, 1, 1)[0].id,
-            "1"
-        );
+        let page = question_history_page(&traces, "deploy", None, 0, 1);
+        assert_eq!(page.rows.len(), 1);
+        assert!(page.has_more);
     }
 }

@@ -28,9 +28,12 @@ impl DiagnosticReport {
             fix_requested: self.fix_requested,
             checks: self.checks.len(),
         })
-        .chain(self.checks.iter().cloned().map(|check| {
-            DiagnosticReportRow::Check { check }
-        }))
+        .chain(
+            self.checks
+                .iter()
+                .cloned()
+                .map(|check| DiagnosticReportRow::Check { check }),
+        )
         .collect()
     }
 
