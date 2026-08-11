@@ -1318,6 +1318,7 @@ async fn run_noninteractive(config: NonInteractiveConfig) -> RunOutcome {
             context_window: selected_model.as_ref().map(|model| model.context_window),
             thinking_level,
             effort,
+            approval_mode: Some(app.approval_mode.current()),
         },
     ];
     let messages = vec![runie_core::types::AgentMessage::User(

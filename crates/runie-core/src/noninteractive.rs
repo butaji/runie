@@ -21,6 +21,7 @@ pub enum JsonlEvent {
         context_window: Option<u64>,
         thinking_level: Option<crate::types::ThinkingLevel>,
         effort: Option<String>,
+        approval_mode: Option<crate::tools::ApprovalMode>,
     },
     Text {
         text: String,
@@ -153,6 +154,7 @@ mod tests {
                 context_window: Some(128_000),
                 thinking_level: Some(crate::types::ThinkingLevel::High),
                 effort: Some("high".into()),
+                approval_mode: Some(crate::tools::ApprovalMode::Ask),
             },
             JsonlEvent::Text {
                 text: "done".into(),
