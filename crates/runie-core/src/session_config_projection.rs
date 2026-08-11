@@ -60,6 +60,7 @@ pub struct CompactionRecoveryPlan {
 pub struct ContextReport {
     pub context_tokens: u64,
     pub context_window: u64,
+    pub settings: CompactionSettings,
     pub decision: CompactionDecision,
     pub compaction: Option<CompactionContextProjection>,
 }
@@ -69,6 +70,12 @@ impl ContextReport {
         let mut lines = vec![
             format!("context_tokens: {}", self.context_tokens),
             format!("context_window: {}", self.context_window),
+            format!(
+                "compaction_settings: enabled={} reserve_tokens={} keep_recent_tokens={}",
+                self.settings.enabled,
+                self.settings.reserve_tokens,
+                self.settings.keep_recent_tokens
+            ),
         ];
         lines.extend(self.decision.terminal_lines());
         if let Some(projection) = &self.compaction {
@@ -89,6 +96,7 @@ pub fn context_report(
     ContextReport {
         context_tokens,
         context_window,
+        settings,
         decision: compaction_decision(context_tokens, context_window, settings),
         compaction,
     }

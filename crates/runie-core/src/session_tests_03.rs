@@ -471,6 +471,10 @@
             None,
         );
         assert_eq!(report.terminal_lines()[0], "context_tokens: 901");
+        assert!(report
+            .terminal_lines()
+            .iter()
+            .any(|line| line.contains("reserve_tokens=100")));
         assert!(report.terminal_lines().iter().any(|line| line.contains("required")));
         assert_eq!(
             serde_json::from_str::<ContextReport>(&serde_json::to_string(&report).unwrap())

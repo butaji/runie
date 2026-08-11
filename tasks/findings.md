@@ -102,6 +102,8 @@ history` exposes the actor-owned selected/alternate branch history without
 creating a second state owner.
 Tool-card previews now aggregate ordered multi-row output with newline
 boundaries instead of silently retaining only the last row.
+Context reports now retain and render the compaction policy inputs alongside
+their token and threshold decision, keeping the control projection complete.
 
 As of 2026-08-09, the reduction work has these verified results:
 
