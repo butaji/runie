@@ -147,7 +147,8 @@ pub struct McpReconnectState {
     pub status: McpConnectionStatus,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum McpReconnectDecision {
     RetryAfter { delay_ms: u64 },
     Exhausted,
@@ -370,6 +371,18 @@ mod tests {
         assert_eq!(exhausted, McpReconnectDecision::Exhausted);
         assert_eq!(state.status, McpConnectionStatus::Exhausted);
         assert_eq!(McpReconnectState::reconnected().attempts, 0);
+    }
+
+    #[test]
+    fn reconnect_decisions_round_trip_as_wire_data() {
+        for decision in [
+            McpReconnectDecision::RetryAfter { delay_ms: 250 },
+            McpReconnectDecision::Exhausted,
+        ] {
+            let value = serde_json::to_value(decision).unwrap();
+            let decoded: McpReconnectDecision = serde_json::from_value(value).unwrap();
+            assert_eq!(decoded, decision);
+        }
     }
 
     #[test]
