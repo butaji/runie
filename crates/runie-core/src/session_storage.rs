@@ -43,6 +43,15 @@ pub struct SessionStorageRow {
     pub created_at: i64,
 }
 
+impl SessionStorageRow {
+    pub fn terminal_line(&self) -> String {
+        format!(
+            "{} · {} · {} · path={}",
+            self.session_id, self.label, self.cwd, self.path
+        )
+    }
+}
+
 impl SessionStorageEntry {
     pub fn row(&self) -> SessionStorageRow {
         SessionStorageRow {

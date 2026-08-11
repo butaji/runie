@@ -185,6 +185,7 @@
             }
         );
         assert!(serde_json::to_value(entry.row()).is_ok());
+        assert_eq!(entry.row().terminal_line(), "abc · runie · /workspace/runie · path=/sessions/abc.jsonl");
     }
 
     #[test]

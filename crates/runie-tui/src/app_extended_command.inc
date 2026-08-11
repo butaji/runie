@@ -41,7 +41,7 @@ impl App {
                 Ok(rows) if rows.is_empty() => "No stored sessions found".into(),
                 Ok(rows) => rows
                     .into_iter()
-                    .map(|row| format!("{} · {} · {}", row.session_id, row.label, row.cwd))
+                    .map(|row| row.terminal_line())
                     .collect::<Vec<_>>()
                     .join("\n"),
                 Err(error) => format!("Session discovery failed: {error}"),
