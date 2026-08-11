@@ -403,7 +403,14 @@ impl App {
                     "plugins" => self
                         .plugin_host
                         .as_ref()
-                        .map(|host| host.snapshot().terminal_lines().join("\n"))
+                        .map(|host| {
+                            host.metadata()
+                                .into_iter()
+                                .map(|metadata| metadata.terminal_line())
+                                .chain(host.snapshot().terminal_lines())
+                                .collect::<Vec<_>>()
+                                .join("\n")
+                        })
                         .filter(|lines| !lines.is_empty())
                         .unwrap_or_else(|| "Plugins loaded".into()),
                     "mcps" => "MCP servers loaded".into(),

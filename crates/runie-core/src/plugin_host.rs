@@ -58,6 +58,10 @@ impl PluginHost {
         self.runtime.snapshot()
     }
 
+    pub fn metadata(&self) -> Vec<crate::plugins::PluginMetadata> {
+        self.registry.metadata()
+    }
+
     pub fn shared_snapshot(&self) -> crate::SharedSnapshot<PluginRuntimeState> {
         self.runtime.shared_snapshot()
     }
