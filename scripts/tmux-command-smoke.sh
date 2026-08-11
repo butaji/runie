@@ -19,7 +19,7 @@ parameterized=(
   "Export Session" "Import Session" "Clone Session" "Resume Session" "Help" "Settings" "Doctor"
   "Rewind Session" "Prompt History" "Find Transcript" "Jump Transcript" "Set Reasoning Effort"
   "Always Approve" "Automatic Approval" "Plan Mode" "Login" "Logout" "Trust Project" "Remember"
-  "Goal" "Workflow" "Loop" "Deep Research" "Feedback" "Usage" "Background Jobs"
+  "Goal" "Workflow" "Loop" "Deep Research" "Feedback" "Usage" "Background Jobs" "Questions"
 )
 
 is_parameterized() {
@@ -76,7 +76,11 @@ for label in "${labels[@]}"; do
     echo "FAIL $label: transition-timeout"; ((failed += 1)); continue
   fi
   if is_parameterized "$label"; then
-    for character in s m o k e; do
+    argument=(s m o k e)
+    if [[ "$label" == "Questions" ]]; then
+      argument=(c l e a r)
+    fi
+    for character in "${argument[@]}"; do
       tmux -L "$socket" send-keys -t smoke -l -- "$character"
       sleep 0.04
     done
@@ -89,6 +93,11 @@ for label in "${labels[@]}"; do
     fi
     if [[ "$label" == "MCP Servers" ]] && ! wait_for 'No MCP stdio servers'; then
       echo "FAIL $label: expected-empty-status"
+      ((failed += 1))
+      continue
+    fi
+    if [[ "$label" == "Questions" ]] && ! wait_for 'User-question history cleared'; then
+      echo "FAIL $label: expected-clear-result"
       ((failed += 1))
       continue
     fi

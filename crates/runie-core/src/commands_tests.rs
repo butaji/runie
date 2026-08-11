@@ -93,6 +93,17 @@ fn parser_maps_clear_and_reset_to_context_commands() {
 }
 
 #[test]
+fn parser_keeps_question_history_actions_as_extended_commands() {
+    assert_eq!(
+        parse_mappable_builtin_command("/questions clear"),
+        Some(MappableBuiltinCommand::Extended {
+            name: "questions".into(),
+            args: "clear".into(),
+        })
+    );
+}
+
+#[test]
 fn parser_keeps_context_compaction_as_a_data_command() {
     assert_eq!(
         parse_mappable_builtin_command("/context compact keep the latest turn"),

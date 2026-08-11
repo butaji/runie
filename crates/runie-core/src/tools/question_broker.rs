@@ -167,12 +167,14 @@ impl UserQuestionBroker {
             .await
             .map_err(|_| "question was cancelled".to_owned())
     }
-
     pub fn try_next(&self) -> Option<PendingUserQuestion> {
         self.rx.lock().expect("question queue lock").try_recv().ok()
     }
     pub fn traces(&self) -> Vec<UserQuestionTrace> {
         self.traces.lock().expect("question traces lock").clone()
+    }
+    pub fn clear_traces(&self) {
+        self.traces.lock().expect("question traces lock").clear();
     }
     pub fn export_traces_jsonl(&self) -> Result<String, serde_json::Error> {
         encode_question_traces(&self.traces())
@@ -218,7 +220,6 @@ impl UserQuestionBroker {
             .send(value)
             .map_err(|_| "question waiter is closed".to_owned())
     }
-
     pub fn cancel(&self, id: &str) -> Result<(), String> {
         let request = self
             .requests
@@ -235,7 +236,6 @@ impl UserQuestionBroker {
             .send(serde_json::json!({"cancelled": true}))
             .map_err(|_| "question waiter is closed".to_owned())
     }
-
     fn record_trace(
         &self,
         id: &str,

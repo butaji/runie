@@ -189,6 +189,13 @@ impl App {
             return true;
         }
         if name == "questions" {
+            if args.trim().eq_ignore_ascii_case("clear") {
+                self.question_broker.clear_traces();
+                self.ui
+                    .send(UiMsg::ShowCommandResult("User-question history cleared".into()))
+                    .await;
+                return true;
+            }
             let query = runie_core::tools::parse_question_history_query(args);
             let rows = runie_core::tools::question_history_rows_page(
                 &self.question_broker.traces(),
