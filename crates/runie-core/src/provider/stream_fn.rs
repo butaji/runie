@@ -148,6 +148,7 @@ provider_failure_kinds! {
     (Network, "network"),
     (Api, "api"),
     (Provider, "provider"),
+    (RateLimited, "rate_limited"),
     (Aborted, "aborted"),
     (Invalid, "invalid"),
 }
@@ -187,7 +188,11 @@ pub fn classify_failure(error: &StreamError) -> ProviderFailure {
             status,
             headers,
         } => (
-            ProviderFailureKind::Provider,
+            if *status == Some(429) {
+                ProviderFailureKind::RateLimited
+            } else {
+                ProviderFailureKind::Provider
+            },
             message.clone(),
             *status,
             provider_retryable(*status, headers),
@@ -345,6 +350,7 @@ mod tests {
             ProviderFailureKind::Network,
             ProviderFailureKind::Api,
             ProviderFailureKind::Provider,
+            ProviderFailureKind::RateLimited,
             ProviderFailureKind::Aborted,
             ProviderFailureKind::Invalid,
         ] {
@@ -354,6 +360,21 @@ mod tests {
             );
         }
         assert_eq!(ProviderFailureKind::from_wire_name("unknown"), None);
+    }
+
+    #[test]
+    fn rate_limit_failures_keep_retryable_provider_context() {
+        let failure = classify_failure(&StreamError::Provider {
+            message: "slow down".into(),
+            status: Some(429),
+            headers: Default::default(),
+        });
+        assert_eq!(failure.kind, ProviderFailureKind::RateLimited);
+        assert!(failure.retryable);
+        assert_eq!(
+            failure.terminal_line(),
+            "rate_limited status=429 retryable=true · slow down"
+        );
     }
 
     #[test]
