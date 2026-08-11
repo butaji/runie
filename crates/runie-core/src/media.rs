@@ -1,4 +1,4 @@
-use super::{ImageContent, UserContent, VideoContent};
+use super::{AudioContent, ImageContent, UserContent, VideoContent};
 
 const MAX_MEDIA_BASE64_BYTES: usize = 16 * 1024 * 1024;
 
@@ -174,6 +174,15 @@ impl VideoContent {
     }
 }
 
+impl AudioContent {
+    pub fn new(mime_type: impl Into<String>, data: impl Into<String>) -> Result<Self, String> {
+        let mime_type = mime_type.into();
+        let data = data.into();
+        validate_media("audio", &mime_type, &data)?;
+        Ok(Self { data, mime_type })
+    }
+}
+
 fn validate_media(kind: &str, mime_type: &str, data: &str) -> Result<(), String> {
     if !mime_type.starts_with(&format!("{kind}/")) {
         return Err(format!("unsupported {kind} MIME type: {mime_type}"));
@@ -251,6 +260,14 @@ mod tests {
         let encoded = encode_user_content(&content, MediaWireFormat::Gemini).unwrap();
         assert_eq!(encoded["inline_data"]["mime_type"], "audio/mpeg");
         assert_eq!(encoded["inline_data"]["data"], "aGVsbG8=");
+    }
+
+    #[test]
+    fn audio_constructor_shares_the_validated_media_boundary() {
+        let audio = AudioContent::new("audio/mpeg", "aGVsbG8=").unwrap();
+        assert_eq!(audio.mime_type, "audio/mpeg");
+        assert!(AudioContent::new("image/png", "aGVsbG8=").is_err());
+        assert!(AudioContent::new("audio/mpeg", "not-base64").is_err());
     }
 
     #[test]
