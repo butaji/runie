@@ -97,7 +97,9 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    `/jobs cancel all` now reduces every running job through the actor mailbox;
    serializable `ToolCardSummary` and `BackgroundJobSummary` now expose card
    status plus shared bounded output facts and Unicode-safe previews; `/jobs`
-   now includes the preview in its pure terminal row;
+   now includes the preview in its pure terminal row; explicit job-output
+   reads now return actor-owned typed capture facts and terminal rows instead
+   of a renderer-unaware string;
    ordered aggregate tool-card previews and core-owned background summary
    terminal rows now remove duplicate renderer formatting; add richer
    renderer-neutral output cards and owned lifecycle controls, with

@@ -170,7 +170,7 @@ impl App {
         if name == "jobs" {
             if let Some(id) = runie_core::commands::parse_background_job_output_query(args) {
                 let result = match self.background_actor.read_output(id).await {
-                    Some(output) => format!("Background job {id} output:\n{output}"),
+                    Some(output) => output.terminal_lines().join("\n"),
                     None => format!("Background job {id} output not found"),
                 };
                 self.ui.send(UiMsg::ShowCommandResult(result)).await;
@@ -258,8 +258,11 @@ impl App {
                 .find(|job| job.id == id)
                 {
                     Some(job) => {
-                        let output = self.background_actor.read_output(id).await.unwrap_or_default();
-                        format!("{}\noutput:\n{}", job.terminal_line(), output)
+                        let output = self.background_actor.read_output(id).await;
+                        let output_lines = output
+                            .map(|output| output.terminal_lines().join("\n"))
+                            .unwrap_or_else(|| "background output unavailable".into());
+                        format!("{}\n{}", job.terminal_line(), output_lines)
                     }
                     None => format!("Background job {id} not found"),
                 };

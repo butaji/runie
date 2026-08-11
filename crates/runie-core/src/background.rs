@@ -45,6 +45,33 @@ pub struct BackgroundJobSummary {
     pub truncated: bool,
 }
 
+/// Actor-owned bounded capture returned by the explicit output inspection
+/// command. Consumers receive facts and text together, so renderers do not
+/// need to rediscover lifecycle/output semantics from a bare string.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BackgroundOutput {
+    pub job_id: String,
+    pub text: String,
+    pub output_lines: usize,
+    pub output_bytes: usize,
+    pub preview: Option<String>,
+    pub truncated: bool,
+}
+
+impl BackgroundOutput {
+    pub fn terminal_lines(&self) -> Vec<String> {
+        let mut lines = vec![format!(
+            "background output {} · {} lines/{} bytes{}",
+            self.job_id,
+            self.output_lines,
+            self.output_bytes,
+            if self.truncated { " truncated" } else { "" },
+        )];
+        lines.extend(self.text.lines().map(str::to_owned));
+        lines
+    }
+}
+
 impl BackgroundJobSummary {
     pub fn terminal_line(&self) -> String {
         format!(
@@ -117,7 +144,7 @@ enum Message {
     },
     ReadOutput {
         id: String,
-        reply: oneshot::Sender<Option<String>>,
+        reply: oneshot::Sender<Option<BackgroundOutput>>,
     },
 }
 
@@ -207,7 +234,7 @@ impl BackgroundProcessActor {
         result.await.unwrap_or_default()
     }
     /// Read one job's already-bounded captured output through the owner.
-    pub async fn read_output(&self, id: impl Into<String>) -> Option<String> {
+    pub async fn read_output(&self, id: impl Into<String>) -> Option<BackgroundOutput> {
         let (reply, result) = oneshot::channel();
         if self
             .tx
@@ -287,7 +314,19 @@ fn handle_message(
         Some(Message::CancelAll { reply }) => handle_cancel_all(reply, jobs, handles, publisher),
         Some(Message::ClearFinished { reply }) => controls::clear_finished(reply, jobs, publisher),
         Some(Message::ReadOutput { id, reply }) => {
-            let _ = reply.send(jobs.get(&id).map(|job| job.output.clone()));
+            let output = jobs.get(&id).map(|job| {
+                let truncated = job.output.contains(OUTPUT_TRUNCATION_MARKER);
+                let facts = output_facts(&job.output, truncated);
+                BackgroundOutput {
+                    job_id: id,
+                    text: job.output.clone(),
+                    output_lines: facts.lines,
+                    output_bytes: facts.bytes,
+                    preview: bounded_preview(&job.output, BACKGROUND_PREVIEW_MAX_CHARS),
+                    truncated: facts.truncated,
+                }
+            });
+            let _ = reply.send(output);
         }
         None => return false,
     }

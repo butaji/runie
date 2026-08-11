@@ -67,8 +67,11 @@ async fn failed_jobs_preserve_failure_output_and_status() {
 async fn output_read_is_actor_owned_and_unknown_ids_are_empty() {
     let actor = BackgroundProcessActor::new();
     let id = actor.start("printf captured").await.unwrap();
-    loop { if actor.read_output(&id).await.as_deref() == Some("captured") { break; } tokio::task::yield_now().await; }
-    assert_eq!(actor.read_output(&id).await.as_deref(), Some("captured"));
+    loop { if actor.read_output(&id).await.as_ref().map(|output| output.text.as_str()) == Some("captured") { break; } tokio::task::yield_now().await; }
+    let output = actor.read_output(&id).await.expect("captured output");
+    assert_eq!(output.text, "captured");
+    assert_eq!(output.output_lines, 1);
+    assert_eq!(output.terminal_lines(), vec!["background output 0 · 1 lines/8 bytes", "captured"]);
     assert_eq!(actor.read_output("missing").await, None);
 }
 
