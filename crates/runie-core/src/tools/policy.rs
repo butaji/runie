@@ -120,6 +120,14 @@ pub enum ApprovalDecisionKind {
 }
 
 impl ApprovalDecision {
+    pub const fn wire_name(&self) -> &'static str {
+        match self {
+            Self::Allow => "allow",
+            Self::Deny { .. } => "deny",
+            Self::Ask { .. } => "ask",
+        }
+    }
+
     pub const fn kind(&self) -> ApprovalDecisionKind {
         match self {
             Self::Allow => ApprovalDecisionKind::Allow,
@@ -143,11 +151,18 @@ impl ApprovalTrace {
 
     pub fn terminal_line(&self) -> String {
         let decision = match &self.decision {
-            ApprovalDecision::Allow => "allow".to_owned(),
-            ApprovalDecision::Deny { reason } => format!("deny ({reason})"),
-            ApprovalDecision::Ask { reason } => format!("ask ({reason})"),
+            ApprovalDecision::Allow => self.decision.wire_name().to_owned(),
+            ApprovalDecision::Deny { reason } => {
+                format!("{} ({reason})", self.decision.wire_name())
+            }
+            ApprovalDecision::Ask { reason } => format!("{} ({reason})", self.decision.wire_name()),
         };
-        format!("approval {}: {} [{:?}]", self.tool, decision, self.mode)
+        format!(
+            "approval {}: {} [{}]",
+            self.tool,
+            decision,
+            self.mode.wire_name()
+        )
     }
 }
 
@@ -322,9 +337,20 @@ mod tests {
         };
         assert_eq!(
             trace.terminal_line(),
-            "approval write: ask (changes files) [Ask]"
+            "approval write: ask (changes files) [ask]"
         );
         assert_eq!(trace.decision_kind(), ApprovalDecisionKind::Ask);
+        assert_eq!(trace.decision.wire_name(), "ask");
         assert_eq!(serde_json::to_value(trace.decision_kind()).unwrap(), "ask");
+    }
+
+    #[test]
+    fn approval_trace_uses_stable_wire_names_for_terminal_projection() {
+        let trace = ApprovalTrace {
+            tool: "bash".into(),
+            mode: ApprovalMode::Yolo,
+            decision: ApprovalDecision::Allow,
+        };
+        assert_eq!(trace.terminal_line(), "approval bash: allow [yolo]");
     }
 }
