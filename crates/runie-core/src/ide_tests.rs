@@ -35,8 +35,37 @@ fn replayed_ide_events_reduce_to_documents_and_diagnostics() {
             "connection: Connected",
             "workspace: /workspace",
             "documents: 1",
-            "diagnostics: 1"
+            "diagnostics: 1",
+            "diagnostic: file:///main.rs:0:3 · Warning · unused"
         ]
+    );
+}
+
+#[test]
+fn diagnostic_rows_are_bounded_serializable_data() {
+    let mut snapshot = IdeSnapshot::default();
+    reduce_ide_event(
+        &mut snapshot,
+        IdeEvent::DiagnosticsReplaced {
+            uri: "file:///main.rs".into(),
+            items: vec![IdeDiagnostic {
+                uri: "file:///main.rs".into(),
+                line: 4,
+                column: 2,
+                severity: IdeSeverity::Error,
+                message: "x".repeat(IDE_DIAGNOSTIC_MESSAGE_MAX_CHARS + 1),
+            }],
+        },
+    )
+    .unwrap();
+    let rows = snapshot.diagnostic_rows();
+    assert_eq!(rows.len(), 1);
+    assert_eq!(
+        rows[0].message.chars().count(),
+        IDE_DIAGNOSTIC_MESSAGE_MAX_CHARS
+    );
+    assert!(
+        serde_json::from_value::<IdeDiagnosticRow>(serde_json::to_value(&rows[0]).unwrap()).is_ok()
     );
 }
 

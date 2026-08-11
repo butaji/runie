@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 
 pub const IDE_INVALID_REQUEST_CODE: i64 = -32_600;
 pub const IDE_MAX_FRAME_BYTES: usize = 1024 * 1024;
+const IDE_DIAGNOSTIC_MESSAGE_MAX_CHARS: usize = 512;
 #[path = "ide_wire.rs"]
 mod ide_wire;
 pub use ide_wire::IdeWireBuffer;
@@ -73,6 +74,24 @@ pub struct IdeSnapshot {
     pub connection: IdeConnectionStatus,
     pub documents: BTreeMap<String, IdeDocument>,
     pub diagnostics: BTreeMap<String, Vec<IdeDiagnostic>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct IdeDiagnosticRow {
+    pub uri: String,
+    pub line: u32,
+    pub column: u32,
+    pub severity: IdeSeverity,
+    pub message: String,
+}
+
+impl IdeDiagnosticRow {
+    pub fn terminal_line(&self) -> String {
+        format!(
+            "{}:{}:{} · {:?} · {}",
+            self.uri, self.line, self.column, self.severity, self.message
+        )
+    }
 }
 
 enum IdeCommand {
@@ -168,7 +187,7 @@ impl IdeSnapshot {
     }
 
     pub fn terminal_lines(&self) -> Vec<String> {
-        vec![
+        let mut lines = vec![
             format!("connection: {:?}", self.connection),
             format!("workspace: {}", self.workspace.as_deref().unwrap_or("none")),
             format!("documents: {}", self.documents.len()),
@@ -176,7 +195,31 @@ impl IdeSnapshot {
                 "diagnostics: {}",
                 self.diagnostics.values().map(Vec::len).sum::<usize>()
             ),
-        ]
+        ];
+        lines.extend(
+            self.diagnostic_rows()
+                .into_iter()
+                .map(|row| format!("diagnostic: {}", row.terminal_line())),
+        );
+        lines
+    }
+
+    pub fn diagnostic_rows(&self) -> Vec<IdeDiagnosticRow> {
+        self.diagnostics
+            .values()
+            .flatten()
+            .map(|diagnostic| IdeDiagnosticRow {
+                uri: diagnostic.uri.clone(),
+                line: diagnostic.line,
+                column: diagnostic.column,
+                severity: diagnostic.severity,
+                message: diagnostic
+                    .message
+                    .chars()
+                    .take(IDE_DIAGNOSTIC_MESSAGE_MAX_CHARS)
+                    .collect(),
+            })
+            .collect()
     }
 }
 
