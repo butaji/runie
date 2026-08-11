@@ -2,6 +2,7 @@
 
 use crate::task_owner::{spawn_actor_worker, TaskOwner};
 use crate::types::{AgentTool, AgentToolResult, ToolResultContent};
+use std::collections::HashSet;
 use std::sync::Arc;
 use tokio::sync::{mpsc, oneshot, watch};
 
@@ -156,6 +157,10 @@ fn validate_snapshot(snapshot: &TodoSnapshot) -> Result<(), String> {
     {
         return Err("todo ids and content must not be empty".into());
     }
+    let mut ids = HashSet::with_capacity(snapshot.items.len());
+    if snapshot.items.iter().any(|item| !ids.insert(&item.id)) {
+        return Err("todo ids must be unique".into());
+    }
     if snapshot
         .items
         .iter()
@@ -253,6 +258,14 @@ mod tests {
             {"id":"b", "content":"two", "status":"in_progress"}
         ]});
         assert!(tool.validate_arguments(&duplicate_active).is_err());
+        let duplicate_id = serde_json::json!({"items": [
+            {"id":"same", "content":"one", "status":"pending"},
+            {"id":"same", "content":"two", "status":"completed"}
+        ]});
+        assert!(tool
+            .validate_arguments(&duplicate_id)
+            .unwrap_err()
+            .contains("unique"));
     }
 
     #[test]
