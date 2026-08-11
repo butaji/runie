@@ -73,6 +73,27 @@ mod tests {
     }
 
     #[test]
+    fn provider_wire_names_reverse_parse_without_accepting_near_misses() {
+        for (transport, wire) in [
+            (ProviderTransport::Sse, "sse"),
+            (ProviderTransport::Websocket, "websocket"),
+            (ProviderTransport::WebsocketCached, "websocket-cached"),
+            (ProviderTransport::Auto, "auto"),
+        ] {
+            assert_eq!(ProviderTransport::from_wire_name(wire), Some(transport));
+        }
+        assert_eq!(ProviderTransport::from_wire_name("websocket-cached "), None);
+        assert_eq!(
+            CacheRetention::from_wire_name("long"),
+            Some(CacheRetention::Long)
+        );
+        assert_eq!(
+            DeferredWindow::from_wire_name("24h"),
+            Some(DeferredWindow::OneDay)
+        );
+    }
+
+    #[test]
     fn assistant_message_round_trips_new_parity_fields() {
         let m = parity_assistant_message();
         let json = serde_json::to_value(&m).unwrap();

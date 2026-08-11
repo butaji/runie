@@ -105,6 +105,10 @@ macro_rules! provider_wire_projection {
             pub const fn wire_name(self) -> &'static str {
                 match self { $($variant => $wire),+ }
             }
+
+            pub fn from_wire_name(value: &str) -> Option<Self> {
+                match value { $($wire => Some($variant),)+ _ => None }
+            }
         }
     };
 }
@@ -129,6 +133,10 @@ macro_rules! provider_transports {
                 match self {
                     $(Self::$variant => $wire),+
                 }
+            }
+
+            pub fn from_wire_name(value: &str) -> Option<Self> {
+                match value { $($wire => Some(Self::$variant),)+ _ => None }
             }
         }
     };

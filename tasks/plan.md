@@ -92,7 +92,9 @@ Priority order:
 
 1. Close provider/session transport gaps with captured wire fixtures and no
    live secret dependency. Session JSONL publication now uses collision-safe,
-   uniquely staged temporary paths while retaining actor-owned atomic rename.
+   uniquely staged temporary paths while retaining actor-owned atomic rename;
+   provider transport, cache-retention, and deferred-window wire vocabularies
+   now share generated reverse parsers for replay/config round-trips.
 2. Add richer tool/scheduler/MCP controls only as typed commands and actor
    events, with queued/running/error replay cases.
 3. Add session/Git picker and conflict interactions through existing pure
