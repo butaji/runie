@@ -1,6 +1,6 @@
 # Reduction 03: declarative scrollback events
 
-Status: partial
+Status: adopted
 
 Replace layered `ScrollbackMsg` routing with grouped typed events and smaller
 data operations without changing transcript behavior.
@@ -26,3 +26,8 @@ intent and the legacy bridge in one inspectable declaration.
 Transcript line variants and their prefix projection now use the same
 data-shaped declaration, keeping the feed vocabulary and terminal rail in
 sync.
+
+Completion evidence: grouped lifecycle, content, tool, workflow, and
+navigation replay tests pass; `ScrollbackActor::apply_grouped` is exercised
+through its owned mailbox; and the full workspace lint/test/replay gates plus
+the live TUI smoke suite pass.
