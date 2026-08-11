@@ -119,6 +119,10 @@ fn encode_image_url(url: &str, format: MediaWireFormat) -> Result<serde_json::Va
         MediaWireFormat::OpenAiResponses => {
             Ok(serde_json::json!({"type":"input_image","detail":"auto","image_url":url}))
         }
+        MediaWireFormat::Anthropic => Ok(serde_json::json!({
+            "type":"image",
+            "source":{"type":"url","url":url}
+        })),
         _ => unsupported_media(format),
     }
 }
@@ -429,6 +433,21 @@ mod tests {
         assert_eq!(encoded["type"], "image");
         assert_eq!(encoded["source"]["type"], "base64");
         assert_eq!(encoded["source"]["media_type"], "image/png");
+    }
+
+    #[test]
+    fn anthropic_image_url_encoding_uses_remote_url_source() {
+        let content = UserContent::ImageUrl {
+            url: "https://example.com/image.png".into(),
+        };
+        let encoded = encode_user_content(&content, MediaWireFormat::Anthropic).unwrap();
+        assert_eq!(
+            encoded,
+            serde_json::json!({
+                "type": "image",
+                "source": {"type": "url", "url": "https://example.com/image.png"}
+            })
+        );
     }
 
     #[test]
