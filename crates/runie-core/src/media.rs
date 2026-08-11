@@ -4,7 +4,8 @@ const MAX_MEDIA_BASE64_BYTES: usize = 16 * 1024 * 1024;
 
 macro_rules! media_wire_formats {
     ($(($variant:ident, $wire:literal, $video:literal, $audio:literal)),+ $(,)?) => {
-        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+        #[serde(rename_all = "kebab-case")]
         pub enum MediaWireFormat {
             $($variant),+
         }
@@ -12,6 +13,10 @@ macro_rules! media_wire_formats {
         impl MediaWireFormat {
             pub const fn wire_name(self) -> &'static str {
                 match self { $(Self::$variant => $wire),+ }
+            }
+
+            pub fn from_wire_name(name: &str) -> Option<Self> {
+                match name { $($wire => Some(Self::$variant),)+ _ => None }
             }
 
             pub const fn supports_video(self) -> bool {
@@ -246,6 +251,26 @@ mod tests {
         let encoded = encode_user_content(&content, MediaWireFormat::Gemini).unwrap();
         assert_eq!(encoded["inline_data"]["mime_type"], "audio/mpeg");
         assert_eq!(encoded["inline_data"]["data"], "aGVsbG8=");
+    }
+
+    #[test]
+    fn media_wire_formats_round_trip_as_replay_data() {
+        for format in [
+            MediaWireFormat::Pi,
+            MediaWireFormat::OpenAiChat,
+            MediaWireFormat::OpenAiResponses,
+            MediaWireFormat::Gemini,
+            MediaWireFormat::Anthropic,
+        ] {
+            let encoded = serde_json::to_string(&format).unwrap();
+            let decoded: MediaWireFormat = serde_json::from_str(&encoded).unwrap();
+            assert_eq!(decoded, format);
+            assert_eq!(
+                MediaWireFormat::from_wire_name(format.wire_name()),
+                Some(format)
+            );
+        }
+        assert_eq!(MediaWireFormat::from_wire_name("unknown"), None);
     }
 
     #[test]
