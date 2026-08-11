@@ -358,10 +358,25 @@ fn minimax_usage(payload: &serde_json::Value) -> Usage {
             .find_map(|name| usage?.get(*name)?.as_u64())
             .unwrap_or_default()
     };
+    let input = read(&["prompt_tokens", "input_tokens"]);
+    let cache_read = usage
+        .and_then(|value| value.pointer("/prompt_tokens_details/cached_tokens"))
+        .or_else(|| usage.and_then(|value| value.get("cached_tokens")))
+        .or_else(|| usage.and_then(|value| value.get("cache_read_input_tokens")))
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or_default();
+    let output = read(&["completion_tokens", "output_tokens"]);
+    let total_tokens = read(&["total_tokens"]);
     Usage {
-        input: read(&["prompt_tokens", "input_tokens"]),
-        output: read(&["completion_tokens", "output_tokens"]),
-        total_tokens: read(&["total_tokens"]),
+        input: input.saturating_sub(cache_read),
+        output,
+        cache_read,
+        reasoning: read(&["reasoning_tokens"]),
+        total_tokens: if total_tokens == 0 {
+            input.saturating_add(output)
+        } else {
+            total_tokens
+        },
         ..Usage::default()
     }
 }
@@ -2916,6 +2931,23 @@ mod tests {
             })),
             Some(0)
         );
+    }
+
+    #[test]
+    fn minimax_usage_preserves_cache_and_reasoning_fields() {
+        let usage = super::minimax_usage(&serde_json::json!({
+            "usage": {
+                "prompt_tokens": 120,
+                "completion_tokens": 30,
+                "cached_tokens": 80,
+                "reasoning_tokens": 4
+            }
+        }));
+        assert_eq!(usage.input, 40);
+        assert_eq!(usage.output, 30);
+        assert_eq!(usage.cache_read, 80);
+        assert_eq!(usage.reasoning, 4);
+        assert_eq!(usage.total_tokens, 150);
     }
 
     #[test]
