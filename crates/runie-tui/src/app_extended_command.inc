@@ -358,10 +358,11 @@ impl App {
                         state.effort.as_deref().unwrap_or("unchanged")
                     ),
                     "always-approve" | "auto" | "deny" => format!("Approval mode: {:?}", state.approval),
-                    "plan" | "view-plan" => state
-                        .plan
-                        .clone()
-                        .unwrap_or_else(|| {
+                    "plan" => format!(
+                        "Plan mode {}",
+                        if state.plan_mode { "ON" } else { "OFF" }
+                    ),
+                    "view-plan" => state.plan.clone().unwrap_or_else(|| {
                             let snapshot = self.todo_actor.snapshot();
                             let summary = self.todo_actor.summary();
                             let mut lines = snapshot.terminal_lines();

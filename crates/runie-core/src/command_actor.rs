@@ -50,6 +50,8 @@ pub struct CommandState {
     pub approval: ApprovalMode,
     pub effort: Option<String>,
     pub plan: Option<String>,
+    #[serde(default)]
+    pub plan_mode: bool,
     pub memory_enabled: bool,
     pub remembered: Vec<String>,
     pub authenticated: Vec<String>,
@@ -126,7 +128,7 @@ fn reduce_command(state: &mut CommandState, name: &str, args: &str) {
         "deny" => state.approval = approval(args, ApprovalMode::Deny),
         "always-approve" => state.approval = approval(args, ApprovalMode::Always),
         "auto" => state.approval = approval(args, ApprovalMode::Auto),
-        "plan" => state.plan = (!args.is_empty()).then(|| args.into()),
+        "plan" => update_plan(state, args),
         "memory" => update_memory(state, args),
         "remember" if !args.is_empty() => state.remembered.push(args.into()),
         "login" => add_unique(&mut state.authenticated, args),
@@ -153,6 +155,17 @@ fn reduce_command(state: &mut CommandState, name: &str, args: &str) {
             state.diagnostic_report = Some(report);
         }
         _ => {}
+    }
+}
+
+fn update_plan(state: &mut CommandState, args: &str) {
+    match args {
+        "on" => state.plan_mode = true,
+        "off" => state.plan_mode = false,
+        "clear" => state.plan = None,
+        "view" => {}
+        "" => state.plan_mode = !state.plan_mode,
+        content => state.plan = Some(content.into()),
     }
 }
 
@@ -234,6 +247,21 @@ mod tests {
         assert_eq!(state.settings.get("theme"), Some(&"dark".into()));
         assert_eq!(state.effort.as_deref(), Some("high"));
         assert_eq!(state.remembered, vec!["keep auth details"]);
+    }
+
+    #[tokio::test]
+    async fn plan_subcommands_reduce_to_explicit_mode_and_data_transitions() {
+        let actor = CommandActor::new();
+        actor.invoke("plan", "on").await;
+        assert!(actor.snapshot().plan_mode);
+        actor.invoke("plan", "clear").await;
+        assert!(actor.snapshot().plan.is_none());
+        actor.invoke("plan", "off").await;
+        assert!(!actor.snapshot().plan_mode);
+        actor.invoke("plan", "").await;
+        assert!(actor.snapshot().plan_mode);
+        actor.invoke("plan", "view").await;
+        assert!(actor.snapshot().plan_mode);
     }
 
     #[tokio::test]
