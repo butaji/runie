@@ -56,6 +56,9 @@ pub use entrypoint::{
 };
 pub use host::{capability_entrypoint, PluginCapabilityKind, PluginHost};
 pub use tool::{plugin_tool, register_plugin_manifest_tools, register_plugin_tool, PluginTool};
+#[path = "plugin_metadata.rs"]
+mod metadata;
+pub use metadata::PluginMetadata;
 pub fn load_manifest(path: impl AsRef<Path>) -> Result<PluginManifest, String> {
     let path = path.as_ref();
     let input = std::fs::read_to_string(path)
@@ -89,7 +92,6 @@ pub fn discover_packages(root: impl AsRef<Path>) -> Result<Vec<PluginPackage>, S
     packages.sort_by(|left, right| left.manifest.name.cmp(&right.manifest.name));
     Ok(packages)
 }
-
 /// Install the declarative part of a plugin package into a host-owned root.
 /// Executable plugin payloads are intentionally not copied or run here.
 pub fn install_manifest_package(
@@ -118,31 +120,26 @@ pub fn install_manifest_package(
 pub struct PluginRegistry {
     manifests: BTreeMap<String, PluginManifest>,
 }
-
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum PluginLifecycleEvent {
     Activated { name: String },
     Deactivated { name: String },
 }
-
 #[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct PluginRuntimeSnapshot {
     pub active: BTreeSet<String>,
 }
-
 #[path = "plugin_runtime.rs"]
 mod runtime;
 pub use runtime::{
     reduce_plugin_runtime, PluginExecutionSummary, PluginRuntimeEvent, PluginRuntimeState,
     PluginRuntimeStatus,
 };
-
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum PluginInstallationEvent {
     Installed { name: String, root: PathBuf },
     Uninstalled { name: String },
 }
-
 #[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct PluginInstallationSnapshot {
     pub roots: BTreeMap<String, PathBuf>,
@@ -264,6 +261,8 @@ impl PluginRegistry {
     pub fn manifests(&self) -> impl Iterator<Item = &PluginManifest> {
         self.manifests.values()
     }
+    #[rustfmt::skip]
+    pub fn metadata(&self) -> Vec<PluginMetadata> { self.manifests.values().map(PluginMetadata::from_manifest).collect() }
 }
 
 fn validate_identifier(kind: &str, value: &str) -> Result<(), String> {
