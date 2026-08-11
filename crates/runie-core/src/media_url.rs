@@ -25,6 +25,10 @@ mod tests {
             "audio/mpeg"
         );
         assert_eq!(
+            gemini_media_url("https://example.test/a.png", "image/jpeg")["file_data"]["mime_type"],
+            "image/jpeg"
+        );
+        assert_eq!(
             gemini_media_url("data:video/mp4;base64,AAAA", "video/mp4")["inline_data"]["mime_type"],
             "video/mp4"
         );

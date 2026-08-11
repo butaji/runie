@@ -123,7 +123,7 @@ fn encode_image_url(url: &str, format: MediaWireFormat) -> Result<serde_json::Va
             "type":"image",
             "source":{"type":"url","url":url}
         })),
-        _ => unsupported_media(format),
+        MediaWireFormat::Gemini => Ok(gemini_media_url(url, "image/jpeg")),
     }
 }
 fn encode_video_url(url: &str, format: MediaWireFormat) -> Result<serde_json::Value, String> {
@@ -447,7 +447,6 @@ mod tests {
         assert_eq!(encoded["source"]["type"], "base64");
         assert_eq!(encoded["source"]["media_type"], "image/png");
     }
-
     #[test]
     fn anthropic_image_url_encoding_uses_remote_url_source() {
         let content = UserContent::ImageUrl {
@@ -462,7 +461,6 @@ mod tests {
             })
         );
     }
-
     #[test]
     fn anthropic_video_encoding_uses_base64_source_data() {
         let content = UserContent::Video {
