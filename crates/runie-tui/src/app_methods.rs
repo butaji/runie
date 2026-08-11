@@ -74,12 +74,12 @@ impl App {
 
     pub async fn model_selector_key(&self, msg: UiMsg) {
         self.ui.send(msg).await;
-        let ui = self.ui.snapshot();
-        if ui.model_selector_open {
+        let ui = self.ui.shared_snapshot();
+        if ui.get().model_selector_open {
             self.model_catalog
                 .search(
-                    ui.model_selector_query.clone(),
-                    ui.model_selector_scoped_only,
+                    ui.get().model_selector_query.clone(),
+                    ui.get().model_selector_scoped_only,
                 )
                 .await;
             self.ui
@@ -94,12 +94,12 @@ impl App {
     /// actor only closes its overlay; model selection remains catalog-owned
     /// and the loop actor admits the resulting model through its mailbox.
     pub async fn activate_model_selector(&self) -> Option<Model> {
-        let ui = self.ui.snapshot();
+        let ui = self.ui.shared_snapshot();
         let catalog = self.model_catalog.shared_snapshot();
         let model = catalog
             .get()
             .results
-            .get(ui.model_selector_index)
+            .get(ui.get().model_selector_index)
             .cloned()?;
         let selected = self.model_catalog.select(model).await?;
         self.set_model_with_declared_effort(selected.clone()).await;
@@ -116,7 +116,7 @@ impl App {
 
     pub async fn activate_command_palette(&self) -> Option<String> {
         self.ui.send(UiMsg::ActivateCommandPalette).await;
-        self.ui.snapshot().last_palette_command
+        self.ui.shared_snapshot().get().last_palette_command.clone()
     }
 
     pub fn subscribe_ui_commands(&self) -> broadcast::Receiver<UiCommand> {

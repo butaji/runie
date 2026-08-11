@@ -67,6 +67,8 @@ use the owned snapshot boundary.
 Scrollback fold, range-selection, and copy-selection reads now use the feed
 shared projection after their actor acknowledgements, avoiding compatibility
 snapshot clones on those command paths.
+Palette and model-selector query/activation reads now use the UI actor's shared
+projection, while UI event delivery remains mailbox-owned.
 `FollowUpQueueActor` now publishes its previously unused queue snapshot as both
 an owned compatibility view and immutable shared projection, with push/drain/
 clear transitions reducing through one queue-owned publication boundary.
