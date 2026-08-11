@@ -50,6 +50,29 @@ fn usage_summary_reduces_ended_provider_spans() {
     assert_eq!(summary.cost, 0.25);
 }
 
+#[test]
+fn usage_summary_terminal_rows_are_renderer_neutral_data() {
+    let rows = UsageSummary {
+        requests: 2,
+        input_tokens: 3,
+        output_tokens: 4,
+        total_tokens: 7,
+        cost: 0.25,
+        ..UsageSummary::default()
+    }
+    .terminal_lines();
+    assert_eq!(
+        rows,
+        [
+            "requests: 2",
+            "input_tokens: 3",
+            "output_tokens: 4",
+            "total_tokens: 7",
+            "cost: 0.250000"
+        ]
+    );
+}
+
 #[tokio::test]
 async fn nested_spans_and_terminal_state_are_actor_owned() {
     let actor = TelemetryActor::new();

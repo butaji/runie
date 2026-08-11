@@ -426,13 +426,9 @@ impl App {
                     "usage" => {
                         let usage = runie_core::telemetry::usage_summary(&self.telemetry.snapshot());
                         format!(
-                            "Usage requested ({})\nrequests: {}\ninput_tokens: {}\noutput_tokens: {}\ntotal_tokens: {}\ncost: {:.6}",
+                            "Usage requested ({})\n{}",
                             state.usage_requests,
-                            usage.requests,
-                            usage.input_tokens,
-                            usage.output_tokens,
-                            usage.total_tokens,
-                            usage.cost
+                            usage.terminal_lines().join("\n")
                         )
                     }
                     "effort" => format!(

@@ -64,6 +64,19 @@ pub struct UsageSummary {
     pub cost: f64,
 }
 
+impl UsageSummary {
+    /// Stable renderer-neutral rows for terminal, JSONL, and diagnostics views.
+    pub fn terminal_lines(&self) -> Vec<String> {
+        vec![
+            format!("requests: {}", self.requests),
+            format!("input_tokens: {}", self.input_tokens),
+            format!("output_tokens: {}", self.output_tokens),
+            format!("total_tokens: {}", self.total_tokens),
+            format!("cost: {:.6}", self.cost),
+        ]
+    }
+}
+
 pub fn usage_summary(snapshot: &TelemetrySnapshot) -> UsageSummary {
     snapshot
         .spans
