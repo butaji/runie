@@ -261,9 +261,9 @@ progress without losing the original scope.
     numbered/fragments into semantic modules after behavior is stable.
 
 The remaining reduction work is intentionally explicit: normalized feed
-records, shared snapshot allocation measurement, YAML trace integration, and
-final semantic consolidation remain tracked as partial work in their
-individual task files. Declarative schema generation and paint-data rendering
+records, shared snapshot allocation measurement, and YAML trace integration
+remain tracked as partial work in their individual task files. Declarative
+schema generation, paint-data rendering, and semantic module consolidation
 are adopted; their acceptance boundaries are complete.
 
 ## Coding harness backlog

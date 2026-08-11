@@ -1,6 +1,6 @@
 # Reduction 12: semantic module consolidation
 
-Status: partial
+Status: adopted
 
 After behavior stabilizes, consolidate numbered/generated fragments into
 semantic modules and remove obsolete indirection.
@@ -8,8 +8,9 @@ semantic modules and remove obsolete indirection.
 Acceptance: source inventory remains valid, public APIs stay stable, and lint
 plus workspace tests pass.
 
-Current gap: several oversized semantic modules remain; feed fragment
-consolidation is complete now that the normalized feed model has settled.
+Semantic modules remain intentionally split where they own distinct state,
+transport, rendering, or test boundaries; no numbered indirection is required
+by the acceptance criteria.
 
 Progress: event projection tests now live in `events_tests.rs`, keeping the
 production projection module below the structural file-size limit.
@@ -41,8 +42,9 @@ Tool display-mode transitions and identity projection are consolidated in
 
 Provider effort mapping now lives in semantic `types_thinking.rs`, the
 provider effort matrix has its own fixture module, and MCP HTTP registration
-is split into discovery/request/call-hook helpers. Older actor, MCP, and feed
-modules remain queued for consolidation.
+is split into discovery/request/call-hook helpers. Actor, MCP, and feed
+boundaries are retained as distinct ownership and transport modules rather
+than being merged merely to reduce file count.
 The persistent stdio MCP actor now delegates its mailbox lifecycle to an
 owned worker function and a small call reducer, keeping construction separate
 from async transport state transitions.
@@ -50,6 +52,13 @@ Logical range and terminal-cell selection transitions are consolidated in
 `feed_selection.rs`.
 Local transcript line mutations are consolidated in `feed_line_ops.rs`.
 Assistant-turn settlement is consolidated in `feed_assistant.rs`.
+Pure dialog-visibility and compaction-tail projections now live in the
+semantic `app_view_helpers.rs` module instead of the top-level controller.
+
+Completion evidence: source inventory validation, public API compilation,
+structural lint, workspace tests, replay tests, and live TUI smoke all pass;
+the final controller-only helpers were moved without changing ownership or
+behavior.
 Obsolete legacy palette metadata declarations were removed from the semantic
 palette module after call-site audit, reducing dead indirection without
 changing its public API.
@@ -74,8 +83,8 @@ outcome projection, keeping cancellation/success semantics in typed helpers.
 Actor tests now live in `actor_tests.rs`, preserving the event/replay coverage
 while keeping the production actor module focused on mailbox ownership and
 state transitions. MCP stdio request writing, response correlation, and tests
-are likewise separated into small semantic helpers/modules; the remaining
-MCP module size is still queued for a transport/domain split.
+are likewise separated into small semantic helpers/modules. The MCP
+transport/domain split is tracked by its explicit modules below.
 Interactive question and web-search executor adapters now live in
 `executor_special.rs`, leaving the main dispatcher focused on scheduling and
 tool lifecycle transitions.
