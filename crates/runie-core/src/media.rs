@@ -51,14 +51,14 @@ pub fn encode_user_content(
         UserContent::AudioUrl { url } => encode_audio_url(url, format),
     }
 }
-
 fn unsupported_media(format: MediaWireFormat) -> Result<serde_json::Value, String> {
     Err(format!(
         "selected provider wire format does not support media: {}",
         format.wire_name()
     ))
 }
-
+#[rustfmt::skip]
+fn omitted_media(kind: &str) -> serde_json::Value { serde_json::json!({"type":"text","text":format!("({kind} omitted: not supported by this provider)")}) }
 fn encode_image(
     data: &str,
     mime_type: &str,
@@ -84,7 +84,6 @@ fn encode_image(
         ),
     }
 }
-
 fn encode_video(
     data: &str,
     mime_type: &str,
@@ -104,10 +103,9 @@ fn encode_video(
         MediaWireFormat::Anthropic => Ok(
             serde_json::json!({"type":"video","source":{"type":"base64","media_type":mime_type,"data":data}}),
         ),
-        MediaWireFormat::OpenAiResponses => unsupported_media(format),
+        MediaWireFormat::OpenAiResponses => Ok(omitted_media("video")),
     }
 }
-
 fn encode_image_url(url: &str, format: MediaWireFormat) -> Result<serde_json::Value, String> {
     validate_media_url(url)?;
     match format {
@@ -125,7 +123,6 @@ fn encode_image_url(url: &str, format: MediaWireFormat) -> Result<serde_json::Va
         _ => unsupported_media(format),
     }
 }
-
 fn encode_video_url(url: &str, format: MediaWireFormat) -> Result<serde_json::Value, String> {
     validate_media_url(url)?;
     match format {
@@ -133,6 +130,7 @@ fn encode_video_url(url: &str, format: MediaWireFormat) -> Result<serde_json::Va
         MediaWireFormat::OpenAiChat => {
             Ok(serde_json::json!({"type":"video_url","video_url":{"url":url}}))
         }
+        MediaWireFormat::OpenAiResponses => Ok(omitted_media("video")),
         _ => unsupported_media(format),
     }
 }
@@ -176,7 +174,7 @@ fn encode_audio(
         MediaWireFormat::Gemini => {
             Ok(serde_json::json!({"inline_data":{"mime_type":mime_type,"data":data}}))
         }
-        MediaWireFormat::Anthropic => unsupported_media(format),
+        MediaWireFormat::Anthropic => Ok(omitted_media("audio")),
     }
 }
 
@@ -227,7 +225,6 @@ impl VideoContent {
         Ok(Self { data, mime_type })
     }
 }
-
 impl AudioContent {
     pub fn new(mime_type: impl Into<String>, data: impl Into<String>) -> Result<Self, String> {
         let mime_type = mime_type.into();
@@ -304,7 +301,10 @@ mod tests {
             video_payload["video_url"]["url"],
             "https://example.test/video.mp4"
         );
-        assert!(encode_user_content(&video, MediaWireFormat::OpenAiResponses).is_err());
+        assert_eq!(
+            encode_user_content(&video, MediaWireFormat::OpenAiResponses).unwrap()["text"],
+            "(video omitted: not supported by this provider)"
+        );
         assert!(encode_user_content(
             &UserContent::ImageUrl {
                 url: "file:///tmp/image.png".into(),
