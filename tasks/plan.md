@@ -82,7 +82,8 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
 
 1. Provider-specific request adapters — `harness-04` and `harness-14`.
    MiniMax effort projection is now covered by a pure request-body regression;
-   the shared model effort accessor is exhaustively tested across all seven
+   model switching now resets to a model-declared default before opening the
+   picker; the shared model effort accessor is exhaustively tested across all seven
    declared levels and preserves unsupported-level omission;
    replay finish-reason mapping now preserves raw chat values with a
    compatibility-tested tool-call path and unknown values fail closed as

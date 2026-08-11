@@ -220,7 +220,7 @@ impl App {
                 let Some(selected) = self.model_catalog.select(selected).await else {
                     return Some(false);
                 };
-                self.loop_actor.set_model(selected).await;
+                self.set_model_with_declared_effort(selected.clone()).await;
                 Some(true)
             }
             MappableBuiltinCommand::ScopedModels => {

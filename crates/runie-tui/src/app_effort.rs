@@ -61,6 +61,43 @@ impl App {
             .any(|(level, wire)| level == effort && wire.is_some());
         supported
     }
+
+    pub(super) fn default_effort_for_model(
+        model: &runie_core::types::Model,
+    ) -> runie_core::types::ThinkingLevel {
+        let Some(map) = model.thinking_level_map.as_ref() else {
+            return runie_core::types::ThinkingLevel::Off;
+        };
+        [
+            (runie_core::types::ThinkingLevel::Off, map.off.is_some()),
+            (
+                runie_core::types::ThinkingLevel::Minimal,
+                map.minimal.is_some(),
+            ),
+            (runie_core::types::ThinkingLevel::Low, map.low.is_some()),
+            (
+                runie_core::types::ThinkingLevel::Medium,
+                map.medium.is_some(),
+            ),
+            (runie_core::types::ThinkingLevel::High, map.high.is_some()),
+            (runie_core::types::ThinkingLevel::XHigh, map.xhigh.is_some()),
+            (runie_core::types::ThinkingLevel::Max, map.max.is_some()),
+        ]
+        .into_iter()
+        .find_map(|(level, supported)| supported.then_some(level))
+        .unwrap_or(runie_core::types::ThinkingLevel::Off)
+    }
+
+    pub(super) async fn reset_effort_for_model(&self, model: &runie_core::types::Model) {
+        self.loop_actor
+            .set_thinking_level(Self::default_effort_for_model(model))
+            .await;
+    }
+
+    pub(super) async fn set_model_with_declared_effort(&self, model: runie_core::types::Model) {
+        self.loop_actor.set_model(model.clone()).await;
+        self.reset_effort_for_model(&model).await;
+    }
 }
 
 #[cfg(test)]
@@ -100,6 +137,26 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(super::App::declared_effort_options(&model), vec!["off"]);
+    }
+
+    #[test]
+    fn default_effort_is_owned_by_the_model_declaration() {
+        let model = runie_core::types::Model {
+            thinking_level_map: Some(runie_core::types::ThinkingLevelMap {
+                high: Some("high-wire".into()),
+                max: Some("max-wire".into()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        assert_eq!(
+            super::App::default_effort_for_model(&model),
+            runie_core::types::ThinkingLevel::High
+        );
+        assert_eq!(
+            super::App::default_effort_for_model(&runie_core::types::Model::default()),
+            runie_core::types::ThinkingLevel::Off
+        );
     }
 
     #[test]

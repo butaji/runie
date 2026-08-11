@@ -133,7 +133,7 @@ impl App {
                 api: "openai-completions".into(),
                 ..Default::default()
             });
-        self.loop_actor.set_model(model.clone()).await;
+        self.set_model_with_declared_effort(model.clone()).await;
         self.apply_provider_event(runie_core::provider_registry::ProviderEvent::Selected {
             provider_id,
             model: model_id,
@@ -175,7 +175,7 @@ impl App {
             .get(ui.model_selector_index)
             .cloned()?;
         let selected = self.model_catalog.select(model).await?;
-        self.loop_actor.set_model(selected.clone()).await;
+        self.set_model_with_declared_effort(selected.clone()).await;
         self.ui.send(UiMsg::ActivateModelSelector).await;
         if Self::model_has_declared_effort(&selected) {
             self.open_effort_picker(&selected).await;
