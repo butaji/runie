@@ -50,6 +50,18 @@ fn mcp_transport_wire_names_round_trip() {
     assert_eq!(McpTransport::from_wire_name("websocket"), None);
 }
 
+#[test]
+fn mcp_transport_is_replayable_wire_data() {
+    for transport in [McpTransport::Stdio, McpTransport::Http] {
+        let encoded = serde_json::to_value(transport).expect("transport JSON");
+        assert_eq!(encoded.as_str(), Some(transport.wire_name()));
+        assert_eq!(
+            serde_json::from_value::<McpTransport>(encoded).unwrap(),
+            transport
+        );
+    }
+}
+
 #[tokio::test]
 async fn mcp_tool_forwards_a_typed_call_to_its_owner() {
     let tool = McpTool::new(
