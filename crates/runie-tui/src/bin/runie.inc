@@ -1565,10 +1565,12 @@ async fn build_live_app() -> App {
                             body: Some("Review this action before it runs.".into()),
                             options: vec![
                                 runie_core::tools::UserQuestionOption {
+                                    id: Some("allow".into()),
                                     label: "Allow".into(),
                                     description: "Run this tool once.".into(),
                                 },
                                 runie_core::tools::UserQuestionOption {
+                                    id: Some("reject".into()),
                                     label: "Reject".into(),
                                     description: "Block this tool call.".into(),
                                 },

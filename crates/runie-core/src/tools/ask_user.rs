@@ -4,9 +4,25 @@ use crate::types::{AgentTool, AgentToolResult, ToolResultContent};
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct UserQuestionOption {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
     pub label: String,
     #[serde(default)]
     pub description: String,
+}
+
+impl UserQuestionOption {
+    pub fn stable_id(&self, index: usize) -> String {
+        self.id
+            .as_deref()
+            .filter(|id| !id.trim().is_empty())
+            .map(str::to_owned)
+            .unwrap_or_else(|| format!("option-{}", index.saturating_add(1)))
+    }
+
+    fn has_valid_id(&self) -> bool {
+        self.id.as_deref().is_none_or(|id| !id.trim().is_empty())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -46,6 +62,7 @@ impl AgentTool for AskUserQuestionTool {
                 "options": { "type": "array", "items": {
                     "type": "object",
                     "properties": {
+                        "id": { "type": "string", "minLength": 1 },
                         "label": { "type": "string", "minLength": 1 },
                         "description": { "type": "string" }
                     },
@@ -71,6 +88,9 @@ impl AgentTool for AskUserQuestionTool {
             .any(|option| option.label.trim().is_empty())
         {
             return Err("option labels must not be empty".into());
+        }
+        if request.options.iter().any(|option| !option.has_valid_id()) {
+            return Err("option ids must not be empty".into());
         }
         if !request.allow_multiple && request.options.len() > 32 {
             return Err("a question may contain at most 32 options".into());
@@ -121,5 +141,21 @@ mod tests {
                 "question": "Ship it?", "options": []
             }))
             .is_err());
+    }
+
+    #[test]
+    fn option_identity_is_explicit_or_deterministically_fallbacked() {
+        let explicit = UserQuestionOption {
+            id: Some("ship".into()),
+            label: "Ship".into(),
+            description: String::new(),
+        };
+        let fallback = UserQuestionOption {
+            id: None,
+            label: "Wait".into(),
+            description: String::new(),
+        };
+        assert_eq!(explicit.stable_id(0), "ship");
+        assert_eq!(fallback.stable_id(1), "option-2");
     }
 }

@@ -348,10 +348,12 @@ fn user_question_dialog_selects_and_projects_answer() {
             body: None,
             options: vec![
                 runie_core::tools::UserQuestionOption {
+                    id: None,
                     label: "Yes".into(),
                     description: String::new(),
                 },
                 runie_core::tools::UserQuestionOption {
+                    id: None,
                     label: "No".into(),
                     description: String::new(),
                 },
@@ -376,10 +378,12 @@ fn multi_select_question_toggles_selected_options() {
             body: None,
             options: vec![
                 runie_core::tools::UserQuestionOption {
+                    id: None,
                     label: "A".into(),
                     description: String::new(),
                 },
                 runie_core::tools::UserQuestionOption {
+                    id: None,
                     label: "B".into(),
                     description: String::new(),
                 },

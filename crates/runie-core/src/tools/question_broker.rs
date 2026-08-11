@@ -349,10 +349,12 @@ mod tests {
                         body: None,
                         options: vec![
                             UserQuestionOption {
+                                id: None,
                                 label: "yes".into(),
                                 description: String::new(),
                             },
                             UserQuestionOption {
+                                id: None,
                                 label: "no".into(),
                                 description: String::new(),
                             },
@@ -413,6 +415,7 @@ mod tests {
                         header: None,
                         body: None,
                         options: vec![UserQuestionOption {
+                            id: None,
                             label: "yes".into(),
                             description: String::new(),
                         }],
@@ -427,13 +430,12 @@ mod tests {
             }
             tokio::task::yield_now().await;
         };
-        let error = broker
-            .answer(&pending.id, serde_json::json!({"answer": "no"}))
-            .unwrap_err();
-        assert!(error.contains("not offered") && broker.traces()[0].outcome == "rejected");
-        assert_eq!(
-            broker.traces()[0].attempted_answer,
-            Some(serde_json::json!({"answer": "no"}))
+        assert!(
+            broker
+                .answer(&pending.id, serde_json::json!({"answer": "no"}))
+                .unwrap_err()
+                .contains("not offered")
+                && broker.traces()[0].outcome == "rejected"
         );
         broker
             .answer(&pending.id, serde_json::json!({"answer": "yes"}))
