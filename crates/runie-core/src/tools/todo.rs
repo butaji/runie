@@ -26,6 +26,21 @@ pub struct TodoSnapshot {
     pub items: Vec<TodoItem>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum TodoEvent {
+    Replaced { snapshot: TodoSnapshot },
+}
+
+pub fn reduce_todo_event(_state: TodoSnapshot, event: TodoEvent) -> Result<TodoSnapshot, String> {
+    match event {
+        TodoEvent::Replaced { snapshot } => {
+            validate_snapshot(&snapshot)?;
+            Ok(snapshot)
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TodoPlanStatus {
@@ -104,8 +119,17 @@ impl Default for TodoActor {
         let (tx, owner) =
             spawn_actor_worker!(32, move |mut rx: mpsc::Receiver<TodoMessage>| async move {
                 while let Some(TodoMessage::Replace { snapshot, reply }) = rx.recv().await {
-                    crate::publish_shared_snapshot(&snapshot_tx, &shared_tx, snapshot.clone());
-                    let _ = reply.send(Ok(snapshot));
+                    let current = snapshot_tx.borrow().clone();
+                    let result = reduce_todo_event(
+                        current,
+                        TodoEvent::Replaced {
+                            snapshot: snapshot.clone(),
+                        },
+                    );
+                    if let Ok(next) = &result {
+                        crate::publish_shared_snapshot(&snapshot_tx, &shared_tx, next.clone());
+                    }
+                    let _ = reply.send(result);
                 }
             });
         Self {
@@ -275,6 +299,24 @@ mod tests {
             .validate_arguments(&duplicate_id)
             .unwrap_err()
             .contains("unique"));
+    }
+
+    #[test]
+    fn todo_events_replay_through_one_pure_reducer() {
+        let initial = TodoSnapshot { items: vec![] };
+        let event = TodoEvent::Replaced {
+            snapshot: TodoSnapshot {
+                items: vec![TodoItem {
+                    id: "a".into(),
+                    content: "ship".into(),
+                    status: TodoStatus::InProgress,
+                }],
+            },
+        };
+        let encoded = serde_json::to_string(&event).unwrap();
+        let restored: TodoEvent = serde_json::from_str(&encoded).unwrap();
+        let state = reduce_todo_event(initial, restored).unwrap();
+        assert_eq!(state.items[0].id, "a");
     }
 
     #[test]

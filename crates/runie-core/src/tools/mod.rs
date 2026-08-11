@@ -64,8 +64,8 @@ pub use subagent::{
     SubagentRole, SubagentTool,
 };
 pub use todo::{
-    summarize_todo_plan, TodoActor, TodoItem, TodoPlanStatus, TodoPlanSummary, TodoSnapshot,
-    TodoStatus, TodoWriteTool,
+    reduce_todo_event, summarize_todo_plan, TodoActor, TodoEvent, TodoItem, TodoPlanStatus,
+    TodoPlanSummary, TodoSnapshot, TodoStatus, TodoWriteTool,
 };
 pub use web::{
     source_cards, WebSearchHttpClient, WebSearchRequest, WebSearchResponse, WebSearchResult,
