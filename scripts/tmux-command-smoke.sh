@@ -11,7 +11,7 @@ labels=(
   "Doctor" "Rewind Session" "Prompt History" "Find Transcript" "Jump Transcript" "Recap"
   "Set Reasoning Effort" "Always Approve" "Automatic Approval" "Plan Mode" "View Plan"
   "Login" "Logout" "Reload" "Trust Project" "Skills" "Hooks" "Plugins" "MCP Servers"
-  "Memory" "Remember" "Goal" "Workflow" "Workflows" "Sessions" "Session History" "Questions" "Active Jobs" "Git Conflicts" "Loop" "Deep Research" "Feedback" "Usage"
+  "Memory" "Remember" "Goal" "Workflow" "Workflows" "Sessions" "Session History" "Questions" "Active Jobs" "Cancel All Jobs" "Clear Finished Jobs" "Git Conflicts" "Loop" "Deep Research" "Feedback" "Usage"
   "Background Jobs" "Jobs"
 )
 parameterized=(
@@ -112,6 +112,16 @@ for label in "${labels[@]}"; do
     fi
     if [[ "$label" == "Git Conflicts" ]] && ! wait_for 'Git conflicts:'; then
       echo "FAIL $label: expected-conflict-result"
+      ((failed += 1))
+      continue
+    fi
+    if [[ "$label" == "Cancel All Jobs" ]] && ! wait_for 'Cancelled 0 running background job'; then
+      echo "FAIL $label: expected-cancel-result"
+      ((failed += 1))
+      continue
+    fi
+    if [[ "$label" == "Clear Finished Jobs" ]] && ! wait_for 'Cleared 0 finished background job'; then
+      echo "FAIL $label: expected-clear-result"
       ((failed += 1))
       continue
     fi

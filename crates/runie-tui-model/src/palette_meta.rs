@@ -74,6 +74,8 @@ declare_palette_metadata! {
     (Usage, "/usage", "Show usage or billing information"),
     (Jobs, "/jobs", "Inspect owned background jobs"),
     (ActiveJobs, "/jobs scheduler active", "Show queued and running work"),
+    (CancelAllJobs, "/jobs cancel all", "Cancel all running jobs"),
+    (ClearFinishedJobs, "/jobs clear finished", "Clear finished job rows"),
     (GitConflicts, "/git conflicts", "Inspect unresolved Git conflicts"),
     (Questions, "/questions", "Browse user-question history"),
 }
@@ -117,7 +119,7 @@ palette_sections! {
     ("Session" => [NewSession, KeyboardShortcuts, Quit, Changelog, ShareSession, SessionHistory]),
     ("Information" => [Help, ContextInfo, Doctor, Feedback, Usage, GitConflicts]),
     ("Extensions" => [Skills, Hooks, Plugins, Mcps, Memory]),
-    ("Automation" => [Goal, Workflow, Workflows, Loop, DeepResearch]),
+    ("Automation" => [Goal, Workflow, Workflows, Loop, DeepResearch, Jobs, ActiveJobs, CancelAllJobs, ClearFinishedJobs]),
 }
 
 fn palette_row(label: &str) -> String {

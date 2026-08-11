@@ -108,7 +108,7 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    threshold/recovery replay coverage;
    unknown zero-sized model windows now disable recovery rather than creating
    an unconditional compaction request.
-4. Scheduler cancellation controls — `harness-08` (actor-owned metrics and `/jobs` projection implemented; status filters now expose running, completed, failed, and cancelled rows).
+4. Scheduler cancellation controls — `harness-08` (actor-owned metrics and `/jobs` projection implemented; status filters now expose running, completed, failed, and cancelled rows; palette actions now expose Cancel All Jobs and Clear Finished Jobs).
    A serializable scheduler metric-row projection now drives terminal lines;
    `/jobs scheduler` and palette-discoverable `Active Jobs` expose actor-owned
    scheduler projections; extend the existing mailbox/replay state machine

@@ -30,7 +30,7 @@ fn exact_slash_command_match_precedes_incidental_fuzzy_matches() {
 
 #[test]
 fn palette_registry_covers_every_mappable_builtin_command() {
-    assert_eq!(PaletteAction::labels().len(), 55);
+    assert_eq!(PaletteAction::labels().len(), 57);
     for label in PaletteAction::labels() {
         assert!(PaletteAction::from_label(label).is_some(), "{label}");
     }
@@ -47,6 +47,14 @@ fn parameterized_palette_actions_are_marked_for_nested_forms() {
     assert_eq!(
         PaletteAction::GitConflicts.slash_command(),
         "/git conflicts"
+    );
+    assert_eq!(
+        PaletteAction::CancelAllJobs.slash_command(),
+        "/jobs cancel all"
+    );
+    assert_eq!(
+        PaletteAction::ClearFinishedJobs.slash_command(),
+        "/jobs clear finished"
     );
 }
 
