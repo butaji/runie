@@ -160,8 +160,10 @@ fn decode_provider_response(
     format: WebSearchWireFormat,
 ) -> Result<WebSearchResponse, String> {
     if matches!(format, WebSearchWireFormat::Generic) {
-        return serde_json::from_str(body)
-            .map_err(|error| format!("invalid web search response: {error}"));
+        let mut response: WebSearchResponse = serde_json::from_str(body)
+            .map_err(|error| format!("invalid web search response: {error}"))?;
+        response.answer = response.answer.as_deref().map(bounded_answer);
+        return Ok(response);
     }
     let value: serde_json::Value = serde_json::from_str(body)
         .map_err(|error| format!("invalid web search response: {error}"))?;
@@ -390,6 +392,20 @@ mod tests {
         .unwrap();
         assert_eq!(
             response.answer.as_ref().unwrap().len(),
+            MAX_WEB_SEARCH_ANSWER_BYTES
+        );
+    }
+
+    #[test]
+    fn generic_provider_answer_is_bounded_like_named_adapters() {
+        let answer = "x".repeat(MAX_WEB_SEARCH_ANSWER_BYTES + 99);
+        let response = decode_provider_response(
+            &format!(r#"{{"answer":"{answer}","results":[]}}"#),
+            WebSearchWireFormat::Generic,
+        )
+        .unwrap();
+        assert_eq!(
+            response.answer.as_deref().unwrap().chars().count(),
             MAX_WEB_SEARCH_ANSWER_BYTES
         );
     }

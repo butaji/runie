@@ -260,10 +260,11 @@ progress without losing the original scope.
 12. `reduction-12-semantic-module-consolidation.md` — consolidate artificial
     numbered/fragments into semantic modules after behavior is stable.
 
-The reduction implementation is intentionally still open: normalized feed
+The remaining reduction work is intentionally explicit: normalized feed
 records, shared snapshot allocation measurement, YAML trace integration, full
 paint-adapter migration, and final semantic consolidation remain tracked as
-partial work in their individual task files.
+partial work in their individual task files. Declarative schema generation is
+adopted; its acceptance boundary is complete.
 
 ## Coding harness backlog
 

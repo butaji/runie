@@ -1,6 +1,6 @@
 # Reduction 09: declarative schema generation
 
-Status: partial
+Status: adopted
 
 Identify repetitive registries, dispatch tables, and metadata suitable for
 typed declarations or narrowly scoped macros.
@@ -85,3 +85,8 @@ stable names and row projection, while event reduction remains explicit.
 Provider request profiles now also declare whether effort is nested, so
 request shaping consumes the profile data instead of a provider-specific
 conditional.
+
+Completion evidence: the workspace lint guard, full workspace tests, replay
+tests, and live TUI smoke all pass; repetitive registries and projections use
+typed declarations while reducers and asynchronous lifecycle decisions remain
+inspectable ordinary Rust as required by the acceptance criteria.
