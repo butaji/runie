@@ -64,7 +64,9 @@ Todo plan summaries now own their terminal projection, so `/plan` and
 status row in the TUI route.
 Bounded workspace and background tool outputs now share the core
 `OutputFacts` projection for bytes, lines, and truncation, while their public
-domain rows retain their stable shapes.
+domain rows retain their stable shapes. Their bounded Unicode-safe preview is
+also one shared output projection, so tool cards and background jobs cannot
+drift in preview semantics.
 Executor built-in tool routing now uses one explicit macro-backed name/handler
 table, keeping the closed vocabulary data-shaped while leaving each async
 handler and lifecycle boundary inspectable.

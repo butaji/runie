@@ -9,6 +9,11 @@ pub struct OutputFacts {
     pub truncated: bool,
 }
 
+/// Return a bounded Unicode-safe preview for renderer-neutral output rows.
+pub fn bounded_preview(text: &str, max_chars: usize) -> Option<String> {
+    (!text.is_empty()).then(|| text.chars().take(max_chars).collect())
+}
+
 pub fn output_facts(text: &str, truncated: bool) -> OutputFacts {
     OutputFacts {
         bytes: text.len(),
@@ -32,5 +37,11 @@ mod tests {
             }
         );
         assert_eq!(output_facts("", false).lines, 0);
+    }
+
+    #[test]
+    fn bounded_preview_is_unicode_safe_and_data_shaped() {
+        assert_eq!(bounded_preview("αβγ", 2).as_deref(), Some("αβ"));
+        assert_eq!(bounded_preview("", 2), None);
     }
 }

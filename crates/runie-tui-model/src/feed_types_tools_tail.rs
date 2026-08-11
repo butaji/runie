@@ -43,7 +43,10 @@ pub fn tool_card_summaries(lines: &[Line], tool_names: &dyn ToolNameLookup) -> V
         if row.row_kind == ToolCardRowKind::Content {
             summary.output_lines += 1;
             summary.output_bytes += row.text.len();
-            summary.output_preview = Some(row.text.chars().take(TOOL_CARD_PREVIEW_MAX_CHARS).collect());
+            summary.output_preview = runie_core::output::bounded_preview(
+                &row.text,
+                TOOL_CARD_PREVIEW_MAX_CHARS,
+            );
             summary.truncated |= row.text.contains("[output truncated]");
         }
         summary.is_running |= row.is_running;

@@ -1,6 +1,6 @@
 //! Owned background shell jobs. The actor owns every JoinSet task and snapshot.
 
-use crate::output::output_facts;
+use crate::output::{bounded_preview, output_facts};
 use crate::task_owner::{spawn_actor_worker, TaskOwner};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, sync::Arc};
@@ -12,6 +12,7 @@ mod controls;
 
 pub const BACKGROUND_OUTPUT_MAX_BYTES: usize = 100 * 1024;
 const OUTPUT_TRUNCATION_MARKER: &str = "\n[output truncated]";
+const BACKGROUND_PREVIEW_MAX_CHARS: usize = 256;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BackgroundStatus {
@@ -39,6 +40,7 @@ pub struct BackgroundJobSummary {
     pub exit_code: Option<i32>,
     pub output_lines: usize,
     pub output_bytes: usize,
+    pub output_preview: Option<String>,
     pub truncated: bool,
 }
 
@@ -53,6 +55,7 @@ pub fn background_job_summaries(jobs: &[BackgroundJob]) -> Vec<BackgroundJobSumm
                 exit_code: job.exit_code,
                 output_lines: facts.lines,
                 output_bytes: facts.bytes,
+                output_preview: bounded_preview(&job.output, BACKGROUND_PREVIEW_MAX_CHARS),
                 truncated: facts.truncated,
             }
         })

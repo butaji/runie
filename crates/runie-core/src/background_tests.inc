@@ -35,6 +35,7 @@ fn summary_projects_bounded_output_facts_without_rendering() {
     let jobs = vec![BackgroundJob { id: "3".into(), command: "printf done".into(), status: BackgroundStatus::Completed, output: "done\nnext".into(), exit_code: Some(0) }];
     assert_eq!(background_job_summaries(&jobs)[0].output_lines, 2);
     assert_eq!(background_job_summaries(&jobs)[0].output_bytes, 9);
+    assert_eq!(background_job_summaries(&jobs)[0].output_preview.as_deref(), Some("done\nnext"));
 }
 
 #[tokio::test]
