@@ -61,6 +61,10 @@ pub struct SchedulerMetrics {
     pub completed: u64,
     pub failed: u64,
     pub cancelled: u64,
+    #[serde(default)]
+    pub cancelled_queued: u64,
+    #[serde(default)]
+    pub cancelled_running: u64,
     pub interactive_enqueued: u64,
     pub background_enqueued: u64,
     #[serde(default)]
@@ -79,6 +83,8 @@ scheduler_metric_fields! {
     completed => "completed",
     failed => "failed",
     cancelled => "cancelled",
+    cancelled_queued => "cancelled_queued",
+    cancelled_running => "cancelled_running",
     interactive_enqueued => "interactive_enqueued",
     background_enqueued => "background_enqueued",
 }
@@ -151,12 +157,15 @@ fn cancel(
 ) -> Result<(), String> {
     if metrics.queued > 0 {
         metrics.queued -= 1;
+        metrics.cancelled += 1;
+        metrics.cancelled_queued += 1;
     } else if metrics.running > 0 {
         metrics.running -= 1;
+        metrics.cancelled += 1;
+        metrics.cancelled_running += 1;
     } else {
         return Err("scheduler cancelled without a queued call".into());
     }
-    metrics.cancelled += 1;
     count_cancellation(metrics, reason);
     Ok(())
 }
@@ -170,6 +179,7 @@ fn cancel_queued(
     }
     metrics.queued -= 1;
     metrics.cancelled += 1;
+    metrics.cancelled_queued += 1;
     count_cancellation(metrics, reason);
     Ok(())
 }
@@ -183,6 +193,7 @@ fn cancel_running(
     }
     metrics.running -= 1;
     metrics.cancelled += 1;
+    metrics.cancelled_running += 1;
     count_cancellation(metrics, reason);
     Ok(())
 }
@@ -235,6 +246,7 @@ mod tests {
         }
         assert_eq!(metrics.running, 0);
         assert_eq!(metrics.cancelled, 1);
+        assert_eq!(metrics.cancelled_running, 1);
     }
 
     #[test]
@@ -245,6 +257,8 @@ mod tests {
             completed: 3,
             failed: 4,
             cancelled: 5,
+            cancelled_queued: 8,
+            cancelled_running: 9,
             interactive_enqueued: 6,
             background_enqueued: 7,
             cancelled_by_reason: BTreeMap::new(),
@@ -257,6 +271,8 @@ mod tests {
                 "completed: 3",
                 "failed: 4",
                 "cancelled: 5",
+                "cancelled_queued: 8",
+                "cancelled_running: 9",
                 "interactive_enqueued: 6",
                 "background_enqueued: 7",
             ]
@@ -313,7 +329,7 @@ mod tests {
             metrics.cancelled_by_reason[&SchedulerCancellationReason::User],
             1
         );
-        assert_eq!(metrics.terminal_lines()[7], "cancelled_user: 1");
+        assert_eq!(metrics.terminal_lines()[9], "cancelled_user: 1");
     }
 
     #[test]
@@ -335,6 +351,8 @@ mod tests {
         assert_eq!(metrics.queued, 0);
         assert_eq!(metrics.running, 0);
         assert_eq!(metrics.cancelled, 2);
+        assert_eq!(metrics.cancelled_running, 1);
+        assert_eq!(metrics.cancelled_queued, 1);
         assert_eq!(
             metrics.cancelled_by_reason[&SchedulerCancellationReason::Abort],
             1
