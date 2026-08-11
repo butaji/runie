@@ -226,6 +226,7 @@ fn user_start(user: &runie_core::types::UserMessage) -> Vec<ScrollbackMsg> {
             runie_core::types::UserContent::Text { text } => text.as_str(),
             runie_core::types::UserContent::Image { .. } => "[image]",
             runie_core::types::UserContent::Video { .. } => "[video]",
+            runie_core::types::UserContent::Audio { .. } => "[audio]",
         })
         .collect::<Vec<_>>()
         .join("");

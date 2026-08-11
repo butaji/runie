@@ -2,7 +2,6 @@ use super::*;
 pub struct TextContent {
     pub text: String,
 }
-
 /// Single content block on a user message.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -20,15 +19,18 @@ pub enum UserContent {
         #[serde(rename = "mimeType")]
         mime_type: String,
     },
+    Audio {
+        data: String,
+        #[serde(rename = "mimeType")]
+        mime_type: String,
+    },
 }
-
 /// A user message.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct UserMessage {
     pub content: Vec<UserContent>,
     pub timestamp: i64,
 }
-
 /// Pi's internal context message emitted after session compaction. It is not
 /// a user-authored message; the provider conversion layer wraps its summary
 /// in Pi's compaction delimiters and emits a user wire message.
@@ -39,7 +41,6 @@ pub struct CompactionSummaryMessage {
     pub tokens_before: u64,
     pub timestamp: i64,
 }
-
 impl<'de> Deserialize<'de> for UserMessage {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         #[derive(Deserialize)]
@@ -59,7 +60,6 @@ impl<'de> Deserialize<'de> for UserMessage {
         })
     }
 }
-
 /// Partial or complete tool call emitted by the assistant.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -477,6 +477,7 @@ pub enum InputKind {
     Text,
     Image,
     Video,
+    Audio,
 }
 
 /// Provider-specific reasoning-effort mappings (pi: `thinkingLevelMap?`).

@@ -49,7 +49,8 @@ pub fn encode_user_content(
             serde_json::json!({"type":"input_image","image_url":format!("data:{mime_type};base64,{data}")}),
         ),
         (UserContent::Image { data, mime_type }, MediaWireFormat::Gemini)
-        | (UserContent::Video { data, mime_type }, MediaWireFormat::Gemini) => {
+        | (UserContent::Video { data, mime_type }, MediaWireFormat::Gemini)
+        | (UserContent::Audio { data, mime_type }, MediaWireFormat::Gemini) => {
             Ok(serde_json::json!({"inline_data":{"mime_type":mime_type,"data":data}}))
         }
         (UserContent::Image { data, mime_type }, MediaWireFormat::Anthropic) => Ok(
@@ -60,8 +61,10 @@ pub fn encode_user_content(
         ),
         (UserContent::Video { .. }, MediaWireFormat::Pi) => serde_json::to_value(content)
             .map_err(|error| format!("encode Pi video content: {error}")),
-        (UserContent::Video { .. }, _) => {
-            Err("selected provider wire format does not support video content".into())
+        (UserContent::Audio { .. }, MediaWireFormat::Pi) => serde_json::to_value(content)
+            .map_err(|error| format!("encode Pi audio content: {error}")),
+        (UserContent::Audio { .. } | UserContent::Video { .. }, _) => {
+            Err("selected provider wire format does not support this media content".into())
         }
     }
 }
@@ -163,6 +166,17 @@ mod tests {
             MediaWireFormat::OpenAiResponses.wire_name(),
             "openai-responses"
         );
+    }
+
+    #[test]
+    fn gemini_audio_encoding_uses_inline_data() {
+        let content = UserContent::Audio {
+            data: "aGVsbG8=".into(),
+            mime_type: "audio/mpeg".into(),
+        };
+        let encoded = encode_user_content(&content, MediaWireFormat::Gemini).unwrap();
+        assert_eq!(encoded["inline_data"]["mime_type"], "audio/mpeg");
+        assert_eq!(encoded["inline_data"]["data"], "aGVsbG8=");
     }
 
     #[test]

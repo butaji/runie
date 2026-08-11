@@ -413,4 +413,13 @@ mod extra {
         };
         assert_eq!(serde_json::to_value(content).unwrap()["type"], "video");
     }
+
+    #[test]
+    fn audio_content_is_typed_data() {
+        let content = UserContent::Audio {
+            data: "aGVsbG8=".into(),
+            mime_type: "audio/mpeg".into(),
+        };
+        assert_eq!(serde_json::to_value(content).unwrap()["type"], "audio");
+    }
 }

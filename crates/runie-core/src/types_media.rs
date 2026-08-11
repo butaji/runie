@@ -15,3 +15,11 @@ pub struct VideoContent {
     #[serde(rename = "mimeType")]
     pub mime_type: String,
 }
+
+/// Audio content block, preserved as provider-neutral MIME and base64 data.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AudioContent {
+    pub data: String,
+    #[serde(rename = "mimeType")]
+    pub mime_type: String,
+}
