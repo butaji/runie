@@ -70,9 +70,11 @@ fn encode_image(
         MediaWireFormat::OpenAiChat => Ok(
             serde_json::json!({"type":"image_url","image_url":{"url":format!("data:{mime_type};base64,{data}")}}),
         ),
-        MediaWireFormat::OpenAiResponses => Ok(
-            serde_json::json!({"type":"input_image","image_url":format!("data:{mime_type};base64,{data}")}),
-        ),
+        MediaWireFormat::OpenAiResponses => Ok(serde_json::json!({
+            "type":"input_image",
+            "detail":"auto",
+            "image_url":format!("data:{mime_type};base64,{data}"),
+        })),
         MediaWireFormat::Gemini => {
             Ok(serde_json::json!({"inline_data":{"mime_type":mime_type,"data":data}}))
         }
@@ -224,6 +226,7 @@ mod tests {
         let responses = encode_user_content(&content, MediaWireFormat::OpenAiResponses).unwrap();
         assert_eq!(responses["type"], "input_image");
         assert_eq!(responses["image_url"], "data:image/png;base64,aGVsbG8=");
+        assert_eq!(responses["detail"], "auto");
     }
 
     #[test]
