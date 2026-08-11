@@ -12,6 +12,26 @@ pub enum SchedulerCancellationReason {
     Shutdown,
 }
 
+macro_rules! scheduler_cancellation_wire_names {
+    ($($variant:ident => $wire:literal),+ $(,)?) => {
+        impl SchedulerCancellationReason {
+            pub const fn wire_name(self) -> &'static str {
+                match self {
+                    $(Self::$variant => $wire,)+
+                }
+            }
+        }
+    };
+}
+
+scheduler_cancellation_wire_names! {
+    Unspecified => "unspecified",
+    User => "user",
+    Abort => "abort",
+    Dependency => "dependency",
+    Shutdown => "shutdown",
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum SchedulerEvent {
     Enqueued { interactive: bool },
@@ -61,7 +81,7 @@ impl SchedulerMetrics {
             self.cancelled_by_reason
                 .iter()
                 .map(|(reason, value)| SchedulerMetricRow {
-                    name: format!("cancelled_{reason:?}"),
+                    name: format!("cancelled_{}", reason.wire_name()),
                     value: *value,
                 }),
         );
@@ -237,6 +257,6 @@ mod tests {
             metrics.cancelled_by_reason[&SchedulerCancellationReason::User],
             1
         );
-        assert_eq!(metrics.terminal_lines()[7], "cancelled_User: 1");
+        assert_eq!(metrics.terminal_lines()[7], "cancelled_user: 1");
     }
 }
