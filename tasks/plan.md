@@ -121,7 +121,8 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    actors expose ready/busy/failed/closed lifecycle projections; persistent HTTP
    registry-backed stdio/HTTP sessions now reuse actor-owned transports, and
    `/mcps` projects unified stdio/HTTP lifecycle rows with transport filters;
-   lifecycle names use the shared lowercase wire vocabulary.
+   lifecycle names use the shared lowercase wire vocabulary; palette actions
+   now expose ready and failed status filters.
 6. Session and Git interactive UX — `harness-12` and `harness-13`.
    `/sessions` now preserves each row’s source path, `/sessions history` is
    palette-discoverable, and `/sessions pick [text]` opens the actor-owned

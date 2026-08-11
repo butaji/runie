@@ -30,13 +30,17 @@ fn exact_slash_command_match_precedes_incidental_fuzzy_matches() {
 
 #[test]
 fn palette_registry_covers_every_mappable_builtin_command() {
-    assert_eq!(PaletteAction::labels().len(), 58);
+    assert_eq!(PaletteAction::labels().len(), 60);
     for label in PaletteAction::labels() {
         assert!(PaletteAction::from_label(label).is_some(), "{label}");
     }
 }
 
 #[test]
+#[allow(
+    clippy::cognitive_complexity,
+    reason = "This is one declarative palette metadata matrix"
+)]
 fn parameterized_palette_actions_are_marked_for_nested_forms() {
     assert!(PaletteAction::SetSessionName.requires_parameters());
     assert!(PaletteAction::ExportSession.requires_parameters());
@@ -55,6 +59,14 @@ fn parameterized_palette_actions_are_marked_for_nested_forms() {
     assert_eq!(
         PaletteAction::ClearFinishedJobs.slash_command(),
         "/jobs clear finished"
+    );
+    assert_eq!(
+        PaletteAction::McpReady.slash_command(),
+        "/mcps status=ready"
+    );
+    assert_eq!(
+        PaletteAction::McpFailed.slash_command(),
+        "/mcps status=failed"
     );
 }
 

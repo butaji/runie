@@ -11,7 +11,7 @@ labels=(
   "Doctor" "Rewind Session" "Prompt History" "Find Transcript" "Jump Transcript" "Recap"
   "Set Reasoning Effort" "Always Approve" "Automatic Approval" "Plan Mode" "View Plan"
   "Login" "Logout" "Reload" "Trust Project" "Skills" "Hooks" "Plugins" "MCP Servers"
-  "Memory" "Remember" "Goal" "Workflow" "Workflows" "Sessions" "Session History" "Questions" "Active Jobs" "Cancel All Jobs" "Clear Finished Jobs" "Git Conflicts" "Loop" "Deep Research" "Feedback" "Usage"
+  "Memory" "Remember" "Goal" "Workflow" "Workflows" "Sessions" "Session History" "Questions" "Active Jobs" "Cancel All Jobs" "Clear Finished Jobs" "Git Conflicts" "Ready MCP Servers" "Failed MCP Servers" "Loop" "Deep Research" "Feedback" "Usage"
   "Background Jobs" "Jobs" "Job Output"
 )
 parameterized=(
@@ -103,6 +103,16 @@ for label in "${labels[@]}"; do
       continue
     fi
     if [[ "$label" == "MCP Servers" ]] && ! wait_for 'No MCP stdio servers'; then
+      echo "FAIL $label: expected-empty-status"
+      ((failed += 1))
+      continue
+    fi
+    if [[ "$label" == "Ready MCP Servers" ]] && ! wait_for 'No MCP ready servers'; then
+      echo "FAIL $label: expected-empty-status"
+      ((failed += 1))
+      continue
+    fi
+    if [[ "$label" == "Failed MCP Servers" ]] && ! wait_for 'No MCP failed servers'; then
       echo "FAIL $label: expected-empty-status"
       ((failed += 1))
       continue

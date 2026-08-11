@@ -2176,6 +2176,22 @@ async fn run_app(
                                 app.toggle_model_selector().await;
                                 return Ok(ui_commands);
                             }
+                            if matches!(action, PaletteAction::McpReady | PaletteAction::McpFailed) {
+                                let args = if action == PaletteAction::McpReady {
+                                    "status=ready"
+                                } else {
+                                    "status=failed"
+                                };
+                                let _ = app
+                                    .route_mappable_command(
+                                        runie_core::commands::MappableBuiltinCommand::Extended {
+                                            name: "mcps".into(),
+                                            args: args.into(),
+                                        },
+                                    )
+                                    .await;
+                                return Ok(ui_commands);
+                            }
                             if action == PaletteAction::ManageProviders {
                                 app.show_provider_summary().await;
                                 return Ok(ui_commands);

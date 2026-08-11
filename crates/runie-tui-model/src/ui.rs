@@ -54,6 +54,8 @@ runie_core::typed_action_registry! {
         Hooks => "Hooks",
         Plugins => "Plugins",
         Mcps => "MCP Servers",
+        McpReady => "Ready MCP Servers",
+        McpFailed => "Failed MCP Servers",
         Memory => "Memory",
         Remember => "Remember",
         Goal => "Goal",
