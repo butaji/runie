@@ -109,6 +109,7 @@ pub(super) fn raw_response_finish_reason(value: &serde_json::Value) -> Option<&s
     value
         .pointer("/choices/0/finish_reason")
         .or_else(|| value.pointer("/delta/stop_reason"))
+        .or_else(|| value.pointer("/candidates/0/finishReason"))
         .or_else(|| value.pointer("/response/incomplete_details/reason"))
         .or_else(|| {
             value
@@ -122,7 +123,6 @@ pub(super) fn response_finish_reason(value: &serde_json::Value) -> Option<StopRe
     let raw = raw_response_finish_reason(value)?;
     Some(StopReason::from_provider_finish_reason(Some(raw), false))
 }
-
 pub fn response_usage(value: &serde_json::Value) -> Usage {
     let Some(raw) = usage_object(value) else {
         return Usage::default();

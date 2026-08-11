@@ -37,11 +37,19 @@ impl crate::types::StopReason {
             };
         };
         match raw {
-            "stop" | "end_turn" | "completed" => Self::Stop,
-            "length" | "max_tokens" | "max_output_tokens" => Self::MaxTokens,
+            "stop" | "STOP" | "end_turn" | "completed" => Self::Stop,
+            "length" | "max_tokens" | "MAX_TOKENS" | "max_output_tokens" => Self::MaxTokens,
             "tool_calls" | "tool_use" => Self::ToolUse,
             "aborted" | "cancelled" => Self::Aborted,
-            "error" | "failed" | "incomplete" | "content_filter" | "filtered" => Self::Error,
+            "error"
+            | "failed"
+            | "incomplete"
+            | "content_filter"
+            | "filtered"
+            | "SAFETY"
+            | "RECITATION"
+            | "MALFORMED_FUNCTION_CALL"
+            | "OTHER" => Self::Error,
             _ => Self::Error,
         }
     }

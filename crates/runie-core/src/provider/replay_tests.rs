@@ -25,7 +25,6 @@ fn failure_projection_preserves_bounded_retry_guidance() {
     .unwrap();
     assert_eq!(decoded.retry_after, None);
 }
-
 #[test]
 fn unsupported_effort_failures_are_typed_replay_data() {
     let failure = crate::provider::classify_failure(&StreamError::Provider {
@@ -80,7 +79,6 @@ async fn responses_trace_maps_text_delta_and_completion_to_pi_events() {
             && usage.total_tokens == 19
     ));
 }
-
 #[test]
 fn provider_usage_conformance_accepts_common_wire_shapes() {
     let cases = [
@@ -110,7 +108,6 @@ fn provider_usage_conformance_accepts_common_wire_shapes() {
         );
     }
 }
-
 #[test]
 fn provider_usage_conformance_preserves_anthropic_cache_fields() {
     let usage = super::response_usage(&serde_json::json!({
@@ -126,7 +123,6 @@ fn provider_usage_conformance_preserves_anthropic_cache_fields() {
     assert_eq!(usage.cache_read, 80);
     assert_eq!(usage.cache_write, 20);
 }
-
 #[test]
 fn provider_finish_reason_conformance_preserves_chat_wire_values() {
     let cases = [
@@ -144,7 +140,20 @@ fn provider_finish_reason_conformance_preserves_chat_wire_values() {
         assert_eq!(super::raw_response_finish_reason(&payload), Some(wire));
     }
 }
-
+#[test]
+fn provider_finish_reason_conformance_accepts_gemini_candidates() {
+    let cases = [
+        ("STOP", StopReason::Stop),
+        ("MAX_TOKENS", StopReason::MaxTokens),
+    ];
+    for (wire, expected) in cases {
+        let payload = serde_json::json!({
+            "candidates": [{"finishReason": wire}]
+        });
+        assert_eq!(super::response_finish_reason(&payload), Some(expected));
+        assert_eq!(super::raw_response_finish_reason(&payload), Some(wire));
+    }
+}
 #[test]
 fn unknown_finish_reasons_are_not_reported_as_successful_stops() {
     let payload = serde_json::json!({
@@ -160,7 +169,6 @@ fn unknown_finish_reasons_are_not_reported_as_successful_stops() {
         Some("provider_specific_failure")
     );
 }
-
 #[test]
 fn provider_finish_reason_conformance_covers_responses_and_stream_shapes() {
     let cases = [
@@ -187,7 +195,6 @@ fn provider_finish_reason_conformance_covers_responses_and_stream_shapes() {
         assert_eq!(super::raw_response_finish_reason(&payload), Some(raw));
     }
 }
-
 #[test]
 fn failed_responses_without_incomplete_details_preserve_terminal_reason() {
     let payload = serde_json::json!({"response": {"status": "failed"}});
