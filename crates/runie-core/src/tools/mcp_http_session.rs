@@ -33,11 +33,22 @@ pub struct McpHttpActor {
     tx: tokio::sync::mpsc::Sender<McpHttpCommand>,
     status: tokio::sync::watch::Receiver<McpHttpStatus>,
     identity: String,
+    notifications: crate::tools::McpNotificationActor,
     _owner: std::sync::Arc<crate::task_owner::TaskOwner>,
 }
 
 impl McpHttpActor {
     pub fn new(client: McpHttpClient) -> Self {
+        Self::new_with_notifications(
+            client,
+            crate::tools::McpNotificationActor::new(crate::tools::MCP_NOTIFICATION_QUEUE_CAPACITY),
+        )
+    }
+
+    pub fn new_with_notifications(
+        client: McpHttpClient,
+        notifications: crate::tools::McpNotificationActor,
+    ) -> Self {
         let identity = client.endpoint.clone();
         let (status_tx, status) = tokio::sync::watch::channel(McpHttpStatus::Ready);
         let (tx, owner) =
@@ -74,6 +85,7 @@ impl McpHttpActor {
             tx,
             status,
             identity,
+            notifications,
             _owner: owner,
         }
     }
@@ -88,6 +100,10 @@ impl McpHttpActor {
 
     pub fn subscribe_status(&self) -> tokio::sync::watch::Receiver<McpHttpStatus> {
         self.status.clone()
+    }
+
+    pub async fn ingest_stream_events(&self, events: Vec<super::McpStreamEvent>) {
+        self.notifications.ingest_stream_events(events).await;
     }
 
     pub async fn request(&self, request: serde_json::Value) -> Result<serde_json::Value, String> {

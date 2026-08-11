@@ -1,4 +1,7 @@
-use runie_core::tools::{McpHttpActor, McpHttpClient, McpHttpSession, McpHttpStatus};
+use runie_core::tools::{
+    McpHttpActor, McpHttpClient, McpHttpSession, McpHttpStatus, McpNotificationActor,
+    McpStreamEvent,
+};
 use std::time::Duration;
 
 #[tokio::test]
@@ -146,4 +149,25 @@ async fn http_actor_projects_failed_request_status() {
     let actor = McpHttpActor::new(client);
     assert!(actor.request(serde_json::json!({"id": 1})).await.is_err());
     assert_eq!(actor.status(), McpHttpStatus::Failed);
+}
+
+#[tokio::test]
+async fn http_actor_forwards_stream_notifications_to_shared_inspector() {
+    let inspector = McpNotificationActor::new(2);
+    let actor = McpHttpActor::new_with_notifications(
+        McpHttpClient::new(
+            "http://127.0.0.1:1".to_owned(),
+            None,
+            Duration::from_millis(50),
+        )
+        .unwrap(),
+        inspector.clone(),
+    );
+    actor
+        .ingest_stream_events(vec![McpStreamEvent {
+            event: None,
+            data: serde_json::json!({"method": "notifications/progress"}),
+        }])
+        .await;
+    assert_eq!(inspector.snapshot().queue.pending.len(), 1);
 }

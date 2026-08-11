@@ -29,11 +29,22 @@ impl LoopActor {
     }
 
     pub fn mcp_notification_snapshot(&self) -> crate::tools::McpNotificationSnapshot {
-        self.inner.mcp_notifications.snapshot()
+        self.inner
+            .deps
+            .tool_executor
+            .registry()
+            .mcp_notifications()
+            .snapshot()
     }
 
     pub async fn clear_mcp_notifications(&self) {
-        self.inner.mcp_notifications.clear().await;
+        self.inner
+            .deps
+            .tool_executor
+            .registry()
+            .mcp_notifications()
+            .clear()
+            .await;
     }
 
     /// Project the next context-recovery operation without mutating any
@@ -74,9 +85,6 @@ impl LoopActor {
                 control_commands,
                 control_rx,
                 shared_control_rx,
-                mcp_notifications: crate::tools::McpNotificationActor::new(
-                    crate::tools::MCP_NOTIFICATION_QUEUE_CAPACITY,
-                ),
                 _control_owner: control_owner,
             }),
         }

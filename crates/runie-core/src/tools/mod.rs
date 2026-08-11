@@ -47,7 +47,7 @@ pub use mcp::{
     McpCallHook, McpCallRequest, McpConnectionStatus, McpHttpActor, McpHttpClient, McpHttpSession,
     McpHttpStatus, McpNotificationActor, McpNotificationSnapshot, McpReconnectDecision,
     McpReconnectPolicy, McpReconnectState, McpServer, McpStatusRow, McpStdioActor, McpStdioClient,
-    McpStdioSession, McpStdioStatus, McpTool, McpToolSpec, McpTransport,
+    McpStdioSession, McpStdioStatus, McpStreamEvent, McpTool, McpToolSpec, McpTransport,
     MCP_NOTIFICATION_QUEUE_CAPACITY,
 };
 pub use policy::{

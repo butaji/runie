@@ -11,6 +11,7 @@ pub struct ToolRegistry {
     tools: HashMap<String, Arc<dyn AgentTool>>,
     mcp_stdio: Vec<Arc<crate::tools::McpStdioActor>>,
     mcp_http: Vec<Arc<crate::tools::McpHttpActor>>,
+    mcp_notifications: Arc<std::sync::OnceLock<crate::tools::McpNotificationActor>>,
 }
 
 impl Default for ToolRegistry {
@@ -25,11 +26,22 @@ impl ToolRegistry {
             tools: HashMap::new(),
             mcp_stdio: Vec::new(),
             mcp_http: Vec::new(),
+            mcp_notifications: Arc::new(std::sync::OnceLock::new()),
         }
     }
 
     pub fn register(&mut self, tool: Arc<dyn AgentTool>) {
         self.tools.insert(tool.name().to_string(), tool);
+    }
+
+    pub fn mcp_notifications(&self) -> crate::tools::McpNotificationActor {
+        self.mcp_notifications
+            .get_or_init(|| {
+                crate::tools::McpNotificationActor::new(
+                    crate::tools::MCP_NOTIFICATION_QUEUE_CAPACITY,
+                )
+            })
+            .clone()
     }
 
     pub fn register_mcp_server(
@@ -75,7 +87,10 @@ impl ToolRegistry {
         &mut self,
         client: crate::tools::McpHttpClient,
     ) -> Result<usize, String> {
-        let owner = Arc::new(crate::tools::McpHttpActor::new(client));
+        let owner = Arc::new(crate::tools::McpHttpActor::new_with_notifications(
+            client,
+            self.mcp_notifications(),
+        ));
         let (name, tools) = discover_http_tools(&owner).await?;
         let call = http_call_hook(owner.clone());
         let result = self.register_mcp_server(crate::tools::McpServer { name, tools }, call);
