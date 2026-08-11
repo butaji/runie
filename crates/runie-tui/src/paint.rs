@@ -63,6 +63,24 @@ pub struct PaintDocument {
 }
 
 impl PaintDocument {
+    pub fn from_text<I>(items: I) -> Self
+    where
+        I: IntoIterator<Item = (Slot, ComponentKind, String, PaintIntent)>,
+    {
+        Self {
+            text: items
+                .into_iter()
+                .map(|(slot, component, text, intent)| PaintText {
+                    slot,
+                    component,
+                    text,
+                    intent,
+                })
+                .collect(),
+            inline: Vec::new(),
+        }
+    }
+
     pub fn text(
         mut self,
         slot: Slot,
@@ -108,16 +126,12 @@ pub fn status_paint(snapshot: &StatusSnapshot) -> PaintDocument {
 
 /// Project semantic tool-card rows into renderer-neutral paint data.
 pub fn tool_card_paint(rows: &[ToolCardRow]) -> PaintDocument {
-    let mut document = PaintDocument::default();
-    for row in rows {
-        document = document.text(
+    PaintDocument::from_text(rows.iter().map(|row| (
             Slot::Scrollback,
             ComponentKind::Scrollback,
             row.text.clone(),
             row.paint_intent().into(),
-        );
-    }
-    document
+        )))
 }
 
 /// Interpret renderer-neutral text instructions at the terminal boundary.
@@ -294,6 +308,16 @@ mod tests {
         );
         assert_eq!(document.text[0].text, "Thinking");
         assert_eq!(document.text[0].intent, PaintIntent::Accent);
+    }
+
+    #[test]
+    fn paint_document_from_text_preserves_declared_order() {
+        let document = PaintDocument::from_text([
+            (Slot::Status, ComponentKind::Status, "one".into(), PaintIntent::Base),
+            (Slot::FooterBadge, ComponentKind::FooterBadge, "two".into(), PaintIntent::Muted),
+        ]);
+        assert_eq!(document.text.iter().map(|row| row.text.as_str()).collect::<Vec<_>>(), ["one", "two"]);
+        assert!(document.inline.is_empty());
     }
 
     #[test]
