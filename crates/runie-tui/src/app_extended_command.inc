@@ -438,7 +438,7 @@ impl App {
 
 fn background_job_line(job: &runie_core::background::BackgroundJobSummary) -> String {
     format!(
-        "{} · {:?} · {} exit={:?} · output={} lines/{} bytes{}",
+        "{} · {:?} · {} exit={:?} · output={} lines/{} bytes{}{}",
         job.id,
         job.status,
         job.command,
@@ -446,5 +446,27 @@ fn background_job_line(job: &runie_core::background::BackgroundJobSummary) -> St
         job.output_lines,
         job.output_bytes,
         if job.truncated { " truncated" } else { "" },
+        job.output_preview
+            .as_deref()
+            .map(|preview| format!(" · preview={preview:?}"))
+            .unwrap_or_default(),
     )
+}
+
+#[cfg(test)]
+mod background_job_projection_tests {
+    #[test]
+    fn jobs_line_projects_bounded_preview_as_data() {
+        let line = super::background_job_line(&runie_core::background::BackgroundJobSummary {
+            id: "job-1".into(),
+            command: "printf output".into(),
+            status: runie_core::background::BackgroundStatus::Completed,
+            exit_code: Some(0),
+            output_lines: 1,
+            output_bytes: 6,
+            output_preview: Some("output".into()),
+            truncated: false,
+        });
+        assert!(line.contains("preview=\"output\""));
+    }
 }
