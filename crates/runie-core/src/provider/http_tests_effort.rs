@@ -117,3 +117,51 @@ fn model_provider_effort_uses_the_profile_wire_field() {
     );
     assert_eq!(explicit["output_config"]["effort"], "explicit");
 }
+
+#[test]
+fn provider_effort_matrix_preserves_shape_and_omits_unsupported_levels() {
+    let cases = [
+        ("openai-responses", "reasoning_effort", false),
+        ("openai-chat", "reasoning_effort", false),
+        ("anthropic", "effort", true),
+        ("gemini", "reasoning", false),
+        ("minimax", "reasoning_effort", false),
+        ("generic", "reasoning_effort", false),
+    ];
+    for (provider, key, nested) in cases {
+        let model = Model {
+            provider: provider.into(),
+            thinking_level_map: Some(crate::types::ThinkingLevelMap {
+                high: Some("wire-high".into()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        let options = SimpleStreamOptions {
+            reasoning: Some(ThinkingLevel::High),
+            ..Default::default()
+        };
+        let shaped = with_model_provider_effort(serde_json::json!({}), &model, Some(&options));
+        let value = if nested {
+            shaped["output_config"][key].clone()
+        } else {
+            shaped[key].clone()
+        };
+        assert_eq!(value, serde_json::json!("wire-high"), "{provider}");
+
+        assert_unsupported_effort_is_omitted(provider, key, &options);
+    }
+}
+
+fn assert_unsupported_effort_is_omitted(provider: &str, key: &str, options: &SimpleStreamOptions) {
+    let unsupported = with_model_provider_effort(
+        serde_json::json!({}),
+        &Model {
+            provider: provider.into(),
+            ..Default::default()
+        },
+        Some(options),
+    );
+    assert!(unsupported.get(key).is_none());
+    assert!(unsupported.get("output_config").is_none());
+}
