@@ -178,3 +178,21 @@ fn tool_card_summary_keeps_terminal_error_and_running_state() {
     assert!(!summaries[0].is_running);
     assert_eq!(summaries[0].card_kind, super::ToolCardKind::Execute);
 }
+
+#[test]
+fn tool_card_summaries_index_duplicate_call_ids_by_member() {
+    let lines = vec![
+        super::Line::new(super::LineKind::Tool, "first").for_tool_row(1).for_tool("same"),
+        super::Line::new(super::LineKind::ToolOutput, "one")
+            .for_tool_row(1)
+            .for_tool("same"),
+        super::Line::new(super::LineKind::Tool, "second").for_tool_row(2).for_tool("same"),
+        super::Line::new(super::LineKind::ToolOutput, "two")
+            .for_tool_row(2)
+            .for_tool("same"),
+    ];
+    let names = std::collections::HashMap::from([("same".to_owned(), "read".to_owned())]);
+    let summaries = super::tool_card_summaries(&lines, &names);
+    assert_eq!(summaries.iter().map(|row| row.member_index).collect::<Vec<_>>(), [0, 1]);
+    assert_eq!(summaries.iter().map(|row| row.output_bytes).collect::<Vec<_>>(), [3, 3]);
+}

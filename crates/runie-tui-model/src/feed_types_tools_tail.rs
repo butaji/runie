@@ -14,11 +14,11 @@ pub struct ToolCardSummary {
 pub fn tool_card_summaries(lines: &[Line], tool_names: &dyn ToolNameLookup) -> Vec<ToolCardSummary> {
     let rows = project_tool_card_rows(lines, tool_names, &HashMap::new());
     let mut summaries = Vec::new();
+    let mut indices = HashMap::<(String, usize), usize>::new();
     for row in rows {
-        let summary = match summaries.iter_mut().find(|summary: &&mut ToolCardSummary| {
-            summary.tool_call_id == row.tool_call_id && summary.member_index == row.member_index
-        }) {
-            Some(summary) => summary,
+        let key = (row.tool_call_id.clone(), row.member_index);
+        let index = match indices.get(&key).copied() {
+            Some(index) => index,
             None => {
                 summaries.push(ToolCardSummary {
                     tool_call_id: row.tool_call_id.clone(),
@@ -30,9 +30,12 @@ pub fn tool_card_summaries(lines: &[Line], tool_names: &dyn ToolNameLookup) -> V
                     is_running: row.is_running,
                     is_error: row.is_error,
                 });
-                summaries.last_mut().expect("just inserted tool summary")
+                let index = summaries.len() - 1;
+                indices.insert(key, index);
+                index
             }
         };
+        let summary = &mut summaries[index];
         if row.row_kind == ToolCardRowKind::Content {
             summary.output_lines += 1;
             summary.output_bytes += row.text.len();

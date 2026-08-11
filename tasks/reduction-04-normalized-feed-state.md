@@ -59,6 +59,9 @@ and keeping selection/card identity on the same derived data.
 The TUI snapshot handoff now transfers the canonical `FeedFacts` aggregate in
 one value operation instead of copying synchronized fields individually; an
 event-based test pins snapshot facts to reducer navigation facts.
+Tool-card output summaries now use one normalized `(call_id, member_index)`
+identity index while retaining first-seen transcript order, removing the
+quadratic derived-card lookup.
 The activity counter projection now reads the normalized facts tuple directly,
 removing an obsolete private forwarding layer.
 
