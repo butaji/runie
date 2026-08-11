@@ -90,6 +90,7 @@ declare_palette_metadata! {
     (CompletedJobs, "/jobs completed", "Show completed jobs"),
     (FailedJobs, "/jobs failed", "Show failed jobs"),
     (CancelledJobs, "/jobs cancelled", "Show cancelled jobs"),
+    (CancelQueuedJobs, "/jobs scheduler cancel queued", "Cancel queued tool batches"),
     (JobOutput, "/jobs output", "Inspect bounded job output"),
     (GitStatus, "/git status", "Inspect repository status"),
     (GitDiff, "/git diff", "Inspect the unstaged Git diff"),
@@ -138,7 +139,7 @@ palette_sections! {
     ("Session" => [NewSession, KeyboardShortcuts, Quit, Changelog, ShareSession, SessionHistory, SessionHistoryQuery, UndoSession]),
     ("Information" => [Help, ContextInfo, Doctor, Feedback, Usage, GitStatus, GitDiff, GitReview, GitWorktrees, GitConflicts]),
     ("Extensions" => [Skills, Hooks, Plugins, Mcps, CloseMcps, ReconnectMcps, McpReady, McpFailed, McpBusy, McpClosed, McpStdio, McpHttp, Memory]),
-    ("Automation" => [Goal, Workflow, Workflows, Loop, DeepResearch, Jobs, ActiveJobs, CancelAllJobs, CancelRunningJobs, ClearFinishedJobs, CompletedJobs, FailedJobs, CancelledJobs]),
+    ("Automation" => [Goal, Workflow, Workflows, Loop, DeepResearch, Jobs, ActiveJobs, CancelAllJobs, CancelRunningJobs, ClearFinishedJobs, CompletedJobs, FailedJobs, CancelledJobs, CancelQueuedJobs]),
 }
 
 fn palette_row(label: &str) -> String {

@@ -238,6 +238,10 @@ pub fn parse_background_scheduler_active_query(args: &str) -> bool {
     args.trim() == "scheduler active"
 }
 
+pub fn parse_background_scheduler_cancel_queued(args: &str) -> bool {
+    args.trim() == "scheduler cancel queued"
+}
+
 /// Parse an optional single background-job ID used by the inspection view.
 /// Control verbs such as `cancel` stay owned by their dedicated parser.
 pub fn parse_background_job_query(args: &str) -> Option<&str> {

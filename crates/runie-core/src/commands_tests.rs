@@ -244,6 +244,16 @@ fn mcp_reconnect_command_requires_an_exact_argument() {
 }
 
 #[test]
+fn scheduler_queued_cancel_command_requires_an_exact_argument() {
+    assert!(parse_background_scheduler_cancel_queued(
+        "scheduler cancel queued"
+    ));
+    assert!(!parse_background_scheduler_cancel_queued(
+        "scheduler cancel running"
+    ));
+}
+
+#[test]
 fn session_history_query_requires_explicit_query_mode() {
     assert_eq!(
         parse_session_history_query("history query tool"),

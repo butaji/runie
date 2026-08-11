@@ -272,6 +272,15 @@ impl App {
                     .await;
                 return true;
             }
+            if runie_core::commands::parse_background_scheduler_cancel_queued(args) {
+                let cancelled = self.loop_actor.cancel_queued_tools().await;
+                self.ui
+                    .send(UiMsg::ShowCommandResult(format!(
+                        "Cancelled {cancelled} queued tool batch(es)"
+                    )))
+                    .await;
+                return true;
+            }
             if runie_core::commands::parse_background_scheduler_query(args) {
                 let lines = self
                     .loop_actor

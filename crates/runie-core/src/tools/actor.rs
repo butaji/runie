@@ -19,8 +19,8 @@ fn unix_timestamp_millis() -> i64 {
 }
 
 use super::executor::{
-    execute_parallel, execute_sequential, reduce_scheduler_event, DispatchOutcome, SchedulerEvent,
-    SchedulerMetrics, ToolExecContext, ToolExecHooks,
+    execute_parallel, execute_sequential, reduce_scheduler_event, DispatchOutcome,
+    SchedulerCancellationReason, SchedulerEvent, SchedulerMetrics, ToolExecContext, ToolExecHooks,
 };
 use super::registry::ToolRegistry;
 
@@ -62,6 +62,9 @@ pub enum ToolCommand {
     },
     Metrics {
         reply: oneshot::Sender<SchedulerMetrics>,
+    },
+    CancelQueued {
+        reply: oneshot::Sender<usize>,
     },
 }
 
@@ -116,6 +119,19 @@ impl ToolExecutorActor {
         let (reply, response) = oneshot::channel();
         if self.tx.send(ToolCommand::Metrics { reply }).await.is_err() {
             return SchedulerMetrics::default();
+        }
+        response.await.unwrap_or_default()
+    }
+
+    pub async fn cancel_queued(&self) -> usize {
+        let (reply, response) = oneshot::channel();
+        if self
+            .tx
+            .send(ToolCommand::CancelQueued { reply })
+            .await
+            .is_err()
+        {
+            return 0;
         }
         response.await.unwrap_or_default()
     }
@@ -250,9 +266,15 @@ async fn run_tool_worker(
     tool_result_timestamp: Option<i64>,
 ) {
     let mut scheduler = SchedulerMetrics::default();
-    while let Some(cmd) = next_prioritized_command(&mut rx).await {
+    let mut pending = Vec::new();
+    while let Some(cmd) = next_prioritized_command(&mut rx, &mut pending).await {
         if let ToolCommand::Metrics { reply } = cmd {
             let _ = reply.send(scheduler.clone());
+            continue;
+        }
+        if let ToolCommand::CancelQueued { reply } = cmd {
+            let cancelled = cancel_pending(&mut pending, &mut scheduler);
+            let _ = reply.send(cancelled);
             continue;
         }
         let interactive = matches!(
@@ -367,9 +389,13 @@ fn completed_tool_outcome(outcome: DispatchOutcome) -> ToolOutcome {
     }
 }
 
-async fn next_prioritized_command(rx: &mut mpsc::Receiver<ToolCommand>) -> Option<ToolCommand> {
-    let first = rx.recv().await?;
-    let mut pending = vec![first];
+async fn next_prioritized_command(
+    rx: &mut mpsc::Receiver<ToolCommand>,
+    pending: &mut Vec<ToolCommand>,
+) -> Option<ToolCommand> {
+    if pending.is_empty() {
+        pending.push(rx.recv().await?);
+    }
     while let Ok(command) = rx.try_recv() {
         pending.push(command);
     }
@@ -378,11 +404,46 @@ async fn next_prioritized_command(rx: &mut mpsc::Receiver<ToolCommand>) -> Optio
         .enumerate()
         .max_by_key(|(_, command)| match command {
             ToolCommand::Execute { priority, .. } => *priority,
-            ToolCommand::Metrics { .. } => ToolPriority::Background,
+            ToolCommand::Metrics { .. } | ToolCommand::CancelQueued { .. } => {
+                ToolPriority::Background
+            }
         })
         .map(|(index, _)| index)
         .expect("pending command is non-empty");
     Some(pending.swap_remove(selected))
+}
+
+fn cancel_pending(pending: &mut Vec<ToolCommand>, scheduler: &mut SchedulerMetrics) -> usize {
+    let mut cancelled = 0;
+    let mut retained = Vec::with_capacity(pending.len());
+    for command in pending.drain(..) {
+        if let ToolCommand::Execute {
+            reply,
+            calls,
+            priority,
+            ..
+        } = command
+        {
+            apply_scheduler(
+                scheduler,
+                SchedulerEvent::Enqueued {
+                    interactive: priority == ToolPriority::Interactive,
+                },
+            );
+            apply_scheduler(
+                scheduler,
+                SchedulerEvent::CancelledQueued {
+                    reason: SchedulerCancellationReason::User,
+                },
+            );
+            let _ = reply.send(aborted_outcome(&calls, "queued execution cancelled"));
+            cancelled += 1;
+        } else {
+            retained.push(command);
+        }
+    }
+    *pending = retained;
+    cancelled
 }
 
 fn effective_tool_mode(

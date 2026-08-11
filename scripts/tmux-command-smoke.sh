@@ -12,7 +12,7 @@ labels=(
   "Set Reasoning Effort" "Always Approve" "Automatic Approval" "Plan Mode" "View Plan"
   "Login" "Logout" "Reload" "Trust Project" "Skills" "Hooks" "Plugins" "MCP Servers" "Close MCP Servers" "Reconnect MCP Servers"
   "Memory" "Remember" "Goal" "Workflow" "Workflows" "Sessions" "Session History" "Session History Query" "Undo Session" "Questions" "Active Jobs" "Cancel All Jobs" "Cancel Running Jobs" "Clear Finished Jobs" "Completed Jobs" "Failed Jobs" "Cancelled Jobs" "Git Status" "Git Diff" "Git Review" "Git Worktrees" "Git Conflicts" "Ready MCP Servers" "Failed MCP Servers" "Busy MCP Servers" "Closed MCP Servers" "Stdio MCP Servers" "HTTP MCP Servers" "Loop" "Deep Research" "Feedback" "Usage"
-  "Background Jobs" "Jobs" "Job Output"
+  "Background Jobs" "Jobs" "Job Output" "Cancel Queued Jobs"
 )
 parameterized=(
   "Select Theme" "Set Session Name" "Compact Context" "Fork Session" "Select Tree Entry"
@@ -108,6 +108,11 @@ for label in "${labels[@]}"; do
     fi
     if [[ "$label" == "MCP Servers" ]] && ! wait_for 'No MCP stdio servers'; then
       echo "FAIL $label: expected-empty-status"
+      ((failed += 1))
+      continue
+    fi
+    if [[ "$label" == "Cancel Queued Jobs" ]] && ! wait_for 'Cancelled 0 queued tool batch'; then
+      echo "FAIL $label: expected-queued-cancel-result"
       ((failed += 1))
       continue
     fi

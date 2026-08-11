@@ -168,6 +168,7 @@ fn dropped_executor_fallback_is_an_error_tool_result() {
 #[tokio::test]
 async fn queued_command_selection_prefers_interactive_work() {
     let (tx, mut rx) = mpsc::channel(4);
+    let mut pending = Vec::new();
     for priority in [ToolPriority::Background, ToolPriority::Interactive] {
         let (reply, _) = oneshot::channel();
         tx.send(ToolCommand::Execute {
@@ -184,7 +185,9 @@ async fn queued_command_selection_prefers_interactive_work() {
         .await
         .unwrap();
     }
-    let selected = next_prioritized_command(&mut rx).await.unwrap();
+    let selected = next_prioritized_command(&mut rx, &mut pending)
+        .await
+        .unwrap();
     assert!(matches!(
         selected,
         ToolCommand::Execute {
@@ -192,4 +195,27 @@ async fn queued_command_selection_prefers_interactive_work() {
             ..
         }
     ));
+    assert_eq!(pending.len(), 1);
+}
+
+#[tokio::test]
+async fn queued_command_cancellation_preserves_only_non_execution_commands() {
+    let (reply, response) = oneshot::channel();
+    let mut pending = vec![ToolCommand::Execute {
+        assistant_message: AssistantMessage::default(),
+        context: AgentContext::default(),
+        abort: None,
+        bus: None,
+        calls: vec![],
+        mode: ToolExecutionMode::Parallel,
+        priority: ToolPriority::Background,
+        hooks: ToolExecHooks::default(),
+        reply,
+    }];
+    let mut metrics = SchedulerMetrics::default();
+    assert_eq!(cancel_pending(&mut pending, &mut metrics), 1);
+    assert!(pending.is_empty());
+    assert_eq!(metrics.cancelled_queued, 1);
+    let outcome = response.await.unwrap();
+    assert!(matches!(outcome, ToolOutcome::Completed { .. }));
 }

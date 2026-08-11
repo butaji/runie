@@ -85,7 +85,7 @@ these do not invalidate the finite matrix evidence.
 
 Each extension follows the same loop: add a failing event/replay test, add the
 smallest actor-owned data boundary (use a declaration macro only for repeated
-closed vocabulary), run `just ci`, run the 81-case TUI smoke, update the
+closed vocabulary), run `just ci`, run the 82-case TUI smoke, update the
 finding, and push one focused commit.
 
 Priority order:
@@ -106,7 +106,7 @@ Priority order:
 
 Completion evidence is: every finite matrix row has source + replay/unit test
  + live TUI evidence, the extension queue has no unverified claim, `just ci`
-is green, the fresh smoke summary is `passed=81 failed=0`, and `git status`
+is green, the fresh smoke summary is `passed=82 failed=0`, and `git status`
  is clean after push.
 
 The reduction backlog is now backed by declarative tables for the major closed
@@ -168,8 +168,9 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    replay events can now explicitly cancel queued versus running slots while
    retaining legacy cancellation compatibility;
    `/jobs scheduler` and palette-discoverable `Active Jobs` expose actor-owned
-   scheduler projections; extend the existing mailbox/replay state machine
-   with richer cancellation controls and live queued/running transitions.
+   scheduler projections; `/jobs scheduler cancel queued` and its palette action
+   now retain mailbox work and cancel queued tool batches through the owning
+   actor; richer live queued/running transitions remain.
 5. MCP lifecycle ownership — `harness-10`; unified MCP status rows now own their stable terminal projection and immutable actor-derived server identity, and reconnect retry/exhaustion decisions are serializable data, so `/mcps` does not rebuild transport/index/identity/status formatting in the TUI.
    The stdio actor now publishes ready/busy/failed/closed lifecycle state,
    `/mcps` projects it through the loop-owned executor, and registry-backed

@@ -89,6 +89,15 @@ fn cancel_running_jobs_palette_action_emits_extended_command() {
 }
 
 #[test]
+fn cancel_queued_jobs_palette_action_emits_extended_command() {
+    assert_parameter_flow(
+        super::PaletteAction::CancelQueuedJobs,
+        "",
+        "/jobs scheduler cancel queued",
+    );
+}
+
+#[test]
 fn close_mcp_palette_action_emits_extended_command() {
     assert_parameter_flow(super::PaletteAction::CloseMcps, "", "/mcps close");
 }

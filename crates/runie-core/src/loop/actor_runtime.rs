@@ -4,6 +4,10 @@ impl LoopActor {
         self.inner.deps.tool_executor.scheduler_metrics().await
     }
 
+    pub async fn cancel_queued_tools(&self) -> usize {
+        self.inner.deps.tool_executor.cancel_queued().await
+    }
+
     pub fn mcp_stdio_statuses(&self) -> Vec<crate::tools::McpStdioStatus> {
         self.inner.deps.tool_executor.mcp_stdio_statuses()
     }
