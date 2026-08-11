@@ -202,7 +202,7 @@ impl App {
         match command {
             MappableBuiltinCommand::Copy => {
                 let text = runie_tui_model::last_assistant_text(
-                    &self.scrollback_actor.model_snapshot().lines,
+                    &self.scrollback_actor.shared_snapshot().get().lines,
                 );
                 self.ui.send(UiMsg::CopyText(text)).await;
                 Some(true)
