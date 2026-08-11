@@ -225,7 +225,7 @@ pub struct SessionBranchEntryQuery {
 }
 
 /// Pi's durable session statistics projection.
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct SessionStats {
     pub message_count: u64,
     pub cached_tokens: u64,

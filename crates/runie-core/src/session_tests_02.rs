@@ -146,6 +146,14 @@
     }
 
     #[test]
+    fn session_stats_round_trip_as_replay_data() {
+        let stats = usage_snapshot().stats();
+        let encoded = serde_json::to_string(&stats).unwrap();
+        let decoded: SessionStats = serde_json::from_str(&encoded).unwrap();
+        assert_eq!(decoded, stats);
+    }
+
+    #[test]
 fn session_lane_metadata_requires_a_complete_positive_storage_tuple() {
         let valid = serde_json::json!({
             "id": "op-1", "lane": "main", "seq": 1, "timestamp": 7
