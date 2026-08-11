@@ -159,10 +159,10 @@ pub struct Model {
     pub reasoning: bool,
     #[serde(default)]
     pub thinking_level_map: Option<ThinkingLevelMap>,
-    /// Accepted input modalities (pi: `input`).
+    #[serde(default, alias = "default_effort", alias = "defaultEffort")]
+    pub default_thinking_level: Option<ThinkingLevel>,
     #[serde(default)]
     pub input: Vec<InputKind>,
-    /// Cost in USD per million tokens (pi: `cost`).
     #[serde(default)]
     pub cost: ModelCost,
     #[serde(default)]

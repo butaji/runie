@@ -51,6 +51,12 @@ impl App {
         let Some(map) = model.thinking_level_map.as_ref() else {
             return runie_core::types::ThinkingLevel::Off;
         };
+        if let Some(level) = model
+            .default_thinking_level
+            .filter(|level| map.value(*level).is_some())
+        {
+            return level;
+        }
         map.declared()
             .find_map(|(level, wire)| wire.map(|_| level))
             .unwrap_or(runie_core::types::ThinkingLevel::Off)
@@ -124,6 +130,39 @@ mod tests {
         assert_eq!(
             super::App::default_effort_for_model(&runie_core::types::Model::default()),
             runie_core::types::ThinkingLevel::Off
+        );
+    }
+
+    #[test]
+    fn valid_model_default_effort_overrides_first_declared_level() {
+        let model = runie_core::types::Model {
+            thinking_level_map: Some(runie_core::types::ThinkingLevelMap {
+                low: Some("low-wire".into()),
+                high: Some("high-wire".into()),
+                ..Default::default()
+            }),
+            default_thinking_level: Some(runie_core::types::ThinkingLevel::High),
+            ..Default::default()
+        };
+        assert_eq!(
+            super::App::default_effort_for_model(&model),
+            runie_core::types::ThinkingLevel::High
+        );
+    }
+
+    #[test]
+    fn unsupported_model_default_falls_back_to_first_declared_level() {
+        let model = runie_core::types::Model {
+            thinking_level_map: Some(runie_core::types::ThinkingLevelMap {
+                low: Some("low-wire".into()),
+                ..Default::default()
+            }),
+            default_thinking_level: Some(runie_core::types::ThinkingLevel::Max),
+            ..Default::default()
+        };
+        assert_eq!(
+            super::App::default_effort_for_model(&model),
+            runie_core::types::ThinkingLevel::Low
         );
     }
 

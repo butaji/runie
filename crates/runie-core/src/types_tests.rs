@@ -38,6 +38,22 @@ mod tests {
     }
 
     #[test]
+    fn model_default_effort_accepts_kimi_and_pi_field_names() {
+        let model: Model = serde_json::from_value(serde_json::json!({
+            "id": "demo",
+            "name": "Demo",
+            "api": "responses",
+            "provider": "test",
+            "default_effort": "high"
+        }))
+        .unwrap();
+        assert_eq!(model.default_thinking_level, Some(ThinkingLevel::High));
+        let encoded = serde_json::to_value(model).unwrap();
+        assert_eq!(encoded["defaultThinkingLevel"], "high");
+        assert!(encoded.get("default_effort").is_none());
+    }
+
+    #[test]
     fn provider_transport_wire_names_are_generated_from_the_contract_table() {
         for (transport, wire) in [
             (ProviderTransport::Sse, "sse"),
@@ -214,6 +230,7 @@ mod tests {
             base_url: "b".into(),
             reasoning: true,
             thinking_level_map: parity_thinking_map(),
+            default_thinking_level: None,
             input: vec![InputKind::Text, InputKind::Image],
             cost: parity_model_cost(cost),
             context_window: 128,
