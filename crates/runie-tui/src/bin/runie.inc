@@ -2207,6 +2207,17 @@ async fn run_app(
                                     .await;
                                 return Ok(ui_commands);
                             }
+                            if action == PaletteAction::UndoSession {
+                                let _ = app
+                                    .route_mappable_command(
+                                        runie_core::commands::MappableBuiltinCommand::Extended {
+                                            name: "undo".into(),
+                                            args: String::new(),
+                                        },
+                                    )
+                                    .await;
+                                return Ok(ui_commands);
+                            }
                             if action == PaletteAction::ActiveJobs {
                                 let _ = app
                                     .route_mappable_command(

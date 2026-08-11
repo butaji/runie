@@ -30,7 +30,7 @@ fn exact_slash_command_match_precedes_incidental_fuzzy_matches() {
 
 #[test]
 fn palette_registry_covers_every_mappable_builtin_command() {
-    assert_eq!(PaletteAction::labels().len(), 60);
+    assert_eq!(PaletteAction::labels().len(), 61);
     for label in PaletteAction::labels() {
         assert!(PaletteAction::from_label(label).is_some(), "{label}");
     }
@@ -68,6 +68,7 @@ fn parameterized_palette_actions_are_marked_for_nested_forms() {
         PaletteAction::McpFailed.slash_command(),
         "/mcps status=failed"
     );
+    assert_eq!(PaletteAction::UndoSession.slash_command(), "/undo");
 }
 
 #[test]

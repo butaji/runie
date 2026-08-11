@@ -28,6 +28,7 @@ declare_palette_metadata! {
     (CopyLastResponse, "/copy", "Copy the latest response"),
     (SessionInfo, "/session", "Show session statistics"),
     (SessionHistory, "/sessions history", "Show session branch history"),
+    (UndoSession, "/undo", "Undo the latest session entry"),
     (SelectModel, "/model", "Switch the active model"),
     (SelectTheme, "/theme", "Change the interface theme"),
     (ManageProviders, "/providers", "Manage configured providers"),
@@ -119,7 +120,7 @@ macro_rules! palette_sections {
 
 palette_sections! {
     ("Context" => [CopyLastResponse, SessionInfo]),
-    ("Session" => [NewSession, KeyboardShortcuts, Quit, Changelog, ShareSession, SessionHistory]),
+    ("Session" => [NewSession, KeyboardShortcuts, Quit, Changelog, ShareSession, SessionHistory, UndoSession]),
     ("Information" => [Help, ContextInfo, Doctor, Feedback, Usage, GitConflicts]),
     ("Extensions" => [Skills, Hooks, Plugins, Mcps, McpReady, McpFailed, Memory]),
     ("Automation" => [Goal, Workflow, Workflows, Loop, DeepResearch, Jobs, ActiveJobs, CancelAllJobs, ClearFinishedJobs]),

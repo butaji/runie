@@ -11,7 +11,7 @@ labels=(
   "Doctor" "Rewind Session" "Prompt History" "Find Transcript" "Jump Transcript" "Recap"
   "Set Reasoning Effort" "Always Approve" "Automatic Approval" "Plan Mode" "View Plan"
   "Login" "Logout" "Reload" "Trust Project" "Skills" "Hooks" "Plugins" "MCP Servers"
-  "Memory" "Remember" "Goal" "Workflow" "Workflows" "Sessions" "Session History" "Questions" "Active Jobs" "Cancel All Jobs" "Clear Finished Jobs" "Git Conflicts" "Ready MCP Servers" "Failed MCP Servers" "Loop" "Deep Research" "Feedback" "Usage"
+  "Memory" "Remember" "Goal" "Workflow" "Workflows" "Sessions" "Session History" "Undo Session" "Questions" "Active Jobs" "Cancel All Jobs" "Clear Finished Jobs" "Git Conflicts" "Ready MCP Servers" "Failed MCP Servers" "Loop" "Deep Research" "Feedback" "Usage"
   "Background Jobs" "Jobs" "Job Output"
 )
 parameterized=(
