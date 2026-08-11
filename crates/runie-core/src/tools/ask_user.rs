@@ -12,6 +12,10 @@ pub struct UserQuestionOption {
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct UserQuestionRequest {
     pub question: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub header: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub body: Option<String>,
     #[serde(default)]
     pub options: Vec<UserQuestionOption>,
     #[serde(default)]
@@ -37,6 +41,8 @@ impl AgentTool for AskUserQuestionTool {
             "type": "object",
             "properties": {
                 "question": { "type": "string", "minLength": 1 },
+                "header": { "type": "string" },
+                "body": { "type": "string" },
                 "options": { "type": "array", "items": {
                     "type": "object",
                     "properties": {
@@ -101,7 +107,7 @@ mod tests {
         let tool = AskUserQuestionTool;
         assert!(tool
             .validate_arguments(&serde_json::json!({
-                "question": "Ship it?",
+                "question": "Ship it?", "header": "Release", "body": "Choose one.",
                 "options": [{"label": "Yes"}, {"label": "No"}]
             }))
             .is_ok());

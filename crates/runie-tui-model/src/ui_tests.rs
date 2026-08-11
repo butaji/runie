@@ -344,6 +344,8 @@ fn user_question_dialog_selects_and_projects_answer() {
         id: "q1".into(),
         request: runie_core::tools::UserQuestionRequest {
             question: "Continue?".into(),
+            header: None,
+            body: None,
             options: vec![
                 runie_core::tools::UserQuestionOption {
                     label: "Yes".into(),
@@ -370,6 +372,8 @@ fn multi_select_question_toggles_selected_options() {
         id: "q2".into(),
         request: runie_core::tools::UserQuestionRequest {
             question: "Which?".into(),
+            header: None,
+            body: None,
             options: vec![
                 runie_core::tools::UserQuestionOption {
                     label: "A".into(),

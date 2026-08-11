@@ -1010,7 +1010,13 @@ fn render_user_question(
     theme: runie_core::types::ThemeKind,
 ) {
     let Some(question) = ui.user_question.as_ref() else { return };
-    let rows = std::iter::once(question.request.question.clone())
+    let rows = question
+        .request
+        .header
+        .iter()
+        .chain(question.request.body.iter())
+        .chain(std::iter::once(&question.request.question))
+        .cloned()
         .chain(question.request.options.iter().enumerate().map(|(index, option)| {
             let mark = if ui.user_question_selected.contains(&index) { '✓' } else { ' ' };
             format!("[{mark}] {}", option.label)
@@ -1555,6 +1561,8 @@ async fn build_live_app() -> App {
                         }
                         let request = runie_core::tools::UserQuestionRequest {
                             question: format!("Allow tool '{}' to run?", input.tool_call.name),
+                            header: Some("Tool approval".into()),
+                            body: Some("Review this action before it runs.".into()),
                             options: vec![
                                 runie_core::tools::UserQuestionOption {
                                     label: "Allow".into(),

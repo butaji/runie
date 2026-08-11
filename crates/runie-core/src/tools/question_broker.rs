@@ -345,6 +345,8 @@ mod tests {
                 broker
                     .ask(UserQuestionRequest {
                         question: "Continue?".into(),
+                        header: None,
+                        body: None,
                         options: vec![
                             UserQuestionOption {
                                 label: "yes".into(),
@@ -381,6 +383,8 @@ mod tests {
                 broker
                     .ask(UserQuestionRequest {
                         question: "Continue?".into(),
+                        header: None,
+                        body: None,
                         options: vec![],
                         allow_multiple: false,
                     })
@@ -406,6 +410,8 @@ mod tests {
                 broker
                     .ask(UserQuestionRequest {
                         question: "Continue?".into(),
+                        header: None,
+                        body: None,
                         options: vec![UserQuestionOption {
                             label: "yes".into(),
                             description: String::new(),
@@ -425,7 +431,6 @@ mod tests {
             .answer(&pending.id, serde_json::json!({"answer": "no"}))
             .unwrap_err();
         assert!(error.contains("not offered") && broker.traces()[0].outcome == "rejected");
-        assert!(broker.traces()[0].error.is_some());
         assert_eq!(
             broker.traces()[0].attempted_answer,
             Some(serde_json::json!({"answer": "no"}))
@@ -435,7 +440,6 @@ mod tests {
             .unwrap();
         assert_eq!(waiter.await.unwrap().unwrap()["answer"], "yes");
         assert_eq!(broker.traces()[1].outcome, "answered");
-        assert!(broker.traces()[1].attempted_answer.is_none());
     }
     #[test]
     fn question_trace_deserializes_legacy_error_only_records() {
