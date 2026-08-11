@@ -1,4 +1,7 @@
 use super::{AudioContent, ImageContent, UserContent, VideoContent};
+#[path = "media_url.rs"]
+mod media_url;
+use media_url::gemini_media_url;
 
 const MAX_MEDIA_BASE64_BYTES: usize = 16 * 1024 * 1024;
 
@@ -131,6 +134,7 @@ fn encode_video_url(url: &str, format: MediaWireFormat) -> Result<serde_json::Va
             Ok(serde_json::json!({"type":"video_url","video_url":{"url":url}}))
         }
         MediaWireFormat::OpenAiResponses => Ok(omitted_media("video")),
+        MediaWireFormat::Gemini => Ok(gemini_media_url(url, "video/mp4")),
         _ => unsupported_media(format),
     }
 }
@@ -145,7 +149,7 @@ fn encode_audio_url(url: &str, format: MediaWireFormat) -> Result<serde_json::Va
             Ok(serde_json::json!({"type":"input_file","file_url":url}))
         }
         MediaWireFormat::Anthropic => Ok(omitted_media("audio")),
-        _ => unsupported_media(format),
+        MediaWireFormat::Gemini => Ok(gemini_media_url(url, "audio/mpeg")),
     }
 }
 fn validate_media_url(url: &str) -> Result<(), String> {
@@ -203,7 +207,6 @@ pub fn encode_user_contents(
         .map(|content| encode_user_content(content, format))
         .collect()
 }
-
 impl ImageContent {
     pub fn new(mime_type: impl Into<String>, data: impl Into<String>) -> Result<Self, String> {
         let mime_type = mime_type.into();
@@ -212,7 +215,6 @@ impl ImageContent {
         Ok(Self { data, mime_type })
     }
 }
-
 impl VideoContent {
     pub fn new(mime_type: impl Into<String>, data: impl Into<String>) -> Result<Self, String> {
         let mime_type = mime_type.into();
@@ -246,7 +248,6 @@ fn validate_media(kind: &str, mime_type: &str, data: &str) -> Result<(), String>
     }
     Ok(())
 }
-
 fn is_base64_payload(data: &str) -> bool {
     !data.is_empty()
         && data.len().is_multiple_of(4)
@@ -256,11 +257,9 @@ fn is_base64_payload(data: &str) -> bool {
                 || (character == '=' && index >= data.len().saturating_sub(2))
         })
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
     #[test]
     fn image_encoding_is_explicit_per_provider_wire_format() {
         let content = UserContent::Image {
