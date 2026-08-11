@@ -77,6 +77,7 @@ fn provider_finish_reason_conformance_preserves_chat_wire_values() {
         ("length", StopReason::MaxTokens),
         ("tool_calls", StopReason::ToolUse),
         ("content_filter", StopReason::Error),
+        ("filtered", StopReason::Error),
     ];
     for (wire, expected) in cases {
         let payload = serde_json::json!({

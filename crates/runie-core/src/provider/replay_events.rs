@@ -121,7 +121,7 @@ pub(super) fn response_finish_reason(value: &serde_json::Value) -> Option<StopRe
         "length" | "max_tokens" | "max_output_tokens" => StopReason::MaxTokens,
         "tool_calls" | "tool_use" => StopReason::ToolUse,
         "aborted" | "cancelled" => StopReason::Aborted,
-        "error" | "failed" | "incomplete" | "content_filter" => StopReason::Error,
+        "error" | "failed" | "incomplete" | "content_filter" | "filtered" => StopReason::Error,
         _ => StopReason::Stop,
     })
 }
