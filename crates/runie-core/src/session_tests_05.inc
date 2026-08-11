@@ -111,6 +111,29 @@
     }
 
     #[tokio::test]
+    async fn concurrent_storage_actors_publish_loadable_jsonl() {
+        let path = std::env::temp_dir().join(format!(
+            "runie-concurrent-session-{}.jsonl",
+            std::process::id()
+        ));
+        let path_string = path.to_string_lossy().into_owned();
+        let first = SessionStorageActor::new();
+        let second = SessionStorageActor::new();
+        let left_snapshot = storage_snapshot();
+        let right_snapshot = storage_snapshot();
+        let (left, right) = tokio::join!(
+            first.publish_snapshot(&path_string, &left_snapshot, "left", 1, "/left"),
+            second.publish_snapshot(&path_string, &right_snapshot, "right", 2, "/right"),
+        );
+        left.expect("left publication");
+        right.expect("right publication");
+        let (session_id, _, snapshot) = first.load_snapshot(&path_string).await.expect("load");
+        assert!(matches!(session_id.as_str(), "left" | "right"));
+        assert!(matches!(snapshot.sequence, 1 | 2));
+        let _ = tokio::fs::remove_file(path).await;
+    }
+
+    #[tokio::test]
     async fn storage_discovery_is_bounded_sorted_and_header_validated() {
         let root = std::env::temp_dir().join(format!("runie-discover-{}", std::process::id()));
         let _ = tokio::fs::remove_dir_all(&root).await;
