@@ -4,6 +4,8 @@ const TOOL_CARD_PREVIEW_MAX_CHARS: usize = 256;
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ToolCardSummary {
     pub tool_call_id: String,
+    #[serde(default)]
+    pub tool_name: Option<String>,
     pub member_index: usize,
     pub card_kind: ToolCardKind,
     pub output_lines: usize,
@@ -26,7 +28,7 @@ impl ToolCardSummary {
         };
         format!(
             "{} · {:?} · {state} · output={} lines/{} bytes{}{}",
-            self.tool_call_id,
+            self.tool_name.as_deref().unwrap_or(&self.tool_call_id),
             self.card_kind,
             self.output_lines,
             self.output_bytes,
@@ -50,6 +52,7 @@ pub fn tool_card_summaries(lines: &[Line], tool_names: &dyn ToolNameLookup) -> V
             None => {
                 summaries.push(ToolCardSummary {
                     tool_call_id: row.tool_call_id.clone(),
+                    tool_name: tool_names.tool_name(&row.tool_call_id).map(str::to_owned),
                     member_index: row.member_index,
                     card_kind: row.card_kind,
                     output_lines: 0,
