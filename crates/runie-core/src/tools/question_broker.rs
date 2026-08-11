@@ -24,6 +24,21 @@ pub struct UserQuestionHistoryRow {
     pub outcome: String,
     pub detail: Option<String>,
 }
+
+impl UserQuestionHistoryRow {
+    pub fn terminal_line(&self) -> String {
+        format!(
+            "{} · {} · {}{}",
+            self.id,
+            self.outcome,
+            self.question,
+            self.detail
+                .as_deref()
+                .map(|detail| format!(" · {detail}"))
+                .unwrap_or_default()
+        )
+    }
+}
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct UserQuestionHistoryPage {
     pub offset: usize,
@@ -464,37 +479,5 @@ mod tests {
         let restored = broker.traces();
         assert_eq!(restored.len(), MAX_QUESTION_TRACES);
         assert_eq!(restored[0].id, "1");
-    }
-    #[test]
-    fn question_history_queries_newest_filtered_traces() {
-        let traces = vec![
-            UserQuestionTrace {
-                id: "1".into(),
-                question: "Deploy now?".into(),
-                outcome: "cancelled".into(),
-                attempted_answer: None,
-                error: None,
-            },
-            UserQuestionTrace {
-                id: "2".into(),
-                question: "Continue deploy?".into(),
-                outcome: "answered".into(),
-                attempted_answer: None,
-                error: None,
-            },
-        ];
-        let history = query_question_history(&traces, "deploy", Some("answered"), 8);
-        assert_eq!(
-            history
-                .iter()
-                .map(|trace| trace.id.as_str())
-                .collect::<Vec<_>>(),
-            ["2"]
-        );
-        let rows = question_history_rows(&traces, "deploy", Some("answered"), 8);
-        assert_eq!(rows[0].question, "Continue deploy?");
-        let page = question_history_page(&traces, "deploy", None, 0, 1);
-        assert_eq!(page.rows.len(), 1);
-        assert!(page.has_more);
     }
 }

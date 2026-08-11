@@ -255,17 +255,7 @@ impl App {
             let mut result = page
                 .rows
                 .into_iter()
-                .map(|row| {
-                    format!(
-                        "{} · {} · {}{}",
-                        row.id,
-                        row.outcome,
-                        row.question,
-                        row.detail
-                            .map(|detail| format!(" · {detail}"))
-                            .unwrap_or_default()
-                    )
-                })
+                .map(|row| row.terminal_line())
                 .collect::<Vec<_>>();
             if has_rows {
                 result.push(format!(

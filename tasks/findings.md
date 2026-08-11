@@ -107,6 +107,8 @@ their token and threshold decision, keeping the control projection complete.
 The context policy projection also has a checked-in YAML fixture replay test.
 Scheduler metrics now expose a pure active-work projection through
 `/jobs scheduler active`, with parser/reducer coverage.
+User-question history rows now own their terminal projection, removing a
+duplicated formatter from the TUI route.
 
 As of 2026-08-09, the reduction work has these verified results:
 
