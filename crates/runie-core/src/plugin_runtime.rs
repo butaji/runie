@@ -31,11 +31,18 @@ pub struct PluginExecutionSummary {
 impl PluginRuntimeState {
     /// Stable renderer-neutral rows for plugin lifecycle inspection.
     pub fn terminal_lines(&self) -> Vec<String> {
-        let mut lines = Vec::with_capacity(self.status.len() + self.errors.len());
+        let mut lines =
+            Vec::with_capacity(self.status.len() + self.errors.len() + self.executions.len());
         for (name, status) in &self.status {
             lines.push(format!("Plugin {name}: {status:?}"));
             if let Some(error) = self.errors.get(name) {
                 lines.push(format!("Plugin {name} error: {error}"));
+            }
+            if let Some(execution) = self.executions.get(name) {
+                lines.push(format!(
+                    "Plugin {name} execution: status={:?} stdout={:?} stderr={:?} truncated={}",
+                    execution.status, execution.stdout, execution.stderr, execution.truncated
+                ));
             }
         }
         lines
@@ -349,7 +356,15 @@ mod tests {
             },
         );
         assert_eq!(state.status["sample-plugin"], PluginRuntimeStatus::Ready);
+        assert_execution_row(&state);
+    }
+
+    fn assert_execution_row(state: &PluginRuntimeState) {
         assert_eq!(state.executions["sample-plugin"].status, Some(0));
+        assert!(state
+            .terminal_lines()
+            .iter()
+            .any(|line| line.contains("Plugin sample-plugin execution: status=Some(0)")));
     }
 
     #[test]
