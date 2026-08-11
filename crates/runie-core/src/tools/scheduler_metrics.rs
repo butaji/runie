@@ -50,6 +50,8 @@ pub enum SchedulerEvent {
     Finished { success: bool },
     Cancelled,
     CancelledWithReason { reason: SchedulerCancellationReason },
+    CancelledQueued { reason: SchedulerCancellationReason },
+    CancelledRunning { reason: SchedulerCancellationReason },
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -133,6 +135,8 @@ pub fn reduce_scheduler_event(
         SchedulerEvent::Finished { success } => finish(metrics, success)?,
         SchedulerEvent::Cancelled => cancel(metrics, SchedulerCancellationReason::Unspecified)?,
         SchedulerEvent::CancelledWithReason { reason } => cancel(metrics, reason)?,
+        SchedulerEvent::CancelledQueued { reason } => cancel_queued(metrics, reason)?,
+        SchedulerEvent::CancelledRunning { reason } => cancel_running(metrics, reason)?,
     }
     Ok(())
 }
@@ -152,6 +156,32 @@ fn cancel(
     } else {
         return Err("scheduler cancelled without a queued call".into());
     }
+    metrics.cancelled += 1;
+    count_cancellation(metrics, reason);
+    Ok(())
+}
+
+fn cancel_queued(
+    metrics: &mut SchedulerMetrics,
+    reason: SchedulerCancellationReason,
+) -> Result<(), String> {
+    if metrics.queued == 0 {
+        return Err("scheduler cancelled queued work without a queued call".into());
+    }
+    metrics.queued -= 1;
+    metrics.cancelled += 1;
+    count_cancellation(metrics, reason);
+    Ok(())
+}
+
+fn cancel_running(
+    metrics: &mut SchedulerMetrics,
+    reason: SchedulerCancellationReason,
+) -> Result<(), String> {
+    if metrics.running == 0 {
+        return Err("scheduler cancelled running work without a running call".into());
+    }
+    metrics.running -= 1;
     metrics.cancelled += 1;
     count_cancellation(metrics, reason);
     Ok(())
@@ -284,5 +314,46 @@ mod tests {
             1
         );
         assert_eq!(metrics.terminal_lines()[7], "cancelled_user: 1");
+    }
+
+    #[test]
+    fn explicit_cancellation_events_release_the_declared_slot() {
+        let mut metrics = SchedulerMetrics::default();
+        for event in [
+            SchedulerEvent::Enqueued { interactive: true },
+            SchedulerEvent::Enqueued { interactive: false },
+            SchedulerEvent::Started,
+            SchedulerEvent::CancelledRunning {
+                reason: SchedulerCancellationReason::Abort,
+            },
+            SchedulerEvent::CancelledQueued {
+                reason: SchedulerCancellationReason::User,
+            },
+        ] {
+            reduce_scheduler_event(&mut metrics, event).unwrap();
+        }
+        assert_eq!(metrics.queued, 0);
+        assert_eq!(metrics.running, 0);
+        assert_eq!(metrics.cancelled, 2);
+        assert_eq!(
+            metrics.cancelled_by_reason[&SchedulerCancellationReason::Abort],
+            1
+        );
+        assert_eq!(
+            metrics.cancelled_by_reason[&SchedulerCancellationReason::User],
+            1
+        );
+    }
+
+    #[test]
+    fn explicit_cancellation_rejects_the_wrong_empty_slot() {
+        let mut metrics = SchedulerMetrics::default();
+        assert!(reduce_scheduler_event(
+            &mut metrics,
+            SchedulerEvent::CancelledRunning {
+                reason: SchedulerCancellationReason::User,
+            }
+        )
+        .is_err());
     }
 }
