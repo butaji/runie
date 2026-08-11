@@ -177,6 +177,8 @@ impl Default for IdeActor {
     }
 }
 
+include!("ide_transport.inc");
+
 impl IdeSnapshot {
     /// Apply one host-owned JSON-RPC notification through the typed event
     /// boundary. Socket lifecycle remains outside the reducer actor.

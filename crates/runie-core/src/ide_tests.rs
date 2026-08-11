@@ -238,3 +238,25 @@ async fn ide_actor_applies_split_wire_frames_through_owned_snapshot() {
         IdeSeverity::Info
     );
 }
+
+#[tokio::test]
+async fn ide_reader_owns_stream_until_eof_and_reduces_disconnect() {
+    use tokio::io::AsyncWriteExt;
+    let actor = IdeActor::new();
+    let (mut writer, reader) = tokio::io::duplex(256);
+    let input = concat!(
+        r#"{"jsonrpc":"2.0","id":1,"method":"initialized","params":{"workspace":"/repo"}}"#,
+        "\n",
+        r#"{"jsonrpc":"2.0","id":2,"method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///main.rs","languageId":"rust","version":1,"text":"fn main() {}"}}}"#,
+        "\n"
+    );
+    let write = async move {
+        writer.write_all(input.as_bytes()).await.unwrap();
+        writer.shutdown().await.unwrap();
+    };
+    let (_, read_result) = tokio::join!(write, actor.ingest_reader(reader));
+    assert_eq!(read_result.unwrap(), 2);
+    let snapshot = actor.snapshot().await.unwrap();
+    assert_eq!(snapshot.connection, IdeConnectionStatus::Disconnected);
+    assert_eq!(snapshot.documents.len(), 1);
+}
