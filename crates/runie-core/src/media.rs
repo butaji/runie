@@ -46,8 +46,11 @@ pub fn encode_user_content(
     match content {
         UserContent::Text { text } => Ok(serde_json::json!({"type":"text","text":text})),
         UserContent::Image { data, mime_type } => encode_image(data, mime_type, format),
+        UserContent::ImageUrl { url } => encode_image_url(url, format),
         UserContent::Video { data, mime_type } => encode_video(data, mime_type, format),
+        UserContent::VideoUrl { url } => encode_video_url(url, format),
         UserContent::Audio { data, mime_type } => encode_audio(data, mime_type, format),
+        UserContent::AudioUrl { url } => encode_audio_url(url, format),
     }
 }
 
@@ -104,6 +107,50 @@ fn encode_video(
             serde_json::json!({"type":"video","source":{"type":"base64","media_type":mime_type,"data":data}}),
         ),
         MediaWireFormat::OpenAiResponses => unsupported_media(format),
+    }
+}
+
+fn encode_image_url(url: &str, format: MediaWireFormat) -> Result<serde_json::Value, String> {
+    validate_media_url(url)?;
+    match format {
+        MediaWireFormat::OpenAiChat => {
+            Ok(serde_json::json!({"type":"image_url","image_url":{"url":url}}))
+        }
+        MediaWireFormat::OpenAiResponses => {
+            Ok(serde_json::json!({"type":"input_image","detail":"auto","image_url":url}))
+        }
+        _ => unsupported_media(format),
+    }
+}
+
+fn encode_video_url(url: &str, format: MediaWireFormat) -> Result<serde_json::Value, String> {
+    validate_media_url(url)?;
+    match format {
+        MediaWireFormat::OpenAiChat => {
+            Ok(serde_json::json!({"type":"video_url","video_url":{"url":url}}))
+        }
+        _ => unsupported_media(format),
+    }
+}
+
+fn encode_audio_url(url: &str, format: MediaWireFormat) -> Result<serde_json::Value, String> {
+    validate_media_url(url)?;
+    match format {
+        MediaWireFormat::OpenAiChat => {
+            Ok(serde_json::json!({"type":"audio_url","audio_url":{"url":url}}))
+        }
+        MediaWireFormat::OpenAiResponses => {
+            Ok(serde_json::json!({"type":"input_file","file_url":url}))
+        }
+        _ => unsupported_media(format),
+    }
+}
+
+fn validate_media_url(url: &str) -> Result<(), String> {
+    if url.starts_with("http://") || url.starts_with("https://") || url.starts_with("data:") {
+        Ok(())
+    } else {
+        Err("media URL must use http, https, or data scheme".into())
     }
 }
 
@@ -227,6 +274,38 @@ mod tests {
         assert_eq!(responses["type"], "input_image");
         assert_eq!(responses["image_url"], "data:image/png;base64,aGVsbG8=");
         assert_eq!(responses["detail"], "auto");
+    }
+
+    #[test]
+    fn url_media_preserves_provider_native_sources() {
+        let image = UserContent::ImageUrl {
+            url: "https://example.test/image.png".into(),
+        };
+        let audio = UserContent::AudioUrl {
+            url: "https://example.test/audio.mp3".into(),
+        };
+        let video = UserContent::VideoUrl {
+            url: "https://example.test/video.mp4".into(),
+        };
+
+        let image_payload = encode_user_content(&image, MediaWireFormat::OpenAiResponses).unwrap();
+        assert_eq!(image_payload["detail"], "auto");
+        assert_eq!(image_payload["image_url"], "https://example.test/image.png");
+        let audio_payload = encode_user_content(&audio, MediaWireFormat::OpenAiResponses).unwrap();
+        assert_eq!(audio_payload["file_url"], "https://example.test/audio.mp3");
+        let video_payload = encode_user_content(&video, MediaWireFormat::OpenAiChat).unwrap();
+        assert_eq!(
+            video_payload["video_url"]["url"],
+            "https://example.test/video.mp4"
+        );
+        assert!(encode_user_content(&video, MediaWireFormat::OpenAiResponses).is_err());
+        assert!(encode_user_content(
+            &UserContent::ImageUrl {
+                url: "file:///tmp/image.png".into(),
+            },
+            MediaWireFormat::OpenAiChat,
+        )
+        .is_err());
     }
 
     #[test]

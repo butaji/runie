@@ -224,9 +224,12 @@ fn user_start(user: &runie_core::types::UserMessage) -> Vec<ScrollbackMsg> {
         .iter()
         .map(|content| match content {
             runie_core::types::UserContent::Text { text } => text.as_str(),
-            runie_core::types::UserContent::Image { .. } => "[image]",
-            runie_core::types::UserContent::Video { .. } => "[video]",
-            runie_core::types::UserContent::Audio { .. } => "[audio]",
+            runie_core::types::UserContent::Image { .. }
+            | runie_core::types::UserContent::ImageUrl { .. } => "[image]",
+            runie_core::types::UserContent::Video { .. }
+            | runie_core::types::UserContent::VideoUrl { .. } => "[video]",
+            runie_core::types::UserContent::Audio { .. }
+            | runie_core::types::UserContent::AudioUrl { .. } => "[audio]",
         })
         .collect::<Vec<_>>()
         .join("");

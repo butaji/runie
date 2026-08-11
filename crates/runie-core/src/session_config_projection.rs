@@ -1,5 +1,7 @@
 use super::super::*;
 
+const ESTIMATED_IMAGE_CHARS: u64 = 4_800;
+
 #[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct SessionLaneQuery {
     pub lane: Option<String>,
@@ -152,18 +154,8 @@ pub struct ContextUsageEstimate {
 
 /// Pi's conservative four-characters-per-token message estimate.
 pub fn estimate_message_tokens(message: &AgentMessage) -> u64 {
-    const ESTIMATED_IMAGE_CHARS: u64 = 4_800;
     let chars = match message {
-        AgentMessage::User(message) => message
-            .content
-            .iter()
-            .map(|content| match content {
-                crate::types::UserContent::Text { text } => pi_text_units(text),
-                crate::types::UserContent::Image { .. }
-                | crate::types::UserContent::Video { .. }
-                | crate::types::UserContent::Audio { .. } => ESTIMATED_IMAGE_CHARS,
-            })
-            .sum(),
+        AgentMessage::User(message) => message.content.iter().map(estimate_user_content).sum(),
         AgentMessage::Assistant(message) => message
             .content
             .iter()
@@ -190,6 +182,19 @@ pub fn estimate_message_tokens(message: &AgentMessage) -> u64 {
         AgentMessage::Custom(_) => 0,
     };
     chars.saturating_add(3) / 4
+}
+
+fn estimate_user_content(content: &crate::types::UserContent) -> u64 {
+    const ESTIMATED_IMAGE_CHARS: u64 = 4_800;
+    match content {
+        crate::types::UserContent::Text { text } => pi_text_units(text),
+        crate::types::UserContent::Image { .. }
+        | crate::types::UserContent::ImageUrl { .. }
+        | crate::types::UserContent::Video { .. }
+        | crate::types::UserContent::VideoUrl { .. }
+        | crate::types::UserContent::Audio { .. }
+        | crate::types::UserContent::AudioUrl { .. } => ESTIMATED_IMAGE_CHARS,
+    }
 }
 
 /// JavaScript's `String.length` counts UTF-16 code units, which is the unit
