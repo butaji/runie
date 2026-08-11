@@ -1,5 +1,4 @@
 use super::*;
-
 #[test]
 fn snapshot_facts_are_the_complete_navigation_facts_projection() {
     let mut state = super::FeedState::default();
@@ -437,6 +436,7 @@ fn tool_card_summary_reduces_output_metadata_as_data() {
         "alpha".len() + "beta".len() + "[output truncated]".len()
     );
     assert!(summaries[0].truncated);
+    assert_eq!(summaries[0].card_kind, ToolCardKind::Read);
 }
 
 #[test]

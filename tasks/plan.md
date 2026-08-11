@@ -91,8 +91,8 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    including unsupported-effort behavior and normalized failures.
 2. Tool output and background lifecycle UX — `harness-01` and `harness-03`.
    `/jobs cancel all` now reduces every running job through the actor mailbox;
-   `ToolCardSummary` and `BackgroundJobSummary` now expose bounded output
-   line/byte/truncation facts;
+   serializable `ToolCardSummary` and `BackgroundJobSummary` now expose card
+   status plus bounded output line/byte/truncation facts;
    add richer renderer-neutral output cards and owned lifecycle controls,
    with failure/cancellation replay traces.
 3. Model-aware context policy — `harness-05` (live usage boundary implemented).

@@ -1,29 +1,45 @@
 /// Bounded, renderer-neutral output facts for one logical tool card.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ToolCardSummary {
     pub tool_call_id: String,
     pub member_index: usize,
+    pub card_kind: ToolCardKind,
     pub output_lines: usize,
     pub output_bytes: usize,
     pub truncated: bool,
+    pub is_running: bool,
+    pub is_error: bool,
 }
 
 pub fn tool_card_summaries(lines: &[Line], tool_names: &dyn ToolNameLookup) -> Vec<ToolCardSummary> {
     let rows = project_tool_card_rows(lines, tool_names, &HashMap::new());
     let mut summaries = Vec::new();
-    for row in rows.into_iter().filter(|row| row.row_kind == ToolCardRowKind::Content) {
+    for row in rows {
         let summary = match summaries.iter_mut().find(|summary: &&mut ToolCardSummary| {
             summary.tool_call_id == row.tool_call_id && summary.member_index == row.member_index
         }) {
             Some(summary) => summary,
             None => {
-                summaries.push(ToolCardSummary { tool_call_id: row.tool_call_id.clone(), member_index: row.member_index, output_lines: 0, output_bytes: 0, truncated: false });
+                summaries.push(ToolCardSummary {
+                    tool_call_id: row.tool_call_id.clone(),
+                    member_index: row.member_index,
+                    card_kind: row.card_kind,
+                    output_lines: 0,
+                    output_bytes: 0,
+                    truncated: false,
+                    is_running: row.is_running,
+                    is_error: row.is_error,
+                });
                 summaries.last_mut().expect("just inserted tool summary")
             }
         };
-        summary.output_lines += 1;
-        summary.output_bytes += row.text.len();
-        summary.truncated |= row.text.contains("[output truncated]");
+        if row.row_kind == ToolCardRowKind::Content {
+            summary.output_lines += 1;
+            summary.output_bytes += row.text.len();
+            summary.truncated |= row.text.contains("[output truncated]");
+        }
+        summary.is_running |= row.is_running;
+        summary.is_error |= row.is_error;
     }
     summaries
 }

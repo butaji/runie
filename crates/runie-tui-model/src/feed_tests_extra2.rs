@@ -164,3 +164,17 @@ fn content_yaml_trace_replays_through_transcript_and_assistant_projection() {
     assert_eq!(snapshot.lines[1].kind, super::LineKind::Assistant);
     assert!(snapshot.facts.settled_no_tool_phase);
 }
+#[test]
+fn tool_card_summary_keeps_terminal_error_and_running_state() {
+    let lines = vec![
+        super::Line::new(super::LineKind::Tool, "Bash").for_tool("bash-1"),
+        super::Line::new(super::LineKind::ToolOutput, "still running").for_tool("bash-1"),
+        super::Line::new(super::LineKind::ToolError, "failed").for_tool("bash-1"),
+    ];
+    let names = std::collections::HashMap::from([("bash-1".to_owned(), "bash".to_owned())]);
+    let summaries = super::tool_card_summaries(&lines, &names);
+    assert_eq!(summaries.len(), 1);
+    assert!(summaries[0].is_error);
+    assert!(!summaries[0].is_running);
+    assert_eq!(summaries[0].card_kind, super::ToolCardKind::Execute);
+}
