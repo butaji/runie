@@ -74,7 +74,12 @@ No task is complete from a green unit test alone; the relevant runtime,
 replay, or capture evidence must also be recorded in `findings.md` or the
 component documentation.
 
-## Ranked remaining implementation queue
+## Ranked extension queue after finite acceptance
+
+The finite acceptance boundary in [`completion-matrix.md`](completion-matrix.md)
+is implemented and verified for H01–H20. The queue below tracks only the
+explicitly open “richer”, provider-specific, or platform-specific extensions;
+these do not invalidate the finite matrix evidence.
 
 The reduction backlog is now backed by declarative tables for the major closed
 vocabularies, so the next work is functional parity. Each item remains open
