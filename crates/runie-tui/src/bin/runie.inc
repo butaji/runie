@@ -1304,6 +1304,11 @@ async fn run_noninteractive(config: NonInteractiveConfig) -> RunOutcome {
     let run_id = format!("run-{}", std::process::id());
     let selected_model = app.model_catalog.snapshot().selected;
     let thinking_level = Some(app.loop_actor.state_snapshot().thinking_level);
+    let effort = selected_model
+        .as_ref()
+        .and_then(|model| model.thinking_level_map.as_ref())
+        .and_then(|map| thinking_level.and_then(|level| map.value(level)))
+        .map(str::to_owned);
     let mut events = vec![
         JsonlEvent::Started { run_id },
         JsonlEvent::Metadata {
@@ -1312,6 +1317,7 @@ async fn run_noninteractive(config: NonInteractiveConfig) -> RunOutcome {
             api: selected_model.as_ref().map(|model| model.api.clone()),
             context_window: selected_model.as_ref().map(|model| model.context_window),
             thinking_level,
+            effort,
         },
     ];
     let messages = vec![runie_core::types::AgentMessage::User(
