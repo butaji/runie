@@ -236,6 +236,13 @@ pub fn parse_background_job_query(args: &str) -> Option<&str> {
     (id != "cancel" && parts.next().is_none()).then_some(id)
 }
 
+/// Parse the explicit bounded-output view for one actor-owned job.
+pub fn parse_background_job_output_query(args: &str) -> Option<&str> {
+    let mut parts = args.split_whitespace();
+    (parts.next() == Some("output") && parts.next().is_some() && parts.next().is_none())
+        .then(|| args.split_whitespace().nth(1).unwrap())
+}
+
 pub fn parse_background_job_status_query(args: &str) -> Option<&str> {
     let status = args.trim();
     ["running", "completed", "failed", "cancelled"]

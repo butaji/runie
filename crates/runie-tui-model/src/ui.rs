@@ -67,6 +67,7 @@ runie_core::typed_action_registry! {
         ActiveJobs => "Active Jobs",
         CancelAllJobs => "Cancel All Jobs",
         ClearFinishedJobs => "Clear Finished Jobs",
+        JobOutput => "Job Output",
         GitConflicts => "Git Conflicts",
         Questions => "User Questions",
     }

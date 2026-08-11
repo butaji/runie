@@ -31,6 +31,6 @@ telemetry, pure snapshots, command palette, and TUI smoke infrastructure.
 
 Smoke requirement: `scripts/tmux-command-smoke.sh` covers 55 palette cases,
 including parameterized background-job inspection, two
-direct command cases, and the Quit lifecycle, for 61 TUI-only cases.
+direct command cases, and the Quit lifecycle, for 62 TUI-only cases.
 Provider-backed coding prompts remain
 environment-dependent and must be recorded separately from local UI evidence.

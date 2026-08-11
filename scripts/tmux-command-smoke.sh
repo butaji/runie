@@ -12,14 +12,14 @@ labels=(
   "Set Reasoning Effort" "Always Approve" "Automatic Approval" "Plan Mode" "View Plan"
   "Login" "Logout" "Reload" "Trust Project" "Skills" "Hooks" "Plugins" "MCP Servers"
   "Memory" "Remember" "Goal" "Workflow" "Workflows" "Sessions" "Session History" "Questions" "Active Jobs" "Cancel All Jobs" "Clear Finished Jobs" "Git Conflicts" "Loop" "Deep Research" "Feedback" "Usage"
-  "Background Jobs" "Jobs"
+  "Background Jobs" "Jobs" "Job Output"
 )
 parameterized=(
   "Select Theme" "Set Session Name" "Compact Context" "Fork Session" "Select Tree Entry"
   "Export Session" "Import Session" "Clone Session" "Resume Session" "Help" "Settings" "Doctor"
   "Rewind Session" "Prompt History" "Find Transcript" "Jump Transcript" "Set Reasoning Effort"
   "Always Approve" "Automatic Approval" "Plan Mode" "Login" "Logout" "Trust Project" "Remember"
-  "Goal" "Workflow" "Loop" "Deep Research" "Feedback" "Usage" "Background Jobs" "Questions" "Jobs" "Git Conflicts"
+  "Goal" "Workflow" "Loop" "Deep Research" "Feedback" "Usage" "Background Jobs" "Questions" "Jobs" "Git Conflicts" "Job Output"
 )
 
 is_parameterized() {
@@ -83,6 +83,8 @@ for label in "${labels[@]}"; do
       argument=(s c h e d u l e r)
     elif [[ "$label" == "Git Conflicts" ]]; then
       argument=(c o n f l i c t s)
+    elif [[ "$label" == "Job Output" ]]; then
+      argument=(o u t p u t 0)
     fi
     for character in "${argument[@]}"; do
       tmux -L "$socket" send-keys -t smoke -l -- "$character"

@@ -76,6 +76,7 @@ declare_palette_metadata! {
     (ActiveJobs, "/jobs scheduler active", "Show queued and running work"),
     (CancelAllJobs, "/jobs cancel all", "Cancel all running jobs"),
     (ClearFinishedJobs, "/jobs clear finished", "Clear finished job rows"),
+    (JobOutput, "/jobs output", "Inspect bounded job output"),
     (GitConflicts, "/git conflicts", "Inspect unresolved Git conflicts"),
     (Questions, "/questions", "Browse user-question history"),
 }
@@ -176,6 +177,7 @@ impl PaletteAction {
                 | Self::Usage
                 | Self::Jobs
                 | Self::Questions
+                | Self::JobOutput
         )
     }
 
@@ -211,6 +213,7 @@ impl PaletteAction {
             Self::Loop => "Interval and prompt",
             Self::DeepResearch => "Query",
             Self::Usage => "manage (optional)",
+            Self::JobOutput => "Job id",
             Self::Questions => "Query (optional)",
             _ => "Value",
         }
