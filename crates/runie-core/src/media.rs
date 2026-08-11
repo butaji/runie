@@ -23,7 +23,7 @@ macro_rules! media_wire_formats {
 
 media_wire_formats! {
     (Pi, "pi", true),
-    (OpenAiChat, "openai-chat", false),
+    (OpenAiChat, "openai-chat", true),
     (OpenAiResponses, "openai-responses", false),
     (Gemini, "gemini", true),
     (Anthropic, "anthropic", true),
@@ -41,6 +41,9 @@ pub fn encode_user_content(
         }
         (UserContent::Image { data, mime_type }, MediaWireFormat::OpenAiChat) => Ok(
             serde_json::json!({"type":"image_url","image_url":{"url":format!("data:{mime_type};base64,{data}")}}),
+        ),
+        (UserContent::Video { data, mime_type }, MediaWireFormat::OpenAiChat) => Ok(
+            serde_json::json!({"type":"video_url","video_url":{"url":format!("data:{mime_type};base64,{data}")}}),
         ),
         (UserContent::Image { data, mime_type }, MediaWireFormat::OpenAiResponses) => Ok(
             serde_json::json!({"type":"input_image","image_url":format!("data:{mime_type};base64,{data}")}),
@@ -138,12 +141,14 @@ mod tests {
     }
 
     #[test]
-    fn unsupported_provider_video_encoding_is_rejected() {
+    fn openai_chat_video_encoding_uses_video_url_data() {
         let content = UserContent::Video {
             data: "aGVsbG8=".into(),
             mime_type: "video/mp4".into(),
         };
-        assert!(encode_user_content(&content, MediaWireFormat::OpenAiChat).is_err());
+        let chat = encode_user_content(&content, MediaWireFormat::OpenAiChat).unwrap();
+        assert_eq!(chat["type"], "video_url");
+        assert_eq!(chat["video_url"]["url"], "data:video/mp4;base64,aGVsbG8=");
         assert_eq!(
             encode_user_content(&content, MediaWireFormat::Pi).unwrap()["type"],
             "video"
@@ -153,7 +158,7 @@ mod tests {
             serde_json::json!({"mime_type":"video/mp4","data":"aGVsbG8="})
         );
         assert!(MediaWireFormat::Gemini.supports_video());
-        assert!(!MediaWireFormat::OpenAiChat.supports_video());
+        assert!(MediaWireFormat::OpenAiChat.supports_video());
         assert_eq!(
             MediaWireFormat::OpenAiResponses.wire_name(),
             "openai-responses"
