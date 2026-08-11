@@ -8,6 +8,17 @@ pub struct SessionHistoryRow {
     pub selected: bool,
 }
 
+impl SessionHistoryRow {
+    pub fn terminal_line(&self) -> String {
+        let selected = if self.selected { "*" } else { " " };
+        let parent = self.parent_id.as_deref().unwrap_or("-");
+        format!(
+            "{selected} {} type={} lane={} seq={} parent={parent}",
+            self.id, self.record_type, self.lane, self.seq
+        )
+    }
+}
+
 impl SessionSnapshot {
     /// Project the journal into stable picker/history data. The selected
     /// branch is marked without discarding alternate undo targets.

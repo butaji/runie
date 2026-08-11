@@ -163,6 +163,15 @@
         assert_eq!(rows[2].record_type, "session_name");
     }
 
+    #[test]
+    fn history_rows_have_a_lossless_terminal_projection() {
+        let row = branch_snapshot().history_rows().remove(1);
+        assert_eq!(
+            row.terminal_line(),
+            "* message-2 type=message lane=feature seq=2 parent=message-1"
+        );
+    }
+
     fn branch_snapshot() -> SessionSnapshot {
         SessionSnapshot {
             entries: vec![

@@ -97,6 +97,9 @@ suite remain green.
 Model-owned default effort now accepts both Pi-style `defaultThinkingLevel` and
 Kimi-style `default_effort`; valid defaults override the first declared level,
 invalid defaults fall back safely, and focused tests cover both serde forms.
+Session history rows now own a lossless terminal projection, and `/sessions
+history` exposes the actor-owned selected/alternate branch history without
+creating a second state owner.
 
 As of 2026-08-09, the reduction work has these verified results:
 

@@ -36,6 +36,23 @@ impl App {
             return true;
         }
         if name == "sessions" {
+            if args.trim().eq_ignore_ascii_case("history") {
+                let result = self
+                    .session_actor
+                    .snapshot()
+                    .history_rows()
+                    .into_iter()
+                    .map(|row| row.terminal_line())
+                    .collect::<Vec<_>>();
+                self.ui
+                    .send(UiMsg::ShowCommandResult(if result.is_empty() {
+                        "No session history".into()
+                    } else {
+                        result.join("\n")
+                    }))
+                    .await;
+                return true;
+            }
             let root = std::env::current_dir()
                 .map(|path| path.to_string_lossy().into_owned())
                 .unwrap_or_else(|_| ".".into());
