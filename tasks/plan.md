@@ -90,7 +90,8 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    compatibility-tested tool-call path and unknown values fail closed as
    explicit errors; a model-derived provider request profile now centralizes
    OpenAI, Anthropic, Gemini, MiniMax, and generic effort-field selection;
-   the live MiniMax request body consumes that profile, whose wire identity is
+   the shared HTTP request boundary and live MiniMax request body consume that
+   profile, whose wire identity is
    now serializable and reverse-parsable for replay;
    typed failures now preserve bounded server retry guidance alongside status and
    retryability; complete the finite provider payload/finish-reason conformance matrix,

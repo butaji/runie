@@ -151,6 +151,7 @@ async fn prepare_request(
     options: Option<&SimpleStreamOptions>,
 ) -> Result<HttpRequest, StreamError> {
     let payload = apply_payload_hook(&body, model, options).await;
+    let payload = with_model_provider_effort(payload, model, options);
     let request_body = match payload {
         serde_json::Value::String(raw) => raw,
         value => serde_json::to_string(&value).map_err(|error| {

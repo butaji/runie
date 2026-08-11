@@ -126,6 +126,33 @@ async fn post_with_options_runs_payload_and_response_hooks() {
     assert_hooked_response(&body, &seen_payload, &seen_response, &response);
 }
 
+#[tokio::test]
+async fn shared_http_boundary_applies_model_effort_profile() {
+    let body = Arc::new(Mutex::new(None));
+    let http = CapturingHttp { body: body.clone() };
+    let model = Model {
+        provider: "anthropic".into(),
+        thinking_level_map: Some(crate::types::ThinkingLevelMap {
+            high: Some("extended".into()),
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    http.post_with_options(
+        r#"{"model":"demo"}"#.into(),
+        model,
+        Some(SimpleStreamOptions {
+            reasoning: Some(crate::types::ThinkingLevel::High),
+            ..Default::default()
+        }),
+    )
+    .await
+    .unwrap();
+    let payload: serde_json::Value =
+        serde_json::from_str(&body.lock().unwrap().clone().unwrap()).unwrap();
+    assert_eq!(payload["reasoning"], "extended");
+}
+
 fn assert_hooked_response(
     body: &Arc<Mutex<Option<String>>>,
     seen_payload: &Arc<Mutex<Option<serde_json::Value>>>,
