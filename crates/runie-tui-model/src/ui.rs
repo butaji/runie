@@ -72,6 +72,7 @@ runie_core::typed_action_registry! {
         ClearFinishedJobs => "Clear Finished Jobs",
         JobOutput => "Job Output",
         GitStatus => "Git Status",
+        GitDiff => "Git Diff",
         GitConflicts => "Git Conflicts",
         Questions => "User Questions",
     }
