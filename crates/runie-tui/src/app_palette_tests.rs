@@ -80,6 +80,15 @@ fn session_history_query_palette_action_emits_extended_command() {
 }
 
 #[test]
+fn cancel_running_jobs_palette_action_emits_extended_command() {
+    assert_parameter_flow(
+        super::PaletteAction::CancelRunningJobs,
+        "",
+        "/jobs cancel running",
+    );
+}
+
+#[test]
 fn parameterized_palette_storage_flows_emit_typed_commands() {
     for (action, input, expected) in [
         (

@@ -2333,6 +2333,7 @@ async fn run_app(
                             if matches!(
                                 action,
                                 PaletteAction::CancelAllJobs
+                                    | PaletteAction::CancelRunningJobs
                                     | PaletteAction::ClearFinishedJobs
                                     | PaletteAction::CompletedJobs
                                     | PaletteAction::FailedJobs
@@ -2340,6 +2341,7 @@ async fn run_app(
                             ) {
                                 let args = match action {
                                     PaletteAction::CancelAllJobs => "cancel all",
+                                    PaletteAction::CancelRunningJobs => "cancel running",
                                     PaletteAction::ClearFinishedJobs => "clear finished",
                                     PaletteAction::CompletedJobs => "completed",
                                     PaletteAction::FailedJobs => "failed",
