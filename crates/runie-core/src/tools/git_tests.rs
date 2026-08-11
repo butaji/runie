@@ -105,6 +105,19 @@ fn conflict_projection_is_lossless_and_ignores_clean_changes() {
 }
 
 #[test]
+fn conflict_summary_owns_renderer_neutral_terminal_rows() {
+    let summary = classify_conflicts("UU src/main.rs\nAA src/new.rs\n");
+    assert_eq!(
+        summary.terminal_lines(),
+        [
+            "Git conflicts: 2 recoverable=true",
+            "Conflict: src/main.rs",
+            "Conflict: src/new.rs"
+        ]
+    );
+}
+
+#[test]
 fn conflict_recovery_plan_is_data_only_and_deterministic() {
     let plan = plan_conflict_recovery(&classify_conflicts("UU src/main.rs\n"));
     assert_eq!(plan.paths, ["src/main.rs"]);

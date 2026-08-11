@@ -4,6 +4,22 @@ pub struct GitConflictSummary {
     pub recoverable: bool,
 }
 
+impl GitConflictSummary {
+    pub fn terminal_lines(&self) -> Vec<String> {
+        let mut lines = vec![format!(
+            "Git conflicts: {} recoverable={}",
+            self.conflicted_paths.len(),
+            self.recoverable
+        )];
+        lines.extend(
+            self.conflicted_paths
+                .iter()
+                .map(|path| format!("Conflict: {path}")),
+        );
+        lines
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum GitConflictAction {

@@ -111,6 +111,8 @@ User-question history rows now own their terminal projection, removing a
 duplicated formatter from the TUI route.
 Background-job summaries now likewise own their terminal projection, removing
 the duplicate `/jobs` formatter from the TUI.
+Git conflict summaries now expose a renderer-neutral terminal projection from
+the existing classified data boundary.
 
 As of 2026-08-09, the reduction work has these verified results:
 
