@@ -48,6 +48,16 @@ pub struct DispatchOutcome {
     pub events: Vec<crate::types::AgentEvent>,
     pub cancelled: bool,
 }
+
+macro_rules! dispatch_named_tools {
+    ($call:expr, $ctx:expr, $( $name:literal => $future:expr ),+ $(,)?) => {{
+        $(
+            if $call.name == $name {
+                return $future.await;
+            }
+        )+
+    }};
+}
 pub async fn execute_sequential(calls: Vec<ToolCall>, ctx: ToolExecContext) -> DispatchOutcome {
     let mut outcome = DispatchOutcome::default();
 
@@ -406,27 +416,17 @@ async fn execute_tool(
     ctx: &ToolExecContext,
     signal: tokio_util::sync::CancellationToken,
 ) -> Result<AgentToolResult, String> {
-    if call.name == "subagent" {
-        return execute_subagent(call, ctx).await;
-    }
-    if call.name == "ask_user_question" {
-        return special::execute_question(call, ctx).await;
-    }
-    if call.name == "web_search" {
-        return special::execute_web_search(call, ctx).await;
-    }
-    if call.name == "background_bash" {
-        return crate::tools::background::execute_shell(call, ctx).await;
-    }
-    if call.name == "background_jobs" {
-        return crate::tools::background::execute_jobs(ctx).await;
-    }
-    if call.name == "background_cancel" {
-        return crate::tools::background::execute_cancel(call, ctx).await;
-    }
-    if call.name == "todo_write" {
-        return crate::tools::todo::execute_write(call, ctx).await;
-    }
+    dispatch_named_tools!(
+        call,
+        ctx,
+        "subagent" => execute_subagent(call, ctx),
+        "ask_user_question" => special::execute_question(call, ctx),
+        "web_search" => special::execute_web_search(call, ctx),
+        "background_bash" => crate::tools::background::execute_shell(call, ctx),
+        "background_jobs" => crate::tools::background::execute_jobs(ctx),
+        "background_cancel" => crate::tools::background::execute_cancel(call, ctx),
+        "todo_write" => crate::tools::todo::execute_write(call, ctx),
+    );
     let settled = Arc::new(AtomicBool::new(false));
     let tool_future = tool.execute(
         &call.id,
