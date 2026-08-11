@@ -358,36 +358,7 @@ fn minimax_status_code(payload: &serde_json::Value) -> Option<i64> {
 }
 
 fn minimax_usage(payload: &serde_json::Value) -> Usage {
-    let usage = payload.pointer("/usage");
-    let read = |names: &[&str]| {
-        names
-            .iter()
-            .find_map(|name| usage?.get(*name)?.as_u64())
-            .unwrap_or_default()
-    };
-    let input = read(&["prompt_tokens", "input_tokens"]);
-    let cache_read = usage
-        .and_then(|value| value.pointer("/prompt_tokens_details/cached_tokens"))
-        .or_else(|| usage.and_then(|value| value.get("cached_tokens")))
-        .or_else(|| usage.and_then(|value| value.get("cache_read_input_tokens")))
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or_default();
-    let output = read(&["completion_tokens", "output_tokens"]);
-    let cache_write = read(&["cache_creation_input_tokens", "cache_write_tokens"]);
-    let total_tokens = read(&["total_tokens"]);
-    Usage {
-        input: input.saturating_sub(cache_read),
-        output,
-        cache_read,
-        cache_write,
-        reasoning: read(&["reasoning_tokens"]),
-        total_tokens: if total_tokens == 0 {
-            input.saturating_add(output)
-        } else {
-            total_tokens
-        },
-        ..Usage::default()
-    }
+    runie_core::provider::response_usage(payload)
 }
 
 fn minimax_events(payload: &serde_json::Value) -> Vec<AssistantMessageEvent> {

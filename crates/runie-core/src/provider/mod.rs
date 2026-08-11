@@ -13,6 +13,7 @@ pub use http::{
     with_model_effort, with_model_provider_effort, with_provider_effort, EffortWireField,
     HttpActor, HttpRequest, HttpResponse, ProviderRequestProfile, ReplayHttpActor,
 };
+pub use replay::response_usage;
 pub use replay::ReplayProvider;
 pub use stream_fn::{
     classify_failure, AssistantMessageEventStream, ProviderFailure, ProviderFailureKind,

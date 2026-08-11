@@ -127,7 +127,7 @@ pub(super) fn response_finish_reason(value: &serde_json::Value) -> Option<StopRe
     clippy::too_many_lines,
     reason = "The usage projection keeps provider aliases visible in one data boundary"
 )]
-pub(super) fn response_usage(value: &serde_json::Value) -> Usage {
+pub fn response_usage(value: &serde_json::Value) -> Usage {
     let Some(raw) = value
         .pointer("/response/usage")
         .or_else(|| value.pointer("/usage"))
@@ -141,6 +141,7 @@ pub(super) fn response_usage(value: &serde_json::Value) -> Usage {
         .or_else(|| raw.pointer("/prompt_tokens_details/cached_tokens"))
         .or_else(|| raw.get("cached_tokens"))
         .or_else(|| raw.get("cache_read_input_tokens"))
+        .or_else(|| raw.get("prompt_cache_hit_tokens"))
         .and_then(|v| v.as_u64())
         .unwrap_or_default();
     let cache_write =
@@ -446,5 +447,21 @@ mod tests {
         .expect("chat terminal event");
         assert_eq!(state.stop_reason, StopReason::MaxTokens);
         assert_eq!(state.raw_stop_reason.as_deref(), Some("length"));
+    }
+
+    #[test]
+    fn provider_usage_conformance_accepts_minimax_cache_hit_alias() {
+        let usage = super::response_usage(&serde_json::json!({
+            "usage": {
+                "prompt_tokens": 120,
+                "completion_tokens": 30,
+                "prompt_cache_hit_tokens": 80,
+                "prompt_cache_miss_tokens": 40,
+                "total_tokens": 150
+            }
+        }));
+        assert_eq!(usage.input, 40);
+        assert_eq!(usage.cache_read, 80);
+        assert_eq!(usage.total_tokens, 150);
     }
 }

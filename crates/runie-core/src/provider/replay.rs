@@ -149,6 +149,8 @@ impl ReplayProvider {
 
 #[path = "replay_events.rs"]
 mod replay_events;
+
+pub use replay_events::response_usage;
 use replay_events::*;
 impl ReplayProvider {
     /// Reset the turn counter so a fresh run replays the recorded trace again.
