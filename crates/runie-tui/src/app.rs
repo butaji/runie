@@ -457,6 +457,8 @@ fn submission_actor(
 
 #[path = "app_methods.rs"]
 mod app_methods;
+#[path = "app_model_catalog.rs"]
+mod app_model_catalog;
 fn dialog_is_visible(ui: &UiState, id: &'static str) -> bool {
     let legacy_open = match id {
         "shortcuts" => ui.shortcuts_open,
@@ -477,7 +479,6 @@ fn compaction_token_estimates(snapshot: &SessionSnapshot) -> Vec<u64> {
         .map(|entry| runie_core::session::estimate_message_tokens(&entry.message))
         .collect()
 }
-
 fn compaction_retained_tail(
     snapshot: &SessionSnapshot,
     preparation: &runie_core::session::CompactionPreparation,

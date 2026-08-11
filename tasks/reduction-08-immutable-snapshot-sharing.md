@@ -58,6 +58,9 @@ keeping plugin lifecycle state on the existing event reducer boundary.
 `LoopActor` now publishes an immutable shared control projection alongside its
 compatibility watch state, keeping abort/run/queue mode transitions on one
 reducer-owned data boundary.
+The TUI model-selector read paths now consume the model catalog's shared
+projection, avoiding repeated deep catalog clones while retaining owned
+snapshot APIs for mutation and serialization boundaries.
 `FollowUpQueueActor` now publishes its previously unused queue snapshot as both
 an owned compatibility view and immutable shared projection, with push/drain/
 clear transitions reducing through one queue-owned publication boundary.

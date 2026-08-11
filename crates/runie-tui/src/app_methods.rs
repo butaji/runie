@@ -71,39 +71,6 @@ impl App {
         self.ui.send(UiMsg::ToggleCommandPalette).await;
     }
 
-    /// Project the catalog actor's immutable search universe into the UI
-    /// actor before opening its selector. The UI owns query/index/scope;
-    /// catalog ownership remains in `ModelCatalogActor`.
-    pub async fn toggle_model_selector(&self) {
-        // The selector is a view of the catalog actor, so refresh the
-        // catalog on a cold start instead of opening an empty form. Preserve
-        // an already-loaded catalog: replay and tests seed it through the
-        // catalog actor, and an unconditional provider refresh would erase
-        // those selectable rows when discovery is unavailable.
-        if self.model_catalog.snapshot().catalog.available.is_empty() {
-            self.refresh_models().await;
-        }
-        if self.model_catalog.snapshot().catalog.available.is_empty() {
-            // Keep the selector useful when provider discovery is unavailable
-            // (for example, before an API key is configured). This is only a
-            // catalog fallback; selecting it still flows through the model
-            // catalog and loop actors.
-            self.model_catalog
-                .load(vec![runie_core::types::Model {
-                    id: std::env::var("MINIMAX_MODEL").unwrap_or_else(|_| "MiniMax-M2.1".into()),
-                    name: "MiniMax M2.1".into(),
-                    api: "openai-completions".into(),
-                    provider: "minimax".into(),
-                    base_url: std::env::var("MINIMAX_BASE_URL").unwrap_or_default(),
-                    ..Default::default()
-                }])
-                .await;
-        }
-        let rows = model_selector_rows(&self.model_catalog.snapshot());
-        self.ui.send(UiMsg::SetModelSelectorRows(rows)).await;
-        self.ui.send(UiMsg::ToggleModelSelector).await;
-    }
-
     pub async fn select_provider_model(
         &self,
         provider_id: String,
@@ -117,9 +84,9 @@ impl App {
             .cloned()
             .ok_or_else(|| format!("provider is not connected: {provider_id}"))?;
 
-        let model = self
-            .model_catalog
-            .snapshot()
+        let catalog = self.model_catalog.shared_snapshot();
+        let model = catalog
+            .get()
             .catalog
             .available
             .iter()
@@ -157,7 +124,7 @@ impl App {
                 .await;
             self.ui
                 .send(UiMsg::SetModelSelectorRows(model_selector_rows(
-                    &self.model_catalog.snapshot(),
+                    self.model_catalog.shared_snapshot().get(),
                 )))
                 .await;
         }
@@ -168,9 +135,9 @@ impl App {
     /// and the loop actor admits the resulting model through its mailbox.
     pub async fn activate_model_selector(&self) -> Option<Model> {
         let ui = self.ui.snapshot();
-        let model = self
-            .model_catalog
-            .snapshot()
+        let catalog = self.model_catalog.shared_snapshot();
+        let model = catalog
+            .get()
             .results
             .get(ui.model_selector_index)
             .cloned()?;
