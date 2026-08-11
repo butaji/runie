@@ -443,6 +443,9 @@ pub(super) fn has_terminal_marker(value: &serde_json::Value) -> bool {
         || value
             .pointer("/choices/0/finish_reason")
             .is_some_and(|v| !v.is_null())
+        || value
+            .pointer("/candidates/0/finishReason")
+            .is_some_and(|v| !v.is_null())
 }
 
 #[cfg(test)]

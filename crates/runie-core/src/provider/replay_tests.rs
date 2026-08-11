@@ -154,6 +154,34 @@ fn provider_finish_reason_conformance_accepts_gemini_candidates() {
         assert_eq!(super::raw_response_finish_reason(&payload), Some(wire));
     }
 }
+
+#[tokio::test]
+async fn gemini_candidate_trace_replays_native_finish_and_usage() {
+    let provider = ReplayProvider::from_sse_body(
+        "data: {\"candidates\":[{\"finishReason\":\"MAX_TOKENS\"}],\"usageMetadata\":{\"promptTokenCount\":12,\"candidatesTokenCount\":30,\"totalTokenCount\":42}}\n",
+    )
+    .expect("Gemini trace");
+    let mut events = provider
+        .stream(
+            &Model::default(),
+            &crate::types::AgentContext::default(),
+            None,
+        )
+        .await
+        .expect("replay stream");
+    assert!(matches!(
+        events.next().await,
+        Some(AssistantMessageEvent::Start { .. })
+    ));
+    assert!(matches!(
+        events.next().await,
+        Some(AssistantMessageEvent::Done {
+            stop_reason: StopReason::MaxTokens,
+            usage,
+            ..
+        }) if usage.input == 12 && usage.output == 30 && usage.total_tokens == 42
+    ));
+}
 #[test]
 fn unknown_finish_reasons_are_not_reported_as_successful_stops() {
     let payload = serde_json::json!({

@@ -130,7 +130,9 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    typed failures now preserve bounded server retry guidance alongside status and
    retryability; complete the finite provider payload/finish-reason conformance matrix,
    including unsupported-effort behavior, normalized failures, Gemini
-   `usageMetadata` token aliases, and native candidate finish reasons.
+   `usageMetadata` token aliases, and native candidate finish reasons. A native
+   Gemini replay trace now drives the actual terminal reducer and verifies
+   `MAX_TOKENS` plus usage projection.
 2. Tool output and background lifecycle UX — `harness-01` and `harness-03`.
    `/jobs cancel all` now reduces every running job through the actor mailbox;
    serializable `ToolCardSummary` and `BackgroundJobSummary` now expose card
