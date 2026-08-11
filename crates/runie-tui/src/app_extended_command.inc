@@ -130,16 +130,7 @@ impl App {
                 )
                 .into_iter()
                 .filter(|job| format!("{:?}", job.status).eq_ignore_ascii_case(status))
-                .map(|job| format!(
-                    "{} · {:?} · {} exit={:?} · output={} lines/{} bytes{}",
-                    job.id,
-                    job.status,
-                    job.command,
-                    job.exit_code,
-                    job.output_lines,
-                    job.output_bytes,
-                    if job.truncated { " truncated" } else { "" },
-                ))
+                .map(|job| background_job_line(&job))
                 .collect::<Vec<_>>();
                 self.ui
                     .send(UiMsg::ShowCommandResult(if result.is_empty() {
@@ -170,16 +161,7 @@ impl App {
                 &self.background_actor.snapshot(),
             )
                 .into_iter()
-                .map(|job| format!(
-                    "{} · {:?} · {} exit={:?} · output={} lines/{} bytes{}",
-                    job.id,
-                    job.status,
-                    job.command,
-                    job.exit_code,
-                    job.output_lines,
-                    job.output_bytes,
-                    if job.truncated { " truncated" } else { "" },
-                ))
+                .map(|job| background_job_line(&job))
                 .collect::<Vec<_>>();
             result.extend(
                 self.loop_actor
