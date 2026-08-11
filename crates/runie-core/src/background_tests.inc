@@ -71,7 +71,10 @@ async fn output_read_is_actor_owned_and_unknown_ids_are_empty() {
     let output = actor.read_output(&id).await.expect("captured output");
     assert_eq!(output.text, "captured");
     assert_eq!(output.output_lines, 1);
-    assert_eq!(output.terminal_lines(), vec!["background output 0 · 1 lines/8 bytes", "captured"]);
+    assert_eq!(output.command, "printf captured");
+    assert_eq!(output.status, BackgroundStatus::Completed);
+    assert_eq!(output.exit_code, Some(0));
+    assert_eq!(output.terminal_lines(), vec!["background output 0 · Completed · printf captured exit=Some(0) · 1 lines/8 bytes", "captured"]);
     assert_eq!(actor.read_output("missing").await, None);
 }
 

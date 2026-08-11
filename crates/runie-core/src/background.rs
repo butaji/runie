@@ -51,6 +51,9 @@ pub struct BackgroundJobSummary {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BackgroundOutput {
     pub job_id: String,
+    pub command: String,
+    pub status: BackgroundStatus,
+    pub exit_code: Option<i32>,
     pub text: String,
     pub output_lines: usize,
     pub output_bytes: usize,
@@ -61,8 +64,11 @@ pub struct BackgroundOutput {
 impl BackgroundOutput {
     pub fn terminal_lines(&self) -> Vec<String> {
         let mut lines = vec![format!(
-            "background output {} · {} lines/{} bytes{}",
+            "background output {} · {:?} · {} exit={:?} · {} lines/{} bytes{}",
             self.job_id,
+            self.status,
+            self.command,
+            self.exit_code,
             self.output_lines,
             self.output_bytes,
             if self.truncated { " truncated" } else { "" },
@@ -319,6 +325,9 @@ fn handle_message(
                 let facts = output_facts(&job.output, truncated);
                 BackgroundOutput {
                     job_id: id,
+                    command: job.command.clone(),
+                    status: job.status.clone(),
+                    exit_code: job.exit_code,
                     text: job.output.clone(),
                     output_lines: facts.lines,
                     output_bytes: facts.bytes,

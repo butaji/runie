@@ -104,7 +104,8 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    ordered aggregate tool-card previews and core-owned background summary
    terminal rows now remove duplicate renderer formatting; add richer
    renderer-neutral output cards and owned lifecycle controls, with
-   failure/cancellation replay traces; palette-discoverable `Job Output`
+   failure/cancellation replay traces; `BackgroundOutput` now carries the
+   actor-owned command/status/exit context as a complete output card; palette-discoverable `Job Output`
    now exposes the actor-owned bounded capture directly.
 3. Model-aware context policy — `harness-05` (live usage boundary implemented).
    Recovery and `/context` now use the active model’s declared window, and
