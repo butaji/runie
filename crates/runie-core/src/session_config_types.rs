@@ -366,14 +366,14 @@ impl SessionLaneRecordSnapshot {
 /// Declarative read boundary matching Pi's durable operation-lane query.
 /// Filters are applied by the session owner to its immutable snapshot; the
 /// query does not expose mutable journal state to callers.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct CompactionCutPoint {
     pub first_kept_entry_index: usize,
     pub turn_start_index: Option<usize>,
     pub is_split_turn: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct CompactionPreparation {
     pub history_indices: Vec<usize>,
     pub turn_prefix_indices: Vec<usize>,

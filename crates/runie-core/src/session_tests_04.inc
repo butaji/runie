@@ -317,6 +317,17 @@
             } if summary == "provider summary" && retained_tail.len() == 1
         ));
     }
+
+    #[test]
+    fn compaction_preparation_round_trips_as_replay_data() {
+        let preparation = prepare_compaction_entries(&compaction_entries(), &[40, 40], 20)
+            .unwrap()
+            .unwrap();
+        let encoded = serde_json::to_string(&preparation).unwrap();
+        let decoded: CompactionPreparation = serde_json::from_str(&encoded).unwrap();
+        assert_eq!(decoded, preparation);
+    }
+
 fn compaction_entries() -> Vec<SessionEntry> {
     vec![
         SessionEntry { id: "user-1".into(), lane: "main".into(), seq: 1, parent_id: None, timestamp: 0, message: user("request"), terminate: false },
