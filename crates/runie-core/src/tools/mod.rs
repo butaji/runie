@@ -45,9 +45,10 @@ pub use git::{
 pub use git_conflict_actor::{GitConflictActor, GitConflictSnapshot};
 pub use mcp::{
     McpCallHook, McpCallRequest, McpConnectionStatus, McpHttpActor, McpHttpClient, McpHttpSession,
-    McpHttpStatus, McpReconnectDecision, McpReconnectPolicy, McpReconnectState, McpServer,
-    McpStatusRow, McpStdioActor, McpStdioClient, McpStdioSession, McpStdioStatus, McpTool,
-    McpToolSpec, McpTransport,
+    McpHttpStatus, McpNotificationActor, McpNotificationSnapshot, McpReconnectDecision,
+    McpReconnectPolicy, McpReconnectState, McpServer, McpStatusRow, McpStdioActor, McpStdioClient,
+    McpStdioSession, McpStdioStatus, McpTool, McpToolSpec, McpTransport,
+    MCP_NOTIFICATION_QUEUE_CAPACITY,
 };
 pub use policy::{
     decide as approval_decision, decide_registered, record_approval_trace, reduce_approval_mode,

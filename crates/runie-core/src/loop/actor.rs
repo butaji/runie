@@ -151,6 +151,7 @@ struct Inner {
     control_commands: mpsc::Sender<LoopControlCommand>,
     control_rx: watch::Receiver<LoopControlSnapshot>,
     shared_control_rx: watch::Receiver<crate::SharedSnapshot<LoopControlSnapshot>>,
+    mcp_notifications: crate::tools::McpNotificationActor,
     _control_owner: Arc<TaskOwner>,
 }
 

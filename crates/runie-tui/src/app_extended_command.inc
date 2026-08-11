@@ -9,6 +9,22 @@ impl App {
             return true;
         }
         if name == "mcps" {
+            if runie_core::commands::parse_mcp_notifications_clear(args) {
+                self.loop_actor.clear_mcp_notifications().await;
+                self.ui
+                    .send(UiMsg::ShowCommandResult("MCP notifications cleared".into()))
+                    .await;
+                return true;
+            }
+            if runie_core::commands::parse_mcp_notifications_query(args) {
+                let result = self
+                    .loop_actor
+                    .mcp_notification_snapshot()
+                    .terminal_lines()
+                    .join("\n");
+                self.ui.send(UiMsg::ShowCommandResult(result)).await;
+                return true;
+            }
             if runie_core::commands::parse_mcp_close_command(args) {
                 let closed = self.loop_actor.close_mcps().await;
                 self.ui

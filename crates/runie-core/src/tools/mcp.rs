@@ -29,12 +29,16 @@ pub use transport::McpTransport;
 #[path = "mcp_http_session.rs"]
 mod http_session;
 pub use http_session::{McpHttpActor, McpHttpSession, McpHttpStatus};
+#[path = "mcp_notification_actor.rs"]
+mod notification_actor;
 #[path = "mcp_stream.rs"]
 mod stream;
+pub use notification_actor::{McpNotificationActor, McpNotificationSnapshot};
 pub use stream::{
     parse_mcp_event_stream, reduce_mcp_notification_queue, reduce_mcp_stream_event,
     McpBackpressureStatus, McpConnectionStatus, McpNotificationQueue, McpNotificationQueueEvent,
     McpReconnectDecision, McpReconnectPolicy, McpReconnectState, McpStreamEvent, McpStreamSnapshot,
+    MCP_NOTIFICATION_QUEUE_CAPACITY,
 };
 #[path = "mcp_http_stream.rs"]
 mod http_stream;
@@ -110,7 +114,6 @@ impl McpStdioActor {
     pub fn new_persistent(client: McpStdioClient) -> Self {
         Self::new_with_persistence(client, true)
     }
-
     fn new_with_persistence(client: McpStdioClient, persistent: bool) -> Self {
         let identity = stdio_identity(&client);
         let (status_tx, status) = tokio::sync::watch::channel(McpStdioStatus::Ready);
@@ -126,11 +129,9 @@ impl McpStdioActor {
             _owner: owner,
         }
     }
-
     pub fn identity(&self) -> &str {
         &self.identity
     }
-
     pub fn status(&self) -> McpStdioStatus {
         *self.status.borrow()
     }

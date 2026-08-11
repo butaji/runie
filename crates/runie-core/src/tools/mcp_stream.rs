@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 use std::collections::VecDeque;
 
 const MAX_MCP_STREAM_NOTIFICATIONS: usize = 4_096;
+pub const MCP_NOTIFICATION_QUEUE_CAPACITY: usize = 4_096;
 
 /// One server-sent MCP event. The JSON-RPC envelope remains data so callers
 /// can project responses, notifications, and errors without losing fields.

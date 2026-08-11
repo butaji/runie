@@ -199,6 +199,8 @@ Resume Picker|/resume|Command Parameters
 Context Summary|/context|compaction: none
 Session History Rows|/sessions history|No session history
 Cancel Git Recovery|/git conflicts cancel|Git conflict recovery cancelled
+MCP Notification Inspect|/mcps notifications|pending: 0
+MCP Notification Clear|/mcps notifications clear|MCP notifications cleared
 CASES
 
 # The quit path is a TUI-only terminal case: it must end the session rather

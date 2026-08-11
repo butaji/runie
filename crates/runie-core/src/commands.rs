@@ -310,6 +310,14 @@ pub fn parse_mcp_reconnect_command(args: &str) -> bool {
     args.trim().eq_ignore_ascii_case("reconnect")
 }
 
+pub fn parse_mcp_notifications_query(args: &str) -> bool {
+    args.trim().eq_ignore_ascii_case("notifications")
+}
+
+pub fn parse_mcp_notifications_clear(args: &str) -> bool {
+    args.trim().eq_ignore_ascii_case("notifications clear")
+}
+
 /// Parse the explicit session-picker form while keeping ordinary `/sessions`
 /// output backward compatible.
 pub fn parse_session_picker_query(args: &str) -> Option<String> {

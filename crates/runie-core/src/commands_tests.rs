@@ -258,6 +258,14 @@ fn mcp_reconnect_command_requires_an_exact_argument() {
 }
 
 #[test]
+fn mcp_notification_controls_are_typed_and_exact() {
+    assert!(parse_mcp_notifications_query("notifications"));
+    assert!(parse_mcp_notifications_clear("notifications clear"));
+    assert!(!parse_mcp_notifications_query("notifications clear"));
+    assert!(!parse_mcp_notifications_clear("notifications now"));
+}
+
+#[test]
 fn scheduler_queued_cancel_command_requires_an_exact_argument() {
     assert!(parse_background_scheduler_cancel_queued(
         "scheduler cancel queued"
