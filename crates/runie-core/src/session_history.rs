@@ -60,4 +60,16 @@ impl SessionSnapshot {
         rows.sort_by_key(|row| row.seq);
         rows
     }
+
+    pub fn history_rows_query(&self, query: &str) -> Vec<SessionHistoryRow> {
+        let query = query.trim().to_ascii_lowercase();
+        self.history_rows()
+            .into_iter()
+            .filter(|row| {
+                [row.id.as_str(), row.record_type.as_str(), row.lane.as_str()]
+                    .into_iter()
+                    .any(|value| value.to_ascii_lowercase().contains(&query))
+            })
+            .collect()
+    }
 }

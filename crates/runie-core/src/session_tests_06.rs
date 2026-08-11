@@ -52,6 +52,13 @@ async fn cloned_session_handles_share_one_actor_snapshot() {
     assert_eq!(owner.snapshot().entries[0].id, tui_handle.snapshot().entries[0].id);
 }
 
+#[test]
+fn history_rows_query_filters_owned_data_without_reordering() {
+    let rows = configuration_snapshot().history_rows_query("active_tools");
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0].record_type, "active_tools_change");
+}
+
     #[test]
     fn jsonl_round_trip_preserves_configuration_records() {
         let snapshot = configuration_snapshot();

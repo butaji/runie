@@ -287,6 +287,13 @@ pub fn parse_session_history_selection(args: &str) -> Option<&str> {
         .then(|| args.split_whitespace().nth(1).unwrap())
 }
 
+pub fn parse_session_history_query(args: &str) -> Option<String> {
+    let mut parts = args.split_whitespace();
+    (parts.next() == Some("history") && parts.next() == Some("query"))
+        .then(|| parts.collect::<Vec<_>>().join(" "))
+        .filter(|query| !query.is_empty())
+}
+
 /// Parse Kimi-compatible repeated undo count without allowing ambiguous input.
 pub fn parse_undo_count(args: &str) -> Option<usize> {
     let value = args.trim();

@@ -232,6 +232,15 @@ fn background_job_command_accepts_only_cancel_and_one_id() {
 }
 
 #[test]
+fn session_history_query_requires_explicit_query_mode() {
+    assert_eq!(
+        parse_session_history_query("history query tool"),
+        Some("tool".into())
+    );
+    assert_eq!(parse_session_history_query("history entry-2"), None);
+}
+
+#[test]
 fn background_cancel_scope_is_typed_data() {
     assert_eq!(
         parse_background_job_cancel_scope("cancel running"),

@@ -83,6 +83,23 @@ impl App {
             return true;
         }
         if name == "sessions" {
+            if let Some(query) = runie_core::commands::parse_session_history_query(args) {
+                let result = self
+                    .session_actor
+                    .snapshot()
+                    .history_rows_query(&query)
+                    .into_iter()
+                    .map(|row| row.terminal_line())
+                    .collect::<Vec<_>>();
+                self.ui
+                    .send(UiMsg::ShowCommandResult(if result.is_empty() {
+                        "No matching session history".into()
+                    } else {
+                        result.join("\n")
+                    }))
+                    .await;
+                return true;
+            }
             if let Some(target_id) = runie_core::commands::parse_session_history_selection(args) {
                 let result = self
                     .session_actor
