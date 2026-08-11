@@ -105,7 +105,8 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    Recovery and `/context` now use the active model’s declared window, and
    `/context` consumes a serializable `ContextReport` projection for its
    typed threshold decision, policy-input rows, and a checked-in YAML context
-   fixtures; `/context compact [instructions]` routes manual recovery through
+   fixtures for required, unknown-window, and explicitly disabled policy
+   states; `/context compact [instructions]` routes manual recovery through
    the actor pipeline; remaining work is richer compaction controls.
    unknown zero-sized model windows now disable recovery rather than creating
    an unconditional compaction request.
