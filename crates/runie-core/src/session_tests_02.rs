@@ -172,6 +172,25 @@
     }
 
     #[test]
+    fn session_snapshot_round_trips_as_replay_data() {
+        let mut snapshot = SessionSnapshot::default();
+        snapshot.sequence = 4;
+        snapshot.leaf_id = Some("entry-4".into());
+        snapshot.navigation = Some(NavigationSnapshot {
+            target_id: Some("entry-2".into()),
+            summarize: true,
+            summary_entry_id: Some("summary-1".into()),
+        });
+        snapshot.operation_errors.insert(
+            "op-1".into(),
+            OperationErrorSnapshot { code: "E1".into(), message: "failed".into() },
+        );
+        let encoded = serde_json::to_string(&snapshot).unwrap();
+        let decoded: SessionSnapshot = serde_json::from_str(&encoded).unwrap();
+        assert_eq!(decoded, snapshot);
+    }
+
+    #[test]
 fn session_lane_metadata_requires_a_complete_positive_storage_tuple() {
         let valid = serde_json::json!({
             "id": "op-1", "lane": "main", "seq": 1, "timestamp": 7

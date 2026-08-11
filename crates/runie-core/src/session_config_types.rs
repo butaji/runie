@@ -133,7 +133,7 @@ pub struct SessionConfigEntry {
     pub record: SessionConfigRecord,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct SessionLaneFact {
     pub seq: u64,
     pub lane: String,
@@ -247,7 +247,7 @@ pub enum SessionLogItem {
     },
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct SessionSnapshot {
     pub sequence: u64,
     pub leaf_id: Option<String>,
@@ -280,20 +280,20 @@ pub struct SessionSnapshot {
     pub navigation: Option<NavigationSnapshot>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct NavigationSnapshot {
     pub target_id: Option<String>,
     pub summarize: bool,
     pub summary_entry_id: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct NavigationValidation {
     pub target_exists: bool,
     pub summary_exists: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct OperationErrorSnapshot {
     pub code: String,
     pub message: String,
