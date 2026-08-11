@@ -1,4 +1,15 @@
 use super::*;
+use std::sync::atomic::{AtomicU64, Ordering};
+
+static NEXT_STORAGE_STAGE: AtomicU64 = AtomicU64::new(1);
+
+pub(super) fn staged_storage_path(path: &str, nonce: u64) -> String {
+    format!("{path}.tmp.{nonce}")
+}
+
+fn next_staged_storage_path(path: &str) -> String {
+    staged_storage_path(path, NEXT_STORAGE_STAGE.fetch_add(1, Ordering::Relaxed))
+}
 enum StorageCommand {
     Discover {
         root: String,
@@ -196,7 +207,7 @@ async fn read_storage_header(
 }
 
 async fn publish_storage_file(path: &str, contents: String) -> Result<(), String> {
-    let temporary = format!("{path}.tmp");
+    let temporary = next_staged_storage_path(path);
     tokio::fs::write(&temporary, contents)
         .await
         .map_err(|error| format!("stage session JSONL: {error}"))?;
@@ -224,7 +235,7 @@ async fn fork_storage_file(
         Some(lane) => snapshot.fork_at_lane_message(lane, target_id)?,
         None => snapshot.fork_at_message(target_id)?,
     };
-    let temporary = format!("{path}.tmp");
+    let temporary = next_staged_storage_path(path);
     tokio::fs::write(&temporary, fork.to_jsonl(session_id, created_at, cwd))
         .await
         .map_err(|error| format!("stage forked session JSONL: {error}"))?;

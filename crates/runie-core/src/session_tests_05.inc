@@ -101,6 +101,15 @@
         let _ = tokio::fs::remove_file(feature_fork_path).await;
     }
 
+    #[test]
+    fn storage_staging_paths_are_unique_per_publication() {
+        let first = super::session_storage::staged_storage_path("/tmp/session.jsonl", 7);
+        let second = super::session_storage::staged_storage_path("/tmp/session.jsonl", 8);
+        assert_ne!(first, second);
+        assert!(first.starts_with("/tmp/session.jsonl.tmp."));
+        assert!(second.ends_with(".8"));
+    }
+
     #[tokio::test]
     async fn storage_discovery_is_bounded_sorted_and_header_validated() {
         let root = std::env::temp_dir().join(format!("runie-discover-{}", std::process::id()));

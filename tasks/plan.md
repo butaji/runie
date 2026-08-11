@@ -91,7 +91,8 @@ finding, and push one focused commit.
 Priority order:
 
 1. Close provider/session transport gaps with captured wire fixtures and no
-   live secret dependency.
+   live secret dependency. Session JSONL publication now uses collision-safe,
+   uniquely staged temporary paths while retaining actor-owned atomic rename.
 2. Add richer tool/scheduler/MCP controls only as typed commands and actor
    events, with queued/running/error replay cases.
 3. Add session/Git picker and conflict interactions through existing pure
