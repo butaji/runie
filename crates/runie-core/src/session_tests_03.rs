@@ -160,7 +160,7 @@
         assert_eq!(rows.iter().map(|row| row.selected).collect::<Vec<_>>(), [
             true, true, false
         ]);
-        assert!(!rows[0].undoable && rows[1].undoable && rows[2].undoable);
+        assert!(!rows[0].undoable && rows[1].undoable && !rows[2].undoable);
         assert_eq!(rows[2].record_type, "session_name");
     }
 

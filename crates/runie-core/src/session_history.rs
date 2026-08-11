@@ -54,7 +54,7 @@ impl SessionSnapshot {
                 seq: entry.seq,
                 parent_id: entry.parent_id.clone(),
                 selected: selected.contains(&entry.id),
-                undoable: entry.parent_id.is_some(),
+                undoable: false,
             }))
             .collect::<Vec<_>>();
         rows.sort_by_key(|row| row.seq);
