@@ -1,4 +1,5 @@
 use super::McpNotificationQueue;
+use super::McpStreamEvent;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::sync::Arc;
@@ -75,6 +76,19 @@ impl McpNotificationActor {
         let _ = self.tx.send(Command::Clear { reply }).await;
         let _ = result.await;
     }
+
+    /// Admit only server notifications; responses remain owned by the
+    /// request/response caller and are never mixed into this queue.
+    pub async fn ingest_stream_events<I>(&self, events: I)
+    where
+        I: IntoIterator<Item = McpStreamEvent>,
+    {
+        for event in events {
+            if event.data.get("id").is_none() {
+                self.push(event.data).await;
+            }
+        }
+    }
 }
 
 fn reduce_command(state: &mut McpNotificationSnapshot, command: Command) {
@@ -112,5 +126,27 @@ mod tests {
             .await;
         actor.clear().await;
         assert!(actor.snapshot().queue.pending.is_empty());
+    }
+
+    #[tokio::test]
+    async fn actor_ingests_only_notification_stream_events() {
+        let actor = McpNotificationActor::new(2);
+        actor
+            .ingest_stream_events([
+                McpStreamEvent {
+                    event: None,
+                    data: serde_json::json!({"id": 1, "result": {}}),
+                },
+                McpStreamEvent {
+                    event: Some("message".into()),
+                    data: serde_json::json!({"method": "notifications/progress"}),
+                },
+            ])
+            .await;
+        assert_eq!(actor.snapshot().queue.pending.len(), 1);
+        assert_eq!(
+            actor.snapshot().queue.pending[0]["method"],
+            "notifications/progress"
+        );
     }
 }
