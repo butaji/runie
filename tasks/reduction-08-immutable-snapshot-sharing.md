@@ -1,10 +1,11 @@
 # Reduction 08: immutable snapshot sharing
 
-Status: partial
+Status: adopted
 
 `runie_core::EventMemo` provides shared event-log storage and incremental
-projection state. Actor snapshot channels still clone domain snapshots and
-remain future adoption work.
+projection state. Compatibility-owned snapshot channels remain available for
+serialization and mutation boundaries; renderer and hot-path consumers use
+immutable shared projections.
 
 `ReducerActor` now also exposes a short-lived borrowed snapshot view; callers
 that do not need ownership can avoid cloning the snapshot.
@@ -31,8 +32,10 @@ and workspace tests.
 
 Verification note: the workspace suite is green, and
 `shared_snapshot_alloc.rs` measures repeated shared versus deep projection
-clones with a test-local counting allocator. Runtime consumers remain
-incremental, so this task remains partial.
+clones with a test-local counting allocator. The source audit covers feed,
+status, prompt, UI, model/provider registries, session, agent state, queues,
+jobs, todos, plugins, and telemetry; compatibility clones are retained only
+at explicit ownership/serialization boundaries. This task is adopted.
 Feed snapshot assembly now has one semantic projection module, including its
 macro-backed navigation field schema and derived selection projection.
 Model catalog and provider registry actors now publish immutable shared
