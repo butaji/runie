@@ -89,6 +89,22 @@ fn provider_finish_reason_conformance_preserves_chat_wire_values() {
 }
 
 #[test]
+fn unknown_finish_reasons_are_not_reported_as_successful_stops() {
+    let payload = serde_json::json!({
+        "choices": [{"finish_reason": "provider_specific_failure"}]
+    });
+
+    assert_eq!(
+        super::response_finish_reason(&payload),
+        Some(StopReason::Error)
+    );
+    assert_eq!(
+        super::raw_response_finish_reason(&payload),
+        Some("provider_specific_failure")
+    );
+}
+
+#[test]
 fn provider_finish_reason_conformance_covers_responses_and_stream_shapes() {
     let cases = [
         (

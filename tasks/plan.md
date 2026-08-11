@@ -85,7 +85,8 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    the shared model effort accessor is exhaustively tested across all seven
    declared levels and preserves unsupported-level omission;
    replay finish-reason mapping now preserves raw chat values with a
-   compatibility-tested tool-call path; complete the finite provider
+   compatibility-tested tool-call path and unknown values fail closed as
+   explicit errors; complete the finite provider
    payload/finish-reason conformance matrix,
    including unsupported-effort behavior and normalized failures.
 2. Tool output and background lifecycle UX — `harness-01` and `harness-03`.
