@@ -1270,6 +1270,10 @@ async fn main() -> Result<()> {
 
 #[allow(clippy::too_many_lines, reason = "Noninteractive setup is one owned runtime boundary")]
 async fn run_noninteractive(config: NonInteractiveConfig) -> RunOutcome {
+    let started = std::time::Instant::now();
+    let cwd = std::env::current_dir()
+        .ok()
+        .and_then(|path| path.to_str().map(str::to_owned));
     let auto_approve = config.auto_approve;
     let prompt = match noninteractive_prompt(config.prompt).await {
         Ok(prompt) => prompt,
@@ -1278,6 +1282,8 @@ async fn run_noninteractive(config: NonInteractiveConfig) -> RunOutcome {
                 JsonlEvent::Error { message },
                 JsonlEvent::Finished {
                     outcome: RunOutcome::Failed,
+                    elapsed_ms: Some(started.elapsed().as_millis() as u64),
+                    exit_code: Some(RunOutcome::Failed.exit_code()),
                 },
             ]);
             return RunOutcome::Failed;
@@ -1302,7 +1308,7 @@ async fn run_noninteractive(config: NonInteractiveConfig) -> RunOutcome {
         .and_then(|(map, level)| map.value(level))
         .map(str::to_owned);
     let mut events = vec![
-        JsonlEvent::Started { run_id },
+        JsonlEvent::Started { run_id, cwd },
         JsonlEvent::Metadata {
             provider: selected_model.as_ref().map(|model| model.provider.clone()),
             model: selected_model.as_ref().map(|model| model.id.clone()),
@@ -1342,7 +1348,11 @@ async fn run_noninteractive(config: NonInteractiveConfig) -> RunOutcome {
             RunOutcome::Failed
         }
     };
-    events.push(JsonlEvent::Finished { outcome });
+    events.push(JsonlEvent::Finished {
+        outcome,
+        elapsed_ms: Some(started.elapsed().as_millis() as u64),
+        exit_code: Some(outcome.exit_code()),
+    });
     emit_jsonl(events);
     outcome
 }

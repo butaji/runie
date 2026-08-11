@@ -13,6 +13,8 @@ pub const MAX_JSONL_PROVIDER_EVENTS: usize = 4_096;
 pub enum JsonlEvent {
     Started {
         run_id: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        cwd: Option<String>,
     },
     Metadata {
         provider: Option<String>,
@@ -47,6 +49,10 @@ pub enum JsonlEvent {
     },
     Finished {
         outcome: RunOutcome,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        elapsed_ms: Option<u64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        exit_code: Option<u8>,
     },
     Error {
         message: String,
@@ -167,6 +173,7 @@ mod tests {
         let events = vec![
             JsonlEvent::Started {
                 run_id: "r1".into(),
+                cwd: Some("/workspace".into()),
             },
             metadata_fixture(),
             JsonlEvent::Text {
@@ -189,6 +196,8 @@ mod tests {
             },
             JsonlEvent::Finished {
                 outcome: RunOutcome::Completed,
+                elapsed_ms: Some(42),
+                exit_code: Some(0),
             },
         ];
         let encoded = encode_jsonl(&events).unwrap();
@@ -208,6 +217,27 @@ mod tests {
             event,
             JsonlEvent::Metadata {
                 model_name: None,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn legacy_terminal_events_default_new_metadata_without_rejecting_records() {
+        let started: JsonlEvent = serde_json::from_value(serde_json::json!({
+            "type": "started", "run_id": "legacy"
+        }))
+        .unwrap();
+        assert!(matches!(started, JsonlEvent::Started { cwd: None, .. }));
+        let finished: JsonlEvent = serde_json::from_value(serde_json::json!({
+            "type": "finished", "outcome": "completed"
+        }))
+        .unwrap();
+        assert!(matches!(
+            finished,
+            JsonlEvent::Finished {
+                elapsed_ms: None,
+                exit_code: None,
                 ..
             }
         ));
