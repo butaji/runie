@@ -177,3 +177,35 @@ fn rpc_notification_adapter_replays_through_one_snapshot_boundary() {
     assert_eq!(snapshot.workspace.as_deref(), Some("/repo"));
     assert_eq!(snapshot.documents.len(), 1);
 }
+
+#[tokio::test]
+async fn ide_actor_applies_split_wire_frames_through_owned_snapshot() {
+    let actor = IdeActor::new();
+    let mut buffer = IdeWireBuffer::default();
+    let initialized =
+        r#"{"jsonrpc":"2.0","id":1,"method":"initialized","params":{"workspace":"/repo"}}"#;
+    let diagnostics = r#"{"jsonrpc":"2.0","id":2,"method":"textDocument/publishDiagnostics","params":{"uri":"file:///main.rs","diagnostics":[{"range":{"start":{"line":1,"character":2}},"message":"error"}]}}"#;
+    assert_eq!(
+        actor
+            .apply_wire_frames(&mut buffer, &initialized[..18])
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        actor
+            .apply_wire_frames(
+                &mut buffer,
+                &format!("{}\n{}\n", &initialized[18..], diagnostics)
+            )
+            .await
+            .unwrap(),
+        2
+    );
+    let snapshot = actor.snapshot().await.unwrap();
+    assert_eq!(snapshot.workspace.as_deref(), Some("/repo"));
+    assert_eq!(
+        snapshot.diagnostics["file:///main.rs"][0].severity,
+        IdeSeverity::Info
+    );
+}
