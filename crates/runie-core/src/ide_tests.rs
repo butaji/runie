@@ -333,3 +333,24 @@ fn ide_endpoints_and_reconnect_decisions_are_serializable_data() {
         (0..policy.max_attempts).fold((state, retry), |(state, _), _| state.disconnected(policy));
     assert_eq!(exhausted, IdeReconnectDecision::Exhausted);
 }
+
+#[tokio::test]
+async fn ide_tcp_connector_owns_a_real_loopback_stream() {
+    let listener = tokio::net::TcpListener::bind(("127.0.0.1", 0))
+        .await
+        .unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let actor = IdeActor::new();
+    let accept = listener.accept();
+    let connect = IdeTransport::connect(
+        IdeEndpoint::Tcp {
+            host: "127.0.0.1".into(),
+            port,
+        },
+        actor,
+    );
+    let (accepted, transport) = tokio::join!(accept, connect);
+    assert!(accepted.is_ok());
+    let transport = transport.unwrap();
+    transport.close().await;
+}

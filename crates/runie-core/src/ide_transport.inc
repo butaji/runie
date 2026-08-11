@@ -48,6 +48,16 @@ pub struct IdeTransport {
 }
 
 impl IdeTransport {
+    pub async fn connect(endpoint: IdeEndpoint, actor: IdeActor) -> Result<Self, String> {
+        match endpoint {
+            IdeEndpoint::Tcp { host, port } => tokio::net::TcpStream::connect((host, port))
+                .await
+                .map(|stream| Self::from_stream(stream, actor))
+                .map_err(|error| format!("IDE TCP connect failed: {error}")),
+            IdeEndpoint::Unix { path } => connect_unix(path, actor).await,
+        }
+    }
+
     pub fn from_stream<S>(stream: S, actor: IdeActor) -> Self
     where
         S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Send + Unpin + 'static,
@@ -103,6 +113,19 @@ impl IdeTransport {
         let (reply, result) = tokio::sync::oneshot::channel();
         if self.tx.send(IdeTransportCommand::Close { reply }).await.is_ok() { let _ = result.await; }
     }
+}
+
+#[cfg(unix)]
+async fn connect_unix(path: String, actor: IdeActor) -> Result<IdeTransport, String> {
+    tokio::net::UnixStream::connect(path)
+        .await
+        .map(|stream| IdeTransport::from_stream(stream, actor))
+        .map_err(|error| format!("IDE Unix connect failed: {error}"))
+}
+
+#[cfg(not(unix))]
+async fn connect_unix(_path: String, _actor: IdeActor) -> Result<IdeTransport, String> {
+    Err("IDE Unix endpoints are unsupported on this platform".into())
 }
 
 async fn async_write<W: tokio::io::AsyncWrite + Unpin>(writer: &mut W, bytes: &[u8]) -> Result<(), String> {
