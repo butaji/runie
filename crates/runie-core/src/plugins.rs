@@ -25,8 +25,12 @@ impl PluginManifest {
             ("tool", &self.tools),
             ("hook", &self.hooks),
         ] {
+            let mut seen = BTreeSet::new();
             for value in values {
                 validate_identifier(kind, value)?;
+                if !seen.insert(value) {
+                    return Err("duplicate capability identifier".into());
+                }
             }
         }
         Ok(())
@@ -65,7 +69,6 @@ pub fn load_manifest(path: impl AsRef<Path>) -> Result<PluginManifest, String> {
         .map_err(|error| format!("read plugin manifest {}: {error}", path.display()))?;
     PluginManifest::from_json(&input)
 }
-
 pub fn discover_packages(root: impl AsRef<Path>) -> Result<Vec<PluginPackage>, String> {
     let root = root.as_ref();
     let mut packages = Vec::new();
@@ -115,7 +118,6 @@ pub fn install_manifest_package(
     .map_err(|error| format!("install plugin manifest: {error}"))?;
     Ok(destination)
 }
-
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct PluginRegistry {
     manifests: BTreeMap<String, PluginManifest>,
@@ -144,7 +146,6 @@ pub enum PluginInstallationEvent {
 pub struct PluginInstallationSnapshot {
     pub roots: BTreeMap<String, PathBuf>,
 }
-
 pub fn reduce_plugin_installation(
     registry: &PluginRegistry,
     snapshot: &mut PluginInstallationSnapshot,

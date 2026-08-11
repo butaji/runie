@@ -68,4 +68,16 @@ mod tests {
             "Plugin sample-plugin v1.0.0 · commands=1 tools=1 hooks=1 capabilities=command:format,tool:inspect,hook:after_turn"
         );
     }
+
+    #[test]
+    fn duplicate_manifest_capabilities_are_rejected() {
+        let manifest = PluginManifest {
+            name: "sample".into(),
+            version: "1".into(),
+            commands: vec!["run".into(), "run".into()],
+            tools: vec![],
+            hooks: vec![],
+        };
+        assert!(manifest.validate().is_err());
+    }
 }
