@@ -31,8 +31,14 @@ pub enum WebSearchWireFormat {
 }
 
 macro_rules! web_search_wire_fields {
-    ($(($format:ident, $snippet_key:literal)),+ $(,)?) => {
+    ($(($format:ident, $wire_name:literal, $snippet_key:literal)),+ $(,)?) => {
         impl WebSearchWireFormat {
+            pub const fn wire_name(self) -> &'static str {
+                match self { $(Self::$format => $wire_name,)+ }
+            }
+            pub fn from_wire_name(name: &str) -> Option<Self> {
+                match name { $($wire_name => Some(Self::$format),)+ _ => None }
+            }
             pub const fn snippet_key(self) -> &'static str {
                 match self { $(Self::$format => $snippet_key,)+ }
             }
@@ -41,9 +47,9 @@ macro_rules! web_search_wire_fields {
 }
 
 web_search_wire_fields! {
-    (Generic, "snippet"),
-    (Brave, "description"),
-    (Tavily, "content"),
+    (Generic, "generic", "snippet"),
+    (Brave, "brave", "description"),
+    (Tavily, "tavily", "content"),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -332,6 +338,19 @@ mod tests {
         assert_eq!(brave.results[0].snippet, "brave");
         assert_eq!(tavily.results[0].snippet, "tavily");
         assert_eq!(tavily.answer.as_deref(), Some("Rust is a systems language"));
+    }
+
+    #[test]
+    fn provider_wire_formats_are_a_closed_replayable_vocabulary() {
+        for (format, wire) in [
+            (WebSearchWireFormat::Generic, "generic"),
+            (WebSearchWireFormat::Brave, "brave"),
+            (WebSearchWireFormat::Tavily, "tavily"),
+        ] {
+            assert_eq!(format.wire_name(), wire);
+            assert_eq!(WebSearchWireFormat::from_wire_name(wire), Some(format));
+        }
+        assert_eq!(WebSearchWireFormat::from_wire_name("other"), None);
     }
 
     #[test]
