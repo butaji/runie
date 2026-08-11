@@ -383,6 +383,20 @@
     }
 
     #[test]
+    fn compaction_is_disabled_when_context_window_is_unknown() {
+        let settings = CompactionSettings {
+            enabled: true,
+            reserve_tokens: 100,
+            keep_recent_tokens: 20,
+        };
+        assert_eq!(
+            compaction_decision(1, 0, settings),
+            CompactionDecision::Disabled
+        );
+        assert!(!should_compact(u64::MAX, 0, settings));
+    }
+
+    #[test]
     fn compaction_recovery_plan_is_typed_and_replayable() {
         let settings = CompactionSettings {
             enabled: true,

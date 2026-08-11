@@ -99,7 +99,9 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    Recovery and `/context` now use the active model’s declared window, and
    `/context` projects the typed threshold decision and `/context compact
    [instructions]` routes manual recovery through the actor pipeline; remaining
-   work is richer compaction controls and threshold/recovery replay coverage.
+   work is richer compaction controls and threshold/recovery replay coverage;
+   unknown zero-sized model windows now disable recovery rather than creating
+   an unconditional compaction request.
 4. Scheduler cancellation controls — `harness-08` (actor-owned metrics and `/jobs` projection implemented; status filters now expose running, completed, failed, and cancelled rows).
    Extend the existing mailbox/replay state machine with richer user-visible
    queued, running, and cancelled control projections.

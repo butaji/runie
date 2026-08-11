@@ -213,7 +213,7 @@ pub fn compaction_decision(
     context_window: u64,
     settings: CompactionSettings,
 ) -> CompactionDecision {
-    if !settings.enabled {
+    if !settings.enabled || context_window == 0 {
         return CompactionDecision::Disabled;
     }
     let threshold_tokens = context_window.saturating_sub(settings.reserve_tokens);
