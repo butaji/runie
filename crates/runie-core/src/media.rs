@@ -113,6 +113,7 @@ fn encode_video(
 fn encode_image_url(url: &str, format: MediaWireFormat) -> Result<serde_json::Value, String> {
     validate_media_url(url)?;
     match format {
+        MediaWireFormat::Pi => encode_pi_media(&UserContent::ImageUrl { url: url.into() }),
         MediaWireFormat::OpenAiChat => {
             Ok(serde_json::json!({"type":"image_url","image_url":{"url":url}}))
         }
@@ -130,6 +131,7 @@ fn encode_image_url(url: &str, format: MediaWireFormat) -> Result<serde_json::Va
 fn encode_video_url(url: &str, format: MediaWireFormat) -> Result<serde_json::Value, String> {
     validate_media_url(url)?;
     match format {
+        MediaWireFormat::Pi => encode_pi_media(&UserContent::VideoUrl { url: url.into() }),
         MediaWireFormat::OpenAiChat => {
             Ok(serde_json::json!({"type":"video_url","video_url":{"url":url}}))
         }
@@ -140,6 +142,7 @@ fn encode_video_url(url: &str, format: MediaWireFormat) -> Result<serde_json::Va
 fn encode_audio_url(url: &str, format: MediaWireFormat) -> Result<serde_json::Value, String> {
     validate_media_url(url)?;
     match format {
+        MediaWireFormat::Pi => encode_pi_media(&UserContent::AudioUrl { url: url.into() }),
         MediaWireFormat::OpenAiChat => {
             Ok(serde_json::json!({"type":"audio_url","audio_url":{"url":url}}))
         }
@@ -279,7 +282,6 @@ mod tests {
         assert_eq!(responses["image_url"], "data:image/png;base64,aGVsbG8=");
         assert_eq!(responses["detail"], "auto");
     }
-
     #[test]
     fn url_media_preserves_provider_native_sources() {
         let image = UserContent::ImageUrl {
@@ -311,7 +313,25 @@ mod tests {
         )
         .is_err());
     }
+    #[test]
+    fn pi_url_media_preserves_shared_content_shape() {
+        let cases = [
+            UserContent::ImageUrl {
+                url: "https://example.test/image.png".into(),
+            },
+            UserContent::VideoUrl {
+                url: "https://example.test/video.mp4".into(),
+            },
+            UserContent::AudioUrl {
+                url: "https://example.test/audio.mp3".into(),
+            },
+        ];
 
+        for content in cases {
+            let encoded = encode_user_content(&content, MediaWireFormat::Pi).unwrap();
+            assert_eq!(encoded, serde_json::to_value(content).unwrap());
+        }
+    }
     #[test]
     fn openai_chat_video_encoding_uses_video_url_data() {
         let content = UserContent::Video {
@@ -336,7 +356,6 @@ mod tests {
             "openai-responses"
         );
     }
-
     #[test]
     fn gemini_audio_encoding_uses_inline_data() {
         let content = UserContent::Audio {
@@ -347,7 +366,6 @@ mod tests {
         assert_eq!(encoded["inline_data"]["mime_type"], "audio/mpeg");
         assert_eq!(encoded["inline_data"]["data"], "aGVsbG8=");
     }
-
     #[test]
     fn audio_constructor_shares_the_validated_media_boundary() {
         let audio = AudioContent::new("audio/mpeg", "aGVsbG8=").unwrap();
@@ -355,7 +373,6 @@ mod tests {
         assert!(AudioContent::new("image/png", "aGVsbG8=").is_err());
         assert!(AudioContent::new("audio/mpeg", "not-base64").is_err());
     }
-
     #[test]
     fn media_wire_formats_round_trip_as_replay_data() {
         for format in [
@@ -375,7 +392,6 @@ mod tests {
         }
         assert_eq!(MediaWireFormat::from_wire_name("unknown"), None);
     }
-
     #[test]
     fn openai_chat_audio_encoding_uses_audio_url_data() {
         let content = UserContent::Audio {
@@ -390,7 +406,6 @@ mod tests {
         );
         assert!(MediaWireFormat::OpenAiChat.supports_audio());
     }
-
     #[test]
     fn openai_responses_audio_encoding_uses_inline_file_data() {
         let content = UserContent::Audio {
@@ -406,7 +421,6 @@ mod tests {
         );
         assert!(MediaWireFormat::OpenAiResponses.supports_audio());
     }
-
     #[test]
     fn gemini_media_encoding_keeps_mixed_content_order() {
         let contents = vec![
@@ -422,7 +436,6 @@ mod tests {
         assert_eq!(encoded[0]["type"], "text");
         assert_eq!(encoded[1]["inline_data"]["mime_type"], "image/png");
     }
-
     #[test]
     fn anthropic_image_encoding_uses_native_base64_source() {
         let content = UserContent::Image {
