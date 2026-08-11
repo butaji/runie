@@ -18,6 +18,7 @@ runie_core::typed_action_registry! {
         Changelog => "Changelog",
         CopyLastResponse => "Copy Last Response",
         SessionInfo => "Session Info",
+        SessionHistory => "Session History",
         SelectModel => "Select Model",
         SelectTheme => "Select Theme",
         ManageProviders => "Manage Providers",

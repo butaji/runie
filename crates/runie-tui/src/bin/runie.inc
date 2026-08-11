@@ -2176,6 +2176,17 @@ async fn run_app(
                                 app.show_provider_summary().await;
                                 return Ok(ui_commands);
                             }
+                            if action == PaletteAction::SessionHistory {
+                                let _ = app
+                                    .route_mappable_command(
+                                        runie_core::commands::MappableBuiltinCommand::Extended {
+                                            name: "sessions".into(),
+                                            args: "history".into(),
+                                        },
+                                    )
+                                    .await;
+                                return Ok(ui_commands);
+                            }
                             let command = match action {
                                 PaletteAction::Changelog => Some(runie_core::commands::MappableBuiltinCommand::Changelog),
                                 PaletteAction::CopyLastResponse => Some(runie_core::commands::MappableBuiltinCommand::Copy),

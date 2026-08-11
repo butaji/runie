@@ -27,6 +27,7 @@ declare_palette_metadata! {
     (Changelog, "/changelog", "Show recent changes"),
     (CopyLastResponse, "/copy", "Copy the latest response"),
     (SessionInfo, "/session", "Show session statistics"),
+    (SessionHistory, "/sessions history", "Show session branch history"),
     (SelectModel, "/model", "Switch the active model"),
     (SelectTheme, "/theme", "Change the interface theme"),
     (ManageProviders, "/providers", "Manage configured providers"),
@@ -111,7 +112,7 @@ macro_rules! palette_sections {
 
 palette_sections! {
     ("Context" => [CopyLastResponse, SessionInfo]),
-    ("Session" => [NewSession, KeyboardShortcuts, Quit, Changelog, ShareSession]),
+    ("Session" => [NewSession, KeyboardShortcuts, Quit, Changelog, ShareSession, SessionHistory]),
     ("Information" => [Help, ContextInfo, Doctor, Feedback, Usage]),
     ("Extensions" => [Skills, Hooks, Plugins, Mcps, Memory]),
     ("Automation" => [Goal, Workflow, Workflows, Loop, DeepResearch]),
