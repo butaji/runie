@@ -39,6 +39,17 @@ fn mcp_lifecycle_wire_names_round_trip_for_both_transports() {
     assert_eq!(McpHttpStatus::from_wire_name("unknown"), None);
 }
 
+#[test]
+fn mcp_transport_wire_names_round_trip() {
+    for transport in [McpTransport::Stdio, McpTransport::Http] {
+        assert_eq!(
+            McpTransport::from_wire_name(transport.wire_name()),
+            Some(transport)
+        );
+    }
+    assert_eq!(McpTransport::from_wire_name("websocket"), None);
+}
+
 #[tokio::test]
 async fn mcp_tool_forwards_a_typed_call_to_its_owner() {
     let tool = McpTool::new(

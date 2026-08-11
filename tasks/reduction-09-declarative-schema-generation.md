@@ -76,5 +76,7 @@ domain serialization and `/jobs` query validation, eliminating a duplicate
 command-local string vocabulary.
 MCP stdio and HTTP lifecycle statuses now use the same macro-generated forward
 and reverse wire vocabulary, and `/mcps` query validation consumes it directly.
+MCP transport filters now use a typed macro-generated `stdio`/`http` wire
+vocabulary instead of a command-local string list.
 Scheduler terminal metric fields now use one macro-backed declaration for
 stable names and row projection, while event reduction remains explicit.

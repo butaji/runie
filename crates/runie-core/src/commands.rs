@@ -250,7 +250,7 @@ pub fn parse_background_job_status_query(args: &str) -> Option<&str> {
 
 pub fn parse_mcp_transport_query(args: &str) -> Option<&str> {
     let transport = args.trim();
-    ["stdio", "http"].contains(&transport).then_some(transport)
+    crate::tools::McpTransport::from_wire_name(transport).map(|_| transport)
 }
 
 pub fn parse_mcp_status_query(args: &str) -> Option<&str> {

@@ -3,7 +3,6 @@ use crate::types::{AgentTool, AgentToolResult, ToolResultContent};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-
 pub const MCP_HTTP_MAX_RESPONSE_BYTES: usize = 1_048_576;
 pub const MCP_MAX_STREAM_EVENTS: usize = 4_096;
 pub(crate) const MCP_SESSION_HEADER: &str = "mcp-session-id";
@@ -14,8 +13,7 @@ macro_rules! mcp_status_wire_names {
                 match self {
                     $(Self::$variant => $wire),+
                 }
-            }
-
+                }
             pub fn from_wire_name(name: &str) -> Option<Self> {
                 match name { $($wire => Some(Self::$variant),)+ _ => None }
             }
@@ -25,6 +23,9 @@ macro_rules! mcp_status_wire_names {
 #[path = "mcp_status.rs"]
 mod status;
 pub use status::McpStatusRow;
+#[path = "mcp_transport.rs"]
+mod transport;
+pub use transport::McpTransport;
 #[path = "mcp_http_session.rs"]
 mod http_session;
 pub use http_session::{McpHttpActor, McpHttpSession, McpHttpStatus};
@@ -52,7 +53,6 @@ pub struct McpToolSpec {
     #[serde(rename = "inputSchema", alias = "input_schema")]
     pub input_schema: serde_json::Value,
 }
-
 fn empty_schema() -> serde_json::Value {
     serde_json::json!({"type": "object"})
 }

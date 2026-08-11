@@ -141,7 +141,7 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    `/mcps` projects unified stdio/HTTP lifecycle rows with transport filters;
    lifecycle names use the shared lowercase wire vocabulary; palette actions
    now expose ready and failed status filters, and `/mcps` validation consumes
-   the macro-generated lifecycle reverse parser.
+   the macro-generated lifecycle reverse parser and transport vocabulary.
 6. Session and Git interactive UX — `harness-12` and `harness-13`; history rows now explicitly expose whether an undo target is available.
    `/git status`, `/git diff`, and `/git review` are now palette-discoverable and project the
    actor-owned bounded results through the same command-result dialog as conflicts.
