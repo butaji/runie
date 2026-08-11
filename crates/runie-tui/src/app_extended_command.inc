@@ -60,6 +60,21 @@ impl App {
                 "status" | "diff" | "review" | "worktrees" | "conflicts"
             )
         {
+            if args.trim().eq_ignore_ascii_case("conflicts") {
+                let result = self
+                    .git_conflict_actor
+                    .refresh()
+                    .await
+                    .map(|()| {
+                        self.git_conflict_actor
+                            .snapshot()
+                            .terminal_lines()
+                            .join("\n")
+                    })
+                    .unwrap_or_else(|error| format!("Git conflicts failed: {error}"));
+                self.ui.send(UiMsg::ShowCommandResult(result)).await;
+                return true;
+            }
             let result = match if args.trim().eq_ignore_ascii_case("diff") {
                 runie_core::tools::GitDiffTool
                     .execute("git-diff", serde_json::json!({}), None, None)
@@ -84,15 +99,6 @@ impl App {
                     .find_map(|content| match content {
                         runie_core::types::ToolResultContent::Text { text } => Some(text),
                         runie_core::types::ToolResultContent::Image { .. } => None,
-                    })
-                    .map(|status| {
-                        if args.trim().eq_ignore_ascii_case("conflicts") {
-                            runie_core::tools::classify_conflicts(&status)
-                                .terminal_lines()
-                                .join("\n")
-                        } else {
-                            status
-                        }
                     })
                     .unwrap_or_else(|| "Git status returned no text".into()),
                 Err(error) => format!("Git status failed: {error}"),

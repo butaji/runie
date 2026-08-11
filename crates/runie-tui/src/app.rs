@@ -425,6 +425,7 @@ pub struct App {
     pub approval_mode: runie_core::tools::ApprovalModeStore,
     pub background_actor: runie_core::background::BackgroundProcessActor,
     pub todo_actor: runie_core::tools::TodoActor,
+    pub git_conflict_actor: runie_core::tools::GitConflictActor,
     pub plugin_host: Option<runie_core::plugins::PluginHost>,
     submission_tx: SubmissionTx,
     _submission_owner: std::sync::Arc<runie_core::task_owner::TaskOwner>,

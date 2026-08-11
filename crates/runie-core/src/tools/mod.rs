@@ -5,6 +5,7 @@ pub mod ask_user;
 pub mod background;
 pub mod executor;
 pub mod git;
+mod git_conflict_actor;
 pub mod mcp;
 pub mod path_policy;
 pub mod policy;
@@ -35,12 +36,13 @@ pub use executor::{
     ToolExecHooks,
 };
 pub use git::{
-    begin_conflict_recovery, classify_conflicts, reduce_conflict_recovery, GitCommitPrepareRequest,
-    GitCommitPrepareTool, GitCommitTool, GitConflictEntry, GitConflictRecoveryEvent,
-    GitConflictRecoveryPlan, GitConflictRecoveryState, GitConflictRecoveryStatus,
-    GitConflictSummary, GitDiffTool, GitPushRequest, GitPushTool, GitRevertRequest, GitRevertTool,
-    GitReviewTool, GitStatusTool, GitWorktreeTool,
+    begin_conflict_recovery, classify_conflicts, plan_conflict_recovery, reduce_conflict_recovery,
+    GitCommitPrepareRequest, GitCommitPrepareTool, GitCommitTool, GitConflictAction,
+    GitConflictEntry, GitConflictRecoveryEvent, GitConflictRecoveryPlan, GitConflictRecoveryState,
+    GitConflictRecoveryStatus, GitConflictSummary, GitDiffTool, GitPushRequest, GitPushTool,
+    GitRevertRequest, GitRevertTool, GitReviewTool, GitStatusTool, GitWorktreeTool,
 };
+pub use git_conflict_actor::{GitConflictActor, GitConflictSnapshot};
 pub use mcp::{
     McpCallHook, McpCallRequest, McpConnectionStatus, McpHttpActor, McpHttpClient, McpHttpSession,
     McpHttpStatus, McpReconnectDecision, McpReconnectPolicy, McpReconnectState, McpServer,
