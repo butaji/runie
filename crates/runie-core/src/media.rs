@@ -29,7 +29,6 @@ macro_rules! media_wire_formats {
         }
     };
 }
-
 media_wire_formats! {
     (Pi, "pi", true, true),
     (OpenAiChat, "openai-chat", true, true),
@@ -37,7 +36,6 @@ media_wire_formats! {
     (Gemini, "gemini", true, true),
     (Anthropic, "anthropic", true, false),
 }
-
 /// Encode validated user media at the provider boundary.
 pub fn encode_user_content(
     content: &UserContent,
@@ -238,9 +236,11 @@ impl AudioContent {
         Ok(Self { data, mime_type })
     }
 }
-
 fn validate_media(kind: &str, mime_type: &str, data: &str) -> Result<(), String> {
-    if !mime_type.starts_with(&format!("{kind}/")) {
+    let valid_mime = mime_type
+        .strip_prefix(&format!("{kind}/"))
+        .is_some_and(|subtype| !subtype.is_empty() && subtype.chars().all(|c| !c.is_whitespace()));
+    if !valid_mime {
         return Err(format!("unsupported {kind} MIME type: {mime_type}"));
     }
     if !is_base64_payload(data) {
@@ -371,6 +371,7 @@ mod tests {
         let audio = AudioContent::new("audio/mpeg", "aGVsbG8=").unwrap();
         assert_eq!(audio.mime_type, "audio/mpeg");
         assert!(AudioContent::new("image/png", "aGVsbG8=").is_err());
+        assert!(AudioContent::new("audio/", "aGVsbG8=").is_err());
         assert!(AudioContent::new("audio/mpeg", "not-base64").is_err());
     }
     #[test]
