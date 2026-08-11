@@ -123,45 +123,60 @@ pub(super) fn response_finish_reason(value: &serde_json::Value) -> Option<StopRe
     Some(StopReason::from_provider_finish_reason(Some(raw), false))
 }
 
-#[allow(
-    clippy::too_many_lines,
-    reason = "The usage projection keeps provider aliases visible in one data boundary"
-)]
 pub fn response_usage(value: &serde_json::Value) -> Usage {
-    let Some(raw) = value
-        .pointer("/response/usage")
-        .or_else(|| value.pointer("/usage"))
-    else {
+    let Some(raw) = usage_object(value) else {
         return Usage::default();
     };
-    let input = direct_usage_value(raw, &["input_tokens", "prompt_tokens"]);
-    let output = direct_usage_value(raw, &["output_tokens", "completion_tokens"]);
-    let cache_read = raw
-        .pointer("/input_tokens_details/cached_tokens")
-        .or_else(|| raw.pointer("/prompt_tokens_details/cached_tokens"))
-        .or_else(|| raw.get("cached_tokens"))
-        .or_else(|| raw.get("cache_read_input_tokens"))
-        .or_else(|| raw.get("prompt_cache_hit_tokens"))
-        .and_then(|v| v.as_u64())
-        .unwrap_or_default();
+    let input = direct_usage_value(raw, &["input_tokens", "prompt_tokens", "promptTokenCount"]);
+    let output = direct_usage_value(
+        raw,
+        &["output_tokens", "completion_tokens", "candidatesTokenCount"],
+    );
+    let cache_read = usage_cache_read(raw);
     let cache_write =
         direct_usage_value(raw, &["cache_creation_input_tokens", "cache_write_tokens"]);
-    let reasoning = raw
-        .pointer("/output_tokens_details/reasoning_tokens")
-        .or_else(|| raw.get("reasoning_tokens"))
-        .and_then(|v| v.as_u64())
-        .unwrap_or_default();
+    let reasoning = usage_reasoning(raw);
     Usage {
         input: input.saturating_sub(cache_read),
         output,
         cache_read,
         cache_write,
-        total_tokens: match direct_usage_value(raw, &["total_tokens"]) {
-            0 => input.saturating_add(output),
-            total => total,
-        },
+        total_tokens: usage_total(raw, input, output),
         reasoning,
         ..Usage::default()
+    }
+}
+
+fn usage_object(value: &serde_json::Value) -> Option<&serde_json::Value> {
+    value
+        .pointer("/response/usage")
+        .or_else(|| value.pointer("/usage"))
+        .or_else(|| value.pointer("/usageMetadata"))
+}
+
+fn usage_cache_read(raw: &serde_json::Value) -> u64 {
+    raw.pointer("/input_tokens_details/cached_tokens")
+        .or_else(|| raw.pointer("/prompt_tokens_details/cached_tokens"))
+        .or_else(|| raw.get("cached_tokens"))
+        .or_else(|| raw.get("cache_read_input_tokens"))
+        .or_else(|| raw.get("prompt_cache_hit_tokens"))
+        .or_else(|| raw.get("cachedContentTokenCount"))
+        .and_then(|value| value.as_u64())
+        .unwrap_or_default()
+}
+
+fn usage_reasoning(raw: &serde_json::Value) -> u64 {
+    raw.pointer("/output_tokens_details/reasoning_tokens")
+        .or_else(|| raw.get("reasoning_tokens"))
+        .or_else(|| raw.get("thoughtsTokenCount"))
+        .and_then(|value| value.as_u64())
+        .unwrap_or_default()
+}
+
+fn usage_total(raw: &serde_json::Value, input: u64, output: u64) -> u64 {
+    match direct_usage_value(raw, &["total_tokens", "totalTokenCount"]) {
+        0 => input.saturating_add(output),
+        total => total,
     }
 }
 
@@ -462,6 +477,24 @@ mod tests {
         }));
         assert_eq!(usage.input, 40);
         assert_eq!(usage.cache_read, 80);
+        assert_eq!(usage.total_tokens, 150);
+    }
+
+    #[test]
+    fn provider_usage_conformance_accepts_gemini_usage_metadata() {
+        let usage = super::response_usage(&serde_json::json!({
+            "usageMetadata": {
+                "promptTokenCount": 120,
+                "candidatesTokenCount": 30,
+                "cachedContentTokenCount": 80,
+                "thoughtsTokenCount": 7,
+                "totalTokenCount": 150
+            }
+        }));
+        assert_eq!(usage.input, 40);
+        assert_eq!(usage.output, 30);
+        assert_eq!(usage.cache_read, 80);
+        assert_eq!(usage.reasoning, 7);
         assert_eq!(usage.total_tokens, 150);
     }
 }

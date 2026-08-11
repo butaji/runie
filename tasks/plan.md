@@ -127,7 +127,8 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    now serializable and reverse-parsable for replay;
    typed failures now preserve bounded server retry guidance alongside status and
    retryability; complete the finite provider payload/finish-reason conformance matrix,
-   including unsupported-effort behavior and normalized failures.
+   including unsupported-effort behavior, normalized failures, and Gemini
+   `usageMetadata` token aliases.
 2. Tool output and background lifecycle UX — `harness-01` and `harness-03`.
    `/jobs cancel all` now reduces every running job through the actor mailbox;
    serializable `ToolCardSummary` and `BackgroundJobSummary` now expose card
