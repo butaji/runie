@@ -2281,6 +2281,17 @@ async fn run_app(
                                     .await;
                                 return Ok(ui_commands);
                             }
+                            if action == PaletteAction::GitWorktrees {
+                                let _ = app
+                                    .route_mappable_command(
+                                        runie_core::commands::MappableBuiltinCommand::Extended {
+                                            name: "git".into(),
+                                            args: "worktrees".into(),
+                                        },
+                                    )
+                                    .await;
+                                return Ok(ui_commands);
+                            }
                             if matches!(
                                 action,
                                 PaletteAction::CancelAllJobs

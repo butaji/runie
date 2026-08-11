@@ -30,7 +30,7 @@ fn exact_slash_command_match_precedes_incidental_fuzzy_matches() {
 
 #[test]
 fn palette_registry_covers_every_mappable_builtin_command() {
-    assert_eq!(PaletteAction::labels().len(), 69);
+    assert_eq!(PaletteAction::labels().len(), 70);
     for label in PaletteAction::labels() {
         assert!(PaletteAction::from_label(label).is_some(), "{label}");
     }
@@ -51,6 +51,10 @@ fn parameterized_palette_actions_are_marked_for_nested_forms() {
     assert_eq!(PaletteAction::GitStatus.slash_command(), "/git status");
     assert_eq!(PaletteAction::GitDiff.slash_command(), "/git diff");
     assert_eq!(PaletteAction::GitReview.slash_command(), "/git review");
+    assert_eq!(
+        PaletteAction::GitWorktrees.slash_command(),
+        "/git worktrees"
+    );
     assert_eq!(
         PaletteAction::GitConflicts.slash_command(),
         "/git conflicts"

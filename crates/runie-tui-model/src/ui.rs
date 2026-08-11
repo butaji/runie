@@ -74,6 +74,7 @@ runie_core::typed_action_registry! {
         GitStatus => "Git Status",
         GitDiff => "Git Diff",
         GitReview => "Git Review",
+        GitWorktrees => "Git Worktrees",
         GitConflicts => "Git Conflicts",
         Questions => "User Questions",
     }
