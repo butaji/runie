@@ -280,29 +280,14 @@ impl App {
                 let messages = snapshot.branch_context_messages();
                 let estimate = runie_core::session::estimate_context_tokens(&messages);
                 let model = self.model_catalog.snapshot().selected;
-                let mut lines = vec![
-                    format!("context_tokens: {}", estimate.tokens),
-                    format!(
-                        "context_window: {}",
-                        model.as_ref().map(|model| model.context_window).unwrap_or(0)
-                    ),
-                ];
                 let context_window = model.as_ref().map(|model| model.context_window).unwrap_or(0);
-                let settings = runie_core::session::CompactionSettings::default();
-                lines.extend(
-                    runie_core::session::compaction_decision(
-                        estimate.tokens,
-                        context_window,
-                        settings,
-                    )
-                    .terminal_lines(),
+                let report = runie_core::session::context_report(
+                    estimate.tokens,
+                    context_window,
+                    runie_core::session::CompactionSettings::default(),
+                    snapshot.compaction_context_projection(),
                 );
-                if let Some(projection) = snapshot.compaction_context_projection() {
-                    lines.extend(projection.terminal_lines());
-                } else {
-                    lines.push("compaction: none".into());
-                }
-                let result = lines.join("\n");
+                let result = report.terminal_lines().join("\n");
                 self.ui.send(UiMsg::ShowCommandResult(result)).await;
             }
             "recap" => {

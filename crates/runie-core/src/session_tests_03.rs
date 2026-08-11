@@ -449,6 +449,27 @@
         assert_eq!(decoded, plan);
     }
 
+    #[test]
+    fn context_report_is_serializable_data_and_preserves_terminal_projection() {
+        let report = context_report(
+            901,
+            1_000,
+            CompactionSettings {
+                enabled: true,
+                reserve_tokens: 100,
+                keep_recent_tokens: 20,
+            },
+            None,
+        );
+        assert_eq!(report.terminal_lines()[0], "context_tokens: 901");
+        assert!(report.terminal_lines().iter().any(|line| line.contains("required")));
+        assert_eq!(
+            serde_json::from_str::<ContextReport>(&serde_json::to_string(&report).unwrap())
+                .unwrap(),
+            report
+        );
+    }
+
     #[tokio::test]
     async fn undo_moves_actor_leaf_to_parent_without_deleting_history() {
         let actor = SessionActor::new();

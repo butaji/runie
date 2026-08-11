@@ -56,6 +56,44 @@ pub struct CompactionRecoveryPlan {
     pub action: CompactionRecoveryAction,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct ContextReport {
+    pub context_tokens: u64,
+    pub context_window: u64,
+    pub decision: CompactionDecision,
+    pub compaction: Option<CompactionContextProjection>,
+}
+
+impl ContextReport {
+    pub fn terminal_lines(&self) -> Vec<String> {
+        let mut lines = vec![
+            format!("context_tokens: {}", self.context_tokens),
+            format!("context_window: {}", self.context_window),
+        ];
+        lines.extend(self.decision.terminal_lines());
+        if let Some(projection) = &self.compaction {
+            lines.extend(projection.terminal_lines());
+        } else {
+            lines.push("compaction: none".into());
+        }
+        lines
+    }
+}
+
+pub fn context_report(
+    context_tokens: u64,
+    context_window: u64,
+    settings: CompactionSettings,
+    compaction: Option<CompactionContextProjection>,
+) -> ContextReport {
+    ContextReport {
+        context_tokens,
+        context_window,
+        decision: compaction_decision(context_tokens, context_window, settings),
+        compaction,
+    }
+}
+
 /// Convert the pure threshold decision into the next event-driven operation.
 /// Keeping this mapping typed prevents loop/UI callers from duplicating
 /// threshold rules or inventing ad-hoc JSON commands.

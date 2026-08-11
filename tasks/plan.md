@@ -99,7 +99,8 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    with failure/cancellation replay traces.
 3. Model-aware context policy — `harness-05` (live usage boundary implemented).
    Recovery and `/context` now use the active model’s declared window, and
-   `/context` projects the typed threshold decision and `/context compact
+   `/context` consumes a serializable `ContextReport` projection for its
+   typed threshold decision and `/context compact
    [instructions]` routes manual recovery through the actor pipeline; remaining
    work is richer compaction controls and threshold/recovery replay coverage;
    unknown zero-sized model windows now disable recovery rather than creating
