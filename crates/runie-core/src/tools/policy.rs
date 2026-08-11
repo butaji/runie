@@ -11,6 +11,27 @@ pub enum ApprovalMode {
     Yolo,
 }
 
+macro_rules! approval_mode_wire_names {
+    ($(($variant:ident, $wire:literal)),+ $(,)?) => {
+        impl ApprovalMode {
+            pub const fn wire_name(self) -> &'static str {
+                match self { $(Self::$variant => $wire,)+ }
+            }
+
+            pub fn from_wire_name(name: &str) -> Option<Self> {
+                match name { $($wire => Some(Self::$variant),)+ _ => None }
+            }
+        }
+    };
+}
+
+approval_mode_wire_names! {
+    (Deny, "deny"),
+    (Ask, "ask"),
+    (Auto, "auto"),
+    (Yolo, "yolo"),
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ApprovalModeEvent {
     Set(ApprovalMode),
@@ -212,6 +233,19 @@ mod tests {
             reduce_approval_mode(&mut mode, event);
         }
         assert_eq!(mode, ApprovalMode::Yolo);
+    }
+
+    #[test]
+    fn approval_modes_round_trip_through_wire_names() {
+        for mode in [
+            ApprovalMode::Deny,
+            ApprovalMode::Ask,
+            ApprovalMode::Auto,
+            ApprovalMode::Yolo,
+        ] {
+            assert_eq!(ApprovalMode::from_wire_name(mode.wire_name()), Some(mode));
+        }
+        assert_eq!(ApprovalMode::from_wire_name("unknown"), None);
     }
 
     #[test]
