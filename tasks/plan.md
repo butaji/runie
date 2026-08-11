@@ -95,21 +95,24 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    serializable `ToolCardSummary` and `BackgroundJobSummary` now expose card
    status plus shared bounded output facts and Unicode-safe previews; `/jobs`
    now includes the preview in its pure terminal row;
-   add richer renderer-neutral output cards and owned lifecycle controls,
-   with failure/cancellation replay traces.
+   ordered aggregate tool-card previews and core-owned background summary
+   terminal rows now remove duplicate renderer formatting; add richer
+   renderer-neutral output cards and owned lifecycle controls, with
+   failure/cancellation replay traces.
 3. Model-aware context policy — `harness-05` (live usage boundary implemented).
    Recovery and `/context` now use the active model’s declared window, and
    `/context` consumes a serializable `ContextReport` projection for its
-   typed threshold decision and `/context compact
-   [instructions]` routes manual recovery through the actor pipeline; remaining
-   work is richer compaction controls and threshold/recovery replay coverage;
+   typed threshold decision, policy-input rows, and a checked-in YAML context
+   fixture; `/context compact [instructions]` routes manual recovery through
+   the actor pipeline; remaining work is richer compaction controls and
+   threshold/recovery replay coverage;
    unknown zero-sized model windows now disable recovery rather than creating
    an unconditional compaction request.
 4. Scheduler cancellation controls — `harness-08` (actor-owned metrics and `/jobs` projection implemented; status filters now expose running, completed, failed, and cancelled rows).
    A serializable scheduler metric-row projection now drives terminal lines;
-   `/jobs scheduler` now exposes the actor-owned scheduler projection directly;
-   extend the existing mailbox/replay state machine with richer user-visible
-   queued, running, and cancelled control projections.
+   `/jobs scheduler` and palette-discoverable `Active Jobs` expose actor-owned
+   scheduler projections; extend the existing mailbox/replay state machine
+   with richer cancellation controls and live queued/running transitions.
 5. MCP lifecycle ownership — `harness-10`.
    The stdio actor now publishes ready/busy/failed/closed lifecycle state,
    `/mcps` projects it through the loop-owned executor, and registry-backed
@@ -119,9 +122,9 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    `/mcps` projects unified stdio/HTTP lifecycle rows with transport filters;
    lifecycle names use the shared lowercase wire vocabulary.
 6. Session and Git interactive UX — `harness-12` and `harness-13`.
-   `/sessions` now preserves each row’s source path in its pure terminal
-   projection, and `/sessions pick [text]` opens the actor-owned resume picker;
-   complete picker/history/conflict interactions over the existing
+   `/sessions` now preserves each row’s source path, `/sessions history` is
+   palette-discoverable, and `/sessions pick [text]` opens the actor-owned
+   resume picker; complete picker/undo history and Git conflict interactions over the existing
    actor-owned projections and inverse-safe event boundaries.
 7. IDE and noninteractive live boundaries — `harness-17` and `harness-18`; telemetry is now wired as one actor-owned live projection into provider streams and `/usage`.
    JSONL now emits selected provider/model/context metadata; add owned
