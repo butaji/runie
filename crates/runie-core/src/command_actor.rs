@@ -30,6 +30,16 @@ pub enum DiagnosticAction {
     Fix,
 }
 
+impl DiagnosticAction {
+    pub fn parse(argument: &str) -> Option<Self> {
+        match argument.trim() {
+            "" | "inspect" => Some(Self::Inspect),
+            "fix" => Some(Self::Fix),
+            _ => None,
+        }
+    }
+}
+
 impl DiagnosticReport {
     pub fn rows(&self) -> Vec<DiagnosticReportRow> {
         std::iter::once(DiagnosticReportRow::Summary {
@@ -208,8 +218,11 @@ fn reduce_command(state: &mut CommandState, name: &str, args: &str) {
         "plugins" => state.plugins_loaded = true,
         "mcps" => state.mcps_loaded = true,
         "doctor" => {
+            let Some(action) = DiagnosticAction::parse(args) else {
+                return;
+            };
             let report = DiagnosticReport {
-                fix_requested: args == "fix",
+                fix_requested: matches!(action, DiagnosticAction::Fix),
                 checks: vec!["workspace".into(), "provider".into(), "session".into()],
             };
             state.last_diagnostic = Some(report.summary());
@@ -377,5 +390,16 @@ mod tests {
                 "check: session"
             ]
         );
+    }
+
+    #[tokio::test]
+    async fn doctor_rejects_unknown_actions_without_overwriting_the_report() {
+        let actor = CommandActor::new();
+        actor.invoke("doctor", "inspect").await;
+        let before = actor.snapshot();
+        actor.invoke("doctor", "repair-everything").await;
+        let after = actor.snapshot();
+        assert_eq!(after.diagnostic_report, before.diagnostic_report);
+        assert_eq!(after.last_diagnostic, before.last_diagnostic);
     }
 }
