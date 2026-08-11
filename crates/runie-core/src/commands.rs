@@ -269,7 +269,7 @@ fn parse_parameterized_command(value: &str) -> Option<MappableBuiltinCommand> {
         | "/doctor" | "/rewind" | "/history" | "/find" | "/jump" | "/context" | "/effort"
         | "/always-approve" | "/auto" | "/deny" | "/plan" | "/remember" | "/goal" | "/workflow"
         | "/jobs" | "/questions" | "/sessions" | "/loop" | "/deep-research" | "/feedback"
-        | "/usage" | "/memory" | "/skills" | "/hooks" | "/plugins" => {
+        | "/usage" | "/memory" | "/skills" | "/hooks" | "/plugins" | "/clear" | "/reset" => {
             Some(MappableBuiltinCommand::Extended {
                 name: prefix.trim_start_matches('/').to_owned(),
                 args: text.to_owned(),
@@ -305,6 +305,8 @@ fn parse_extended_no_arg(value: &str) -> Option<MappableBuiltinCommand> {
     matches!(
         name,
         "settings"
+            | "clear"
+            | "reset"
             | "share"
             | "trust"
             | "login"

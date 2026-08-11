@@ -80,6 +80,19 @@ fn parser_maps_effort_without_an_argument_for_picker_reopen() {
 }
 
 #[test]
+fn parser_maps_clear_and_reset_to_context_commands() {
+    for name in ["clear", "reset"] {
+        assert_eq!(
+            parse_mappable_builtin_command(&format!("/{name}")),
+            Some(MappableBuiltinCommand::Extended {
+                name: name.into(),
+                args: String::new(),
+            })
+        );
+    }
+}
+
+#[test]
 fn parser_keeps_context_compaction_as_a_data_command() {
     assert_eq!(
         parse_mappable_builtin_command("/context compact keep the latest turn"),

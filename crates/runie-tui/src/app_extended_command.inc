@@ -1,5 +1,12 @@
 impl App {
     async fn route_extended_command(&self, name: &str, args: &str) -> bool {
+        if matches!(name, "clear" | "reset") && args.trim().is_empty() {
+            self.session_actor.reset().await;
+            self.ui
+                .send(UiMsg::ShowCommandResult("The context has been cleared.".into()))
+                .await;
+            return true;
+        }
         if name == "mcps" {
             let transport = runie_core::commands::parse_mcp_transport_query(args);
             let statuses = self
