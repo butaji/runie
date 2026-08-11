@@ -57,6 +57,7 @@ pub fn reduce_mcp_notification_queue(
         McpNotificationQueueEvent::Pop => queue.pending.pop_front(),
         McpNotificationQueueEvent::Clear => {
             queue.pending.clear();
+            queue.dropped = 0;
             None
         }
     }
@@ -481,5 +482,16 @@ mod tests {
         assert_eq!(queue.backpressure(), McpBackpressureStatus::Saturated);
         queue.push(serde_json::json!({"n": 2}));
         assert_eq!(queue.backpressure(), McpBackpressureStatus::Dropping);
+    }
+
+    #[test]
+    fn clearing_queue_starts_a_fresh_backpressure_epoch() {
+        let mut queue = McpNotificationQueue::new(1);
+        queue.push(serde_json::json!({"n": 1}));
+        queue.push(serde_json::json!({"n": 2}));
+        assert_eq!(queue.backpressure(), McpBackpressureStatus::Dropping);
+        queue.clear();
+        assert_eq!(queue.dropped, 0);
+        assert_eq!(queue.backpressure(), McpBackpressureStatus::Clear);
     }
 }
