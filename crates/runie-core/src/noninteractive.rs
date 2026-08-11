@@ -17,6 +17,8 @@ pub enum JsonlEvent {
     Metadata {
         provider: Option<String>,
         model: Option<String>,
+        #[serde(default)]
+        model_name: Option<String>,
         api: Option<String>,
         context_window: Option<u64>,
         thinking_level: Option<crate::types::ThinkingLevel>,
@@ -145,6 +147,7 @@ mod tests {
         JsonlEvent::Metadata {
             provider: Some("minimax".into()),
             model: Some("model-1".into()),
+            model_name: Some("Model One".into()),
             api: Some("openai-completions".into()),
             context_window: Some(128_000),
             thinking_level: Some(crate::types::ThinkingLevel::High),
@@ -191,6 +194,23 @@ mod tests {
         let encoded = encode_jsonl(&events).unwrap();
         assert_eq!(decode_jsonl(&encoded).unwrap(), events);
         assert_eq!(RunOutcome::Completed.exit_code(), 0);
+    }
+
+    #[test]
+    fn legacy_metadata_defaults_model_name_without_rejecting_the_record() {
+        let event: JsonlEvent = serde_json::from_value(serde_json::json!({
+            "type": "metadata",
+            "provider": "openai",
+            "model": "model-1"
+        }))
+        .unwrap();
+        assert!(matches!(
+            event,
+            JsonlEvent::Metadata {
+                model_name: None,
+                ..
+            }
+        ));
     }
 
     #[test]
