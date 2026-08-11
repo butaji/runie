@@ -85,6 +85,9 @@ provider tests, full workspace tests, and the 55-case TUI smoke suite remain
 green.
 Dialog hint strings now come from the model-owned kind table; dialog tests,
 full workspace tests, and the 55-case TUI smoke suite remain green.
+Scheduler metric names and terminal-row projection now come from one typed
+macro declaration; scheduler reducer tests, workspace verification, and the
+live 56-case TUI smoke suite remain green.
 The owned context-recovery hook now receives the active model and uses its
 declared context window for compaction decisions; context replay/tests,
 workspace verification, and the 55-case TUI smoke suite remain green.
