@@ -1,12 +1,14 @@
 # Reduction 04: normalized feed state
 
-Status: partial
+Status: adopted
 
 Store canonical feed records and derive tool/activity/navigation projections;
 remove synchronized duplicate indexes where possible.
 
 Progress: the feed actor now retains the reduced event sequence through
-`EventMemo`; normalized records and derived-index removal remain next.
+`EventMemo`; transcript lines remain the canonical ordered record stream while
+`FeedFacts` owns normalized tool/activity/workflow metadata and derived card
+projections are rebuilt from those two explicit data boundaries.
 
 The first migration boundary is now present: `FeedFacts` is a typed normalized
 projection for tool, activity, workflow, and lifecycle facts, populated once
@@ -40,8 +42,9 @@ The live scrollback event projection now stores one normalized `ToolRecord`
 per call ID for name and arguments instead of parallel name/argument maps.
 `FeedSnapshot` no longer copies the navigation-owned tool-mode map; tool display
 mode now has one canonical owner and tool-card projection reads it directly.
-Remaining work is removal of duplicated derived indexes and normalization of
-individual line/tool records.
+No mutable parallel tool-name/argument or lifecycle index remains; line
+identity is retained as transcript data and tool metadata is retained in the
+typed `ToolRecord` registry.
 Tool-header and tool-line classification is now owned by `LineKind` predicates,
 so feed update, selection, error, and rendering paths share one vocabulary.
 Live-header classification (`Tool`/`ToolRunning`) is also centralized, keeping
@@ -70,4 +73,6 @@ transcript identity set. A reducer regression covers orphan removal while
 retaining a live tool card, closing the stale-derived-index failure mode.
 
 Acceptance: snapshot parity, replay parity, and no stale derived index after
-insert/update/remove sequences.
+insert/update/remove sequences. The lifecycle, interleaving, YAML, and
+`RemoveKind` orphan-pruning regressions provide that evidence. This task is
+adopted.
