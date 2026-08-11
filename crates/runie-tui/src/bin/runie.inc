@@ -2180,12 +2180,16 @@ async fn run_app(
                                 action,
                                 PaletteAction::McpReady
                                     | PaletteAction::McpFailed
+                                    | PaletteAction::McpBusy
+                                    | PaletteAction::McpClosed
                                     | PaletteAction::McpStdio
                                     | PaletteAction::McpHttp
                             ) {
                                 let args = match action {
                                     PaletteAction::McpReady => "status=ready",
                                     PaletteAction::McpFailed => "status=failed",
+                                    PaletteAction::McpBusy => "status=busy",
+                                    PaletteAction::McpClosed => "status=closed",
                                     PaletteAction::McpStdio => "stdio",
                                     PaletteAction::McpHttp => "http",
                                     _ => unreachable!(),
