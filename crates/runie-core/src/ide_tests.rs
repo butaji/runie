@@ -167,6 +167,20 @@ fn ide_json_rpc_codec_is_typed_and_lossless() {
 }
 
 #[test]
+fn ide_outbound_notification_is_typed_newline_delimited_data() {
+    let encoded = encode_ide_notification(
+        "textDocument/didChange",
+        serde_json::json!({"textDocument":{"uri":"file:///main.rs","version":2}}),
+    )
+    .unwrap();
+    assert!(encoded.ends_with('\n'));
+    let notification: IdeRpcNotification = serde_json::from_str(encoded.trim()).unwrap();
+    assert_eq!(notification.jsonrpc, "2.0");
+    assert_eq!(notification.method, "textDocument/didChange");
+    assert!(encode_ide_notification(" ", serde_json::Value::Null).is_err());
+}
+
+#[test]
 fn lsp_diagnostics_notification_becomes_typed_event_data() {
     let event = ide_event_from_rpc("textDocument/publishDiagnostics", serde_json::json!({"uri":"file:///a","diagnostics":[{"range":{"start":{"line":3,"character":7}},"severity":2,"message":"unused import"}]})).unwrap();
     let IdeEvent::DiagnosticsReplaced { items, .. } = event else {

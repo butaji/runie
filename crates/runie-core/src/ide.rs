@@ -235,6 +235,14 @@ pub struct IdeRpcRequest {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct IdeRpcNotification {
+    pub jsonrpc: String,
+    pub method: String,
+    #[serde(default)]
+    pub params: serde_json::Value,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct IdeRpcError {
     pub code: i64,
     pub message: String,
@@ -264,6 +272,19 @@ pub fn encode_ide_response(response: &IdeRpcResponse) -> Result<String, String> 
         return Err("IDE response must contain exactly one result or error".into());
     }
     serde_json::to_string(response).map_err(|error| format!("encode IDE response: {error}"))
+}
+
+pub fn encode_ide_notification(method: &str, params: serde_json::Value) -> Result<String, String> {
+    if method.trim().is_empty() {
+        return Err("IDE notification method must not be empty".into());
+    }
+    serde_json::to_string(&IdeRpcNotification {
+        jsonrpc: "2.0".into(),
+        method: method.into(),
+        params,
+    })
+    .map(|value| format!("{value}\n"))
+    .map_err(|error| format!("encode IDE notification: {error}"))
 }
 
 /// Convert common LSP/ACP notifications into the replayable IDE event model.
