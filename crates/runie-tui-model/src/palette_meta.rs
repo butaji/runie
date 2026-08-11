@@ -160,6 +160,7 @@ impl PaletteAction {
         matches!(
             self,
             Self::SetSessionName
+                | Self::UndoSession
                 | Self::SelectTheme
                 | Self::CompactContext
                 | Self::ForkSession
@@ -202,6 +203,7 @@ impl PaletteAction {
     pub const fn parameter_hint(&self) -> &'static str {
         match self {
             Self::SetSessionName => "Session name",
+            Self::UndoSession => "Count (optional)",
             Self::CompactContext => "Instructions (optional)",
             Self::ForkSession | Self::SelectTreeEntry => "Entry id",
             Self::SelectModel => "provider/model",

@@ -232,6 +232,26 @@ fn background_job_command_accepts_only_cancel_and_one_id() {
 }
 
 #[test]
+fn undo_count_accepts_one_positive_integer_only() {
+    assert_eq!(parse_undo_count(""), Some(1));
+    assert_eq!(parse_undo_count("3"), Some(3));
+    assert_eq!(parse_undo_count("0"), None);
+    assert_eq!(parse_undo_count("3 4"), None);
+    assert_eq!(parse_undo_count("latest"), None);
+}
+
+#[test]
+fn parameterized_undo_reaches_the_typed_extended_command() {
+    assert_eq!(
+        parse_mappable_builtin_command("/undo 2"),
+        Some(MappableBuiltinCommand::Extended {
+            name: "undo".into(),
+            args: "2".into(),
+        })
+    );
+}
+
+#[test]
 fn background_job_output_query_requires_one_id() {
     assert_eq!(parse_background_job_output_query("output 7"), Some("7"));
     assert_eq!(parse_background_job_output_query("output"), None);

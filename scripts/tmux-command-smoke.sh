@@ -18,7 +18,7 @@ parameterized=(
   "Select Theme" "Set Session Name" "Compact Context" "Fork Session" "Select Tree Entry"
   "Export Session" "Import Session" "Clone Session" "Resume Session" "Help" "Settings" "Doctor"
   "Rewind Session" "Prompt History" "Find Transcript" "Jump Transcript" "Set Reasoning Effort"
-  "Always Approve" "Automatic Approval" "Plan Mode" "Login" "Logout" "Trust Project" "Remember"
+  "Always Approve" "Automatic Approval" "Plan Mode" "Login" "Logout" "Trust Project" "Remember" "Undo Session"
   "Goal" "Workflow" "Loop" "Deep Research" "Feedback" "Usage" "Background Jobs" "Questions" "Jobs" "Completed Jobs" "Failed Jobs" "Cancelled Jobs" "Busy MCP Servers" "Closed MCP Servers" "Stdio MCP Servers" "HTTP MCP Servers" "Git Status" "Git Diff" "Git Review" "Git Worktrees" "Git Conflicts" "Job Output"
 )
 

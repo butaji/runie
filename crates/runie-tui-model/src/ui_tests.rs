@@ -43,6 +43,7 @@ fn palette_registry_covers_every_mappable_builtin_command() {
 )]
 fn parameterized_palette_actions_are_marked_for_nested_forms() {
     assert!(PaletteAction::SetSessionName.requires_parameters());
+    assert!(PaletteAction::UndoSession.requires_parameters());
     assert!(PaletteAction::ExportSession.requires_parameters());
     assert!(PaletteAction::SelectTheme.requires_parameters());
     assert!(!PaletteAction::SelectModel.requires_parameters());

@@ -163,7 +163,15 @@ impl App {
             return true;
         }
         if name == "undo" {
-            let result = self.session_actor.undo().await;
+            let Some(count) = runie_core::commands::parse_undo_count(args) else {
+                self.ui
+                    .send(UiMsg::ShowCommandResult(
+                        "Undo expects a positive integer count".into(),
+                    ))
+                    .await;
+                return true;
+            };
+            let result = self.undo_session(count).await;
             if let Err(error) = &result {
                 self.bus.publish(AgentEvent::Error {
                     message: error.clone(),
@@ -171,7 +179,7 @@ impl App {
             }
             self.ui
                 .send(UiMsg::ShowCommandResult(match result {
-                    Ok(()) => "Session undone".into(),
+                    Ok(done) => format!("Session undone ({done})"),
                     Err(error) => format!("Undo unavailable: {error}"),
                 }))
                 .await;
@@ -518,5 +526,14 @@ impl App {
             }
         }
         true
+    }
+
+    async fn undo_session(&self, count: usize) -> Result<usize, String> {
+        let mut completed = 0;
+        for _ in 0..count {
+            self.session_actor.undo().await?;
+            completed += 1;
+        }
+        Ok(completed)
     }
 }

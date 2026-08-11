@@ -273,6 +273,18 @@ pub fn parse_session_history_selection(args: &str) -> Option<&str> {
         .then(|| args.split_whitespace().nth(1).unwrap())
 }
 
+/// Parse Kimi-compatible repeated undo count without allowing ambiguous input.
+pub fn parse_undo_count(args: &str) -> Option<usize> {
+    let value = args.trim();
+    if value.is_empty() {
+        return Some(1);
+    }
+    (value.split_whitespace().count() == 1)
+        .then(|| value.parse::<usize>().ok())
+        .flatten()
+        .filter(|count| *count > 0)
+}
+
 #[allow(clippy::too_many_lines)]
 fn parse_parameterized_command(value: &str) -> Option<MappableBuiltinCommand> {
     if let Some(command) = parse_compact_command(value) {
@@ -303,7 +315,7 @@ fn parse_parameterized_command(value: &str) -> Option<MappableBuiltinCommand> {
         | "/always-approve" | "/auto" | "/deny" | "/plan" | "/remember" | "/goal" | "/workflow"
         | "/jobs" | "/git" | "/questions" | "/sessions" | "/loop" | "/deep-research"
         | "/feedback" | "/usage" | "/memory" | "/skills" | "/hooks" | "/plugins" | "/clear"
-        | "/reset" => Some(MappableBuiltinCommand::Extended {
+        | "/reset" | "/undo" => Some(MappableBuiltinCommand::Extended {
             name: prefix.trim_start_matches('/').to_owned(),
             args: text.to_owned(),
         }),
