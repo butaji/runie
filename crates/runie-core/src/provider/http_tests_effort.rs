@@ -5,7 +5,7 @@ use crate::types::ThinkingLevel;
 fn provider_profile_selects_wire_field_from_model_aliases() {
     let cases = [
         ("openai-responses", "", "reasoning_effort"),
-        ("", "anthropic", "reasoning"),
+        ("", "anthropic", "effort"),
         ("", "google", "reasoning"),
         ("", "minimax", "reasoning_effort"),
         ("unknown", "unknown", "reasoning_effort"),
@@ -106,14 +106,14 @@ fn model_provider_effort_uses_the_profile_wire_field() {
             ..Default::default()
         }),
     );
-    assert_eq!(payload["reasoning"], "high-wire");
+    assert_eq!(payload["output_config"]["effort"], "high-wire");
     let explicit = with_model_provider_effort(
-        serde_json::json!({"reasoning":"explicit"}),
+        serde_json::json!({"output_config":{"effort":"explicit"}}),
         &model,
         Some(&SimpleStreamOptions {
             reasoning: Some(ThinkingLevel::High),
             ..Default::default()
         }),
     );
-    assert_eq!(explicit["reasoning"], "explicit");
+    assert_eq!(explicit["output_config"]["effort"], "explicit");
 }

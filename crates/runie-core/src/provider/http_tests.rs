@@ -150,7 +150,7 @@ async fn shared_http_boundary_applies_model_effort_profile() {
     .unwrap();
     let payload: serde_json::Value =
         serde_json::from_str(&body.lock().unwrap().clone().unwrap()).unwrap();
-    assert_eq!(payload["reasoning"], "extended");
+    assert_eq!(payload["output_config"]["effort"], "extended");
 }
 
 fn assert_hooked_response(

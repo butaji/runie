@@ -54,6 +54,7 @@ macro_rules! effort_wire_fields {
 effort_wire_fields! {
     (ReasoningEffort, "reasoning_effort"),
     (Reasoning, "reasoning"),
+    (OutputConfigEffort, "effort"),
 }
 
 /// The small provider profile is request-shaping data, not transport state.
@@ -95,7 +96,7 @@ macro_rules! provider_request_profiles {
 provider_request_profiles! {
     (OpenAiResponses, "openai-responses", ["openai-responses", "responses"], ReasoningEffort),
     (OpenAiChat, "openai-chat", ["openai-chat", "openai", "chat"], ReasoningEffort),
-    (Anthropic, "anthropic", ["anthropic", "claude"], Reasoning),
+    (Anthropic, "anthropic", ["anthropic", "claude"], OutputConfigEffort),
     (Gemini, "gemini", ["gemini", "google"], Reasoning),
     (MiniMax, "minimax", ["minimax"], ReasoningEffort),
     (Generic, "generic", ["__generic__"], ReasoningEffort),
@@ -221,7 +222,6 @@ pub fn with_model_effort(
     }
     payload
 }
-
 /// Apply the selected provider adapter's typed effort field.
 pub fn with_provider_effort(
     payload: serde_json::Value,
@@ -231,7 +231,6 @@ pub fn with_provider_effort(
 ) -> serde_json::Value {
     with_model_effort(payload, model, options, field.key())
 }
-
 /// Apply the effort spelling selected by the model's provider profile.
 pub fn with_model_provider_effort(
     payload: serde_json::Value,
@@ -239,9 +238,32 @@ pub fn with_model_provider_effort(
     options: Option<&SimpleStreamOptions>,
 ) -> serde_json::Value {
     let profile = ProviderRequestProfile::for_model(model);
+    if matches!(profile, ProviderRequestProfile::Anthropic) {
+        return with_nested_effort(payload, model, options, "output_config", "effort");
+    }
     with_provider_effort(payload, model, options, profile.effort_field())
 }
-
+fn with_nested_effort(
+    mut payload: serde_json::Value,
+    model: &Model,
+    options: Option<&SimpleStreamOptions>,
+    container: &str,
+    key: &str,
+) -> serde_json::Value {
+    if let Some(effort) = mapped_reasoning(model, options) {
+        if let Some(object) = payload.as_object_mut() {
+            let nested = object
+                .entry(container.to_owned())
+                .or_insert_with(|| serde_json::json!({}));
+            if let Some(nested) = nested.as_object_mut() {
+                nested
+                    .entry(key.to_owned())
+                    .or_insert_with(|| serde_json::Value::String(effort));
+            }
+        }
+    }
+    payload
+}
 async fn execute_with_retries<A: HttpActor + ?Sized>(
     client: &A,
     request: HttpRequest,
