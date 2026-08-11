@@ -72,3 +72,6 @@ while keeping the production actor module focused on mailbox ownership and
 state transitions. MCP stdio request writing, response correlation, and tests
 are likewise separated into small semantic helpers/modules; the remaining
 MCP module size is still queued for a transport/domain split.
+Interactive question and web-search executor adapters now live in
+`executor_special.rs`, leaving the main dispatcher focused on scheduling and
+tool lifecycle transitions.

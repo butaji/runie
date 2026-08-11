@@ -14,6 +14,8 @@ mod executor_hooks;
 pub use executor_hooks::*;
 #[path = "scheduler_metrics.rs"]
 mod scheduler_metrics;
+#[path = "executor_special.rs"]
+mod special;
 pub use scheduler_metrics::{
     reduce_scheduler_event, SchedulerCancellationReason, SchedulerEvent, SchedulerMetrics,
 };
@@ -408,10 +410,10 @@ async fn execute_tool(
         return execute_subagent(call, ctx).await;
     }
     if call.name == "ask_user_question" {
-        return execute_question(call, ctx).await;
+        return special::execute_question(call, ctx).await;
     }
     if call.name == "web_search" {
-        return execute_web_search(call, ctx).await;
+        return special::execute_web_search(call, ctx).await;
     }
     if call.name == "background_bash" {
         return crate::tools::background::execute_shell(call, ctx).await;
@@ -481,26 +483,4 @@ fn tool_update_callback(
             updates.lock().expect("tool update event lock").push(event);
         }
     })
-}
-async fn execute_question(
-    call: &ToolCall,
-    ctx: &ToolExecContext,
-) -> Result<AgentToolResult, String> {
-    let Some(hook) = &ctx.hooks.ask_user_question else {
-        return Err("ask_user_question requires an interactive question hook".into());
-    };
-    let request = serde_json::from_value(call.arguments.clone())
-        .map_err(|error| format!("invalid question: {error}"))?;
-    Ok(crate::tools::ask_user::answer_result(hook(request).await?))
-}
-async fn execute_web_search(
-    call: &ToolCall,
-    ctx: &ToolExecContext,
-) -> Result<AgentToolResult, String> {
-    let Some(hook) = &ctx.hooks.web_search else {
-        return Err("web_search requires an owning web search hook".into());
-    };
-    let request = serde_json::from_value(call.arguments.clone())
-        .map_err(|error| format!("invalid web search request: {error}"))?;
-    Ok(crate::tools::web::result(hook(request).await?))
 }
