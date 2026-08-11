@@ -1,6 +1,8 @@
 use super::*;
 
 const TEST_IDE_PORT: u16 = 9_000;
+const TEST_DISCOVERED_IDE_PORT: u16 = 9_001;
+const TEST_DISCOVERED_IDE_ENDPOINT: &str = "tcp://127.0.0.1:9001";
 
 #[test]
 fn replayed_ide_events_reduce_to_documents_and_diagnostics() {
@@ -339,6 +341,31 @@ fn ide_endpoints_and_reconnect_decisions_are_serializable_data() {
     let (_, exhausted) =
         (0..policy.max_attempts).fold((state, retry), |(state, _), _| state.disconnected(policy));
     assert_eq!(exhausted, IdeReconnectDecision::Exhausted);
+}
+
+#[test]
+fn ide_environment_discovery_prefers_explicit_endpoint_and_skips_invalid_values() {
+    let endpoint = IdeEndpoint::discover_environment([
+        ("VSCODE_IPC_HOOK_CLI", "/tmp/vscode.sock"),
+        ("RUNIE_IDE_ENDPOINT", "invalid"),
+    ]);
+    assert_eq!(
+        endpoint,
+        Some(IdeEndpoint::Unix {
+            path: "/tmp/vscode.sock".into()
+        })
+    );
+
+    assert_eq!(
+        IdeEndpoint::discover_environment([
+            ("VSCODE_IPC_HOOK_CLI", "/tmp/vscode.sock"),
+            ("RUNIE_IDE_ENDPOINT", TEST_DISCOVERED_IDE_ENDPOINT,),
+        ]),
+        Some(IdeEndpoint::Tcp {
+            host: "127.0.0.1".into(),
+            port: TEST_DISCOVERED_IDE_PORT
+        })
+    );
 }
 
 #[tokio::test]

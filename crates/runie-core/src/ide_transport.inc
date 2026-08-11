@@ -192,6 +192,30 @@ impl IdeEndpoint {
             .into_iter()
             .find_map(|candidate| Self::parse(candidate.as_ref()).ok())
     }
+
+    /// Discover editor-provided endpoints at the process boundary while
+    /// keeping precedence and normalization pure/replayable for callers.
+    pub fn discover_from_environment() -> Option<Self> {
+        Self::discover_environment(std::env::vars())
+    }
+
+    pub fn discover_environment<I, K, V>(vars: I) -> Option<Self>
+    where
+        I: IntoIterator<Item = (K, V)>,
+        K: AsRef<str>,
+        V: AsRef<str>,
+    {
+        let mut explicit = None;
+        let mut vscode = None;
+        for (key, value) in vars {
+            match key.as_ref() {
+                "RUNIE_IDE_ENDPOINT" => explicit = Some(value.as_ref().to_owned()),
+                "VSCODE_IPC_HOOK_CLI" => vscode = Some(format!("unix://{}", value.as_ref())),
+                _ => {}
+            }
+        }
+        Self::discover([explicit, vscode].into_iter().flatten())
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
