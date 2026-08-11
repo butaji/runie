@@ -12,14 +12,14 @@ labels=(
   "Set Reasoning Effort" "Always Approve" "Automatic Approval" "Plan Mode" "View Plan"
   "Login" "Logout" "Reload" "Trust Project" "Skills" "Hooks" "Plugins" "MCP Servers"
   "Memory" "Remember" "Goal" "Workflow" "Workflows" "Sessions" "Questions" "Loop" "Deep Research" "Feedback" "Usage"
-  "Background Jobs"
+  "Background Jobs" "Jobs"
 )
 parameterized=(
   "Select Theme" "Set Session Name" "Compact Context" "Fork Session" "Select Tree Entry"
   "Export Session" "Import Session" "Clone Session" "Resume Session" "Help" "Settings" "Doctor"
   "Rewind Session" "Prompt History" "Find Transcript" "Jump Transcript" "Set Reasoning Effort"
   "Always Approve" "Automatic Approval" "Plan Mode" "Login" "Logout" "Trust Project" "Remember"
-  "Goal" "Workflow" "Loop" "Deep Research" "Feedback" "Usage" "Background Jobs" "Questions"
+  "Goal" "Workflow" "Loop" "Deep Research" "Feedback" "Usage" "Background Jobs" "Questions" "Jobs"
 )
 
 is_parameterized() {
@@ -79,6 +79,8 @@ for label in "${labels[@]}"; do
     argument=(s m o k e)
     if [[ "$label" == "Questions" ]]; then
       argument=(c l e a r)
+    elif [[ "$label" == "Jobs" ]]; then
+      argument=(s c h e d u l e r)
     fi
     for character in "${argument[@]}"; do
       tmux -L "$socket" send-keys -t smoke -l -- "$character"
@@ -88,6 +90,11 @@ for label in "${labels[@]}"; do
     sleep 0.5
     if [[ "$label" == "Background Jobs" ]] && ! wait_for 'Background job smoke not found'; then
       echo "FAIL $label: expected-query-result"
+      ((failed += 1))
+      continue
+    fi
+    if [[ "$label" == "Jobs" ]] && ! wait_for 'scheduler queued:'; then
+      echo "FAIL $label: expected-scheduler-result"
       ((failed += 1))
       continue
     fi

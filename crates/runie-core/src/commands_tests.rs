@@ -184,6 +184,8 @@ fn background_job_command_accepts_only_cancel_and_one_id() {
     assert_eq!(parse_background_job_query("7 extra"), None);
     assert!(parse_background_job_cancel_all("cancel all"));
     assert!(!parse_background_job_cancel_all("cancel all extra"));
+    assert!(parse_background_scheduler_query("scheduler"));
+    assert!(!parse_background_scheduler_query("scheduler extra"));
     assert_eq!(
         parse_background_job_status_query("running"),
         Some("running")

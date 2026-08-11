@@ -104,6 +104,7 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    an unconditional compaction request.
 4. Scheduler cancellation controls — `harness-08` (actor-owned metrics and `/jobs` projection implemented; status filters now expose running, completed, failed, and cancelled rows).
    A serializable scheduler metric-row projection now drives terminal lines;
+   `/jobs scheduler` now exposes the actor-owned scheduler projection directly;
    extend the existing mailbox/replay state machine with richer user-visible
    queued, running, and cancelled control projections.
 5. MCP lifecycle ownership — `harness-10`.

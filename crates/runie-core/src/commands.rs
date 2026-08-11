@@ -220,6 +220,10 @@ pub fn parse_background_job_clear_finished(args: &str) -> bool {
     args.split_whitespace().eq(["clear", "finished"])
 }
 
+pub fn parse_background_scheduler_query(args: &str) -> bool {
+    args.trim() == "scheduler"
+}
+
 /// Parse an optional single background-job ID used by the inspection view.
 /// Control verbs such as `cancel` stay owned by their dedicated parser.
 pub fn parse_background_job_query(args: &str) -> Option<&str> {
