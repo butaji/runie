@@ -6,6 +6,8 @@ pub struct SessionHistoryRow {
     pub seq: u64,
     pub parent_id: Option<String>,
     pub selected: bool,
+    #[serde(default)]
+    pub undoable: bool,
 }
 
 impl SessionHistoryRow {
@@ -13,8 +15,12 @@ impl SessionHistoryRow {
         let selected = if self.selected { "*" } else { " " };
         let parent = self.parent_id.as_deref().unwrap_or("-");
         format!(
-            "{selected} {} type={} lane={} seq={} parent={parent}",
-            self.id, self.record_type, self.lane, self.seq
+            "{selected} {} type={} lane={} seq={} parent={parent} undoable={}",
+            self.id,
+            self.record_type,
+            self.lane,
+            self.seq,
+            self.undoable
         )
     }
 }
@@ -37,6 +43,7 @@ impl SessionSnapshot {
                 seq: entry.seq,
                 parent_id: entry.parent_id.clone(),
                 selected: selected.contains(&entry.id),
+                undoable: entry.parent_id.is_some(),
             })
             .chain(self.config_records.iter().map(|entry| SessionHistoryRow {
                 id: entry.id.clone(),
@@ -47,6 +54,7 @@ impl SessionSnapshot {
                 seq: entry.seq,
                 parent_id: entry.parent_id.clone(),
                 selected: selected.contains(&entry.id),
+                undoable: entry.parent_id.is_some(),
             }))
             .collect::<Vec<_>>();
         rows.sort_by_key(|row| row.seq);
