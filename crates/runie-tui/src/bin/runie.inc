@@ -2176,11 +2176,19 @@ async fn run_app(
                                 app.toggle_model_selector().await;
                                 return Ok(ui_commands);
                             }
-                            if matches!(action, PaletteAction::McpReady | PaletteAction::McpFailed) {
-                                let args = if action == PaletteAction::McpReady {
-                                    "status=ready"
-                                } else {
-                                    "status=failed"
+                            if matches!(
+                                action,
+                                PaletteAction::McpReady
+                                    | PaletteAction::McpFailed
+                                    | PaletteAction::McpStdio
+                                    | PaletteAction::McpHttp
+                            ) {
+                                let args = match action {
+                                    PaletteAction::McpReady => "status=ready",
+                                    PaletteAction::McpFailed => "status=failed",
+                                    PaletteAction::McpStdio => "stdio",
+                                    PaletteAction::McpHttp => "http",
+                                    _ => unreachable!(),
                                 };
                                 let _ = app
                                     .route_mappable_command(

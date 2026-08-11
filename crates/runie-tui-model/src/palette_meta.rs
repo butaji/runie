@@ -66,6 +66,8 @@ declare_palette_metadata! {
     (Mcps, "/mcps", "Manage MCP servers"),
     (McpReady, "/mcps status=ready", "Show ready MCP servers"),
     (McpFailed, "/mcps status=failed", "Show failed MCP servers"),
+    (McpStdio, "/mcps stdio", "Show stdio MCP servers"),
+    (McpHttp, "/mcps http", "Show HTTP MCP servers"),
     (Memory, "/memory", "Browse or configure memory"),
     (Remember, "/remember", "Save a note immediately"),
     (Goal, "/goal", "Create or manage an autonomous goal"),
@@ -128,7 +130,7 @@ palette_sections! {
     ("Context" => [CopyLastResponse, SessionInfo]),
     ("Session" => [NewSession, KeyboardShortcuts, Quit, Changelog, ShareSession, SessionHistory, UndoSession]),
     ("Information" => [Help, ContextInfo, Doctor, Feedback, Usage, GitStatus, GitDiff, GitReview, GitConflicts]),
-    ("Extensions" => [Skills, Hooks, Plugins, Mcps, McpReady, McpFailed, Memory]),
+    ("Extensions" => [Skills, Hooks, Plugins, Mcps, McpReady, McpFailed, McpStdio, McpHttp, Memory]),
     ("Automation" => [Goal, Workflow, Workflows, Loop, DeepResearch, Jobs, ActiveJobs, CancelAllJobs, ClearFinishedJobs, CompletedJobs, FailedJobs, CancelledJobs]),
 }
 

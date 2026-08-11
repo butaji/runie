@@ -1,5 +1,3 @@
-//! Renderer-independent UI actor messages.
-
 use runie_core::types::AgentEvent;
 
 use crate::{
@@ -57,6 +55,7 @@ runie_core::typed_action_registry! {
         Mcps => "MCP Servers",
         McpReady => "Ready MCP Servers",
         McpFailed => "Failed MCP Servers",
+        McpStdio => "Stdio MCP Servers", McpHttp => "HTTP MCP Servers",
         Memory => "Memory",
         Remember => "Remember",
         Goal => "Goal",
