@@ -274,3 +274,36 @@ async fn ide_reader_owns_stream_until_eof_and_reduces_disconnect() {
     assert_eq!(snapshot.connection, IdeConnectionStatus::Disconnected);
     assert_eq!(snapshot.documents.len(), 1);
 }
+
+#[tokio::test]
+async fn ide_transport_owns_bidirectional_stream_and_close_event() {
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
+    let actor = IdeActor::new();
+    let (server, peer) = tokio::io::duplex(256);
+    let transport = IdeTransport::from_stream(server, actor.clone());
+    let (peer_reader, mut peer_writer) = tokio::io::split(peer);
+    let mut peer_reader = tokio::io::BufReader::new(peer_reader);
+    peer_writer
+        .write_all(
+            br#"{"jsonrpc":"2.0","id":1,"method":"initialized","params":{"workspace":"/repo"}}
+"#,
+        )
+        .await
+        .unwrap();
+    transport
+        .send(IdeRpcNotification {
+            jsonrpc: "2.0".into(),
+            method: "textDocument/didChange".into(),
+            params: serde_json::json!({"textDocument":{"uri":"file:///main.rs"}}),
+        })
+        .await
+        .unwrap();
+    let mut outbound = String::new();
+    peer_reader.read_line(&mut outbound).await.unwrap();
+    assert!(outbound.contains("textDocument/didChange"));
+    transport.close().await;
+    assert_eq!(
+        actor.snapshot().await.unwrap().connection,
+        IdeConnectionStatus::Disconnected
+    );
+}

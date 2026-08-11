@@ -30,3 +30,82 @@ impl IdeActor {
         Ok(frames)
     }
 }
+
+enum IdeTransportCommand {
+    Send {
+        notification: IdeRpcNotification,
+        reply: tokio::sync::oneshot::Sender<Result<(), String>>,
+    },
+    Close {
+        reply: tokio::sync::oneshot::Sender<()>,
+    },
+}
+
+#[derive(Clone)]
+pub struct IdeTransport {
+    tx: tokio::sync::mpsc::Sender<IdeTransportCommand>,
+    _owner: std::sync::Arc<crate::task_owner::TaskOwner>,
+}
+
+impl IdeTransport {
+    pub fn from_stream<S>(stream: S, actor: IdeActor) -> Self
+    where
+        S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Send + Unpin + 'static,
+    {
+        let (tx, mut commands) = tokio::sync::mpsc::channel(16);
+        let owner = crate::spawn_owned_worker!(async move {
+            use tokio::io::AsyncBufReadExt;
+            let (read_half, mut write_half) = tokio::io::split(stream);
+            let mut reader = tokio::io::BufReader::new(read_half);
+            let mut buffer = IdeWireBuffer::default();
+            let mut line = Vec::new();
+            loop {
+                tokio::select! {
+                    incoming = reader.read_until(b'\n', &mut line) => {
+                        let Ok(bytes) = incoming else { break; };
+                        if bytes == 0 { break; }
+                        if line.len() > IDE_MAX_FRAME_BYTES { break; }
+                        let Ok(text) = std::str::from_utf8(&line) else { break; };
+                        if actor.apply_wire_frames(&mut buffer, text).await.is_err() { break; }
+                        line.clear();
+                    }
+                    command = commands.recv() => match command {
+                        Some(IdeTransportCommand::Send { notification, reply }) => {
+                            let result = match serde_json::to_string(&notification) {
+                                Ok(value) => async_write(&mut write_half, format!("{value}\n").as_bytes()).await,
+                                Err(error) => Err(format!("encode IDE notification: {error}")),
+                            };
+                            let _ = reply.send(result);
+                        }
+                        Some(IdeTransportCommand::Close { reply }) => {
+                            let _ = actor.apply(IdeEvent::ConnectionLost).await;
+                            let _ = reply.send(());
+                            break;
+                        }
+                        None => break,
+                    }
+                }
+                line.clear();
+            }
+            let _ = actor.apply(IdeEvent::ConnectionLost).await;
+        });
+        Self { tx, _owner: owner }
+    }
+
+    pub async fn send(&self, notification: IdeRpcNotification) -> Result<(), String> {
+        let (reply, result) = tokio::sync::oneshot::channel();
+        self.tx.send(IdeTransportCommand::Send { notification, reply }).await
+            .map_err(|_| "IDE transport is closed".to_owned())?;
+        result.await.map_err(|_| "IDE write acknowledgement was dropped".to_owned())?
+    }
+
+    pub async fn close(&self) {
+        let (reply, result) = tokio::sync::oneshot::channel();
+        if self.tx.send(IdeTransportCommand::Close { reply }).await.is_ok() { let _ = result.await; }
+    }
+}
+
+async fn async_write<W: tokio::io::AsyncWrite + Unpin>(writer: &mut W, bytes: &[u8]) -> Result<(), String> {
+    use tokio::io::AsyncWriteExt;
+    writer.write_all(bytes).await.map_err(|error| format!("IDE writer failed: {error}"))
+}
