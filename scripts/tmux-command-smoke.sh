@@ -11,7 +11,7 @@ labels=(
   "Doctor" "Rewind Session" "Prompt History" "Find Transcript" "Jump Transcript" "Recap"
   "Set Reasoning Effort" "Always Approve" "Automatic Approval" "Plan Mode" "View Plan"
   "Login" "Logout" "Reload" "Trust Project" "Skills" "Hooks" "Plugins" "MCP Servers"
-  "Memory" "Remember" "Goal" "Workflow" "Workflows" "Sessions" "Session History" "Questions" "Active Jobs" "Loop" "Deep Research" "Feedback" "Usage"
+  "Memory" "Remember" "Goal" "Workflow" "Workflows" "Sessions" "Session History" "Questions" "Active Jobs" "Git Conflicts" "Loop" "Deep Research" "Feedback" "Usage"
   "Background Jobs" "Jobs"
 )
 parameterized=(
@@ -19,7 +19,7 @@ parameterized=(
   "Export Session" "Import Session" "Clone Session" "Resume Session" "Help" "Settings" "Doctor"
   "Rewind Session" "Prompt History" "Find Transcript" "Jump Transcript" "Set Reasoning Effort"
   "Always Approve" "Automatic Approval" "Plan Mode" "Login" "Logout" "Trust Project" "Remember"
-  "Goal" "Workflow" "Loop" "Deep Research" "Feedback" "Usage" "Background Jobs" "Questions" "Jobs"
+  "Goal" "Workflow" "Loop" "Deep Research" "Feedback" "Usage" "Background Jobs" "Questions" "Jobs" "Git Conflicts"
 )
 
 is_parameterized() {
@@ -81,6 +81,8 @@ for label in "${labels[@]}"; do
       argument=(c l e a r)
     elif [[ "$label" == "Jobs" ]]; then
       argument=(s c h e d u l e r)
+    elif [[ "$label" == "Git Conflicts" ]]; then
+      argument=(c o n f l i c t s)
     fi
     for character in "${argument[@]}"; do
       tmux -L "$socket" send-keys -t smoke -l -- "$character"
@@ -105,6 +107,11 @@ for label in "${labels[@]}"; do
     fi
     if [[ "$label" == "Questions" ]] && ! wait_for 'User-question history cleared'; then
       echo "FAIL $label: expected-clear-result"
+      ((failed += 1))
+      continue
+    fi
+    if [[ "$label" == "Git Conflicts" ]] && ! wait_for 'Git conflicts:'; then
+      echo "FAIL $label: expected-conflict-result"
       ((failed += 1))
       continue
     fi

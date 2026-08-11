@@ -65,6 +65,7 @@ runie_core::typed_action_registry! {
         Usage => "Usage",
         Jobs => "Background Jobs",
         ActiveJobs => "Active Jobs",
+        GitConflicts => "Git Conflicts",
         Questions => "User Questions",
     }
 }

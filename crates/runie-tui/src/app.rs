@@ -6,7 +6,7 @@ use ratatui::layout::Rect;
 use runie_core::commands::{BuiltinCommandDisposition, MappableBuiltinCommand};
 use runie_core::events::EventBus;
 use runie_core::r#loop::LoopActor;
-use runie_core::types::{AgentEvent, AgentMessage, Model};
+use runie_core::types::{AgentEvent, AgentMessage, AgentTool, Model};
 use tokio::sync::{broadcast, mpsc, watch};
 
 use crate::event_renderer::EventRenderer;

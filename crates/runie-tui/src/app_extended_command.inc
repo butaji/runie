@@ -35,6 +35,25 @@ impl App {
             self.ui.send(UiMsg::ShowCommandResult(result)).await;
             return true;
         }
+        if name == "git" && args.trim().eq_ignore_ascii_case("conflicts") {
+            let result = match runie_core::tools::GitStatusTool
+                .execute("git-conflicts", serde_json::json!({}), None, None)
+                .await
+            {
+                Ok(result) => result
+                    .content
+                    .into_iter()
+                    .find_map(|content| match content {
+                        runie_core::types::ToolResultContent::Text { text } => Some(text),
+                        runie_core::types::ToolResultContent::Image { .. } => None,
+                    })
+                    .map(|status| runie_core::tools::classify_conflicts(&status).terminal_lines().join("\n"))
+                    .unwrap_or_else(|| "Git status returned no text".into()),
+                Err(error) => format!("Git status failed: {error}"),
+            };
+            self.ui.send(UiMsg::ShowCommandResult(result)).await;
+            return true;
+        }
         if name == "sessions" {
             if args.trim().eq_ignore_ascii_case("history") {
                 let result = self

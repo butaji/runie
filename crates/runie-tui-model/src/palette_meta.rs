@@ -74,6 +74,7 @@ declare_palette_metadata! {
     (Usage, "/usage", "Show usage or billing information"),
     (Jobs, "/jobs", "Inspect owned background jobs"),
     (ActiveJobs, "/jobs scheduler active", "Show queued and running work"),
+    (GitConflicts, "/git conflicts", "Inspect unresolved Git conflicts"),
     (Questions, "/questions", "Browse user-question history"),
 }
 
@@ -114,7 +115,7 @@ macro_rules! palette_sections {
 palette_sections! {
     ("Context" => [CopyLastResponse, SessionInfo]),
     ("Session" => [NewSession, KeyboardShortcuts, Quit, Changelog, ShareSession, SessionHistory]),
-    ("Information" => [Help, ContextInfo, Doctor, Feedback, Usage]),
+    ("Information" => [Help, ContextInfo, Doctor, Feedback, Usage, GitConflicts]),
     ("Extensions" => [Skills, Hooks, Plugins, Mcps, Memory]),
     ("Automation" => [Goal, Workflow, Workflows, Loop, DeepResearch]),
 }

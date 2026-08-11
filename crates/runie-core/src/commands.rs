@@ -290,13 +290,12 @@ fn parse_parameterized_command(value: &str) -> Option<MappableBuiltinCommand> {
         "/settings" | "/share" | "/trust" | "/login" | "/logout" | "/reload" | "/help"
         | "/doctor" | "/rewind" | "/history" | "/find" | "/jump" | "/context" | "/effort"
         | "/always-approve" | "/auto" | "/deny" | "/plan" | "/remember" | "/goal" | "/workflow"
-        | "/jobs" | "/questions" | "/sessions" | "/loop" | "/deep-research" | "/feedback"
-        | "/usage" | "/memory" | "/skills" | "/hooks" | "/plugins" | "/clear" | "/reset" => {
-            Some(MappableBuiltinCommand::Extended {
-                name: prefix.trim_start_matches('/').to_owned(),
-                args: text.to_owned(),
-            })
-        }
+        | "/jobs" | "/git" | "/questions" | "/sessions" | "/loop" | "/deep-research"
+        | "/feedback" | "/usage" | "/memory" | "/skills" | "/hooks" | "/plugins" | "/clear"
+        | "/reset" => Some(MappableBuiltinCommand::Extended {
+            name: prefix.trim_start_matches('/').to_owned(),
+            args: text.to_owned(),
+        }),
         _ => None,
     }
 }
@@ -346,6 +345,7 @@ fn parse_extended_no_arg(value: &str) -> Option<MappableBuiltinCommand> {
             | "memory"
             | "workflows"
             | "jobs"
+            | "git"
             | "questions"
             | "undo"
             | "sessions"
