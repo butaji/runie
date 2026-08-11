@@ -87,6 +87,33 @@ fn provider_finish_reason_conformance_preserves_chat_wire_values() {
     }
 }
 
+#[test]
+fn provider_finish_reason_conformance_covers_responses_and_stream_shapes() {
+    let cases = [
+        (
+            serde_json::json!({
+                "response": {"incomplete_details": {"reason": "max_output_tokens"}}
+            }),
+            "max_output_tokens",
+            StopReason::MaxTokens,
+        ),
+        (
+            serde_json::json!({"delta": {"stop_reason": "tool_use"}}),
+            "tool_use",
+            StopReason::ToolUse,
+        ),
+        (
+            serde_json::json!({"choices": [{"finish_reason": "end_turn"}]}),
+            "end_turn",
+            StopReason::Stop,
+        ),
+    ];
+    for (payload, raw, expected) in cases {
+        assert_eq!(super::response_finish_reason(&payload), Some(expected));
+        assert_eq!(super::raw_response_finish_reason(&payload), Some(raw));
+    }
+}
+
 #[tokio::test]
 async fn deferred_replay_uses_provider_scoped_event_fixture() {
     let handle = crate::types::DeferredHandle {
