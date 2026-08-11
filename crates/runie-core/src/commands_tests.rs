@@ -232,6 +232,19 @@ fn background_job_command_accepts_only_cancel_and_one_id() {
 }
 
 #[test]
+fn background_cancel_scope_is_typed_data() {
+    assert_eq!(
+        parse_background_job_cancel_scope("cancel running"),
+        Some(BackgroundCancelScope::Running)
+    );
+    assert_eq!(
+        parse_background_job_cancel_scope("cancel all"),
+        Some(BackgroundCancelScope::All)
+    );
+    assert_eq!(parse_background_job_cancel_scope("cancel queued"), None);
+}
+
+#[test]
 fn undo_count_accepts_one_positive_integer_only() {
     assert_eq!(parse_undo_count(""), Some(1));
     assert_eq!(parse_undo_count("3"), Some(3));

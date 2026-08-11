@@ -34,7 +34,7 @@ capture() { tmux -L "$socket" capture-pane -p -t smoke 2>/dev/null || true; }
 
 wait_for() {
   local pattern=$1
-  for _ in $(seq 1 100); do
+  for _ in $(seq 1 200); do
     if capture | rg -q "$pattern"; then return 0; fi
     sleep 0.05
   done
@@ -59,7 +59,7 @@ for label in "${labels[@]}"; do
   fi
   for ((index = 0; index < ${#label}; index += 1)); do
     tmux -L "$socket" send-keys -t smoke -l -- "${label:index:1}"
-    sleep 0.04
+    sleep 0.08
   done
   tmux -L "$socket" send-keys -t smoke Enter
   transitioned=0
@@ -88,7 +88,7 @@ for label in "${labels[@]}"; do
     fi
     for character in "${argument[@]}"; do
       tmux -L "$socket" send-keys -t smoke -l -- "$character"
-      sleep 0.04
+      sleep 0.08
     done
     tmux -L "$socket" send-keys -t smoke Enter
     sleep 0.5

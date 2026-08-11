@@ -203,11 +203,15 @@ impl App {
                     .await;
                 return true;
             }
-            if runie_core::commands::parse_background_job_cancel_all(args) {
+            if let Some(scope) = runie_core::commands::parse_background_job_cancel_scope(args) {
                 let cancelled = self.background_actor.cancel_all().await;
+                let scope = match scope {
+                    runie_core::commands::BackgroundCancelScope::All
+                    | runie_core::commands::BackgroundCancelScope::Running => "running",
+                };
                 self.ui
                     .send(UiMsg::ShowCommandResult(format!(
-                        "Cancelled {cancelled} running background job(s)"
+                        "Cancelled {cancelled} {scope} background job(s)",
                     )))
                     .await;
                 return true;

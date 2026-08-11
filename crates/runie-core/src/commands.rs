@@ -212,8 +212,22 @@ pub fn parse_background_job_command(args: &str) -> Option<&str> {
 }
 
 /// Parse the lifecycle-wide background cancellation control.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BackgroundCancelScope {
+    All,
+    Running,
+}
+
+pub fn parse_background_job_cancel_scope(args: &str) -> Option<BackgroundCancelScope> {
+    match args.split_whitespace().collect::<Vec<_>>().as_slice() {
+        ["cancel", "all"] => Some(BackgroundCancelScope::All),
+        ["cancel", "running"] => Some(BackgroundCancelScope::Running),
+        _ => None,
+    }
+}
+
 pub fn parse_background_job_cancel_all(args: &str) -> bool {
-    args.split_whitespace().eq(["cancel", "all"])
+    parse_background_job_cancel_scope(args) == Some(BackgroundCancelScope::All)
 }
 
 pub fn parse_background_job_clear_finished(args: &str) -> bool {
