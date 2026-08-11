@@ -1,0 +1,12 @@
+context_tokens: 901
+context_window: 1000
+settings:
+  enabled: true
+  reserve_tokens: 100
+  keep_recent_tokens: 20
+expected:
+  - "context_tokens: 901"
+  - "context_window: 1000"
+  - "compaction_settings: enabled=true reserve_tokens=100 keep_recent_tokens=20"
+  - "compaction_policy: required context_tokens=901 threshold_tokens=900"
+  - "compaction: none"
