@@ -21,7 +21,8 @@ impl App {
     }
 
     pub async fn show_provider_summary(&self) {
-        let state = self.provider_registry.snapshot();
+        let shared = self.provider_registry.shared_snapshot();
+        let state = shared.get();
         let summary = if state.providers.is_empty() {
             "providers: none configured".to_owned()
         } else {
@@ -69,47 +70,6 @@ impl App {
 
     pub async fn toggle_command_palette(&self) {
         self.ui.send(UiMsg::ToggleCommandPalette).await;
-    }
-
-    pub async fn select_provider_model(
-        &self,
-        provider_id: String,
-        model_id: String,
-    ) -> Result<(), String> {
-        let state = self.provider_registry.snapshot();
-        let provider = state
-            .providers
-            .iter()
-            .find(|provider| provider.id == provider_id && provider.connected)
-            .cloned()
-            .ok_or_else(|| format!("provider is not connected: {provider_id}"))?;
-
-        let catalog = self.model_catalog.shared_snapshot();
-        let model = catalog
-            .get()
-            .catalog
-            .available
-            .iter()
-            .find(|model| model.provider == provider_id && model.id == model_id)
-            .cloned()
-            .unwrap_or_else(|| runie_core::types::Model {
-                id: model_id.clone(),
-                name: model_id.clone(),
-                provider: provider_id.clone(),
-                base_url: provider.base_url.clone(),
-                api: "openai-completions".into(),
-                ..Default::default()
-            });
-        self.set_model_with_declared_effort(model.clone()).await;
-        self.apply_provider_event(runie_core::provider_registry::ProviderEvent::Selected {
-            provider_id,
-            model: model_id,
-        })
-        .await?;
-        self.prompt
-            .set_model_caption(format!("{} · always-approve", model.id))
-            .await;
-        Ok(())
     }
 
     pub async fn model_selector_key(&self, msg: UiMsg) {
