@@ -70,6 +70,7 @@ runie_core::typed_action_registry! {
         ActiveJobs => "Active Jobs",
         CancelAllJobs => "Cancel All Jobs",
         ClearFinishedJobs => "Clear Finished Jobs",
+        CompletedJobs => "Completed Jobs", FailedJobs => "Failed Jobs", CancelledJobs => "Cancelled Jobs",
         JobOutput => "Job Output",
         GitStatus => "Git Status",
         GitDiff => "Git Diff",
@@ -473,7 +474,6 @@ impl UiState {
         }
         self.model_selector_index = 0;
     }
-
     fn toggle_model_scope(&mut self) {
         self.model_selector_scoped_only = !self.model_selector_scoped_only;
         self.model_selector_index = 0;

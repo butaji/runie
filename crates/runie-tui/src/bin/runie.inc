@@ -2275,12 +2275,19 @@ async fn run_app(
                             }
                             if matches!(
                                 action,
-                                PaletteAction::CancelAllJobs | PaletteAction::ClearFinishedJobs
+                                PaletteAction::CancelAllJobs
+                                    | PaletteAction::ClearFinishedJobs
+                                    | PaletteAction::CompletedJobs
+                                    | PaletteAction::FailedJobs
+                                    | PaletteAction::CancelledJobs
                             ) {
-                                let args = if action == PaletteAction::CancelAllJobs {
-                                    "cancel all"
-                                } else {
-                                    "clear finished"
+                                let args = match action {
+                                    PaletteAction::CancelAllJobs => "cancel all",
+                                    PaletteAction::ClearFinishedJobs => "clear finished",
+                                    PaletteAction::CompletedJobs => "completed",
+                                    PaletteAction::FailedJobs => "failed",
+                                    PaletteAction::CancelledJobs => "cancelled",
+                                    _ => unreachable!(),
                                 };
                                 let _ = app
                                     .route_mappable_command(
