@@ -168,7 +168,7 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    `/jobs scheduler` and palette-discoverable `Active Jobs` expose actor-owned
    scheduler projections; extend the existing mailbox/replay state machine
    with richer cancellation controls and live queued/running transitions.
-5. MCP lifecycle ownership — `harness-10`; unified MCP status rows now own their stable terminal projection, and reconnect retry/exhaustion decisions are serializable data, so `/mcps` does not rebuild transport/index/status formatting in the TUI.
+5. MCP lifecycle ownership — `harness-10`; unified MCP status rows now own their stable terminal projection and immutable actor-derived server identity, and reconnect retry/exhaustion decisions are serializable data, so `/mcps` does not rebuild transport/index/identity/status formatting in the TUI.
    The stdio actor now publishes ready/busy/failed/closed lifecycle state,
    `/mcps` projects it through the loop-owned executor, and registry-backed
    stdio calls reuse an actor-owned persistent session, and both stdio and HTTP

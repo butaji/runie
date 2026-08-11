@@ -29,11 +29,13 @@ enum McpHttpCommand {
 pub struct McpHttpActor {
     tx: tokio::sync::mpsc::Sender<McpHttpCommand>,
     status: tokio::sync::watch::Receiver<McpHttpStatus>,
+    identity: String,
     _owner: std::sync::Arc<crate::task_owner::TaskOwner>,
 }
 
 impl McpHttpActor {
     pub fn new(client: McpHttpClient) -> Self {
+        let identity = client.endpoint.clone();
         let (status_tx, status) = tokio::sync::watch::channel(McpHttpStatus::Ready);
         let (tx, owner) =
             crate::spawn_actor_worker!(32, move |mut rx: tokio::sync::mpsc::Receiver<
@@ -63,8 +65,13 @@ impl McpHttpActor {
         Self {
             tx,
             status,
+            identity,
             _owner: owner,
         }
+    }
+
+    pub fn identity(&self) -> &str {
+        &self.identity
     }
 
     pub fn status(&self) -> McpHttpStatus {

@@ -102,6 +102,7 @@ impl ToolRegistry {
             .map(|(index, status)| crate::tools::McpStatusRow {
                 transport: "stdio".into(),
                 index,
+                identity: self.mcp_stdio[index].identity().into(),
                 status: status.wire_name().into(),
             })
             .chain(
@@ -111,6 +112,7 @@ impl ToolRegistry {
                     .map(|(index, status)| crate::tools::McpStatusRow {
                         transport: "http".into(),
                         index,
+                        identity: self.mcp_http[index].identity().into(),
                         status: status.wire_name().into(),
                     }),
             )
@@ -384,6 +386,7 @@ mod tests {
             vec![crate::tools::McpStatusRow {
                 transport: "http".into(),
                 index: 0,
+                identity: format!("http://{address}"),
                 status: "ready".into(),
             }]
         );

@@ -1,4 +1,11 @@
 use super::McpStdioClient;
+
+pub(crate) fn stdio_identity(client: &McpStdioClient) -> String {
+    std::iter::once(client.command.as_str())
+        .chain(client.args.iter().map(String::as_str))
+        .collect::<Vec<_>>()
+        .join(" ")
+}
 use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 

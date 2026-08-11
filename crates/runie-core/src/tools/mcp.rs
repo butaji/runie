@@ -43,6 +43,7 @@ mod http_transport;
 pub use http_transport::McpHttpClient;
 #[path = "mcp_stdio_transport.rs"]
 mod stdio_transport;
+use stdio_transport::stdio_identity;
 pub use stdio_transport::McpStdioSession;
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct McpToolSpec {
@@ -56,21 +57,18 @@ pub struct McpToolSpec {
 fn empty_schema() -> serde_json::Value {
     serde_json::json!({"type": "object"})
 }
-
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct McpServer {
     pub name: String,
     #[serde(default)]
     pub tools: Vec<McpToolSpec>,
 }
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct McpStdioClient {
     pub command: String,
     pub args: Vec<String>,
     pub timeout: Duration,
 }
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum McpStdioStatus {
@@ -79,14 +77,12 @@ pub enum McpStdioStatus {
     Failed,
     Closed,
 }
-
 mcp_status_wire_names!(McpStdioStatus => {
     Ready => "ready",
     Busy => "busy",
     Failed => "failed",
     Closed => "closed",
 });
-
 enum McpStdioCommand {
     Call {
         tool: String,
@@ -97,24 +93,23 @@ enum McpStdioCommand {
         reply: tokio::sync::oneshot::Sender<()>,
     },
 }
-
 #[derive(Clone)]
 pub struct McpStdioActor {
     tx: tokio::sync::mpsc::Sender<McpStdioCommand>,
     status: tokio::sync::watch::Receiver<McpStdioStatus>,
+    identity: String,
     _owner: std::sync::Arc<crate::task_owner::TaskOwner>,
 }
-
 impl McpStdioActor {
     pub fn new(client: McpStdioClient) -> Self {
         Self::new_with_persistence(client, false)
     }
-
     pub fn new_persistent(client: McpStdioClient) -> Self {
         Self::new_with_persistence(client, true)
     }
 
     fn new_with_persistence(client: McpStdioClient, persistent: bool) -> Self {
+        let identity = stdio_identity(&client);
         let (status_tx, status) = tokio::sync::watch::channel(McpStdioStatus::Ready);
         let (tx, owner) = crate::spawn_actor_worker!(32, move |rx: tokio::sync::mpsc::Receiver<
             McpStdioCommand,
@@ -124,8 +119,13 @@ impl McpStdioActor {
         Self {
             tx,
             status,
+            identity,
             _owner: owner,
         }
+    }
+
+    pub fn identity(&self) -> &str {
+        &self.identity
     }
 
     pub fn status(&self) -> McpStdioStatus {

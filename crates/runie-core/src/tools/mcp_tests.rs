@@ -18,9 +18,13 @@ fn status_rows_own_their_terminal_projection() {
     let row = McpStatusRow {
         transport: "http".into(),
         index: 2,
+        identity: "https://mcp.example.test".into(),
         status: "busy".into(),
     };
-    assert_eq!(row.terminal_line(), "http[2] status=busy");
+    assert_eq!(
+        row.terminal_line(),
+        "http[2] https://mcp.example.test status=busy"
+    );
     assert_eq!(
         serde_json::from_value::<McpStatusRow>(serde_json::to_value(&row).unwrap()).unwrap(),
         row
