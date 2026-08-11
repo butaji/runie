@@ -1,5 +1,6 @@
 //! Owned background shell jobs. The actor owns every JoinSet task and snapshot.
 
+use crate::output::output_facts;
 use crate::task_owner::{spawn_actor_worker, TaskOwner};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, sync::Arc};
@@ -40,14 +41,17 @@ pub struct BackgroundJobSummary {
 
 pub fn background_job_summaries(jobs: &[BackgroundJob]) -> Vec<BackgroundJobSummary> {
     jobs.iter()
-        .map(|job| BackgroundJobSummary {
-            id: job.id.clone(),
-            command: job.command.clone(),
-            status: job.status.clone(),
-            exit_code: job.exit_code,
-            output_lines: job.output.lines().count(),
-            output_bytes: job.output.len(),
-            truncated: job.output.contains(OUTPUT_TRUNCATION_MARKER),
+        .map(|job| {
+            let facts = output_facts(&job.output, job.output.contains(OUTPUT_TRUNCATION_MARKER));
+            BackgroundJobSummary {
+                id: job.id.clone(),
+                command: job.command.clone(),
+                status: job.status.clone(),
+                exit_code: job.exit_code,
+                output_lines: facts.lines,
+                output_bytes: facts.bytes,
+                truncated: facts.truncated,
+            }
         })
         .collect()
 }

@@ -62,3 +62,6 @@ table, removing the widget-local duplicate.
 Todo plan summaries now own their terminal projection, so `/plan` and
 `/view-plan` consume the same data-shaped formatter instead of rebuilding the
 status row in the TUI route.
+Bounded workspace and background tool outputs now share the core
+`OutputFacts` projection for bytes, lines, and truncation, while their public
+domain rows retain their stable shapes.

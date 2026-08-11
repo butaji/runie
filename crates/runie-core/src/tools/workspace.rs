@@ -1,6 +1,7 @@
 //! Bounded, read-only workspace tools.
 
 use super::path_policy::{validate, PathOperation};
+use crate::output::{output_facts, OutputFacts};
 use crate::types::{AgentTool, AgentToolResult, ToolResultContent};
 use std::path::Path;
 use tokio::io::AsyncReadExt;
@@ -9,19 +10,10 @@ pub const READ_MAX_LINES: usize = 1_000;
 pub const READ_MAX_BYTES: usize = 100 * 1024;
 pub const BASH_MAX_OUTPUT_BYTES: usize = 100 * 1024;
 
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct WorkspaceOutputSummary {
-    pub bytes: usize,
-    pub lines: usize,
-    pub truncated: bool,
-}
+pub type WorkspaceOutputSummary = OutputFacts;
 
 pub fn summarize_workspace_output(text: &str, truncated: bool) -> WorkspaceOutputSummary {
-    WorkspaceOutputSummary {
-        bytes: text.len(),
-        lines: text.lines().count(),
-        truncated,
-    }
+    output_facts(text, truncated)
 }
 
 macro_rules! workspace_types { ($($name:ident),+ $(,)?) => { $(#[derive(Default)] pub struct $name;)+ }; }

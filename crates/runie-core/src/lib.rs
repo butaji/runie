@@ -33,6 +33,7 @@ pub mod event_trace_yaml;
 pub mod ide;
 pub mod model_catalog;
 pub mod noninteractive;
+pub mod output;
 pub mod types;
 #[path = "types_thinking.rs"]
 mod types_thinking;
