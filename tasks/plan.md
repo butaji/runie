@@ -85,7 +85,8 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    model switching now resets to a model-declared default before opening the
    picker; the shared model effort accessor is exhaustively tested across all seven
    declared levels and preserves unsupported-level omission;
-   replay finish-reason mapping now preserves raw chat values with a
+   replay usage mapping now preserves Anthropic cache-read/cache-write fields;
+   finish-reason mapping now preserves raw chat values with a
    compatibility-tested tool-call path and unknown values fail closed as
    explicit errors; complete the finite provider
    payload/finish-reason conformance matrix,

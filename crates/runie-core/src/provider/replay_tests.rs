@@ -71,6 +71,22 @@ fn provider_usage_conformance_accepts_common_wire_shapes() {
 }
 
 #[test]
+fn provider_usage_conformance_preserves_anthropic_cache_fields() {
+    let usage = super::response_usage(&serde_json::json!({
+        "usage": {
+            "input_tokens": 120,
+            "output_tokens": 30,
+            "cache_read_input_tokens": 80,
+            "cache_creation_input_tokens": 20
+        }
+    }));
+    assert_eq!(usage.input, 40);
+    assert_eq!(usage.output, 30);
+    assert_eq!(usage.cache_read, 80);
+    assert_eq!(usage.cache_write, 20);
+}
+
+#[test]
 fn provider_finish_reason_conformance_preserves_chat_wire_values() {
     let cases = [
         ("stop", StopReason::Stop),

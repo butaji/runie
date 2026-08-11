@@ -128,6 +128,10 @@ pub(super) fn response_finish_reason(value: &serde_json::Value) -> Option<StopRe
     })
 }
 
+#[allow(
+    clippy::too_many_lines,
+    reason = "The usage projection keeps provider aliases visible in one data boundary"
+)]
 pub(super) fn response_usage(value: &serde_json::Value) -> Usage {
     let Some(raw) = value
         .pointer("/response/usage")
@@ -135,22 +139,17 @@ pub(super) fn response_usage(value: &serde_json::Value) -> Usage {
     else {
         return Usage::default();
     };
-    let input = raw
-        .get("input_tokens")
-        .or_else(|| raw.get("prompt_tokens"))
-        .and_then(|v| v.as_u64())
-        .unwrap_or_default();
-    let output = raw
-        .get("output_tokens")
-        .or_else(|| raw.get("completion_tokens"))
-        .and_then(|v| v.as_u64())
-        .unwrap_or_default();
+    let input = direct_usage_value(raw, &["input_tokens", "prompt_tokens"]);
+    let output = direct_usage_value(raw, &["output_tokens", "completion_tokens"]);
     let cache_read = raw
         .pointer("/input_tokens_details/cached_tokens")
         .or_else(|| raw.pointer("/prompt_tokens_details/cached_tokens"))
         .or_else(|| raw.get("cached_tokens"))
+        .or_else(|| raw.get("cache_read_input_tokens"))
         .and_then(|v| v.as_u64())
         .unwrap_or_default();
+    let cache_write =
+        direct_usage_value(raw, &["cache_creation_input_tokens", "cache_write_tokens"]);
     let reasoning = raw
         .pointer("/output_tokens_details/reasoning_tokens")
         .or_else(|| raw.get("reasoning_tokens"))
@@ -160,13 +159,21 @@ pub(super) fn response_usage(value: &serde_json::Value) -> Usage {
         input: input.saturating_sub(cache_read),
         output,
         cache_read,
-        total_tokens: raw
-            .get("total_tokens")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(input.saturating_add(output)),
+        cache_write,
+        total_tokens: match direct_usage_value(raw, &["total_tokens"]) {
+            0 => input.saturating_add(output),
+            total => total,
+        },
         reasoning,
         ..Usage::default()
     }
+}
+
+fn direct_usage_value(raw: &serde_json::Value, names: &[&str]) -> u64 {
+    names
+        .iter()
+        .find_map(|name| raw.get(*name).and_then(serde_json::Value::as_u64))
+        .unwrap_or_default()
 }
 
 pub(super) fn finish_replay_events(
