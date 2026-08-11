@@ -139,7 +139,7 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    through the session actor, and `/sessions pick [text]` opens the actor-owned
    resume picker; complete picker/undo history (including the palette-discoverable `/undo` action) and Git conflict interactions over the existing
    actor-owned projections and inverse-safe event boundaries.
-7. IDE and noninteractive live boundaries — `harness-17` and `harness-18`; telemetry is now wired as one actor-owned live projection into provider streams and `/usage`; IDE snapshots now expose bounded serializable diagnostic rows with severity, location, and message terminal projections.
+7. IDE and noninteractive live boundaries — `harness-17` and `harness-18`; telemetry is now wired as one actor-owned live projection into provider streams and `/usage`; IDE snapshots now expose bounded serializable diagnostic rows with severity, location, and message terminal projections; JSONL metadata now preserves model default effort and effective compaction settings.
    JSONL now emits selected provider/model/context metadata; add owned
    socket/editor and terminal metadata adapters over the typed event
    protocols, with deterministic abort/error replay.

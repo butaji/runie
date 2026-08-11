@@ -21,6 +21,10 @@ pub enum JsonlEvent {
         context_window: Option<u64>,
         thinking_level: Option<crate::types::ThinkingLevel>,
         effort: Option<String>,
+        #[serde(default)]
+        default_effort: Option<String>,
+        #[serde(default)]
+        compaction_settings: Option<crate::session::CompactionSettings>,
         approval_mode: Option<crate::tools::ApprovalMode>,
     },
     Text {
@@ -137,6 +141,20 @@ pub fn forward_provider_events(
 mod tests {
     use super::*;
 
+    fn metadata_fixture() -> JsonlEvent {
+        JsonlEvent::Metadata {
+            provider: Some("minimax".into()),
+            model: Some("model-1".into()),
+            api: Some("openai-completions".into()),
+            context_window: Some(128_000),
+            thinking_level: Some(crate::types::ThinkingLevel::High),
+            effort: Some("high".into()),
+            default_effort: Some("medium".into()),
+            compaction_settings: Some(crate::session::CompactionSettings::default()),
+            approval_mode: Some(crate::tools::ApprovalMode::Ask),
+        }
+    }
+
     #[test]
     #[allow(
         clippy::too_many_lines,
@@ -147,15 +165,7 @@ mod tests {
             JsonlEvent::Started {
                 run_id: "r1".into(),
             },
-            JsonlEvent::Metadata {
-                provider: Some("minimax".into()),
-                model: Some("model-1".into()),
-                api: Some("openai-completions".into()),
-                context_window: Some(128_000),
-                thinking_level: Some(crate::types::ThinkingLevel::High),
-                effort: Some("high".into()),
-                approval_mode: Some(crate::tools::ApprovalMode::Ask),
-            },
+            metadata_fixture(),
             JsonlEvent::Text {
                 text: "done".into(),
             },
