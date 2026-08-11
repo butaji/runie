@@ -8,6 +8,17 @@ pub enum McpHttpStatus {
     Closed,
 }
 
+impl McpHttpStatus {
+    pub const fn wire_name(self) -> &'static str {
+        match self {
+            Self::Ready => "ready",
+            Self::Busy => "busy",
+            Self::Failed => "failed",
+            Self::Closed => "closed",
+        }
+    }
+}
+
 enum McpHttpCommand {
     Request {
         request: serde_json::Value,

@@ -102,7 +102,7 @@ impl ToolRegistry {
             .map(|(index, status)| crate::tools::McpStatusRow {
                 transport: "stdio".into(),
                 index,
-                status: format!("{status:?}"),
+                status: status.wire_name().into(),
             })
             .chain(
                 self.mcp_http_statuses()
@@ -111,7 +111,7 @@ impl ToolRegistry {
                     .map(|(index, status)| crate::tools::McpStatusRow {
                         transport: "http".into(),
                         index,
-                        status: format!("{status:?}"),
+                        status: status.wire_name().into(),
                     }),
             )
             .collect()
@@ -384,7 +384,7 @@ mod tests {
             vec![crate::tools::McpStatusRow {
                 transport: "http".into(),
                 index: 0,
-                status: "Ready".into(),
+                status: "ready".into(),
             }]
         );
         let tool = registry.lookup("mcp__demo-http__echo").unwrap();

@@ -72,6 +72,17 @@ pub enum McpStdioStatus {
     Closed,
 }
 
+impl McpStdioStatus {
+    pub const fn wire_name(self) -> &'static str {
+        match self {
+            Self::Ready => "ready",
+            Self::Busy => "busy",
+            Self::Failed => "failed",
+            Self::Closed => "closed",
+        }
+    }
+}
+
 enum McpStdioCommand {
     Call {
         tool: String,
