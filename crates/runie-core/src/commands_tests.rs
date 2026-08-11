@@ -232,6 +232,12 @@ fn background_job_command_accepts_only_cancel_and_one_id() {
 }
 
 #[test]
+fn mcp_close_command_requires_an_exact_argument() {
+    assert!(parse_mcp_close_command("close"));
+    assert!(!parse_mcp_close_command("close now"));
+}
+
+#[test]
 fn session_history_query_requires_explicit_query_mode() {
     assert_eq!(
         parse_session_history_query("history query tool"),

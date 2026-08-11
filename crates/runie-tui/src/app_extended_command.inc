@@ -9,6 +9,15 @@ impl App {
             return true;
         }
         if name == "mcps" {
+            if runie_core::commands::parse_mcp_close_command(args) {
+                let closed = self.loop_actor.close_mcps().await;
+                self.ui
+                    .send(UiMsg::ShowCommandResult(format!(
+                        "Closed {closed} MCP server(s)"
+                    )))
+                    .await;
+                return true;
+            }
             let transport = runie_core::commands::parse_mcp_transport_query(args);
             let status = runie_core::commands::parse_mcp_status_query(args);
             let statuses = self

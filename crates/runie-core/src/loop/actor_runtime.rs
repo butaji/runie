@@ -16,6 +16,10 @@ impl LoopActor {
         self.inner.deps.tool_executor.mcp_status_rows()
     }
 
+    pub async fn close_mcps(&self) -> usize {
+        self.inner.deps.tool_executor.close_mcps().await
+    }
+
     /// Project the next context-recovery operation without mutating any
     /// actor. Callers can route `Prepare` through the session owner and keep
     /// summarization in the provider owner.

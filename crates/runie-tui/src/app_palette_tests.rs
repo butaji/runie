@@ -89,6 +89,11 @@ fn cancel_running_jobs_palette_action_emits_extended_command() {
 }
 
 #[test]
+fn close_mcp_palette_action_emits_extended_command() {
+    assert_parameter_flow(super::PaletteAction::CloseMcps, "", "/mcps close");
+}
+
+#[test]
 fn parameterized_palette_storage_flows_emit_typed_commands() {
     for (action, input, expected) in [
         (

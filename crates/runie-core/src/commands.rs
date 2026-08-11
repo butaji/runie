@@ -268,6 +268,10 @@ pub fn parse_mcp_status_query(args: &str) -> Option<&str> {
     crate::tools::McpStdioStatus::from_wire_name(status).map(|_| status)
 }
 
+pub fn parse_mcp_close_command(args: &str) -> bool {
+    args.trim().eq_ignore_ascii_case("close")
+}
+
 /// Parse the explicit session-picker form while keeping ordinary `/sessions`
 /// output backward compatible.
 pub fn parse_session_picker_query(args: &str) -> Option<String> {
@@ -343,7 +347,7 @@ fn parse_parameterized_command(value: &str) -> Option<MappableBuiltinCommand> {
         "/settings" | "/share" | "/trust" | "/login" | "/logout" | "/reload" | "/help"
         | "/doctor" | "/rewind" | "/history" | "/find" | "/jump" | "/context" | "/effort"
         | "/always-approve" | "/auto" | "/deny" | "/plan" | "/remember" | "/goal" | "/workflow"
-        | "/jobs" | "/git" | "/questions" | "/sessions" | "/loop" | "/deep-research"
+        | "/jobs" | "/mcps" | "/git" | "/questions" | "/sessions" | "/loop" | "/deep-research"
         | "/feedback" | "/usage" | "/memory" | "/skills" | "/hooks" | "/plugins" | "/clear"
         | "/reset" | "/undo" => Some(MappableBuiltinCommand::Extended {
             name: prefix.trim_start_matches('/').to_owned(),

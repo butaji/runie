@@ -10,7 +10,7 @@ labels=(
   "Clone Session" "Resume Session" "Share Session" "Help" "Context Info" "Settings"
   "Doctor" "Rewind Session" "Prompt History" "Find Transcript" "Jump Transcript" "Recap"
   "Set Reasoning Effort" "Always Approve" "Automatic Approval" "Plan Mode" "View Plan"
-  "Login" "Logout" "Reload" "Trust Project" "Skills" "Hooks" "Plugins" "MCP Servers"
+  "Login" "Logout" "Reload" "Trust Project" "Skills" "Hooks" "Plugins" "MCP Servers" "Close MCP Servers"
   "Memory" "Remember" "Goal" "Workflow" "Workflows" "Sessions" "Session History" "Session History Query" "Undo Session" "Questions" "Active Jobs" "Cancel All Jobs" "Cancel Running Jobs" "Clear Finished Jobs" "Completed Jobs" "Failed Jobs" "Cancelled Jobs" "Git Status" "Git Diff" "Git Review" "Git Worktrees" "Git Conflicts" "Ready MCP Servers" "Failed MCP Servers" "Busy MCP Servers" "Closed MCP Servers" "Stdio MCP Servers" "HTTP MCP Servers" "Loop" "Deep Research" "Feedback" "Usage"
   "Background Jobs" "Jobs" "Job Output"
 )
@@ -108,6 +108,11 @@ for label in "${labels[@]}"; do
     fi
     if [[ "$label" == "MCP Servers" ]] && ! wait_for 'No MCP stdio servers'; then
       echo "FAIL $label: expected-empty-status"
+      ((failed += 1))
+      continue
+    fi
+    if [[ "$label" == "Close MCP Servers" ]] && ! wait_for 'Closed 0 MCP server'; then
+      echo "FAIL $label: expected-close-result"
       ((failed += 1))
       continue
     fi

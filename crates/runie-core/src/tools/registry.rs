@@ -119,6 +119,17 @@ impl ToolRegistry {
             .collect()
     }
 
+    pub async fn close_mcps(&self) -> usize {
+        let mut closed = 0;
+        for owner in &self.mcp_stdio {
+            closed += owner.as_ref().clone().close().await.is_ok() as usize;
+        }
+        for owner in &self.mcp_http {
+            closed += owner.as_ref().clone().close().await.is_ok() as usize;
+        }
+        closed
+    }
+
     pub fn lookup(&self, name: &str) -> Option<Arc<dyn AgentTool>> {
         self.tools.get(name).cloned()
     }
@@ -223,6 +234,11 @@ fn http_call_hook(owner: Arc<crate::tools::McpHttpActor>) -> crate::tools::McpCa
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn close_mcps_reduces_empty_registry_to_zero() {
+        assert_eq!(ToolRegistry::new().close_mcps().await, 0);
+    }
     use crate::types::{AgentToolResult, ToolResultContent};
 
     struct EchoTool {

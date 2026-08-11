@@ -175,6 +175,8 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    actors expose ready/busy/failed/closed lifecycle projections; persistent HTTP
    registry-backed stdio/HTTP sessions now reuse actor-owned transports, and
    `/mcps` projects unified stdio/HTTP lifecycle rows with transport filters;
+   `/mcps close` and its palette action close every registered transport through
+   the registry-owned awaited actor boundary;
    lifecycle names use the shared lowercase wire vocabulary; palette actions
    now expose ready and failed status filters, and `/mcps` validation consumes
    the macro-generated lifecycle reverse parser and transport vocabulary.
