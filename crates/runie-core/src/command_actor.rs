@@ -22,11 +22,24 @@ pub struct DiagnosticReport {
     pub checks: Vec<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum DiagnosticAction {
+    #[default]
+    Inspect,
+    Fix,
+}
+
 impl DiagnosticReport {
     pub fn rows(&self) -> Vec<DiagnosticReportRow> {
         std::iter::once(DiagnosticReportRow::Summary {
             fix_requested: self.fix_requested,
             checks: self.checks.len(),
+            action: if self.fix_requested {
+                DiagnosticAction::Fix
+            } else {
+                DiagnosticAction::Inspect
+            },
         })
         .chain(
             self.checks
@@ -59,8 +72,15 @@ impl DiagnosticReport {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DiagnosticReportRow {
-    Summary { fix_requested: bool, checks: usize },
-    Check { check: String },
+    Summary {
+        fix_requested: bool,
+        checks: usize,
+        #[serde(default)]
+        action: DiagnosticAction,
+    },
+    Check {
+        check: String,
+    },
 }
 
 impl DiagnosticReportRow {
@@ -69,6 +89,7 @@ impl DiagnosticReportRow {
             Self::Summary {
                 fix_requested,
                 checks,
+                ..
             } => format!(
                 "{} ({checks} checks)",
                 if fix_requested {
@@ -339,7 +360,8 @@ mod tests {
             report.rows()[0],
             DiagnosticReportRow::Summary {
                 fix_requested: true,
-                checks: 3
+                checks: 3,
+                action: DiagnosticAction::Fix,
             }
         ));
         assert_eq!(
