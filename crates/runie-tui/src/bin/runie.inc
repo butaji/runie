@@ -833,12 +833,7 @@ fn minimax_request_body(
     if let Some(tools) = minimax_tool_definitions(context) {
         body["tools"] = serde_json::Value::Array(tools);
     }
-    Ok(runie_core::provider::with_provider_effort(
-        body,
-        model,
-        options,
-        runie_core::provider::EffortWireField::ReasoningEffort,
-    ))
+    Ok(runie_core::provider::with_model_provider_effort(body, model, options))
 }
 
 enum InputEvent {
@@ -2916,6 +2911,7 @@ mod tests {
     #[test]
     fn minimax_request_body_preserves_declared_reasoning_effort() {
         let model = runie_core::types::Model {
+            provider: "minimax".into(),
             thinking_level_map: Some(runie_core::types::ThinkingLevelMap {
                 off: None,
                 minimal: Some("minimal".into()),
