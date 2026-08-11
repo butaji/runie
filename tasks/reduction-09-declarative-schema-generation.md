@@ -71,3 +71,5 @@ drift in preview semantics.
 Executor built-in tool routing now uses one explicit macro-backed name/handler
 table, keeping the closed vocabulary data-shaped while leaving each async
 handler and lifecycle boundary inspectable.
+Scheduler terminal metric fields now use one macro-backed declaration for
+stable names and row projection, while event reduction remains explicit.

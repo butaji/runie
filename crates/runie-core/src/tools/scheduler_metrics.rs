@@ -24,6 +24,17 @@ macro_rules! scheduler_cancellation_wire_names {
     };
 }
 
+macro_rules! scheduler_metric_fields {
+    ($($field:ident => $wire:literal),+ $(,)?) => {
+        fn metric_rows(metrics: &SchedulerMetrics) -> Vec<SchedulerMetricRow> {
+            vec![$(SchedulerMetricRow {
+                name: $wire.into(),
+                value: metrics.$field,
+            }),+]
+        }
+    };
+}
+
 scheduler_cancellation_wire_names! {
     Unspecified => "unspecified",
     User => "user",
@@ -60,23 +71,19 @@ pub struct SchedulerMetricRow {
     pub value: u64,
 }
 
+scheduler_metric_fields! {
+    queued => "queued",
+    running => "running",
+    completed => "completed",
+    failed => "failed",
+    cancelled => "cancelled",
+    interactive_enqueued => "interactive_enqueued",
+    background_enqueued => "background_enqueued",
+}
+
 impl SchedulerMetrics {
     pub fn rows(&self) -> Vec<SchedulerMetricRow> {
-        let mut rows = vec![
-            ("queued", self.queued),
-            ("running", self.running),
-            ("completed", self.completed),
-            ("failed", self.failed),
-            ("cancelled", self.cancelled),
-            ("interactive_enqueued", self.interactive_enqueued),
-            ("background_enqueued", self.background_enqueued),
-        ]
-        .into_iter()
-        .map(|(name, value)| SchedulerMetricRow {
-            name: name.into(),
-            value,
-        })
-        .collect::<Vec<_>>();
+        let mut rows = metric_rows(self);
         rows.extend(
             self.cancelled_by_reason
                 .iter()
