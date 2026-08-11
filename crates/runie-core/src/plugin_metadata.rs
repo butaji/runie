@@ -7,6 +7,7 @@ pub struct PluginMetadata {
     pub commands: usize,
     pub tools: usize,
     pub hooks: usize,
+    pub capabilities: Vec<String>,
 }
 
 impl PluginMetadata {
@@ -17,14 +18,27 @@ impl PluginMetadata {
             commands: manifest.commands.len(),
             tools: manifest.tools.len(),
             hooks: manifest.hooks.len(),
+            capabilities: manifest
+                .commands
+                .iter()
+                .map(|name| format!("command:{name}"))
+                .chain(manifest.tools.iter().map(|name| format!("tool:{name}")))
+                .chain(manifest.hooks.iter().map(|name| format!("hook:{name}")))
+                .collect(),
         }
     }
 
     pub fn terminal_line(&self) -> String {
-        format!(
+        let capabilities = self.capabilities.join(",");
+        let summary = format!(
             "Plugin {} v{} · commands={} tools={} hooks={}",
             self.name, self.version, self.commands, self.tools, self.hooks
-        )
+        );
+        if capabilities.is_empty() {
+            summary
+        } else {
+            format!("{summary} capabilities={capabilities}")
+        }
     }
 }
 
@@ -46,8 +60,12 @@ mod tests {
         assert_eq!(metadata.tools, 1);
         assert_eq!(metadata.hooks, 1);
         assert_eq!(
+            metadata.capabilities,
+            ["command:format", "tool:inspect", "hook:after_turn"]
+        );
+        assert_eq!(
             metadata.terminal_line(),
-            "Plugin sample-plugin v1.0.0 · commands=1 tools=1 hooks=1"
+            "Plugin sample-plugin v1.0.0 · commands=1 tools=1 hooks=1 capabilities=command:format,tool:inspect,hook:after_turn"
         );
     }
 }
