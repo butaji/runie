@@ -88,7 +88,9 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    replay usage mapping now preserves Anthropic cache-read/cache-write fields;
    finish-reason mapping now preserves raw chat values with a
    compatibility-tested tool-call path and unknown values fail closed as
-   explicit errors; complete the finite provider
+   explicit errors; a model-derived provider request profile now centralizes
+   OpenAI, Anthropic, Gemini, MiniMax, and generic effort-field selection;
+   complete the finite provider
    payload/finish-reason conformance matrix,
    including unsupported-effort behavior and normalized failures.
 2. Tool output and background lifecycle UX — `harness-01` and `harness-03`.

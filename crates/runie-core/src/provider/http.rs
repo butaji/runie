@@ -56,6 +56,42 @@ effort_wire_fields! {
     (Reasoning, "reasoning"),
 }
 
+/// The small provider profile is request-shaping data, not transport state.
+/// Keeping aliases in one table lets adapters share the same model metadata
+/// boundary without duplicating provider-name conditionals.
+macro_rules! provider_request_profiles {
+    ($(($variant:ident, [$($alias:literal),+], $field:ident)),+ $(,)?) => {
+        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+        pub enum ProviderRequestProfile {
+            $($variant),+
+        }
+
+        impl ProviderRequestProfile {
+            pub const fn effort_field(self) -> EffortWireField {
+                match self { $(Self::$variant => EffortWireField::$field,)+ }
+            }
+
+            pub fn for_model(model: &Model) -> Self {
+                let api = model.api.trim().to_ascii_lowercase();
+                let provider = model.provider.trim().to_ascii_lowercase();
+                $(if [$($alias),+].iter().any(|alias| api == *alias || provider == *alias) {
+                    return Self::$variant;
+                })+
+                Self::Generic
+            }
+        }
+    };
+}
+
+provider_request_profiles! {
+    (OpenAiResponses, ["openai-responses", "responses"], ReasoningEffort),
+    (OpenAiChat, ["openai-chat", "openai", "chat"], ReasoningEffort),
+    (Anthropic, ["anthropic", "claude"], Reasoning),
+    (Gemini, ["gemini", "google"], Reasoning),
+    (MiniMax, ["minimax"], ReasoningEffort),
+    (Generic, ["__generic__"], ReasoningEffort),
+}
+
 #[async_trait::async_trait]
 pub trait HttpActor: Send + Sync + 'static {
     async fn post(&self, body: String) -> Result<HttpResponse, StreamError>;
@@ -182,6 +218,16 @@ pub fn with_provider_effort(
     field: EffortWireField,
 ) -> serde_json::Value {
     with_model_effort(payload, model, options, field.key())
+}
+
+/// Apply the effort spelling selected by the model's provider profile.
+pub fn with_model_provider_effort(
+    payload: serde_json::Value,
+    model: &Model,
+    options: Option<&SimpleStreamOptions>,
+) -> serde_json::Value {
+    let profile = ProviderRequestProfile::for_model(model);
+    with_provider_effort(payload, model, options, profile.effort_field())
 }
 
 async fn execute_with_retries<A: HttpActor + ?Sized>(

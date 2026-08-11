@@ -10,8 +10,8 @@ pub use crate::types::{Model, ProviderTransport, SimpleStreamOptions};
 pub use actor::{ProviderActor, ProviderCommand};
 pub use http::{
     mapped_reasoning, provider_retry_delay_ms, provider_retry_delay_ms_with_jitter_at,
-    with_model_effort, with_provider_effort, EffortWireField, HttpActor, HttpRequest, HttpResponse,
-    ReplayHttpActor,
+    with_model_effort, with_model_provider_effort, with_provider_effort, EffortWireField,
+    HttpActor, HttpRequest, HttpResponse, ProviderRequestProfile, ReplayHttpActor,
 };
 pub use replay::ReplayProvider;
 pub use stream_fn::{
