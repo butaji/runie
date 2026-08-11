@@ -149,6 +149,7 @@ pub struct UserQuestionBroker {
     traces: Arc<Mutex<Vec<UserQuestionTrace>>>,
     next_id: Arc<std::sync::atomic::AtomicU64>,
 }
+include!("question_batch.inc");
 impl Default for UserQuestionBroker {
     fn default() -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
