@@ -182,6 +182,16 @@ impl IdeEndpoint {
         }
         Err("IDE endpoint must use tcp:// or unix://".into())
     }
+
+    pub fn discover<I, S>(candidates: I) -> Option<Self>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
+        candidates
+            .into_iter()
+            .find_map(|candidate| Self::parse(candidate.as_ref()).ok())
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]

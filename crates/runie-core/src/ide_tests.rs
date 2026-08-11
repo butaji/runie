@@ -326,6 +326,13 @@ fn ide_endpoints_and_reconnect_decisions_are_serializable_data() {
         }
     );
     assert!(IdeEndpoint::parse(&format!("http://127.0.0.1:{TEST_IDE_PORT}")).is_err());
+    assert_eq!(
+        IdeEndpoint::discover(["invalid", "tcp://127.0.0.1:9000", "unix:///tmp/other"]),
+        Some(IdeEndpoint::Tcp {
+            host: "127.0.0.1".into(),
+            port: TEST_IDE_PORT
+        })
+    );
     let policy = IdeReconnectPolicy::bounded();
     let (state, retry) = IdeReconnectState::new().disconnected(policy);
     assert_eq!(retry, IdeReconnectDecision::RetryAfter { delay_ms: 250 });
