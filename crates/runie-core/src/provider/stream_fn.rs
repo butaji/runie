@@ -159,6 +159,8 @@ pub struct ProviderFailure {
     pub message: String,
     pub status: Option<u16>,
     pub retryable: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub retry_after: Option<String>,
 }
 
 impl ProviderFailure {
@@ -167,10 +169,16 @@ impl ProviderFailure {
             .status
             .map(|value| format!(" status={value}"))
             .unwrap_or_default();
+        let retry_after = self
+            .retry_after
+            .as_deref()
+            .map(|value| format!(" retry_after={value}"))
+            .unwrap_or_default();
         format!(
-            "{}{} retryable={} · {}",
+            "{}{}{} retryable={} · {}",
             self.kind.wire_name(),
             status,
+            retry_after,
             self.retryable,
             self.message
         )
@@ -178,36 +186,75 @@ impl ProviderFailure {
 }
 
 pub fn classify_failure(error: &StreamError) -> ProviderFailure {
-    let (kind, message, status, retryable) = match error {
-        StreamError::Network(message) => {
-            (ProviderFailureKind::Network, message.clone(), None, true)
-        }
-        StreamError::Api(message) => (ProviderFailureKind::Api, message.clone(), None, false),
+    let (kind, message, status, retryable, retry_after) = match error {
+        StreamError::Network(message) => (
+            ProviderFailureKind::Network,
+            message.clone(),
+            None,
+            true,
+            None,
+        ),
+        StreamError::Api(message) => (ProviderFailureKind::Api, message.clone(), None, false, None),
         StreamError::Provider {
             message,
             status,
             headers,
-        } => (
-            if *status == Some(429) {
-                ProviderFailureKind::RateLimited
-            } else {
-                ProviderFailureKind::Provider
-            },
-            message.clone(),
-            *status,
-            provider_retryable(*status, headers),
+        } => classify_provider_failure(message, *status, headers),
+        StreamError::Aborted => (
+            ProviderFailureKind::Aborted,
+            "aborted".into(),
+            None,
+            false,
+            None,
         ),
-        StreamError::Aborted => (ProviderFailureKind::Aborted, "aborted".into(), None, false),
-        StreamError::Invalid(message) => {
-            (ProviderFailureKind::Invalid, message.clone(), None, false)
-        }
+        StreamError::Invalid(message) => (
+            ProviderFailureKind::Invalid,
+            message.clone(),
+            None,
+            false,
+            None,
+        ),
     };
     ProviderFailure {
         kind,
         message,
         status,
         retryable,
+        retry_after,
     }
+}
+
+fn classify_provider_failure(
+    message: &str,
+    status: Option<u16>,
+    headers: &std::collections::HashMap<String, String>,
+) -> (
+    ProviderFailureKind,
+    String,
+    Option<u16>,
+    bool,
+    Option<String>,
+) {
+    (
+        if status == Some(429) {
+            ProviderFailureKind::RateLimited
+        } else {
+            ProviderFailureKind::Provider
+        },
+        message.to_owned(),
+        status,
+        provider_retryable(status, headers),
+        retry_after_header(headers),
+    )
+}
+
+fn retry_after_header(headers: &std::collections::HashMap<String, String>) -> Option<String> {
+    headers
+        .iter()
+        .find(|(key, _)| {
+            key.eq_ignore_ascii_case("retry-after-ms") || key.eq_ignore_ascii_case("retry-after")
+        })
+        .map(|(_, value)| value.chars().take(128).collect())
 }
 
 pub(crate) fn provider_retryable(
@@ -384,6 +431,7 @@ mod tests {
             message: "busy".into(),
             status: Some(503),
             retryable: true,
+            retry_after: None,
         };
         assert_eq!(
             failure.terminal_line(),

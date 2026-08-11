@@ -2,6 +2,30 @@ use super::*;
 use crate::types::AssistantContent;
 use futures::StreamExt;
 
+#[test]
+fn failure_projection_preserves_bounded_retry_guidance() {
+    const RETRY_AFTER_MS: &str = "2500";
+    const EXPECTED_TERMINAL: &str =
+        "rate_limited status=429 retry_after=2500 retryable=true · slow down";
+    let failure = crate::provider::classify_failure(&StreamError::Provider {
+        message: "slow down".into(),
+        status: Some(429),
+        headers: [("Retry-After-Ms".into(), RETRY_AFTER_MS.into())]
+            .into_iter()
+            .collect(),
+    });
+    assert_eq!(failure.retry_after.as_deref(), Some(RETRY_AFTER_MS));
+    assert_eq!(failure.terminal_line(), EXPECTED_TERMINAL);
+    let decoded: crate::provider::ProviderFailure = serde_json::from_value(serde_json::json!({
+        "kind": "provider",
+        "message": "busy",
+        "status": 503,
+        "retryable": true
+    }))
+    .unwrap();
+    assert_eq!(decoded.retry_after, None);
+}
+
 #[tokio::test]
 async fn responses_trace_maps_text_delta_and_completion_to_pi_events() {
     let provider = ReplayProvider::from_sse_body(

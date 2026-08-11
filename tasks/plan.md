@@ -91,8 +91,8 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    explicit errors; a model-derived provider request profile now centralizes
    OpenAI, Anthropic, Gemini, MiniMax, and generic effort-field selection;
    the live MiniMax request body consumes that profile;
-   complete the finite provider
-   payload/finish-reason conformance matrix,
+   typed failures now preserve bounded server retry guidance alongside status and
+   retryability; complete the finite provider payload/finish-reason conformance matrix,
    including unsupported-effort behavior and normalized failures.
 2. Tool output and background lifecycle UX — `harness-01` and `harness-03`.
    `/jobs cancel all` now reduces every running job through the actor mailbox;
