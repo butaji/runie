@@ -410,7 +410,7 @@ fn tool_card_summary_reduces_output_metadata_as_data() {
     assert!(summaries[0].truncated);
     assert_eq!(
         summaries[0].output_preview.as_deref(),
-        Some("[output truncated]")
+        Some("alpha\nbeta\n[output truncated]")
     );
     assert_eq!(summaries[0].card_kind, ToolCardKind::Read);
 }

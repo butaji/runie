@@ -41,18 +41,23 @@ pub fn tool_card_summaries(lines: &[Line], tool_names: &dyn ToolNameLookup) -> V
         };
         let summary = &mut summaries[index];
         if row.row_kind == ToolCardRowKind::Content {
-            summary.output_lines += 1;
-            summary.output_bytes += row.text.len();
-            summary.output_preview = runie_core::output::bounded_preview(
-                &row.text,
-                TOOL_CARD_PREVIEW_MAX_CHARS,
-            );
-            summary.truncated |= row.text.contains("[output truncated]");
+            append_tool_output(summary, &row.text);
         }
         summary.is_running |= row.is_running;
         summary.is_error |= row.is_error;
     }
     summaries
+}
+
+fn append_tool_output(summary: &mut ToolCardSummary, text: &str) {
+    summary.output_lines += 1;
+    summary.output_bytes += text.len();
+    let combined = summary
+        .output_preview
+        .as_deref()
+        .map_or_else(|| text.to_owned(), |preview| format!("{preview}\n{text}"));
+    summary.output_preview = runie_core::output::bounded_preview(&combined, TOOL_CARD_PREVIEW_MAX_CHARS);
+    summary.truncated |= text.contains("[output truncated]");
 }
 
 fn workflow_trail(phases: &[(String, String)]) -> String {

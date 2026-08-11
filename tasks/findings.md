@@ -100,6 +100,8 @@ invalid defaults fall back safely, and focused tests cover both serde forms.
 Session history rows now own a lossless terminal projection, and `/sessions
 history` exposes the actor-owned selected/alternate branch history without
 creating a second state owner.
+Tool-card previews now aggregate ordered multi-row output with newline
+boundaries instead of silently retaining only the last row.
 
 As of 2026-08-09, the reduction work has these verified results:
 
