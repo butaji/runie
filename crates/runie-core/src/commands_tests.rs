@@ -241,6 +241,15 @@ fn undo_count_accepts_one_positive_integer_only() {
 }
 
 #[test]
+fn usage_limit_accepts_only_a_positive_last_query() {
+    assert_eq!(parse_usage_limit(""), Some(None));
+    assert_eq!(parse_usage_limit("last 3"), Some(Some(3)));
+    assert_eq!(parse_usage_limit("last 0"), None);
+    assert_eq!(parse_usage_limit("last"), None);
+    assert_eq!(parse_usage_limit("3"), None);
+}
+
+#[test]
 fn parameterized_undo_reaches_the_typed_extended_command() {
     assert_eq!(
         parse_mappable_builtin_command("/undo 2"),

@@ -285,6 +285,19 @@ pub fn parse_undo_count(args: &str) -> Option<usize> {
         .filter(|count| *count > 0)
 }
 
+/// Parse the bounded history view for `/usage`; empty input keeps the full
+/// aggregate while `last N` selects the newest N ended requests.
+pub fn parse_usage_limit(args: &str) -> Option<Option<usize>> {
+    let mut parts = args.split_whitespace();
+    match (parts.next(), parts.next(), parts.next()) {
+        (None, None, None) => Some(None),
+        (Some("last"), Some(value), None) => {
+            value.parse::<usize>().ok().filter(|n| *n > 0).map(Some)
+        }
+        _ => None,
+    }
+}
+
 #[allow(clippy::too_many_lines)]
 fn parse_parameterized_command(value: &str) -> Option<MappableBuiltinCommand> {
     if let Some(command) = parse_compact_command(value) {

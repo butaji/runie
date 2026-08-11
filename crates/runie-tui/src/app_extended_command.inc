@@ -461,12 +461,16 @@ impl App {
                         format!("Rewind request recorded ({})", state.rewind_requests.len())
                     }
                     "usage" => {
-                        let usage = runie_core::telemetry::usage_summary(&self.telemetry.snapshot());
-                        format!(
-                            "Usage requested ({})\n{}",
-                            state.usage_requests,
-                            usage.terminal_lines().join("\n")
-                        )
+                        match runie_core::commands::parse_usage_limit(args) {
+                            Some(limit) => {
+                                let usage = runie_core::telemetry::usage_summary_limited(
+                                    &self.telemetry.snapshot(),
+                                    limit,
+                                );
+                                format!("Usage requested ({})\n{}", state.usage_requests, usage.terminal_lines().join("\n"))
+                            }
+                            None => "Usage expects optional `last N`".into(),
+                        }
                     }
                     "effort" => format!(
                         "Reasoning effort: {}",

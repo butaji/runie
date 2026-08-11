@@ -78,10 +78,21 @@ impl UsageSummary {
 }
 
 pub fn usage_summary(snapshot: &TelemetrySnapshot) -> UsageSummary {
-    snapshot
+    usage_summary_limited(snapshot, None)
+}
+
+pub fn usage_summary_limited(snapshot: &TelemetrySnapshot, limit: Option<usize>) -> UsageSummary {
+    let mut spans = snapshot
         .spans
         .iter()
         .filter(|span| span.ended && span.name == "pi.ai.request")
+        .collect::<Vec<_>>();
+    if let Some(limit) = limit {
+        let start = spans.len().saturating_sub(limit);
+        spans.drain(..start);
+    }
+    spans
+        .into_iter()
         .fold(UsageSummary::default(), |mut summary, span| {
             summary.requests += 1;
             summary.input_tokens += attribute_u64(span, "pi.ai.usage.input_tokens");

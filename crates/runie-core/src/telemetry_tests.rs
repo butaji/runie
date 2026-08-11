@@ -51,6 +51,30 @@ fn usage_summary_reduces_ended_provider_spans() {
 }
 
 #[test]
+fn limited_usage_summary_selects_the_newest_ended_requests() {
+    let mut snapshot = TelemetrySnapshot::default();
+    for (id, tokens) in [(1, 4), (2, 9)] {
+        snapshot.spans.push(SpanSnapshot {
+            id,
+            name: "pi.ai.request".into(),
+            ended: true,
+            attributes: [("pi.ai.usage.total_tokens".into(), serde_json::json!(tokens))]
+                .into_iter()
+                .collect(),
+            parent_id: None,
+            events: Vec::new(),
+            status: SpanStatus::Ok,
+            explicit_status: false,
+            error: None,
+            end_sequence: Some(id),
+        });
+    }
+    let summary = usage_summary_limited(&snapshot, Some(1));
+    assert_eq!(summary.requests, 1);
+    assert_eq!(summary.total_tokens, 9);
+}
+
+#[test]
 fn usage_summary_terminal_rows_are_renderer_neutral_data() {
     let rows = UsageSummary {
         requests: 2,
