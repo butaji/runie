@@ -64,6 +64,9 @@ snapshot APIs for mutation and serialization boundaries.
 Provider summary and provider-model selection reads now use the provider
 registry's shared projection as well; configuration persistence continues to
 use the owned snapshot boundary.
+Scrollback fold, range-selection, and copy-selection reads now use the feed
+shared projection after their actor acknowledgements, avoiding compatibility
+snapshot clones on those command paths.
 `FollowUpQueueActor` now publishes its previously unused queue snapshot as both
 an owned compatibility view and immutable shared projection, with push/drain/
 clear transitions reducing through one queue-owned publication boundary.

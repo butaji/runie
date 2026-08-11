@@ -138,10 +138,11 @@ impl App {
     /// deterministic selected-entry fallback; an empty feed keeps the legacy
     /// activity-group fold behavior.
     pub async fn toggle_selected_tool_fold(&self) {
-        let snapshot = self.scrollback_actor.snapshot();
-        let tool_call_id = snapshot.selected_tool_id().map(str::to_owned).or_else(|| {
+        let snapshot = self.scrollback_actor.shared_snapshot();
+        let tool_call_id = snapshot.get().selected_tool_id.clone().or_else(|| {
             snapshot
-                .tool_blocks()
+                .get()
+                .tool_blocks
                 .last()
                 .map(|block| block.tool_call_id.clone())
         });
@@ -179,8 +180,8 @@ impl App {
     }
 
     pub async fn extend_selection(&self, delta: i32) {
-        let snapshot = self.scrollback_actor.model_snapshot();
-        let Some(current) = snapshot.selected_entry else {
+        let snapshot = self.scrollback_actor.shared_snapshot();
+        let Some(current) = snapshot.get().selected_entry else {
             return;
         };
         let next = if delta < 0 {
@@ -188,9 +189,9 @@ impl App {
         } else {
             current
                 .saturating_add(delta as usize)
-                .min(snapshot.lines.len().saturating_sub(1))
+                .min(snapshot.get().lines.len().saturating_sub(1))
         };
-        let anchor = snapshot.selection_anchor.unwrap_or(current);
+        let anchor = snapshot.get().selection_anchor.unwrap_or(current);
         self.scrollback_actor
             .apply(crate::widgets::ScrollbackMsg::SelectRange { anchor, head: next })
             .await;
@@ -232,10 +233,11 @@ impl App {
     /// text payload. The terminal clipboard effect remains in the binary.
     pub async fn copy_selection_text(&self) -> Option<String> {
         self.request_copy_selection().await;
-        let snapshot = self.scrollback_actor.model_snapshot();
+        let snapshot = self.scrollback_actor.shared_snapshot();
         snapshot
+            .get()
             .copy_selection
-            .map(|selection| runie_tui_model::selected_cell_text(&snapshot.lines, selection))
+            .map(|selection| runie_tui_model::selected_cell_text(&snapshot.get().lines, selection))
     }
 
     pub async fn clear_copy_request(&self) {
