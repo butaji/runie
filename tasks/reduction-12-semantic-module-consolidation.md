@@ -67,3 +67,8 @@ small semantic helpers, keeping event/state tests focused on data tables and
 boundaries.
 Tool executor worker settlement now separates scheduler event reduction from
 outcome projection, keeping cancellation/success semantics in typed helpers.
+Actor tests now live in `actor_tests.rs`, preserving the event/replay coverage
+while keeping the production actor module focused on mailbox ownership and
+state transitions. MCP stdio request writing, response correlation, and tests
+are likewise separated into small semantic helpers/modules; the remaining
+MCP module size is still queued for a transport/domain split.
