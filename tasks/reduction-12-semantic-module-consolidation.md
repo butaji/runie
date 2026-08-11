@@ -75,3 +75,7 @@ MCP module size is still queued for a transport/domain split.
 Interactive question and web-search executor adapters now live in
 `executor_special.rs`, leaving the main dispatcher focused on scheduling and
 tool lifecycle transitions.
+The MCP transport/domain split is now complete: HTTP request/response policy
+lives in `mcp_http_transport.rs`, persistent stdio protocol state lives in
+`mcp_stdio_transport.rs`, and the root module retains shared lifecycle and
+tool data. Structural lint is clean again.

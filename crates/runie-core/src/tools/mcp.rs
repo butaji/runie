@@ -28,6 +28,12 @@ pub use stream::{
 };
 #[path = "mcp_http_stream.rs"]
 mod http_stream;
+#[path = "mcp_http_transport.rs"]
+mod http_transport;
+pub use http_transport::McpHttpClient;
+#[path = "mcp_stdio_transport.rs"]
+mod stdio_transport;
+pub use stdio_transport::McpStdioSession;
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct McpToolSpec {
@@ -55,155 +61,6 @@ pub struct McpStdioClient {
     pub command: String,
     pub args: Vec<String>,
     pub timeout: Duration,
-}
-
-/// A single actor-owned MCP stdio process/session. Unlike `McpStdioClient`,
-/// this keeps the child and protocol state across calls.
-pub struct McpStdioSession {
-    child: tokio::process::Child,
-    input: tokio::process::ChildStdin,
-    lines: tokio::io::Lines<BufReader<tokio::process::ChildStdout>>,
-    timeout: Duration,
-    initialized: bool,
-    next_id: u64,
-}
-
-impl McpStdioSession {
-    pub async fn connect(client: &McpStdioClient) -> Result<Self, String> {
-        let mut child = tokio::process::Command::new(&client.command)
-            .args(&client.args)
-            .stdin(std::process::Stdio::piped())
-            .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::piped())
-            .spawn()
-            .map_err(|error| format!("MCP spawn: {error}"))?;
-        let input = child.stdin.take().ok_or("MCP stdin unavailable")?;
-        let stdout = child.stdout.take().ok_or("MCP stdout unavailable")?;
-        Ok(Self {
-            child,
-            input,
-            lines: BufReader::new(stdout).lines(),
-            timeout: client.timeout,
-            initialized: false,
-            next_id: 1,
-        })
-    }
-
-    async fn send(
-        &mut self,
-        requests: &[serde_json::Value],
-    ) -> Result<Vec<serde_json::Value>, String> {
-        write_mcp_requests(&mut self.input, requests).await?;
-        let expected_ids = requests
-            .iter()
-            .filter_map(|request| request.get("id").and_then(serde_json::Value::as_u64))
-            .collect::<Vec<_>>();
-        read_mcp_responses(&mut self.lines, self.timeout, &expected_ids).await
-    }
-
-    async fn initialize(&mut self) -> Result<(), String> {
-        if self.initialized {
-            return Ok(());
-        }
-        let initialize_id = self.next_id;
-        self.next_id += 1;
-        let list_id = self.next_id;
-        self.next_id += 1;
-        let responses = self.send(&[
-            serde_json::json!({"jsonrpc":"2.0","id":initialize_id,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"runie","version":"0.1.0"}}}),
-            serde_json::json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
-            serde_json::json!({"jsonrpc":"2.0","id":list_id,"method":"tools/list","params":{}}),
-        ]).await?;
-        response_result_or_error(&responses, initialize_id, "initialize")?;
-        response_result_or_error(&responses, list_id, "tools/list")?;
-        self.initialized = true;
-        Ok(())
-    }
-
-    pub async fn call_tool(
-        &mut self,
-        tool: &str,
-        arguments: serde_json::Value,
-    ) -> Result<serde_json::Value, String> {
-        if tool.trim().is_empty() {
-            return Err("MCP tool name must not be empty".into());
-        }
-        self.initialize().await?;
-        let id = self.next_id;
-        self.next_id += 1;
-        let responses = self
-            .send(&[serde_json::json!({
-                "jsonrpc":"2.0", "id":id, "method":"tools/call",
-                "params":{"name":tool,"arguments":arguments}
-            })])
-            .await?;
-        response_result_or_error(&responses, id, "tools/call").cloned()
-    }
-
-    pub async fn close(mut self) -> Result<(), String> {
-        self.child.kill().await.map_err(|error| error.to_string())?;
-        self.child
-            .wait()
-            .await
-            .map_err(|error| error.to_string())
-            .map(|_| ())
-    }
-}
-
-async fn write_mcp_requests(
-    input: &mut tokio::process::ChildStdin,
-    requests: &[serde_json::Value],
-) -> Result<(), String> {
-    for request in requests {
-        input
-            .write_all(request.to_string().as_bytes())
-            .await
-            .map_err(|error| error.to_string())?;
-        input
-            .write_all(b"\n")
-            .await
-            .map_err(|error| error.to_string())?;
-    }
-    input.flush().await.map_err(|error| error.to_string())
-}
-
-async fn read_mcp_responses(
-    lines: &mut tokio::io::Lines<BufReader<tokio::process::ChildStdout>>,
-    timeout: Duration,
-    expected_ids: &[u64],
-) -> Result<Vec<serde_json::Value>, String> {
-    let mut responses = Vec::new();
-    while responses.len() < expected_ids.len() {
-        let line = tokio::time::timeout(timeout, lines.next_line())
-            .await
-            .map_err(|_| "MCP request timed out".to_owned())?
-            .map_err(|error| error.to_string())?;
-        let Some(line) = line else {
-            return Err("MCP process closed stdout".into());
-        };
-        let value = serde_json::from_str::<serde_json::Value>(&line)
-            .map_err(|error| format!("invalid MCP JSON: {error}"))?;
-        if response_matches(&value, expected_ids, &responses) {
-            responses.push(value);
-        }
-    }
-    Ok(responses)
-}
-
-fn response_matches(
-    value: &serde_json::Value,
-    expected_ids: &[u64],
-    responses: &[serde_json::Value],
-) -> bool {
-    value
-        .get("id")
-        .and_then(serde_json::Value::as_u64)
-        .is_some_and(|id| {
-            expected_ids.contains(&id)
-                && !responses.iter().any(|response| {
-                    response.get("id").and_then(serde_json::Value::as_u64) == Some(id)
-                })
-        })
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -371,93 +228,6 @@ async fn call_stdio(
         .expect("persistent MCP session")
         .call_tool(tool, arguments)
         .await
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct McpHttpClient {
-    pub(crate) endpoint: String,
-    pub(crate) bearer_token: Option<String>,
-    pub(crate) timeout: Duration,
-}
-
-impl McpHttpClient {
-    pub fn new(
-        endpoint: impl Into<String>,
-        bearer_token: Option<String>,
-        timeout: Duration,
-    ) -> Result<Self, String> {
-        let endpoint = endpoint.into();
-        if endpoint.trim().is_empty() {
-            return Err("MCP endpoint must not be empty".into());
-        }
-        if timeout.is_zero() {
-            return Err("MCP timeout must be positive".into());
-        }
-        Ok(Self {
-            endpoint,
-            bearer_token,
-            timeout,
-        })
-    }
-
-    pub async fn request(&self, request: serde_json::Value) -> Result<serde_json::Value, String> {
-        self.request_with_session(request, None)
-            .await
-            .map(|(value, _)| value)
-    }
-
-    pub(crate) async fn request_with_session(
-        &self,
-        request: serde_json::Value,
-        session_id: Option<&str>,
-    ) -> Result<(serde_json::Value, Option<String>), String> {
-        let client = reqwest::Client::builder()
-            .timeout(self.timeout)
-            .build()
-            .map_err(|error| error.to_string())?;
-        let mut call = client.post(&self.endpoint).json(&request);
-        if let Some(token) = &self.bearer_token {
-            call = call.bearer_auth(token);
-        }
-        if let Some(session_id) = session_id {
-            call = call.header(MCP_SESSION_HEADER, session_id);
-        }
-        let response = call
-            .send()
-            .await
-            .map_err(|error| format!("MCP HTTP request: {error}"))?;
-        decode_http_response(response).await
-    }
-}
-
-async fn decode_http_response(
-    response: reqwest::Response,
-) -> Result<(serde_json::Value, Option<String>), String> {
-    let status = response.status();
-    let response_session = response
-        .headers()
-        .get(MCP_SESSION_HEADER)
-        .and_then(|value| value.to_str().ok())
-        .map(str::to_owned);
-    let body = response
-        .bytes()
-        .await
-        .map_err(|error| format!("MCP HTTP body: {error}"))?;
-    if body.len() > MCP_HTTP_MAX_RESPONSE_BYTES {
-        return Err(format!(
-            "MCP HTTP response exceeds {} bytes",
-            MCP_HTTP_MAX_RESPONSE_BYTES
-        ));
-    }
-    if !status.is_success() {
-        return Err(format!(
-            "MCP HTTP status {status}: {}",
-            String::from_utf8_lossy(&body)
-        ));
-    }
-    serde_json::from_slice(&body)
-        .map(|value| (value, response_session))
-        .map_err(|error| format!("invalid MCP HTTP response: {error}"))
 }
 
 impl McpStdioClient {
