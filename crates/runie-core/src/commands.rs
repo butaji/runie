@@ -245,9 +245,7 @@ pub fn parse_background_job_output_query(args: &str) -> Option<&str> {
 
 pub fn parse_background_job_status_query(args: &str) -> Option<&str> {
     let status = args.trim();
-    ["running", "completed", "failed", "cancelled"]
-        .contains(&status)
-        .then_some(status)
+    crate::background::BackgroundStatus::from_wire_name(status).map(|_| status)
 }
 
 pub fn parse_mcp_transport_query(args: &str) -> Option<&str> {

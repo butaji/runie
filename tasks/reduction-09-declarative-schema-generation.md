@@ -71,5 +71,8 @@ drift in preview semantics.
 Executor built-in tool routing now uses one explicit macro-backed name/handler
 table, keeping the closed vocabulary data-shaped while leaving each async
 handler and lifecycle boundary inspectable.
+Background job statuses now use one macro-backed wire-name table for both
+domain serialization and `/jobs` query validation, eliminating a duplicate
+command-local string vocabulary.
 Scheduler terminal metric fields now use one macro-backed declaration for
 stable names and row projection, while event reduction remains explicit.

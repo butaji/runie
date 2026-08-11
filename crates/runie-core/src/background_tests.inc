@@ -25,6 +25,19 @@ fn output_projection_is_bounded_and_marks_truncation() {
 }
 
 #[test]
+fn background_status_wire_names_round_trip() {
+    for status in [
+        BackgroundStatus::Running,
+        BackgroundStatus::Completed,
+        BackgroundStatus::Failed,
+        BackgroundStatus::Cancelled,
+    ] {
+        assert_eq!(BackgroundStatus::from_wire_name(status.wire_name()), Some(status));
+    }
+    assert_eq!(BackgroundStatus::from_wire_name("queued"), None);
+}
+
+#[test]
 fn terminal_line_preserves_status_exit_and_output_as_data() {
     let job = BackgroundJob { id: "3".into(), command: "printf done".into(), status: BackgroundStatus::Completed, output: "done\nnext".into(), exit_code: Some(0) };
     assert_eq!(job.terminal_line(), "3 · Completed · printf done exit=0 · done\\nnext");

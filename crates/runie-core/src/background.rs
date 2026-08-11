@@ -9,19 +9,15 @@ use tokio::task::JoinSet;
 
 #[path = "background_controls.rs"]
 mod controls;
+#[path = "background_status.rs"]
+mod status;
+
+pub use status::BackgroundStatus;
 
 pub const BACKGROUND_OUTPUT_MAX_BYTES: usize = 100 * 1024;
 const OUTPUT_TRUNCATION_MARKER: &str = "\n[output truncated]";
 const BACKGROUND_PREVIEW_MAX_CHARS: usize = 256;
 type BackgroundTask = (String, Result<(String, Option<i32>), (String, Option<i32>)>);
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum BackgroundStatus {
-    Running,
-    Completed,
-    Failed,
-    Cancelled,
-}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BackgroundJob {
