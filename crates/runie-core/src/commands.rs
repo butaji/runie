@@ -244,6 +244,13 @@ pub fn parse_mcp_transport_query(args: &str) -> Option<&str> {
     ["stdio", "http"].contains(&transport).then_some(transport)
 }
 
+/// Parse the explicit session-picker form while keeping ordinary `/sessions`
+/// output backward compatible.
+pub fn parse_session_picker_query(args: &str) -> Option<String> {
+    let mut parts = args.split_whitespace();
+    (parts.next() == Some("pick")).then(|| parts.collect::<Vec<_>>().join(" "))
+}
+
 #[allow(clippy::too_many_lines)]
 fn parse_parameterized_command(value: &str) -> Option<MappableBuiltinCommand> {
     if let Some(command) = parse_compact_command(value) {

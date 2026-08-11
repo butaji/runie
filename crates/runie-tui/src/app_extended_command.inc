@@ -33,6 +33,23 @@ impl App {
             let root = std::env::current_dir()
                 .map(|path| path.to_string_lossy().into_owned())
                 .unwrap_or_else(|_| ".".into());
+            if let Some(query) = runie_core::commands::parse_session_picker_query(args) {
+                let options = self
+                    .session_storage
+                    .discover_rows(root, 64, &query)
+                    .await
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|row| row.path)
+                    .collect();
+                self.ui
+                    .send(UiMsg::SetPaletteParameterOptions(options))
+                    .await;
+                self.ui
+                    .send(UiMsg::OpenPaletteParameters(PaletteAction::ResumeSession))
+                    .await;
+                return true;
+            }
             let result = match self
                 .session_storage
                 .discover_rows(root, 64, args.trim())
