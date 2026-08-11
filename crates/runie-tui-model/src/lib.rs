@@ -9,7 +9,9 @@ mod dialog_specs;
 mod events;
 mod feed;
 mod memory;
+mod palette_action;
 mod palette_meta;
+pub use palette_action::PaletteAction;
 pub use palette_meta::theme_labels;
 mod prompt;
 mod scroll;
@@ -73,8 +75,7 @@ pub use sticky::{
 };
 pub use theme::ThemeToken;
 pub use ui::{
-    palette_display_rows, palette_labels, ui_messages_for_event, PaletteAction, UiCommand, UiMsg,
-    UiState,
+    palette_display_rows, palette_labels, ui_messages_for_event, UiCommand, UiMsg, UiState,
 };
 
 /// Immutable aggregate of actor-owned TUI projections for a single view pass.

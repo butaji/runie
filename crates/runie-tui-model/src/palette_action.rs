@@ -1,0 +1,26 @@
+runie_core::typed_action_registry! {
+    pub enum PaletteAction {
+        NewSession => "New Session", KeyboardShortcuts => "Keyboard Shortcuts", Quit => "Quit",
+        Changelog => "Changelog", CopyLastResponse => "Copy Last Response", SessionInfo => "Session Info",
+        SessionHistory => "Session History", UndoSession => "Undo Session", SelectModel => "Select Model",
+        SelectTheme => "Select Theme", ManageProviders => "Manage Providers", ScopedModels => "Scoped Models",
+        SetSessionName => "Set Session Name", CompactContext => "Compact Context", ForkSession => "Fork Session",
+        SelectTreeEntry => "Select Tree Entry", ExportSession => "Export Session", ImportSession => "Import Session",
+        CloneSession => "Clone Session", ResumeSession => "Resume Session", ShareSession => "Share Session",
+        Help => "Help", ContextInfo => "Context Info", Settings => "Settings", Doctor => "Doctor",
+        RewindSession => "Rewind Session", PromptHistory => "Prompt History", FindTranscript => "Find Transcript",
+        JumpTranscript => "Jump Transcript", Recap => "Recap", SetEffort => "Set Reasoning Effort",
+        AlwaysApprove => "Always Approve", AutoApprove => "Automatic Approval", PlanMode => "Plan Mode",
+        ViewPlan => "View Plan", Login => "Login", Logout => "Logout", Reload => "Reload",
+        TrustProject => "Trust Project", Skills => "Skills", Hooks => "Hooks", Plugins => "Plugins",
+        Mcps => "MCP Servers", McpReady => "Ready MCP Servers", McpFailed => "Failed MCP Servers",
+        McpBusy => "Busy MCP Servers", McpClosed => "Closed MCP Servers", McpStdio => "Stdio MCP Servers",
+        McpHttp => "HTTP MCP Servers", Memory => "Memory", Remember => "Remember", Goal => "Goal",
+        Workflow => "Workflow", Workflows => "Workflows", Loop => "Loop", DeepResearch => "Deep Research",
+        Feedback => "Feedback", Usage => "Usage", Jobs => "Background Jobs", ActiveJobs => "Active Jobs",
+        CancelAllJobs => "Cancel All Jobs", ClearFinishedJobs => "Clear Finished Jobs", CompletedJobs => "Completed Jobs",
+        FailedJobs => "Failed Jobs", CancelledJobs => "Cancelled Jobs", JobOutput => "Job Output",
+        GitStatus => "Git Status", GitDiff => "Git Diff", GitReview => "Git Review", GitWorktrees => "Git Worktrees",
+        GitConflicts => "Git Conflicts", Questions => "User Questions",
+    }
+}

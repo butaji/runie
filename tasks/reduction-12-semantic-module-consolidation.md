@@ -54,6 +54,10 @@ Obsolete legacy palette metadata declarations were removed from the semantic
 palette module after call-site audit, reducing dead indirection without
 changing its public API.
 
+The typed `PaletteAction` declaration now lives in its own semantic module,
+leaving `ui.rs` focused on UI state and reducer behavior while preserving the
+public re-export and generated palette accessors.
+
 Background job mailbox reduction now delegates start/cancel/cancel-all events
 to small owned handlers while `run_worker` retains the async completion select;
 the actor lifecycle remains unchanged.
