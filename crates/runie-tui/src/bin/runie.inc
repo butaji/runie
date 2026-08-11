@@ -1309,6 +1309,7 @@ async fn run_noninteractive(config: NonInteractiveConfig) -> RunOutcome {
         JsonlEvent::Metadata {
             provider: selected_model.as_ref().map(|model| model.provider.clone()),
             model: selected_model.as_ref().map(|model| model.id.clone()),
+            api: selected_model.as_ref().map(|model| model.api.clone()),
             context_window: selected_model.as_ref().map(|model| model.context_window),
             thinking_level,
         },

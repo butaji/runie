@@ -17,6 +17,7 @@ pub enum JsonlEvent {
     Metadata {
         provider: Option<String>,
         model: Option<String>,
+        api: Option<String>,
         context_window: Option<u64>,
         thinking_level: Option<crate::types::ThinkingLevel>,
     },
@@ -143,6 +144,7 @@ mod tests {
             JsonlEvent::Metadata {
                 provider: Some("minimax".into()),
                 model: Some("model-1".into()),
+                api: Some("openai-completions".into()),
                 context_window: Some(128_000),
                 thinking_level: Some(crate::types::ThinkingLevel::High),
             },
