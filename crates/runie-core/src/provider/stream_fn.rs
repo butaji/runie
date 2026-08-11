@@ -136,6 +136,10 @@ macro_rules! provider_failure_kinds {
             pub const fn wire_name(self) -> &'static str {
                 match self { $(Self::$variant => $wire),+ }
             }
+
+            pub fn from_wire_name(name: &str) -> Option<Self> {
+                match name { $($wire => Some(Self::$variant),)+ _ => None }
+            }
         }
     };
 }
@@ -333,6 +337,23 @@ mod tests {
         let decoded: ProviderFailure =
             serde_json::from_value(serde_json::to_value(failure).unwrap()).unwrap();
         assert_eq!(decoded.message, "busy");
+    }
+
+    #[test]
+    fn provider_failure_kinds_round_trip_through_wire_names() {
+        for kind in [
+            ProviderFailureKind::Network,
+            ProviderFailureKind::Api,
+            ProviderFailureKind::Provider,
+            ProviderFailureKind::Aborted,
+            ProviderFailureKind::Invalid,
+        ] {
+            assert_eq!(
+                ProviderFailureKind::from_wire_name(kind.wire_name()),
+                Some(kind)
+            );
+        }
+        assert_eq!(ProviderFailureKind::from_wire_name("unknown"), None);
     }
 
     #[test]
