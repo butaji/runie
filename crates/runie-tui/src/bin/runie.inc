@@ -402,15 +402,32 @@ fn minimax_events(payload: &serde_json::Value) -> Vec<AssistantMessageEvent> {
     append_minimax_tool_events(&mut events, &tool_calls);
     append_minimax_content_events(&mut events, reasoning, text);
     events.push(AssistantMessageEvent::Done {
-        stop_reason: if tool_calls.is_empty() {
-            StopReason::Stop
-        } else {
-            StopReason::ToolUse
-        },
+        stop_reason: minimax_stop_reason(payload, !tool_calls.is_empty()),
         usage: minimax_usage(payload),
         message: None,
     });
     events
+}
+
+fn minimax_stop_reason(payload: &serde_json::Value, has_tool_calls: bool) -> StopReason {
+    let Some(raw) = payload
+        .pointer("/choices/0/finish_reason")
+        .and_then(serde_json::Value::as_str)
+    else {
+        return if has_tool_calls {
+            StopReason::ToolUse
+        } else {
+            StopReason::Stop
+        };
+    };
+    match raw {
+        "stop" | "end_turn" | "completed" => StopReason::Stop,
+        "length" | "max_tokens" | "max_output_tokens" => StopReason::MaxTokens,
+        "tool_calls" | "tool_use" => StopReason::ToolUse,
+        "aborted" | "cancelled" => StopReason::Aborted,
+        "error" | "failed" | "content_filter" | "filtered" => StopReason::Error,
+        _ => StopReason::Error,
+    }
 }
 
 fn minimax_tool_calls(choice: &serde_json::Value) -> Vec<ToolCall> {
@@ -2952,6 +2969,27 @@ mod tests {
         assert_eq!(usage.cache_write, 20);
         assert_eq!(usage.reasoning, 4);
         assert_eq!(usage.total_tokens, 150);
+    }
+
+    #[test]
+    fn minimax_finish_reason_preserves_known_values_and_fails_closed() {
+        let cases = [
+            ("stop", runie_core::types::StopReason::Stop),
+            ("length", runie_core::types::StopReason::MaxTokens),
+            ("tool_calls", runie_core::types::StopReason::ToolUse),
+            ("content_filter", runie_core::types::StopReason::Error),
+            ("provider_failure", runie_core::types::StopReason::Error),
+        ];
+        for (wire, expected) in cases {
+            let events = super::minimax_events(&serde_json::json!({
+                "choices": [{"finish_reason": wire}]
+            }));
+            assert!(matches!(
+                events.last(),
+                Some(runie_core::types::AssistantMessageEvent::Done { stop_reason, .. })
+                    if *stop_reason == expected
+            ));
+        }
     }
 
     #[test]
