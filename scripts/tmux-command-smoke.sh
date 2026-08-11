@@ -79,6 +79,8 @@ for label in "${labels[@]}"; do
     argument=(s m o k e)
     if [[ "$label" == "Questions" ]]; then
       argument=(c l e a r)
+    elif [[ "$label" == "Usage" ]]; then
+      argument=(l a s t 3)
     elif [[ "$label" == "Jobs" ]]; then
       argument=(s c h e d u l e r)
     elif [[ "$label" == "Git Conflicts" ]]; then
