@@ -2187,6 +2187,17 @@ async fn run_app(
                                     .await;
                                 return Ok(ui_commands);
                             }
+                            if action == PaletteAction::ActiveJobs {
+                                let _ = app
+                                    .route_mappable_command(
+                                        runie_core::commands::MappableBuiltinCommand::Extended {
+                                            name: "jobs".into(),
+                                            args: "scheduler active".into(),
+                                        },
+                                    )
+                                    .await;
+                                return Ok(ui_commands);
+                            }
                             let command = match action {
                                 PaletteAction::Changelog => Some(runie_core::commands::MappableBuiltinCommand::Changelog),
                                 PaletteAction::CopyLastResponse => Some(runie_core::commands::MappableBuiltinCommand::Copy),

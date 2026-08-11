@@ -73,6 +73,7 @@ declare_palette_metadata! {
     (Feedback, "/feedback", "Submit feedback"),
     (Usage, "/usage", "Show usage or billing information"),
     (Jobs, "/jobs", "Inspect owned background jobs"),
+    (ActiveJobs, "/jobs scheduler active", "Show queued and running work"),
     (Questions, "/questions", "Browse user-question history"),
 }
 
