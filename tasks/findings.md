@@ -109,6 +109,8 @@ Scheduler metrics now expose a pure active-work projection through
 `/jobs scheduler active`, with parser/reducer coverage.
 User-question history rows now own their terminal projection, removing a
 duplicated formatter from the TUI route.
+Background-job summaries now likewise own their terminal projection, removing
+the duplicate `/jobs` formatter from the TUI.
 
 As of 2026-08-09, the reduction work has these verified results:
 

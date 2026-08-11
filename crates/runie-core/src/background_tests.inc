@@ -38,6 +38,19 @@ fn summary_projects_bounded_output_facts_without_rendering() {
     assert_eq!(background_job_summaries(&jobs)[0].output_preview.as_deref(), Some("done\nnext"));
 }
 
+#[test]
+fn summary_owns_bounded_terminal_projection() {
+    let summary = background_job_summaries(&[BackgroundJob {
+        id: "job-1".into(),
+        command: "printf output".into(),
+        status: BackgroundStatus::Completed,
+        output: "output".into(),
+        exit_code: Some(0),
+    }])[0]
+        .clone();
+    assert!(summary.terminal_line().contains("preview=\"output\""));
+}
+
 #[tokio::test]
 async fn failed_jobs_preserve_failure_output_and_status() {
     let actor = BackgroundProcessActor::new();

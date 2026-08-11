@@ -184,7 +184,7 @@ impl App {
                 )
                 .into_iter()
                 .filter(|job| format!("{:?}", job.status).eq_ignore_ascii_case(status))
-                .map(|job| background_job_line(&job))
+                .map(|job| job.terminal_line())
                 .collect::<Vec<_>>();
                 self.ui
                     .send(UiMsg::ShowCommandResult(if result.is_empty() {
@@ -204,7 +204,7 @@ impl App {
                 {
                     Some(job) => {
                         let output = self.background_actor.read_output(id).await.unwrap_or_default();
-                        format!("{}\noutput:\n{}", background_job_line(&job), output)
+                        format!("{}\noutput:\n{}", job.terminal_line(), output)
                     }
                     None => format!("Background job {id} not found"),
                 };
@@ -215,7 +215,7 @@ impl App {
                 &self.background_actor.snapshot(),
             )
                 .into_iter()
-                .map(|job| background_job_line(&job))
+                .map(|job| job.terminal_line())
                 .collect::<Vec<_>>();
             result.extend(
                 self.loop_actor
@@ -454,40 +454,5 @@ impl App {
             }
         }
         true
-    }
-}
-
-fn background_job_line(job: &runie_core::background::BackgroundJobSummary) -> String {
-    format!(
-        "{} · {:?} · {} exit={:?} · output={} lines/{} bytes{}{}",
-        job.id,
-        job.status,
-        job.command,
-        job.exit_code,
-        job.output_lines,
-        job.output_bytes,
-        if job.truncated { " truncated" } else { "" },
-        job.output_preview
-            .as_deref()
-            .map(|preview| format!(" · preview={preview:?}"))
-            .unwrap_or_default(),
-    )
-}
-
-#[cfg(test)]
-mod background_job_projection_tests {
-    #[test]
-    fn jobs_line_projects_bounded_preview_as_data() {
-        let line = super::background_job_line(&runie_core::background::BackgroundJobSummary {
-            id: "job-1".into(),
-            command: "printf output".into(),
-            status: runie_core::background::BackgroundStatus::Completed,
-            exit_code: Some(0),
-            output_lines: 1,
-            output_bytes: 6,
-            output_preview: Some("output".into()),
-            truncated: false,
-        });
-        assert!(line.contains("preview=\"output\""));
     }
 }

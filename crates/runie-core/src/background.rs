@@ -44,6 +44,25 @@ pub struct BackgroundJobSummary {
     pub truncated: bool,
 }
 
+impl BackgroundJobSummary {
+    pub fn terminal_line(&self) -> String {
+        format!(
+            "{} · {:?} · {} exit={:?} · output={} lines/{} bytes{}{}",
+            self.id,
+            self.status,
+            self.command,
+            self.exit_code,
+            self.output_lines,
+            self.output_bytes,
+            if self.truncated { " truncated" } else { "" },
+            self.output_preview
+                .as_deref()
+                .map(|preview| format!(" · preview={preview:?}"))
+                .unwrap_or_default(),
+        )
+    }
+}
+
 pub fn background_job_summaries(jobs: &[BackgroundJob]) -> Vec<BackgroundJobSummary> {
     jobs.iter()
         .map(|job| {
