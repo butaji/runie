@@ -79,3 +79,6 @@ The MCP transport/domain split is now complete: HTTP request/response policy
 lives in `mcp_http_transport.rs`, persistent stdio protocol state lives in
 `mcp_stdio_transport.rs`, and the root module retains shared lifecycle and
 tool data. Structural lint is clean again.
+The closed MCP lifecycle wire vocabulary is now generated once by a local
+macro for both stdio and HTTP statuses, removing duplicate state-to-wire
+matches while keeping each transport enum typed.

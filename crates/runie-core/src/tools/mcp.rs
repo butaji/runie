@@ -8,14 +8,23 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 pub const MCP_HTTP_MAX_RESPONSE_BYTES: usize = 1_048_576;
 pub const MCP_MAX_STREAM_EVENTS: usize = 4_096;
 pub(crate) const MCP_SESSION_HEADER: &str = "mcp-session-id";
-
+macro_rules! mcp_status_wire_names {
+    ($status:ty => { $($variant:ident => $wire:literal),+ $(,)? }) => {
+        impl $status {
+            pub const fn wire_name(self) -> &'static str {
+                match self {
+                    $(Self::$variant => $wire),+
+                }
+            }
+        }
+    };
+}
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct McpStatusRow {
     pub transport: String,
     pub index: usize,
     pub status: String,
 }
-
 #[path = "mcp_http_session.rs"]
 mod http_session;
 pub use http_session::{McpHttpActor, McpHttpSession, McpHttpStatus};
@@ -34,7 +43,6 @@ pub use http_transport::McpHttpClient;
 #[path = "mcp_stdio_transport.rs"]
 mod stdio_transport;
 pub use stdio_transport::McpStdioSession;
-
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct McpToolSpec {
     pub name: String,
@@ -72,16 +80,12 @@ pub enum McpStdioStatus {
     Closed,
 }
 
-impl McpStdioStatus {
-    pub const fn wire_name(self) -> &'static str {
-        match self {
-            Self::Ready => "ready",
-            Self::Busy => "busy",
-            Self::Failed => "failed",
-            Self::Closed => "closed",
-        }
-    }
-}
+mcp_status_wire_names!(McpStdioStatus => {
+    Ready => "ready",
+    Busy => "busy",
+    Failed => "failed",
+    Closed => "closed",
+});
 
 enum McpStdioCommand {
     Call {
@@ -491,7 +495,6 @@ impl AgentTool for McpTool {
         })
     }
 }
-
 #[cfg(test)]
 #[path = "mcp_tests.rs"]
 mod tests;

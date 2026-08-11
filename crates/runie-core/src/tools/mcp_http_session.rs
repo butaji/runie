@@ -8,16 +8,12 @@ pub enum McpHttpStatus {
     Closed,
 }
 
-impl McpHttpStatus {
-    pub const fn wire_name(self) -> &'static str {
-        match self {
-            Self::Ready => "ready",
-            Self::Busy => "busy",
-            Self::Failed => "failed",
-            Self::Closed => "closed",
-        }
-    }
-}
+mcp_status_wire_names!(McpHttpStatus => {
+    Ready => "ready",
+    Busy => "busy",
+    Failed => "failed",
+    Closed => "closed",
+});
 
 enum McpHttpCommand {
     Request {
