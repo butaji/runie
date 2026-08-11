@@ -55,11 +55,43 @@ impl App {
             return true;
         }
         if name == "git"
-            && matches!(
+            && (matches!(
                 args.trim().to_ascii_lowercase().as_str(),
                 "status" | "diff" | "review" | "worktrees" | "conflicts"
-            )
+            ) || runie_core::commands::parse_git_conflict_path_selection(args).is_some()
+                || runie_core::commands::parse_git_conflict_action_selection(args).is_some()
+                || runie_core::commands::parse_git_conflict_cancel(args))
         {
+            if let Some(path) = runie_core::commands::parse_git_conflict_path_selection(args) {
+                let result = self
+                    .git_conflict_actor
+                    .select_path(path)
+                    .await
+                    .map(|()| "Selected Git conflict path".into())
+                    .unwrap_or_else(|error| format!("Git conflict path selection failed: {error}"));
+                self.ui.send(UiMsg::ShowCommandResult(result)).await;
+                return true;
+            }
+            if let Some(action) = runie_core::commands::parse_git_conflict_action_selection(args) {
+                let result = self
+                    .git_conflict_actor
+                    .select_action(action)
+                    .await
+                    .map(|()| "Selected Git conflict action".into())
+                    .unwrap_or_else(|error| format!("Git conflict action selection failed: {error}"));
+                self.ui.send(UiMsg::ShowCommandResult(result)).await;
+                return true;
+            }
+            if runie_core::commands::parse_git_conflict_cancel(args) {
+                let result = self
+                    .git_conflict_actor
+                    .cancel()
+                    .await
+                    .map(|()| "Git conflict recovery cancelled".into())
+                    .unwrap_or_else(|error| format!("Git conflict cancellation failed: {error}"));
+                self.ui.send(UiMsg::ShowCommandResult(result)).await;
+                return true;
+            }
             if args.trim().eq_ignore_ascii_case("conflicts") {
                 let result = self
                     .git_conflict_actor

@@ -27,6 +27,13 @@ enum GitConflictCommand {
         path: String,
         reply: oneshot::Sender<Result<(), String>>,
     },
+    SelectAction {
+        action: super::GitConflictAction,
+        reply: oneshot::Sender<Result<(), String>>,
+    },
+    Cancel {
+        reply: oneshot::Sender<Result<(), String>>,
+    },
 }
 
 #[derive(Clone)]
@@ -77,6 +84,16 @@ impl GitConflictActor {
         .await
     }
 
+    pub async fn select_action(&self, action: super::GitConflictAction) -> Result<(), String> {
+        self.request(|reply| GitConflictCommand::SelectAction { action, reply })
+            .await
+    }
+
+    pub async fn cancel(&self) -> Result<(), String> {
+        self.request(|reply| GitConflictCommand::Cancel { reply })
+            .await
+    }
+
     async fn request<F>(&self, command: F) -> Result<(), String>
     where
         F: FnOnce(oneshot::Sender<Result<(), String>>) -> GitConflictCommand,
@@ -112,18 +129,31 @@ async fn apply_command(state: &mut GitConflictSnapshot, command: GitConflictComm
             let _ = reply.send(result);
             changed
         }
-        GitConflictCommand::SelectPath { path, reply } => {
-            let result = super::reduce_conflict_recovery(
-                state.state.clone(),
-                super::GitConflictRecoveryEvent::PathSelected { path },
-            );
-            let changed = result.is_ok();
-            let _ = reply.send(result.map(|next| {
-                state.state = next;
-            }));
-            changed
+        GitConflictCommand::SelectPath { path, reply } => apply_recovery_event(
+            state,
+            super::GitConflictRecoveryEvent::PathSelected { path },
+            reply,
+        ),
+        GitConflictCommand::SelectAction { action, reply } => apply_recovery_event(
+            state,
+            super::GitConflictRecoveryEvent::ActionSelected { action },
+            reply,
+        ),
+        GitConflictCommand::Cancel { reply } => {
+            apply_recovery_event(state, super::GitConflictRecoveryEvent::Cancelled, reply)
         }
     }
+}
+
+fn apply_recovery_event(
+    state: &mut GitConflictSnapshot,
+    event: super::GitConflictRecoveryEvent,
+    reply: oneshot::Sender<Result<(), String>>,
+) -> bool {
+    let result = super::reduce_conflict_recovery(state.state.clone(), event);
+    let changed = result.is_ok();
+    let _ = reply.send(result.map(|next| state.state = next));
+    changed
 }
 
 async fn refresh_state(snapshot: &mut GitConflictSnapshot) -> Result<(), String> {

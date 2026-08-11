@@ -80,6 +80,20 @@ fn parser_maps_git_conflict_report_as_an_extended_command() {
 }
 
 #[test]
+fn git_conflict_interaction_commands_are_typed_and_bounded() {
+    assert_eq!(
+        parse_git_conflict_path_selection("conflicts select src/main.rs"),
+        Some("src/main.rs")
+    );
+    assert_eq!(
+        parse_git_conflict_action_selection("conflicts action resolve"),
+        Some(crate::tools::GitConflictAction::Resolve)
+    );
+    assert!(parse_git_conflict_cancel("conflicts cancel"));
+    assert!(parse_git_conflict_action_selection("conflicts action nope").is_none());
+}
+
+#[test]
 fn parser_maps_effort_without_an_argument_for_picker_reopen() {
     assert_eq!(
         parse_mappable_builtin_command("/effort"),

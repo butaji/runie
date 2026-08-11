@@ -238,6 +238,36 @@ pub fn parse_background_scheduler_active_query(args: &str) -> bool {
     args.trim() == "scheduler active"
 }
 
+pub fn parse_git_conflict_path_selection(args: &str) -> Option<&str> {
+    let mut parts = args.split_whitespace();
+    (parts.next() == Some("conflicts")
+        && parts.next() == Some("select")
+        && parts.next().is_some()
+        && parts.next().is_none())
+    .then(|| args.split_whitespace().nth(2).unwrap())
+}
+
+pub fn parse_git_conflict_action_selection(args: &str) -> Option<crate::tools::GitConflictAction> {
+    let mut parts = args.split_whitespace();
+    if parts.next() != Some("conflicts") || parts.next() != Some("action") {
+        return None;
+    }
+    let action = parts.next()?;
+    if parts.next().is_some() {
+        return None;
+    }
+    match action {
+        "inspect" => Some(crate::tools::GitConflictAction::Inspect),
+        "resolve" => Some(crate::tools::GitConflictAction::Resolve),
+        "abort" => Some(crate::tools::GitConflictAction::Abort),
+        _ => None,
+    }
+}
+
+pub fn parse_git_conflict_cancel(args: &str) -> bool {
+    args.trim() == "conflicts cancel"
+}
+
 pub fn parse_background_scheduler_cancel_queued(args: &str) -> bool {
     args.trim() == "scheduler cancel queued"
 }
