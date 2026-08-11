@@ -421,6 +421,22 @@
         );
     }
 
+    #[test]
+    fn compaction_recovery_plan_round_trips_as_replay_data() {
+        let plan = plan_compaction_recovery(
+            901,
+            1_000,
+            CompactionSettings {
+                enabled: true,
+                reserve_tokens: 100,
+                keep_recent_tokens: 20,
+            },
+        );
+        let encoded = serde_json::to_string(&plan).unwrap();
+        let decoded: CompactionRecoveryPlan = serde_json::from_str(&encoded).unwrap();
+        assert_eq!(decoded, plan);
+    }
+
     #[tokio::test]
     async fn undo_moves_actor_leaf_to_parent_without_deleting_history() {
         let actor = SessionActor::new();

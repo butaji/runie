@@ -12,14 +12,14 @@ pub struct SessionLaneQuery {
 }
 
 /// Pi's automatic-compaction threshold settings.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct CompactionSettings {
     pub enabled: bool,
     pub reserve_tokens: u64,
     pub keep_recent_tokens: u64,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum CompactionDecision {
     Disabled,
     WithinBudget {
@@ -34,13 +34,13 @@ pub enum CompactionDecision {
 /// Typed action selected after measuring a context. The action is data only:
 /// session and provider actors still own preparation, summarization, and
 /// publication respectively.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum CompactionRecoveryAction {
     Continue,
     Prepare { keep_recent_tokens: u64 },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct CompactionRecoveryPlan {
     pub decision: CompactionDecision,
     pub action: CompactionRecoveryAction,
@@ -86,7 +86,7 @@ impl CompactionDecision {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ContextUsageEstimate {
     pub tokens: u64,
     pub usage_tokens: u64,
@@ -236,7 +236,7 @@ pub fn compaction_decision(
 /// compaction record; ordinary message indices identify only entries written
 /// after that boundary, so callers cannot accidentally send the compacted
 /// prefix again.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct CompactionContextProjection {
     pub summary: String,
     pub tokens_before: u64,
