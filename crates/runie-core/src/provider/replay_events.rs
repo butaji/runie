@@ -59,7 +59,11 @@ fn apply_terminal_marker(state: &mut SseParseState, value: &serde_json::Value) {
     state.finished = true;
     // Chat tool-call traces finalize typed state from reconstructed content;
     // Responses traces use their mapped incomplete marker directly.
-    state.stop_reason = if value.pointer("/choices/0/finish_reason").is_some() {
+    // Chat tool calls keep the legacy replay reduction: the reconstructed
+    // tool-call batch, rather than the wire stop label, owns continuation.
+    state.stop_reason = if !state.tool_calls.is_empty()
+        || raw_response_finish_reason(value) == Some("tool_calls")
+    {
         StopReason::Stop
     } else {
         response_finish_reason(value).unwrap_or(StopReason::Stop)
@@ -423,4 +427,24 @@ pub(super) fn has_terminal_marker(value: &serde_json::Value) -> bool {
         || value
             .pointer("/choices/0/finish_reason")
             .is_some_and(|v| !v.is_null())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{consume_sse_line, SseParseState};
+    use crate::types::{AssistantMessageEvent, StopReason};
+
+    #[test]
+    fn chat_terminal_reason_is_projected_instead_of_defaulting_to_stop() {
+        let mut state = SseParseState::default();
+        let mut events = Vec::<AssistantMessageEvent>::new();
+        consume_sse_line(
+            r#"data: {"choices":[{"finish_reason":"length"}]}"#,
+            &mut state,
+            &mut events,
+        )
+        .expect("chat terminal event");
+        assert_eq!(state.stop_reason, StopReason::MaxTokens);
+        assert_eq!(state.raw_stop_reason.as_deref(), Some("length"));
+    }
 }
