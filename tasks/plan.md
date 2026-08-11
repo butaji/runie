@@ -109,7 +109,9 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    renderer-neutral output cards and owned lifecycle controls, with
    failure/cancellation replay traces; `BackgroundOutput` now carries the
    actor-owned command/status/exit context as a complete output card; palette-discoverable `Job Output`
-   now exposes the actor-owned bounded capture directly.
+   now exposes the actor-owned bounded capture directly; summary and output
+   reads now share one pure output-metadata projection for facts, previews,
+   and truncation.
 3. Model-aware context policy — `harness-05` (live usage boundary implemented).
    Recovery and `/context` now use the active model’s declared window, and
    `/context` consumes a serializable `ContextReport` projection for its

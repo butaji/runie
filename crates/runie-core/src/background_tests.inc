@@ -51,6 +51,25 @@ fn summary_owns_bounded_terminal_projection() {
     assert!(summary.terminal_line().contains("preview=\"output\""));
 }
 
+#[test]
+fn output_metadata_is_one_shared_projection_for_summary_and_read_rows() {
+    let output = format!("first\nsecond{OUTPUT_TRUNCATION_MARKER}");
+    let metadata = output_metadata(&output);
+    let summary = background_job_summaries(&[BackgroundJob {
+        id: "job-1".into(),
+        command: "printf output".into(),
+        status: BackgroundStatus::Failed,
+        output,
+        exit_code: Some(1),
+    }])[0]
+        .clone();
+
+    assert_eq!(summary.output_lines, metadata.lines);
+    assert_eq!(summary.output_bytes, metadata.bytes);
+    assert_eq!(summary.output_preview, metadata.preview);
+    assert_eq!(summary.truncated, metadata.truncated);
+}
+
 #[tokio::test]
 async fn failed_jobs_preserve_failure_output_and_status() {
     let actor = BackgroundProcessActor::new();

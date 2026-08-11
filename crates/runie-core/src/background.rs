@@ -61,6 +61,25 @@ pub struct BackgroundOutput {
     pub truncated: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct OutputMetadata {
+    lines: usize,
+    bytes: usize,
+    preview: Option<String>,
+    truncated: bool,
+}
+
+fn output_metadata(output: &str) -> OutputMetadata {
+    let truncated = output.contains(OUTPUT_TRUNCATION_MARKER);
+    let facts = output_facts(output, truncated);
+    OutputMetadata {
+        lines: facts.lines,
+        bytes: facts.bytes,
+        preview: bounded_preview(output, BACKGROUND_PREVIEW_MAX_CHARS),
+        truncated: facts.truncated,
+    }
+}
+
 impl BackgroundOutput {
     pub fn terminal_lines(&self) -> Vec<String> {
         let mut lines = vec![format!(
@@ -100,16 +119,16 @@ impl BackgroundJobSummary {
 pub fn background_job_summaries(jobs: &[BackgroundJob]) -> Vec<BackgroundJobSummary> {
     jobs.iter()
         .map(|job| {
-            let facts = output_facts(&job.output, job.output.contains(OUTPUT_TRUNCATION_MARKER));
+            let metadata = output_metadata(&job.output);
             BackgroundJobSummary {
                 id: job.id.clone(),
                 command: job.command.clone(),
                 status: job.status.clone(),
                 exit_code: job.exit_code,
-                output_lines: facts.lines,
-                output_bytes: facts.bytes,
-                output_preview: bounded_preview(&job.output, BACKGROUND_PREVIEW_MAX_CHARS),
-                truncated: facts.truncated,
+                output_lines: metadata.lines,
+                output_bytes: metadata.bytes,
+                output_preview: metadata.preview,
+                truncated: metadata.truncated,
             }
         })
         .collect()
@@ -321,18 +340,17 @@ fn handle_message(
         Some(Message::ClearFinished { reply }) => controls::clear_finished(reply, jobs, publisher),
         Some(Message::ReadOutput { id, reply }) => {
             let output = jobs.get(&id).map(|job| {
-                let truncated = job.output.contains(OUTPUT_TRUNCATION_MARKER);
-                let facts = output_facts(&job.output, truncated);
+                let metadata = output_metadata(&job.output);
                 BackgroundOutput {
                     job_id: id,
                     command: job.command.clone(),
                     status: job.status.clone(),
                     exit_code: job.exit_code,
                     text: job.output.clone(),
-                    output_lines: facts.lines,
-                    output_bytes: facts.bytes,
-                    preview: bounded_preview(&job.output, BACKGROUND_PREVIEW_MAX_CHARS),
-                    truncated: facts.truncated,
+                    output_lines: metadata.lines,
+                    output_bytes: metadata.bytes,
+                    preview: metadata.preview,
+                    truncated: metadata.truncated,
                 }
             });
             let _ = reply.send(output);
