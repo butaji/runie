@@ -21,19 +21,6 @@ pub fn reduce_approval_mode(mode: &mut ApprovalMode, event: ApprovalModeEvent) {
     *mode = next;
 }
 
-const READ_ONLY_TOOLS: &[&str] = &["read", "grep", "glob", "list_dir", "echo"];
-const MUTATING_TOOLS: &[&str] = &[
-    "write",
-    "edit",
-    "bash",
-    "shell",
-    "exec",
-    "run",
-    "git_commit",
-    "git_push",
-    "git_revert",
-];
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ToolClass {
     ReadOnly,
@@ -41,14 +28,20 @@ enum ToolClass {
     Unknown,
 }
 
-fn classify_tool(tool: &str) -> ToolClass {
-    if READ_ONLY_TOOLS.contains(&tool) {
-        ToolClass::ReadOnly
-    } else if MUTATING_TOOLS.contains(&tool) {
-        ToolClass::Mutating
-    } else {
-        ToolClass::Unknown
-    }
+macro_rules! tool_class_table {
+    ($( $class:ident => [$($name:literal),* $(,)?] ),+ $(,)?) => {
+        fn classify_tool(tool: &str) -> ToolClass {
+            match tool {
+                $( $( $name => ToolClass::$class, )* )+
+                _ => ToolClass::Unknown,
+            }
+        }
+    };
+}
+
+tool_class_table! {
+    ReadOnly => ["read", "grep", "glob", "list_dir", "echo"],
+    Mutating => ["write", "edit", "bash", "shell", "exec", "run", "git_commit", "git_push", "git_revert"],
 }
 
 #[derive(Clone)]
