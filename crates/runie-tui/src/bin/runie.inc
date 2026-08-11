@@ -426,21 +426,7 @@ fn minimax_stop_reason(payload: &serde_json::Value, has_tool_calls: bool) -> Sto
 }
 
 fn minimax_stop_reason_from_raw(raw: Option<&str>, has_tool_calls: bool) -> StopReason {
-    let Some(raw) = raw else {
-        return if has_tool_calls {
-            StopReason::ToolUse
-        } else {
-            StopReason::Stop
-        };
-    };
-    match raw {
-        "stop" | "end_turn" | "completed" => StopReason::Stop,
-        "length" | "max_tokens" | "max_output_tokens" => StopReason::MaxTokens,
-        "tool_calls" | "tool_use" => StopReason::ToolUse,
-        "aborted" | "cancelled" => StopReason::Aborted,
-        "error" | "failed" | "content_filter" | "filtered" => StopReason::Error,
-        _ => StopReason::Error,
-    }
+    StopReason::from_provider_finish_reason(raw, has_tool_calls)
 }
 
 fn minimax_tool_calls(choice: &serde_json::Value) -> Vec<ToolCall> {

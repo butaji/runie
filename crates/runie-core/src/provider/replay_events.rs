@@ -116,16 +116,7 @@ pub(super) fn raw_response_finish_reason(value: &serde_json::Value) -> Option<&s
 
 pub(super) fn response_finish_reason(value: &serde_json::Value) -> Option<StopReason> {
     let raw = raw_response_finish_reason(value)?;
-    Some(match raw {
-        "stop" | "end_turn" | "completed" => StopReason::Stop,
-        "length" | "max_tokens" | "max_output_tokens" => StopReason::MaxTokens,
-        "tool_calls" | "tool_use" => StopReason::ToolUse,
-        "aborted" | "cancelled" => StopReason::Aborted,
-        "error" | "failed" | "incomplete" | "content_filter" | "filtered" => StopReason::Error,
-        // Preserve the raw provider value separately, but fail closed when a
-        // provider adds a terminal state we do not understand yet.
-        _ => StopReason::Error,
-    })
+    Some(StopReason::from_provider_finish_reason(Some(raw), false))
 }
 
 #[allow(
