@@ -28,7 +28,7 @@ macro_rules! media_wire_formats {
 media_wire_formats! {
     (Pi, "pi", true, true),
     (OpenAiChat, "openai-chat", true, true),
-    (OpenAiResponses, "openai-responses", false, false),
+    (OpenAiResponses, "openai-responses", false, true),
     (Gemini, "gemini", true, true),
     (Anthropic, "anthropic", true, false),
 }
@@ -38,45 +38,104 @@ pub fn encode_user_content(
     content: &UserContent,
     format: MediaWireFormat,
 ) -> Result<serde_json::Value, String> {
-    match (content, format) {
-        (UserContent::Text { text }, _) => Ok(serde_json::json!({"type": "text", "text": text})),
-        (UserContent::Image { data, mime_type }, MediaWireFormat::Pi) => {
+    match content {
+        UserContent::Text { text } => Ok(serde_json::json!({"type":"text","text":text})),
+        UserContent::Image { data, mime_type } => encode_image(data, mime_type, format),
+        UserContent::Video { data, mime_type } => encode_video(data, mime_type, format),
+        UserContent::Audio { data, mime_type } => encode_audio(data, mime_type, format),
+    }
+}
+
+fn unsupported_media(format: MediaWireFormat) -> Result<serde_json::Value, String> {
+    Err(format!(
+        "selected provider wire format does not support media: {}",
+        format.wire_name()
+    ))
+}
+
+fn encode_image(
+    data: &str,
+    mime_type: &str,
+    format: MediaWireFormat,
+) -> Result<serde_json::Value, String> {
+    match format {
+        MediaWireFormat::Pi => {
             Ok(serde_json::json!({"type":"image","data":data,"mimeType":mime_type}))
         }
-        (UserContent::Image { data, mime_type }, MediaWireFormat::OpenAiChat) => Ok(
+        MediaWireFormat::OpenAiChat => Ok(
             serde_json::json!({"type":"image_url","image_url":{"url":format!("data:{mime_type};base64,{data}")}}),
         ),
-        (UserContent::Video { data, mime_type }, MediaWireFormat::OpenAiChat) => Ok(
-            serde_json::json!({"type":"video_url","video_url":{"url":format!("data:{mime_type};base64,{data}")}}),
-        ),
-        (UserContent::Audio { data, mime_type }, MediaWireFormat::OpenAiChat) => Ok(
-            serde_json::json!({"type":"audio_url","audio_url":{"url":format!("data:{mime_type};base64,{data}")}}),
-        ),
-        (UserContent::Image { data, mime_type }, MediaWireFormat::OpenAiResponses) => Ok(
+        MediaWireFormat::OpenAiResponses => Ok(
             serde_json::json!({"type":"input_image","image_url":format!("data:{mime_type};base64,{data}")}),
         ),
-        (UserContent::Image { data, mime_type }, MediaWireFormat::Gemini)
-        | (UserContent::Video { data, mime_type }, MediaWireFormat::Gemini)
-        | (UserContent::Audio { data, mime_type }, MediaWireFormat::Gemini) => {
+        MediaWireFormat::Gemini => {
             Ok(serde_json::json!({"inline_data":{"mime_type":mime_type,"data":data}}))
         }
-        (UserContent::Image { data, mime_type }, MediaWireFormat::Anthropic) => Ok(
+        MediaWireFormat::Anthropic => Ok(
             serde_json::json!({"type":"image","source":{"type":"base64","media_type":mime_type,"data":data}}),
         ),
-        (UserContent::Video { data, mime_type }, MediaWireFormat::Anthropic) => Ok(
+    }
+}
+
+fn encode_video(
+    data: &str,
+    mime_type: &str,
+    format: MediaWireFormat,
+) -> Result<serde_json::Value, String> {
+    match format {
+        MediaWireFormat::Pi => encode_pi_media(&UserContent::Video {
+            data: data.into(),
+            mime_type: mime_type.into(),
+        }),
+        MediaWireFormat::OpenAiChat => Ok(
+            serde_json::json!({"type":"video_url","video_url":{"url":format!("data:{mime_type};base64,{data}")}}),
+        ),
+        MediaWireFormat::Gemini => {
+            Ok(serde_json::json!({"inline_data":{"mime_type":mime_type,"data":data}}))
+        }
+        MediaWireFormat::Anthropic => Ok(
             serde_json::json!({"type":"video","source":{"type":"base64","media_type":mime_type,"data":data}}),
         ),
-        (UserContent::Video { .. } | UserContent::Audio { .. }, MediaWireFormat::Pi) => {
-            encode_pi_media(content)
+        MediaWireFormat::OpenAiResponses => unsupported_media(format),
+    }
+}
+
+fn encode_audio(
+    data: &str,
+    mime_type: &str,
+    format: MediaWireFormat,
+) -> Result<serde_json::Value, String> {
+    match format {
+        MediaWireFormat::Pi => encode_pi_media(&UserContent::Audio {
+            data: data.into(),
+            mime_type: mime_type.into(),
+        }),
+        MediaWireFormat::OpenAiChat => Ok(
+            serde_json::json!({"type":"audio_url","audio_url":{"url":format!("data:{mime_type};base64,{data}")}}),
+        ),
+        MediaWireFormat::OpenAiResponses => encode_responses_audio(data, mime_type),
+        MediaWireFormat::Gemini => {
+            Ok(serde_json::json!({"inline_data":{"mime_type":mime_type,"data":data}}))
         }
-        (UserContent::Audio { .. } | UserContent::Video { .. }, _) => {
-            Err("selected provider wire format does not support this media content".into())
-        }
+        MediaWireFormat::Anthropic => unsupported_media(format),
     }
 }
 
 fn encode_pi_media(content: &UserContent) -> Result<serde_json::Value, String> {
     serde_json::to_value(content).map_err(|error| format!("encode Pi media content: {error}"))
+}
+
+fn encode_responses_audio(data: &str, mime_type: &str) -> Result<serde_json::Value, String> {
+    let filename = match mime_type {
+        "audio/mp3" | "audio/mpeg" => "inline.mp3",
+        "audio/wav" | "audio/x-wav" => "inline.wav",
+        _ => {
+            return Err(format!(
+                "unsupported Responses audio MIME type: {mime_type}"
+            ))
+        }
+    };
+    Ok(serde_json::json!({"type":"input_file","file_data":data,"filename":filename}))
 }
 
 /// Encode an entire user turn as an ordered provider payload. Keeping the
@@ -202,6 +261,22 @@ mod tests {
             "data:audio/mpeg;base64,aGVsbG8="
         );
         assert!(MediaWireFormat::OpenAiChat.supports_audio());
+    }
+
+    #[test]
+    fn openai_responses_audio_encoding_uses_inline_file_data() {
+        let content = UserContent::Audio {
+            data: "aGVsbG8=".into(),
+            mime_type: "audio/mpeg".into(),
+        };
+        let encoded = encode_user_content(&content, MediaWireFormat::OpenAiResponses).unwrap();
+        assert_eq!(
+            encoded,
+            serde_json::json!({
+                "type": "input_file", "file_data": "aGVsbG8=", "filename": "inline.mp3"
+            })
+        );
+        assert!(MediaWireFormat::OpenAiResponses.supports_audio());
     }
 
     #[test]
