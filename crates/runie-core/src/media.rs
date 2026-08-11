@@ -134,7 +134,6 @@ fn encode_video_url(url: &str, format: MediaWireFormat) -> Result<serde_json::Va
         _ => unsupported_media(format),
     }
 }
-
 fn encode_audio_url(url: &str, format: MediaWireFormat) -> Result<serde_json::Value, String> {
     validate_media_url(url)?;
     match format {
@@ -145,10 +144,10 @@ fn encode_audio_url(url: &str, format: MediaWireFormat) -> Result<serde_json::Va
         MediaWireFormat::OpenAiResponses => {
             Ok(serde_json::json!({"type":"input_file","file_url":url}))
         }
+        MediaWireFormat::Anthropic => Ok(omitted_media("audio")),
         _ => unsupported_media(format),
     }
 }
-
 fn validate_media_url(url: &str) -> Result<(), String> {
     if url.starts_with("http://") || url.starts_with("https://") || url.starts_with("data:") {
         Ok(())
@@ -156,7 +155,6 @@ fn validate_media_url(url: &str) -> Result<(), String> {
         Err("media URL must use http, https, or data scheme".into())
     }
 }
-
 fn encode_audio(
     data: &str,
     mime_type: &str,
@@ -177,11 +175,9 @@ fn encode_audio(
         MediaWireFormat::Anthropic => Ok(omitted_media("audio")),
     }
 }
-
 fn encode_pi_media(content: &UserContent) -> Result<serde_json::Value, String> {
     serde_json::to_value(content).map_err(|error| format!("encode Pi media content: {error}"))
 }
-
 fn encode_responses_audio(data: &str, mime_type: &str) -> Result<serde_json::Value, String> {
     let filename = match mime_type {
         "audio/mp3" | "audio/mpeg" => "inline.mp3",
@@ -296,6 +292,10 @@ mod tests {
         assert_eq!(image_payload["image_url"], "https://example.test/image.png");
         let audio_payload = encode_user_content(&audio, MediaWireFormat::OpenAiResponses).unwrap();
         assert_eq!(audio_payload["file_url"], "https://example.test/audio.mp3");
+        assert_eq!(
+            encode_user_content(&audio, MediaWireFormat::Anthropic).unwrap()["text"],
+            "(audio omitted: not supported by this provider)"
+        );
         let video_payload = encode_user_content(&video, MediaWireFormat::OpenAiChat).unwrap();
         assert_eq!(
             video_payload["video_url"]["url"],
