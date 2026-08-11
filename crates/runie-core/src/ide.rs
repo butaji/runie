@@ -1,10 +1,10 @@
-//! Renderer-neutral IDE protocol projection.
-//! Transport adapters (ACP, JSON-RPC, or editor bridges) emit these events;
-//! the reducer owns no sockets and is deterministic under replay.
-
 use std::collections::BTreeMap;
 
 pub const IDE_INVALID_REQUEST_CODE: i64 = -32_600;
+pub const IDE_MAX_FRAME_BYTES: usize = 1024 * 1024;
+#[path = "ide_wire.rs"]
+mod ide_wire;
+pub use ide_wire::IdeWireBuffer;
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(untagged)]
@@ -125,6 +125,19 @@ impl IdeActor {
 
     pub async fn apply_rpc(&self, method: &str, params: serde_json::Value) -> Result<(), String> {
         self.apply(ide_event_from_rpc(method, params)?).await
+    }
+
+    pub async fn apply_wire_frames(
+        &self,
+        buffer: &mut IdeWireBuffer,
+        bytes: &str,
+    ) -> Result<usize, String> {
+        let frames = buffer.push(bytes)?;
+        for frame in &frames {
+            let request = decode_ide_request(frame)?;
+            self.apply_rpc(&request.method, request.params).await?;
+        }
+        Ok(frames.len())
     }
 
     pub async fn snapshot(&self) -> Result<IdeSnapshot, String> {
@@ -405,6 +418,29 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(actor.snapshot().await.unwrap().documents.len(), 1);
+    }
+
+    #[test]
+    fn ide_wire_buffer_replays_split_and_multiple_frames() {
+        let mut buffer = IdeWireBuffer::default();
+        let first =
+            r#"{"jsonrpc":"2.0","id":1,"method":"initialized","params":{"workspace":"/w"}}"#;
+        let second = r#"{"jsonrpc":"2.0","id":2,"method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///a","languageId":"rust","version":1,"text":"fn main() {}"}}}"#;
+        assert!(buffer.push(&first[..20]).unwrap().is_empty());
+        let frames = buffer
+            .push(&format!("{}\n{}\n", &first[20..], second))
+            .unwrap();
+        assert_eq!(frames, [first, second]);
+        assert_eq!(buffer.pending_bytes(), 0);
+    }
+
+    #[test]
+    fn ide_wire_buffer_rejects_unbounded_incomplete_frames() {
+        let mut buffer = IdeWireBuffer::default();
+        let error = buffer
+            .push(&"x".repeat(IDE_MAX_FRAME_BYTES + 1))
+            .unwrap_err();
+        assert!(error.contains("bounded byte limit"));
     }
 
     #[test]
