@@ -335,3 +335,31 @@
         let decoded: SessionLaneQuery = serde_json::from_str(&encoded).unwrap();
         assert_eq!(decoded, query);
     }
+
+    #[test]
+    fn entry_queries_round_trip_as_replay_data() {
+        let entry = SessionEntryQuery {
+            lane: Some("main".into()),
+            record_type: Some("message".into()),
+            custom_type: Some("runie.note".into()),
+            after_seq: Some(2),
+            newest_first: true,
+            limit: Some(4),
+        };
+        let branch = SessionBranchEntryQuery {
+            start: "entry-3".into(),
+            lane: Some("main".into()),
+            stop_at_type: Some("compaction".into()),
+            stop_at_id: Some("entry-1".into()),
+            record_type: Some("message".into()),
+            custom_type: None,
+            newest_first: false,
+            limit: Some(8),
+        };
+        let entry_json = serde_json::to_string(&entry).unwrap();
+        let branch_json = serde_json::to_string(&branch).unwrap();
+        let decoded_entry: SessionEntryQuery = serde_json::from_str(&entry_json).unwrap();
+        let decoded_branch: SessionBranchEntryQuery = serde_json::from_str(&branch_json).unwrap();
+        assert_eq!(decoded_entry, entry);
+        assert_eq!(decoded_branch, branch);
+    }

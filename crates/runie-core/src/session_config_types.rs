@@ -195,7 +195,7 @@ session_record_types! {
 }
 
 /// Declarative equivalent of Pi's `EntryQuery`.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct SessionEntryQuery {
     /// Restrict message entries to one actor-owned session lane. Configuration
     /// records remain in the shared journal namespace.
@@ -209,7 +209,7 @@ pub struct SessionEntryQuery {
 
 /// Declarative Pi branch query. `start` is required; callers cannot silently
 /// fall back to the current leaf when asking for a specific branch.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct SessionBranchEntryQuery {
     pub start: String,
     /// Restrict message entries to the actor-owned session lane. Configuration
