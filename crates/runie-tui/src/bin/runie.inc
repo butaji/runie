@@ -327,6 +327,15 @@ fn minimax_tool_definitions(context: &AgentContext) -> Option<Vec<serde_json::Va
 }
 
 fn minimax_error(payload: &serde_json::Value, status: reqwest::StatusCode) -> StreamError {
+    let message = minimax_failure_message(payload, "Minimax request failed");
+    StreamError::Provider {
+        message,
+        status: Some(status.as_u16()),
+        headers: std::collections::HashMap::new(),
+    }
+}
+
+fn minimax_failure_message(payload: &serde_json::Value, fallback: &str) -> String {
     let message = payload
         .pointer("/base_resp/status_msg")
         .and_then(serde_json::Value::as_str)
@@ -335,12 +344,10 @@ fn minimax_error(payload: &serde_json::Value, status: reqwest::StatusCode) -> St
                 .pointer("/error/message")
                 .and_then(serde_json::Value::as_str)
         })
-        .unwrap_or("Minimax request failed");
-    StreamError::Provider {
-        message: message.into(),
-        status: Some(status.as_u16()),
-        headers: std::collections::HashMap::new(),
-    }
+        .unwrap_or(fallback);
+    minimax_status_code(payload)
+        .filter(|code| *code != 0)
+        .map_or_else(|| message.to_owned(), |code| format!("Minimax error {code}: {message}"))
 }
 
 fn minimax_status_code(payload: &serde_json::Value) -> Option<i64> {
@@ -663,13 +670,7 @@ fn minimax_stream_failure(payload: &serde_json::Value) -> Option<String> {
     if !minimax_status_code(payload).is_some_and(|code| code != 0) {
         return None;
     }
-    Some(
-        payload
-            .pointer("/base_resp/status_msg")
-            .and_then(serde_json::Value::as_str)
-            .unwrap_or("Minimax stream request failed")
-            .to_owned(),
-    )
+    Some(minimax_failure_message(payload, "Minimax stream request failed"))
 }
 
 fn update_minimax_usage(usage: &mut Usage, payload: &serde_json::Value) {
@@ -2961,6 +2962,17 @@ mod tests {
             })),
             Some(0)
         );
+    }
+
+    #[test]
+    fn minimax_failures_preserve_provider_codes() {
+        let message = super::minimax_failure_message(
+            &serde_json::json!({
+                "base_resp": {"status_code": 1004, "status_msg": "invalid key"}
+            }),
+            "fallback",
+        );
+        assert_eq!(message, "Minimax error 1004: invalid key");
     }
 
     #[test]
