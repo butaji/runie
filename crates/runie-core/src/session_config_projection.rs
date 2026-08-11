@@ -19,6 +19,16 @@ pub struct CompactionSettings {
     pub keep_recent_tokens: u64,
 }
 
+impl Default for CompactionSettings {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            reserve_tokens: 20_000,
+            keep_recent_tokens: 20,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum CompactionDecision {
     Disabled,

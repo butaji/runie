@@ -293,11 +293,7 @@ impl App {
                     ),
                 ];
                 let context_window = model.as_ref().map(|model| model.context_window).unwrap_or(0);
-                let settings = runie_core::session::CompactionSettings {
-                    enabled: true,
-                    reserve_tokens: 20_000,
-                    keep_recent_tokens: 20,
-                };
+                let settings = runie_core::session::CompactionSettings::default();
                 lines.extend(
                     runie_core::session::compaction_decision(
                         estimate.tokens,

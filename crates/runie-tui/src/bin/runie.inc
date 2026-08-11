@@ -1381,8 +1381,6 @@ fn restore_terminal(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result
 
 async fn build_live_app() -> App {
     const PRODUCTION_CONTEXT_WINDOW: u64 = 128_000;
-    const PRODUCTION_RESERVE_TOKENS: u64 = 20_000;
-    const PRODUCTION_KEEP_RECENT_TOKENS: u64 = 20;
     let bus = EventBus::new();
     let question_broker = runie_core::tools::UserQuestionBroker::default();
     let approval_mode = runie_core::tools::ApprovalModeStore::default();
@@ -1442,11 +1440,7 @@ async fn build_live_app() -> App {
                 let context_window = (model.context_window > 0)
                     .then_some(model.context_window)
                     .unwrap_or(PRODUCTION_CONTEXT_WINDOW);
-                let settings = runie_core::session::CompactionSettings {
-                    enabled: true,
-                    reserve_tokens: PRODUCTION_RESERVE_TOKENS,
-                    keep_recent_tokens: PRODUCTION_KEEP_RECENT_TOKENS,
-                };
+                let settings = runie_core::session::CompactionSettings::default();
                 if !runie_core::session::should_compact(
                     estimate.tokens,
                     context_window,
@@ -1461,7 +1455,7 @@ async fn build_live_app() -> App {
                     .map(|entry| runie_core::session::estimate_message_tokens(&entry.message))
                     .collect();
                 let Some(preparation) = session
-                    .prepare_compaction(token_estimates, PRODUCTION_KEEP_RECENT_TOKENS)
+                    .prepare_compaction(token_estimates, settings.keep_recent_tokens)
                     .await?
                 else {
                     return Ok(context);

@@ -397,6 +397,18 @@
     }
 
     #[test]
+    fn compaction_defaults_are_one_replayable_policy_value() {
+        assert_eq!(
+            CompactionSettings::default(),
+            CompactionSettings {
+                enabled: true,
+                reserve_tokens: 20_000,
+                keep_recent_tokens: 20,
+            }
+        );
+    }
+
+    #[test]
     fn compaction_recovery_plan_is_typed_and_replayable() {
         let settings = CompactionSettings {
             enabled: true,
