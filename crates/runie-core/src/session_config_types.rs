@@ -4,7 +4,7 @@ use crate::types::{AgentMessage, ThinkingLevel};
 /// Pi session configuration changes which are journal facts but not
 /// `AgentMessage` values. They are kept separate from the message projection
 /// until the complete JSONL record union is migrated.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum SessionConfigRecord {
     ModelChanged {
         provider: String,
@@ -122,7 +122,7 @@ macro_rules! session_config_record {
     }};
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct SessionConfigEntry {
     pub id: String,
     /// Canonical Pi session-lane identity for configuration facts.
@@ -140,7 +140,7 @@ pub struct SessionLaneFact {
     pub leaf_id: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct SessionEntry {
     pub id: String,
     /// Canonical Pi session-lane identity for this message entry.
@@ -156,7 +156,7 @@ pub struct SessionEntry {
 }
 
 /// One ordered Pi session entry returned by the declarative entry query.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum SessionEntryRecord {
     Message(Box<SessionEntry>),
     Config(Box<SessionConfigEntry>),
@@ -235,7 +235,7 @@ pub struct SessionStats {
 }
 
 /// Ordered durable items returned by the Pi-compatible session log query.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum SessionLogItem {
     Entry {
         seq: u64,
@@ -300,7 +300,7 @@ pub struct OperationErrorSnapshot {
 }
 
 /// Lossless actor-owned projection of an admitted Pi operation-lane record.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct SessionLaneRecordSnapshot {
     pub record_type: String,
     pub id: String,
@@ -313,7 +313,7 @@ pub struct SessionLaneRecordSnapshot {
 /// Lossless internal boundary for Pi lane records. Known families use the
 /// validated typed union; extension records remain explicitly opaque instead
 /// of leaking a bare `(record_type, data)` pair into actor consumers.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum SessionLaneRecordEnvelope {
     Known(SessionLaneRecord),
     Opaque {

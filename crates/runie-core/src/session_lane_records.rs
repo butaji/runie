@@ -1,7 +1,7 @@
 /// Typed internal representation of a Pi operation-lane fact. The payload is
 /// deliberately retained losslessly because Pi may add fields without a
 /// Runie release; only the family is closed over here.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum SessionLaneRecord {
     OperationStarted(serde_json::Value),
     AbortRequested(serde_json::Value),

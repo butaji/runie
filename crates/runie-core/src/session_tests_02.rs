@@ -154,6 +154,24 @@
     }
 
     #[test]
+    fn session_lane_record_projection_round_trips_as_replay_data() {
+        let record = SessionLaneRecordSnapshot {
+            record_type: "tool_started".into(),
+            id: "op-1".into(),
+            lane: Some("main".into()),
+            seq: Some(3),
+            timestamp: Some(9),
+            data: serde_json::json!({"tool":"read"}),
+        };
+        let encoded = serde_json::to_string(&record).unwrap();
+        let decoded: SessionLaneRecordSnapshot = serde_json::from_str(&encoded).unwrap();
+        assert_eq!(decoded, record);
+        let typed = SessionLaneRecord::ToolStarted(record.data.clone());
+        let typed_json = serde_json::to_string(&typed).unwrap();
+        assert_eq!(serde_json::from_str::<SessionLaneRecord>(&typed_json).unwrap(), typed);
+    }
+
+    #[test]
 fn session_lane_metadata_requires_a_complete_positive_storage_tuple() {
         let valid = serde_json::json!({
             "id": "op-1", "lane": "main", "seq": 1, "timestamp": 7
