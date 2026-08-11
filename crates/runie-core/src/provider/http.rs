@@ -60,8 +60,9 @@ effort_wire_fields! {
 /// Keeping aliases in one table lets adapters share the same model metadata
 /// boundary without duplicating provider-name conditionals.
 macro_rules! provider_request_profiles {
-    ($(($variant:ident, [$($alias:literal),+], $field:ident)),+ $(,)?) => {
-        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    ($(($variant:ident, $wire:literal, [$($alias:literal),+], $field:ident)),+ $(,)?) => {
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+        #[serde(rename_all = "kebab-case")]
         pub enum ProviderRequestProfile {
             $($variant),+
         }
@@ -69,6 +70,14 @@ macro_rules! provider_request_profiles {
         impl ProviderRequestProfile {
             pub const fn effort_field(self) -> EffortWireField {
                 match self { $(Self::$variant => EffortWireField::$field,)+ }
+            }
+
+            pub const fn wire_name(self) -> &'static str {
+                match self { $(Self::$variant => $wire,)+ }
+            }
+
+            pub fn from_wire_name(name: &str) -> Option<Self> {
+                match name { $($wire => Some(Self::$variant),)+ _ => None }
             }
 
             pub fn for_model(model: &Model) -> Self {
@@ -84,12 +93,12 @@ macro_rules! provider_request_profiles {
 }
 
 provider_request_profiles! {
-    (OpenAiResponses, ["openai-responses", "responses"], ReasoningEffort),
-    (OpenAiChat, ["openai-chat", "openai", "chat"], ReasoningEffort),
-    (Anthropic, ["anthropic", "claude"], Reasoning),
-    (Gemini, ["gemini", "google"], Reasoning),
-    (MiniMax, ["minimax"], ReasoningEffort),
-    (Generic, ["__generic__"], ReasoningEffort),
+    (OpenAiResponses, "openai-responses", ["openai-responses", "responses"], ReasoningEffort),
+    (OpenAiChat, "openai-chat", ["openai-chat", "openai", "chat"], ReasoningEffort),
+    (Anthropic, "anthropic", ["anthropic", "claude"], Reasoning),
+    (Gemini, "gemini", ["gemini", "google"], Reasoning),
+    (MiniMax, "minimax", ["minimax"], ReasoningEffort),
+    (Generic, "generic", ["__generic__"], ReasoningEffort),
 }
 
 #[async_trait::async_trait]

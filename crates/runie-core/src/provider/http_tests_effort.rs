@@ -26,6 +26,30 @@ fn provider_profile_selects_wire_field_from_model_aliases() {
 }
 
 #[test]
+fn provider_profiles_are_stable_replay_data() {
+    for profile in [
+        super::ProviderRequestProfile::OpenAiResponses,
+        super::ProviderRequestProfile::OpenAiChat,
+        super::ProviderRequestProfile::Anthropic,
+        super::ProviderRequestProfile::Gemini,
+        super::ProviderRequestProfile::MiniMax,
+        super::ProviderRequestProfile::Generic,
+    ] {
+        let encoded = serde_json::to_string(&profile).unwrap();
+        let decoded: super::ProviderRequestProfile = serde_json::from_str(&encoded).unwrap();
+        assert_eq!(decoded, profile);
+        assert_eq!(
+            super::ProviderRequestProfile::from_wire_name(profile.wire_name()),
+            Some(profile)
+        );
+    }
+    assert_eq!(
+        super::ProviderRequestProfile::from_wire_name("unknown"),
+        None
+    );
+}
+
+#[test]
 fn every_declared_effort_level_maps_without_inventing_unsupported_values() {
     let model = Model {
         thinking_level_map: Some(crate::types::ThinkingLevelMap {
