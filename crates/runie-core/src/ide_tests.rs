@@ -354,3 +354,43 @@ async fn ide_tcp_connector_owns_a_real_loopback_stream() {
     let transport = transport.unwrap();
     transport.close().await;
 }
+
+#[tokio::test]
+async fn ide_connector_retries_through_bounded_policy_without_test_sleep() {
+    use std::sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    };
+    let attempts = Arc::new(AtomicUsize::new(0));
+    let actor = IdeActor::new();
+    let policy = IdeReconnectPolicy {
+        max_attempts: 3,
+        base_delay_ms: 0,
+        max_delay_ms: 0,
+    };
+    let attempts_for_connector = attempts.clone();
+    let transport = IdeTransport::connect_with_retry(
+        IdeEndpoint::Unix {
+            path: "/tmp/runie.sock".into(),
+        },
+        actor,
+        policy,
+        move |_endpoint, _actor| {
+            let attempts = attempts_for_connector.fetch_add(1, Ordering::Relaxed);
+            async move {
+                if attempts < 2 {
+                    Err("not ready".into())
+                } else {
+                    Ok(IdeTransport::from_stream(
+                        tokio::io::duplex(1).0,
+                        IdeActor::new(),
+                    ))
+                }
+            }
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(attempts.load(Ordering::Relaxed), 3);
+    transport.close().await;
+}

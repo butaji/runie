@@ -58,6 +58,35 @@ impl IdeTransport {
         }
     }
 
+    pub async fn connect_with_retry<F, Fut>(
+        endpoint: IdeEndpoint,
+        actor: IdeActor,
+        policy: IdeReconnectPolicy,
+        mut connector: F,
+    ) -> Result<Self, String>
+    where
+        F: FnMut(IdeEndpoint, IdeActor) -> Fut,
+        Fut: std::future::Future<Output = Result<Self, String>>,
+    {
+        let mut state = IdeReconnectState::default();
+        loop {
+            match connector(endpoint.clone(), actor.clone()).await {
+                Ok(transport) => return Ok(transport),
+                Err(error) => match state.disconnected(policy) {
+                    (next, IdeReconnectDecision::RetryAfter { delay_ms }) => {
+                        state = next;
+                        if delay_ms > 0 {
+                            tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
+                        }
+                    }
+                    (_, IdeReconnectDecision::Exhausted) => {
+                        return Err(format!("IDE reconnect exhausted: {error}"));
+                    }
+                },
+            }
+        }
+    }
+
     pub fn from_stream<S>(stream: S, actor: IdeActor) -> Self
     where
         S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Send + Unpin + 'static,
