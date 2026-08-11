@@ -165,7 +165,7 @@ fn decode_provider_response(
     }
     let value: serde_json::Value = serde_json::from_str(body)
         .map_err(|error| format!("invalid web search response: {error}"))?;
-    let Some(results) = value.get("results").and_then(serde_json::Value::as_array) else {
+    let Some(results) = provider_results(&value, format) else {
         return Err("provider web search response has no results array".into());
     };
     let results = results
@@ -189,6 +189,21 @@ fn decode_provider_response(
         .and_then(serde_json::Value::as_str)
         .map(bounded_answer);
     Ok(WebSearchResponse { results, answer })
+}
+
+fn provider_results(
+    value: &serde_json::Value,
+    format: WebSearchWireFormat,
+) -> Option<&[serde_json::Value]> {
+    let value = if matches!(format, WebSearchWireFormat::Brave) {
+        value
+            .get("web")
+            .and_then(|web| web.get("results"))
+            .or_else(|| value.get("results"))?
+    } else {
+        value.get("results")?
+    };
+    value.as_array().map(Vec::as_slice)
 }
 
 fn bounded_answer(answer: &str) -> String {
@@ -338,6 +353,16 @@ mod tests {
         assert_eq!(brave.results[0].snippet, "brave");
         assert_eq!(tavily.results[0].snippet, "tavily");
         assert_eq!(tavily.answer.as_deref(), Some("Rust is a systems language"));
+    }
+
+    #[test]
+    fn brave_nested_web_results_normalize_as_source_data() {
+        let response = decode_provider_response(
+            r#"{"web":{"results":[{"title":"Rust","url":"https://rust-lang.org","description":"nested"}]}}"#,
+            WebSearchWireFormat::Brave,
+        )
+        .unwrap();
+        assert_eq!(response.results[0].snippet, "nested");
     }
 
     #[test]
