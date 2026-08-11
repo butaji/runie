@@ -6,6 +6,10 @@ pub const MAX_JSONL_PROVIDER_EVENTS: usize = 4_096;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
+#[allow(
+    clippy::large_enum_variant,
+    reason = "Provider events stay lossless and typed at the JSONL boundary"
+)]
 pub enum JsonlEvent {
     Started {
         run_id: String,

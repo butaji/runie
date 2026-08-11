@@ -139,6 +139,12 @@ impl IdeActor {
     }
 }
 
+impl Default for IdeActor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl IdeSnapshot {
     /// Apply one host-owned JSON-RPC notification through the typed event
     /// boundary. Socket lifecycle remains outside the reducer actor.

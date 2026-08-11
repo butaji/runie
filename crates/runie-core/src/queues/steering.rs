@@ -131,7 +131,7 @@ async fn run_steering_worker(
                 publish(&snapshot_tx, &shared_tx, queue.len());
             }
             SteeringCommand::DrainOne(reply) => {
-                let popped = queue.first().is_some().then(|| queue.remove(0).1);
+                let popped = (!queue.is_empty()).then(|| queue.remove(0).1);
                 let _ = reply.send(popped).await;
                 publish(&snapshot_tx, &shared_tx, queue.len());
             }

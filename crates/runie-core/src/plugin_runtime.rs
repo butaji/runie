@@ -12,7 +12,7 @@ pub enum PluginRuntimeStatus {
     Unloaded,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, Default)]
 pub struct PluginRuntimeState {
     pub status: BTreeMap<String, PluginRuntimeStatus>,
     pub errors: BTreeMap<String, String>,
@@ -46,16 +46,6 @@ impl PluginRuntimeState {
             }
         }
         lines
-    }
-}
-
-impl Default for PluginRuntimeState {
-    fn default() -> Self {
-        Self {
-            status: BTreeMap::new(),
-            errors: BTreeMap::new(),
-            executions: BTreeMap::new(),
-        }
     }
 }
 

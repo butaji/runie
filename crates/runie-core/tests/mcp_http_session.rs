@@ -35,6 +35,10 @@ async fn http_transport_posts_json_and_decodes_response() {
 }
 
 #[tokio::test]
+#[allow(
+    clippy::too_many_lines,
+    reason = "The test is a complete transport lifecycle trace"
+)]
 async fn http_session_reuses_and_closes_server_session() {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let address = listener.local_addr().unwrap();
@@ -82,6 +86,10 @@ async fn http_session_reuses_and_closes_server_session() {
 }
 
 #[tokio::test]
+#[allow(
+    clippy::too_many_lines,
+    reason = "The test is a complete actor-owned transport lifecycle trace"
+)]
 async fn http_actor_serializes_session_and_closes_owned_transport() {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let address = listener.local_addr().unwrap();

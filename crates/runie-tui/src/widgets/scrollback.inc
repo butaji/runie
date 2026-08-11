@@ -1146,7 +1146,7 @@ impl Scrollback {
             return None;
         }
         let (id, tool_row_id, member_index) = self.tool_row_identity(kind, text, occurrence)?;
-        rows.into_iter()
+        rows.iter()
             .find(|row| {
                 row.tool_call_id == id
                     && row.tool_row_id == tool_row_id

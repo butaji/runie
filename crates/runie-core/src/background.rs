@@ -13,6 +13,7 @@ mod controls;
 pub const BACKGROUND_OUTPUT_MAX_BYTES: usize = 100 * 1024;
 const OUTPUT_TRUNCATION_MARKER: &str = "\n[output truncated]";
 const BACKGROUND_PREVIEW_MAX_CHARS: usize = 256;
+type BackgroundTask = (String, Result<(String, Option<i32>), (String, Option<i32>)>);
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BackgroundStatus {
@@ -274,7 +275,7 @@ fn handle_message(
     message: Option<Message>,
     jobs: &mut BTreeMap<String, BackgroundJob>,
     handles: &mut BTreeMap<String, tokio::task::AbortHandle>,
-    tasks: &mut JoinSet<(String, Result<(String, Option<i32>), (String, Option<i32>)>)>,
+    tasks: &mut JoinSet<BackgroundTask>,
     publisher: &BackgroundSnapshotPublisher,
     next_id: &mut u64,
 ) -> bool {
@@ -298,7 +299,7 @@ fn handle_start(
     reply: oneshot::Sender<Result<String, String>>,
     jobs: &mut BTreeMap<String, BackgroundJob>,
     handles: &mut BTreeMap<String, tokio::task::AbortHandle>,
-    tasks: &mut JoinSet<(String, Result<(String, Option<i32>), (String, Option<i32>)>)>,
+    tasks: &mut JoinSet<BackgroundTask>,
     publisher: &BackgroundSnapshotPublisher,
     next_id: &mut u64,
 ) {

@@ -1,14 +1,4 @@
 //! `App` — the top-level TUI controller.
-
-use crossterm::event::KeyEvent;
-use ratatui::buffer::Buffer;
-use ratatui::layout::Rect;
-use runie_core::commands::{BuiltinCommandDisposition, MappableBuiltinCommand};
-use runie_core::events::EventBus;
-use runie_core::r#loop::LoopActor;
-use runie_core::types::{AgentEvent, AgentMessage, AgentTool, Model};
-use tokio::sync::{broadcast, mpsc, watch};
-
 use crate::event_renderer::EventRenderer;
 use crate::layout::chat_layout_with_prompt_height;
 use crate::scrollback_actor::ScrollbackActor;
@@ -21,9 +11,17 @@ use crate::widgets::{
     FeedSnapshot, PromptOutcome, PromptSnapshot, PromptWidget, Scrollback, Status, StatusBar,
     StatusSnapshot, TuiSnapshot,
 };
+use crossterm::event::KeyEvent;
+use ratatui::buffer::Buffer;
+use ratatui::layout::Rect;
+use runie_core::commands::{BuiltinCommandDisposition, MappableBuiltinCommand};
+use runie_core::events::EventBus;
+use runie_core::r#loop::LoopActor;
 use runie_core::session::{SessionActor, SessionSnapshot, SessionStorageActor};
+use runie_core::types::{AgentEvent, AgentMessage, AgentTool, Model};
 use runie_tui_model::project_event;
 pub use runie_tui_model::{ui_messages_for_event, UiCommand, UiMsg, UiState};
+use tokio::sync::{broadcast, mpsc, watch};
 
 #[derive(Debug)]
 pub enum AppExit {
@@ -107,6 +105,7 @@ impl UiActor {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn run_ui_actor(
     mut rx: mpsc::Receiver<UiMailbox>,
     mut events: broadcast::Receiver<AgentEvent>,

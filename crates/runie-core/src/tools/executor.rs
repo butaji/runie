@@ -147,14 +147,14 @@ pub async fn execute_parallel(calls: Vec<ToolCall>, ctx: ToolExecContext) -> Dis
     execute_parallel_batch(batches.into_iter().next().unwrap_or_default(), &ctx).await
 }
 async fn execute_parallel_batch(calls: Vec<ToolCall>, ctx: &ToolExecContext) -> DispatchOutcome {
-    let (preflighted, mut outcome, had_invalid) = preflight_calls(calls, &ctx);
+    let (preflighted, mut outcome, had_invalid) = preflight_calls(calls, ctx);
     if preflighted.is_empty() {
         outcome.all_terminated = !had_invalid;
         return outcome;
     }
 
     outcome.events.extend(preflighted.iter().map(tool_start));
-    let (completion_events, mut by_id) = run_parallel_calls(&preflighted, &ctx).await;
+    let (completion_events, mut by_id) = run_parallel_calls(&preflighted, ctx).await;
     outcome.events.extend(completion_events);
     // Emit toolResult messages in source order.
     let mut all_terminated = !by_id.is_empty();

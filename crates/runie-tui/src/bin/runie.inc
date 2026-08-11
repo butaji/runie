@@ -1235,6 +1235,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
+#[allow(clippy::too_many_lines, reason = "Noninteractive setup is one owned runtime boundary")]
 async fn run_noninteractive(config: NonInteractiveConfig) -> RunOutcome {
     let auto_approve = config.auto_approve;
     let prompt = match noninteractive_prompt(config.prompt).await {
@@ -1381,6 +1382,7 @@ fn restore_terminal(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result
     Ok(())
 }
 
+#[allow(clippy::too_many_lines, reason = "Live app assembly keeps all actor ownership wiring in one boundary")]
 async fn build_live_app() -> App {
     const PRODUCTION_CONTEXT_WINDOW: u64 = 128_000;
     let bus = EventBus::new();
@@ -1439,9 +1441,11 @@ async fn build_live_app() -> App {
             let provider = recovery_provider.clone();
             Box::pin(async move {
                 let estimate = runie_core::session::estimate_context_tokens(&context.messages);
-                let context_window = (model.context_window > 0)
-                    .then_some(model.context_window)
-                    .unwrap_or(PRODUCTION_CONTEXT_WINDOW);
+                let context_window = if model.context_window > 0 {
+                    model.context_window
+                } else {
+                    PRODUCTION_CONTEXT_WINDOW
+                };
                 let settings = runie_core::session::CompactionSettings::default();
                 if !runie_core::session::should_compact(
                     estimate.tokens,

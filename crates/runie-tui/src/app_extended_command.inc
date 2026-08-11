@@ -1,4 +1,5 @@
 impl App {
+    #[allow(clippy::cognitive_complexity, clippy::too_many_lines, reason = "The extended command registry is the single typed routing boundary")]
     async fn route_extended_command(&self, name: &str, args: &str) -> bool {
         if matches!(name, "clear" | "reset") && args.trim().is_empty() {
             self.session_actor.reset().await;

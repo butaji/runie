@@ -2,7 +2,6 @@ use super::{PromptActor, UiActor, UiMsg, UiState};
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
 use runie_core::events::EventBus;
 use runie_core::types::AgentEvent;
-
 #[test]
 fn ui_reducer_owns_welcome_and_shortcut_transitions() {
     let initial = UiState::with_welcome();
@@ -473,6 +472,7 @@ fn enqueue_ui_messages(
     replies
 }
 
+#[allow(clippy::too_many_arguments)]
 fn spawn_ui_test_actor(
     mailbox_rx: tokio::sync::mpsc::Receiver<super::UiMailbox>,
     event_rx: tokio::sync::broadcast::Receiver<AgentEvent>,

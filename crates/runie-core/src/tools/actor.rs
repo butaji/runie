@@ -44,6 +44,10 @@ pub enum ToolPriority {
     Interactive,
 }
 
+#[allow(
+    clippy::large_enum_variant,
+    reason = "Execute retains the complete actor-owned request while Metrics stays a small mailbox query"
+)]
 pub enum ToolCommand {
     Execute {
         assistant_message: AssistantMessage,

@@ -89,9 +89,7 @@ pub fn logical_tool_member_indices(lines: &[Line]) -> Vec<Option<usize>> {
         .iter()
         .enumerate()
         .map(|(line_index, line)| {
-            let Some(_) = line.tool_call_id else {
-                return None;
-            };
+            let _ = line.tool_call_id.as_ref()?;
             let key = tool_member_key(lines, line_index);
             let member_index = *indices.entry(key).or_insert_with(|| {
                 let index = next;

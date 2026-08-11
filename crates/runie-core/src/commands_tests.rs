@@ -186,6 +186,10 @@ fn assert_mappable_basics() {
 }
 
 #[test]
+#[allow(
+    clippy::cognitive_complexity,
+    reason = "This is one declarative parser acceptance matrix"
+)]
 fn background_job_command_accepts_only_cancel_and_one_id() {
     assert_eq!(parse_background_job_command("cancel 7"), Some("7"));
     assert_eq!(parse_background_job_command("cancel 7 extra"), None);

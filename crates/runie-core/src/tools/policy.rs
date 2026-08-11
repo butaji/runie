@@ -144,9 +144,10 @@ pub fn decide(mode: ApprovalMode, tool: &str) -> ApprovalDecision {
 
 pub fn decide_registered(mode: ApprovalMode, tool: &str, registered: bool) -> ApprovalDecision {
     let class = classify_tool(tool);
-    if matches!(mode, ApprovalMode::Auto | ApprovalMode::Yolo) || class == ToolClass::ReadOnly {
-        ApprovalDecision::Allow
-    } else if registered && mode != ApprovalMode::Deny {
+    if matches!(mode, ApprovalMode::Auto | ApprovalMode::Yolo)
+        || class == ToolClass::ReadOnly
+        || (registered && mode != ApprovalMode::Deny)
+    {
         ApprovalDecision::Allow
     } else if mode == ApprovalMode::Deny {
         ApprovalDecision::Deny {

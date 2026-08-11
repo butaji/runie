@@ -1,7 +1,5 @@
 //! Actor-owned transcript projection.
-
 use std::sync::Arc;
-
 use tokio::sync::{mpsc, oneshot, watch};
 
 use runie_core::types::AgentEvent;
@@ -14,6 +12,7 @@ use runie_tui_model::{FeedState, ScrollbackEvent};
 
 use crate::scrollback_projection::{run_bus_projection, OwnedEventProjection};
 
+#[allow(clippy::enum_variant_names)]
 pub(crate) enum Command {
     ApplyBatch(Vec<ScrollbackMsg>, oneshot::Sender<()>),
     ApplyGrouped(ScrollbackEvent, oneshot::Sender<()>),
@@ -51,6 +50,7 @@ async fn run_scrollback_worker(
             Command::ApplyEvent(event, reply) => (projection.messages(*event), reply),
         };
         for message in messages {
+            // FeedState owns the reducer seam: state.reduce(message).
             memo = memo.apply(message, |state, message| state.reduce(message.clone()));
         }
         let next_snapshot = memo.state().snapshot();

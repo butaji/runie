@@ -104,6 +104,10 @@ fn line_kind_prefix_pins_activity_rail() {
     assert_eq!(super::LineKind::Activity.prefix(), "❙  ");
 }
 #[test]
+#[allow(
+    clippy::cognitive_complexity,
+    reason = "This is one declarative predicate vocabulary matrix"
+)]
 fn line_kind_tool_predicates_share_the_declared_vocabulary() {
     for kind in [LineKind::Tool, LineKind::ToolRunning, LineKind::ToolError] {
         assert!(kind.is_tool_header());

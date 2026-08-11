@@ -346,7 +346,7 @@ impl McpStdioClient {
             .iter()
             .filter(|request| request.get("id").is_some())
             .count();
-        return read_responses(stdout, expected, self.timeout).await;
+        read_responses(stdout, expected, self.timeout).await
     }
 }
 

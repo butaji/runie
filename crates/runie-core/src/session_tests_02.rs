@@ -173,14 +173,16 @@
 
     #[test]
     fn session_snapshot_round_trips_as_replay_data() {
-        let mut snapshot = SessionSnapshot::default();
-        snapshot.sequence = 4;
-        snapshot.leaf_id = Some("entry-4".into());
-        snapshot.navigation = Some(NavigationSnapshot {
+        let mut snapshot = SessionSnapshot {
+            sequence: 4,
+            leaf_id: Some("entry-4".into()),
+            navigation: Some(NavigationSnapshot {
             target_id: Some("entry-2".into()),
             summarize: true,
             summary_entry_id: Some("summary-1".into()),
-        });
+            }),
+            ..Default::default()
+        };
         snapshot.operation_errors.insert(
             "op-1".into(),
             OperationErrorSnapshot { code: "E1".into(), message: "failed".into() },
