@@ -111,6 +111,24 @@ pub enum ApprovalDecision {
     Ask { reason: String },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ApprovalDecisionKind {
+    Allow,
+    Deny,
+    Ask,
+}
+
+impl ApprovalDecision {
+    pub const fn kind(&self) -> ApprovalDecisionKind {
+        match self {
+            Self::Allow => ApprovalDecisionKind::Allow,
+            Self::Deny { .. } => ApprovalDecisionKind::Deny,
+            Self::Ask { .. } => ApprovalDecisionKind::Ask,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ApprovalTrace {
     pub tool: String,
@@ -119,6 +137,10 @@ pub struct ApprovalTrace {
 }
 
 impl ApprovalTrace {
+    pub const fn decision_kind(&self) -> ApprovalDecisionKind {
+        self.decision.kind()
+    }
+
     pub fn terminal_line(&self) -> String {
         let decision = match &self.decision {
             ApprovalDecision::Allow => "allow".to_owned(),
@@ -302,5 +324,7 @@ mod tests {
             trace.terminal_line(),
             "approval write: ask (changes files) [Ask]"
         );
+        assert_eq!(trace.decision_kind(), ApprovalDecisionKind::Ask);
+        assert_eq!(serde_json::to_value(trace.decision_kind()).unwrap(), "ask");
     }
 }

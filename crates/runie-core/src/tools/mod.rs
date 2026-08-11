@@ -49,7 +49,8 @@ pub use mcp::{
 };
 pub use policy::{
     decide as approval_decision, decide_registered, record_approval_trace, reduce_approval_mode,
-    ApprovalDecision, ApprovalMode, ApprovalModeEvent, ApprovalModeStore, ApprovalTrace,
+    ApprovalDecision, ApprovalDecisionKind, ApprovalMode, ApprovalModeEvent, ApprovalModeStore,
+    ApprovalTrace,
 };
 pub use question_broker::{
     decode_question_traces, encode_question_traces, question_history_page, question_history_rows,
