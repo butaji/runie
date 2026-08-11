@@ -17,7 +17,8 @@ mod scheduler_metrics;
 #[path = "executor_special.rs"]
 mod special;
 pub use scheduler_metrics::{
-    reduce_scheduler_event, SchedulerCancellationReason, SchedulerEvent, SchedulerMetrics,
+    reduce_scheduler_event, SchedulerCancellationReason, SchedulerEvent, SchedulerMetricRow,
+    SchedulerMetrics,
 };
 
 #[derive(Clone)]

@@ -34,23 +34,43 @@ pub struct SchedulerMetrics {
     pub cancelled_by_reason: BTreeMap<SchedulerCancellationReason, u64>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct SchedulerMetricRow {
+    pub name: String,
+    pub value: u64,
+}
+
 impl SchedulerMetrics {
+    pub fn rows(&self) -> Vec<SchedulerMetricRow> {
+        let mut rows = vec![
+            ("queued", self.queued),
+            ("running", self.running),
+            ("completed", self.completed),
+            ("failed", self.failed),
+            ("cancelled", self.cancelled),
+            ("interactive_enqueued", self.interactive_enqueued),
+            ("background_enqueued", self.background_enqueued),
+        ]
+        .into_iter()
+        .map(|(name, value)| SchedulerMetricRow {
+            name: name.into(),
+            value,
+        })
+        .collect::<Vec<_>>();
+        rows.extend(self.cancelled_by_reason.iter().map(|(reason, value)| {
+            SchedulerMetricRow {
+                name: format!("cancelled_{reason:?}"),
+                value: *value,
+            }
+        }));
+        rows
+    }
+
     pub fn terminal_lines(&self) -> Vec<String> {
-        let mut lines = vec![
-            format!("queued: {}", self.queued),
-            format!("running: {}", self.running),
-            format!("completed: {}", self.completed),
-            format!("failed: {}", self.failed),
-            format!("cancelled: {}", self.cancelled),
-            format!("interactive_enqueued: {}", self.interactive_enqueued),
-            format!("background_enqueued: {}", self.background_enqueued),
-        ];
-        lines.extend(
-            self.cancelled_by_reason
-                .iter()
-                .map(|(reason, count)| format!("cancelled_{reason:?}: {count}")),
-        );
-        lines
+        self.rows()
+            .into_iter()
+            .map(|row| format!("{}: {}", row.name, row.value))
+            .collect()
     }
 }
 
@@ -174,6 +194,29 @@ mod tests {
                 "background_enqueued: 7",
             ]
         );
+    }
+
+    #[test]
+    fn rows_are_the_serializable_scheduler_projection() {
+        let metrics = SchedulerMetrics {
+            queued: 2,
+            running: 1,
+            ..SchedulerMetrics::default()
+        };
+        assert_eq!(
+            metrics.rows()[..2],
+            [
+                SchedulerMetricRow {
+                    name: "queued".into(),
+                    value: 2,
+                },
+                SchedulerMetricRow {
+                    name: "running".into(),
+                    value: 1,
+                },
+            ]
+        );
+        assert_eq!(metrics.terminal_lines()[..2], ["queued: 2", "running: 1"]);
     }
 
     #[test]
