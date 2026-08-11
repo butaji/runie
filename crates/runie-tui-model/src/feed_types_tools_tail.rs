@@ -1,4 +1,6 @@
 /// Bounded, renderer-neutral output facts for one logical tool card.
+const TOOL_CARD_PREVIEW_MAX_CHARS: usize = 256;
+
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ToolCardSummary {
     pub tool_call_id: String,
@@ -6,6 +8,7 @@ pub struct ToolCardSummary {
     pub card_kind: ToolCardKind,
     pub output_lines: usize,
     pub output_bytes: usize,
+    pub output_preview: Option<String>,
     pub truncated: bool,
     pub is_running: bool,
     pub is_error: bool,
@@ -26,6 +29,7 @@ pub fn tool_card_summaries(lines: &[Line], tool_names: &dyn ToolNameLookup) -> V
                     card_kind: row.card_kind,
                     output_lines: 0,
                     output_bytes: 0,
+                    output_preview: None,
                     truncated: false,
                     is_running: row.is_running,
                     is_error: row.is_error,
@@ -39,6 +43,7 @@ pub fn tool_card_summaries(lines: &[Line], tool_names: &dyn ToolNameLookup) -> V
         if row.row_kind == ToolCardRowKind::Content {
             summary.output_lines += 1;
             summary.output_bytes += row.text.len();
+            summary.output_preview = Some(row.text.chars().take(TOOL_CARD_PREVIEW_MAX_CHARS).collect());
             summary.truncated |= row.text.contains("[output truncated]");
         }
         summary.is_running |= row.is_running;
