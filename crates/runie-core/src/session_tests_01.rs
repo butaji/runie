@@ -319,3 +319,19 @@
         });
         assert_eq!(compactions[0].id, "run-2");
     }
+
+    #[test]
+    fn lane_query_round_trips_as_replay_data() {
+        let query = SessionLaneQuery {
+            lane: Some("tools".into()),
+            record_type: Some("operation_started".into()),
+            run_id: Some("run-1".into()),
+            operation_kind: Some("read".into()),
+            after_seq: Some(4),
+            newest_first: true,
+            limit: Some(8),
+        };
+        let encoded = serde_json::to_string(&query).unwrap();
+        let decoded: SessionLaneQuery = serde_json::from_str(&encoded).unwrap();
+        assert_eq!(decoded, query);
+    }
