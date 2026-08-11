@@ -410,10 +410,16 @@ fn minimax_events(payload: &serde_json::Value) -> Vec<AssistantMessageEvent> {
 }
 
 fn minimax_stop_reason(payload: &serde_json::Value, has_tool_calls: bool) -> StopReason {
-    let Some(raw) = payload
+    minimax_stop_reason_from_raw(
+        payload
         .pointer("/choices/0/finish_reason")
-        .and_then(serde_json::Value::as_str)
-    else {
+        .and_then(serde_json::Value::as_str),
+        has_tool_calls,
+    )
+}
+
+fn minimax_stop_reason_from_raw(raw: Option<&str>, has_tool_calls: bool) -> StopReason {
+    let Some(raw) = raw else {
         return if has_tool_calls {
             StopReason::ToolUse
         } else {
@@ -527,6 +533,7 @@ fn minimax_sse_stream(response: reqwest::Response) -> AssistantMessageEventStrea
         let mut buffer = String::new();
         let mut reasoning = String::new();
         let mut usage = Usage::default();
+        let mut raw_stop_reason = None;
         let mut tool_calls: BTreeMap<usize, (String, String, String)> = BTreeMap::new();
         yield AssistantMessageEvent::Start { partial: Default::default() };
         while let Some(chunk) = bytes.next().await {
@@ -538,7 +545,7 @@ fn minimax_sse_stream(response: reqwest::Response) -> AssistantMessageEventStrea
             while let Some(newline) = buffer.find('\n') {
                 let line = buffer[..newline].trim_end_matches('\r').to_owned();
                 buffer.drain(..=newline);
-                let events = match minimax_line_events(&line, &mut reasoning, &mut tool_calls, &mut usage) {
+                let events = match minimax_line_events(&line, &mut reasoning, &mut tool_calls, &mut usage, &mut raw_stop_reason) {
                     Ok(events) => events,
                     Err(error) => {
                         yield minimax_stream_error(error);
@@ -551,7 +558,7 @@ fn minimax_sse_stream(response: reqwest::Response) -> AssistantMessageEventStrea
             }
         }
         if !buffer.trim().is_empty() { yield minimax_stream_error("Incomplete Minimax stream event"); return; }
-        for event in minimax_stream_completion(reasoning, tool_calls, usage) {
+        for event in minimax_stream_completion(reasoning, tool_calls, usage, raw_stop_reason) {
             yield event;
         }
     };
@@ -567,6 +574,7 @@ fn minimax_line_events(
     reasoning: &mut String,
     tool_calls: &mut BTreeMap<usize, (String, String, String)>,
     usage: &mut Usage,
+    raw_stop_reason: &mut Option<String>,
 ) -> Result<Vec<AssistantMessageEvent>, String> {
     let Some(data) = line.strip_prefix("data:").map(str::trim) else {
         return Ok(Vec::new());
@@ -582,6 +590,12 @@ fn minimax_line_events(
     let mut events = minimax_content_events(&payload, reasoning);
     events.extend(minimax_tool_call_events(&payload, tool_calls));
     update_minimax_usage(usage, &payload);
+    if let Some(reason) = payload
+        .pointer("/choices/0/finish_reason")
+        .and_then(serde_json::Value::as_str)
+    {
+        *raw_stop_reason = Some(reason.to_owned());
+    }
     Ok(events)
 }
 
@@ -589,6 +603,7 @@ fn minimax_stream_completion(
     reasoning: String,
     tool_calls: BTreeMap<usize, (String, String, String)>,
     usage: Usage,
+    raw_stop_reason: Option<String>,
 ) -> Vec<AssistantMessageEvent> {
     let mut events = Vec::new();
     if !reasoning.is_empty() {
@@ -615,11 +630,7 @@ fn minimax_stream_completion(
         });
     }
     events.push(AssistantMessageEvent::Done {
-        stop_reason: if has_tool_calls {
-            StopReason::ToolUse
-        } else {
-            StopReason::Stop
-        },
+        stop_reason: minimax_stop_reason_from_raw(raw_stop_reason.as_deref(), has_tool_calls),
         usage,
         message: None,
     });
