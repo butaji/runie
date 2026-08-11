@@ -94,6 +94,11 @@ fn close_mcp_palette_action_emits_extended_command() {
 }
 
 #[test]
+fn reconnect_mcp_palette_action_emits_extended_command() {
+    assert_parameter_flow(super::PaletteAction::ReconnectMcps, "", "/mcps reconnect");
+}
+
+#[test]
 fn parameterized_palette_storage_flows_emit_typed_commands() {
     for (action, input, expected) in [
         (

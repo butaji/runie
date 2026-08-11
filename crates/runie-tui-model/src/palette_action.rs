@@ -13,7 +13,7 @@ runie_core::typed_action_registry! {
         AlwaysApprove => "Always Approve", AutoApprove => "Automatic Approval", PlanMode => "Plan Mode",
         ViewPlan => "View Plan", Login => "Login", Logout => "Logout", Reload => "Reload",
         TrustProject => "Trust Project", Skills => "Skills", Hooks => "Hooks", Plugins => "Plugins",
-        Mcps => "MCP Servers", CloseMcps => "Close MCP Servers", McpReady => "Ready MCP Servers", McpFailed => "Failed MCP Servers",
+        Mcps => "MCP Servers", CloseMcps => "Close MCP Servers", ReconnectMcps => "Reconnect MCP Servers", McpReady => "Ready MCP Servers", McpFailed => "Failed MCP Servers",
         McpBusy => "Busy MCP Servers", McpClosed => "Closed MCP Servers", McpStdio => "Stdio MCP Servers",
         McpHttp => "HTTP MCP Servers", Memory => "Memory", Remember => "Remember", Goal => "Goal",
         Workflow => "Workflow", Workflows => "Workflows", Loop => "Loop", DeepResearch => "Deep Research",

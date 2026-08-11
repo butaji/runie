@@ -85,7 +85,7 @@ these do not invalidate the finite matrix evidence.
 
 Each extension follows the same loop: add a failing event/replay test, add the
 smallest actor-owned data boundary (use a declaration macro only for repeated
-closed vocabulary), run `just ci`, run the 79-case TUI smoke, update the
+closed vocabulary), run `just ci`, run the 81-case TUI smoke, update the
 finding, and push one focused commit.
 
 Priority order:
@@ -106,7 +106,7 @@ Priority order:
 
 Completion evidence is: every finite matrix row has source + replay/unit test
  + live TUI evidence, the extension queue has no unverified claim, `just ci`
-is green, the fresh smoke summary is `passed=79 failed=0`, and `git status`
+is green, the fresh smoke summary is `passed=81 failed=0`, and `git status`
  is clean after push.
 
 The reduction backlog is now backed by declarative tables for the major closed
@@ -177,6 +177,8 @@ until its source change, event/replay tests, and live TUI evidence are recorded.
    `/mcps` projects unified stdio/HTTP lifecycle rows with transport filters;
    `/mcps close` and its palette action close every registered transport through
    the registry-owned awaited actor boundary;
+   `/mcps reconnect` and its palette action reset every registered transport
+   session through the actor mailbox;
    lifecycle names use the shared lowercase wire vocabulary; palette actions
    now expose ready and failed status filters, and `/mcps` validation consumes
    the macro-generated lifecycle reverse parser and transport vocabulary.
