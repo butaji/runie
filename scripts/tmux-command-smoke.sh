@@ -144,6 +144,11 @@ for label in "${labels[@]}"; do
       ((failed += 1))
       continue
     fi
+    if [[ "$label" == "Job Output Preview" ]] && ! wait_for 'Background job smoke output not found'; then
+      echo "FAIL $label: expected-preview-query-result"
+      ((failed += 1))
+      continue
+    fi
     if [[ "$label" == "Jobs" ]] && ! wait_for 'scheduler queued:'; then
       echo "FAIL $label: expected-scheduler-result"
       ((failed += 1))
