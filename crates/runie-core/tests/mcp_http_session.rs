@@ -171,3 +171,36 @@ async fn http_actor_forwards_stream_notifications_to_shared_inspector() {
         .await;
     assert_eq!(inspector.snapshot().queue.pending.len(), 1);
 }
+
+#[tokio::test]
+async fn http_actor_stream_operation_ingests_sse_notifications() {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let task = tokio::spawn(async move {
+        let (mut socket, _) = listener.accept().await.unwrap();
+        let mut request = vec![0_u8; 2048];
+        let _ = tokio::io::AsyncReadExt::read(&mut socket, &mut request).await;
+        let body =
+            "data: {\"id\":1,\"result\":{}}\n\ndata: {\"method\":\"notifications/progress\"}\n\n";
+        let response = format!(
+            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nContent-Type: text/event-stream\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        tokio::io::AsyncWriteExt::write_all(&mut socket, response.as_bytes())
+            .await
+            .unwrap();
+    });
+    let inspector = McpNotificationActor::new(2);
+    let actor = McpHttpActor::new_with_notifications(
+        McpHttpClient::new(format!("http://{address}"), None, Duration::from_secs(1)).unwrap(),
+        inspector.clone(),
+    );
+    let events = actor
+        .stream_events(serde_json::json!({"method":"subscribe"}))
+        .await
+        .unwrap();
+    assert_eq!(events.len(), 2);
+    assert_eq!(inspector.snapshot().queue.pending.len(), 1);
+    task.await.unwrap();
+}

@@ -20,6 +20,10 @@ enum McpHttpCommand {
         request: serde_json::Value,
         reply: tokio::sync::oneshot::Sender<Result<serde_json::Value, String>>,
     },
+    Stream {
+        request: serde_json::Value,
+        reply: tokio::sync::oneshot::Sender<Result<Vec<super::McpStreamEvent>, String>>,
+    },
     Close {
         reply: tokio::sync::oneshot::Sender<Result<(), String>>,
     },
@@ -50,37 +54,11 @@ impl McpHttpActor {
         notifications: crate::tools::McpNotificationActor,
     ) -> Self {
         let identity = client.endpoint.clone();
+        let notifications_for_worker = notifications.clone();
         let (status_tx, status) = tokio::sync::watch::channel(McpHttpStatus::Ready);
-        let (tx, owner) =
-            crate::spawn_actor_worker!(32, move |mut rx: tokio::sync::mpsc::Receiver<
-                McpHttpCommand,
-            >| async move {
-                let mut session = McpHttpSession::new(client);
-                while let Some(command) = rx.recv().await {
-                    match command {
-                        McpHttpCommand::Request { request, reply } => {
-                            let _ = status_tx.send(McpHttpStatus::Busy);
-                            let result = session.request(request).await;
-                            let _ = status_tx.send(if result.is_ok() {
-                                McpHttpStatus::Ready
-                            } else {
-                                McpHttpStatus::Failed
-                            });
-                            let _ = reply.send(result);
-                        }
-                        McpHttpCommand::Close { reply } => {
-                            let _ = reply.send(session.close().await);
-                            let _ = status_tx.send(McpHttpStatus::Closed);
-                            break;
-                        }
-                        McpHttpCommand::Reconnect { reply } => {
-                            session = McpHttpSession::new(session.client.clone());
-                            let _ = status_tx.send(McpHttpStatus::Ready);
-                            let _ = reply.send(());
-                        }
-                    }
-                }
-            });
+        let (tx, owner) = crate::spawn_actor_worker!(32, move |rx| async move {
+            run_http_worker(rx, client, notifications_for_worker, status_tx).await;
+        });
         Self {
             tx,
             status,
@@ -117,6 +95,20 @@ impl McpHttpActor {
             .map_err(|_| "MCP HTTP actor response was dropped".to_owned())?
     }
 
+    pub async fn stream_events(
+        &self,
+        request: serde_json::Value,
+    ) -> Result<Vec<super::McpStreamEvent>, String> {
+        let (reply, response) = tokio::sync::oneshot::channel();
+        self.tx
+            .send(McpHttpCommand::Stream { request, reply })
+            .await
+            .map_err(|_| "MCP HTTP actor is closed".to_owned())?;
+        response
+            .await
+            .map_err(|_| "MCP HTTP actor stream response was dropped".to_owned())?
+    }
+
     pub async fn close(self) -> Result<(), String> {
         let (reply, response) = tokio::sync::oneshot::channel();
         self.tx
@@ -138,6 +130,65 @@ impl McpHttpActor {
             .await
             .map_err(|_| "MCP HTTP actor reconnect response was dropped".to_owned())
     }
+}
+
+async fn run_http_worker(
+    mut rx: tokio::sync::mpsc::Receiver<McpHttpCommand>,
+    client: McpHttpClient,
+    notifications: crate::tools::McpNotificationActor,
+    status_tx: tokio::sync::watch::Sender<McpHttpStatus>,
+) {
+    let mut session = McpHttpSession::new(client);
+    while let Some(command) = rx.recv().await {
+        if handle_http_command(&mut session, command, &notifications, &status_tx).await {
+            break;
+        }
+    }
+}
+
+async fn handle_http_command(
+    session: &mut McpHttpSession,
+    command: McpHttpCommand,
+    notifications: &crate::tools::McpNotificationActor,
+    status_tx: &tokio::sync::watch::Sender<McpHttpStatus>,
+) -> bool {
+    match command {
+        McpHttpCommand::Request { request, reply } => {
+            let _ = status_tx.send(McpHttpStatus::Busy);
+            let result = session.request(request).await;
+            let _ = status_tx.send(if result.is_ok() {
+                McpHttpStatus::Ready
+            } else {
+                McpHttpStatus::Failed
+            });
+            let _ = reply.send(result);
+        }
+        McpHttpCommand::Stream { request, reply } => {
+            let _ = status_tx.send(McpHttpStatus::Busy);
+            let result = session.stream_events(request).await;
+            if let Ok(events) = &result {
+                notifications.ingest_stream_events(events.clone()).await;
+            }
+            let _ = status_tx.send(if result.is_ok() {
+                McpHttpStatus::Ready
+            } else {
+                McpHttpStatus::Failed
+            });
+            let _ = reply.send(result);
+        }
+        McpHttpCommand::Close { reply } => {
+            let old = std::mem::replace(session, McpHttpSession::new(session.client.clone()));
+            let _ = reply.send(old.close().await);
+            let _ = status_tx.send(McpHttpStatus::Closed);
+            return true;
+        }
+        McpHttpCommand::Reconnect { reply } => {
+            *session = McpHttpSession::new(session.client.clone());
+            let _ = status_tx.send(McpHttpStatus::Ready);
+            let _ = reply.send(());
+        }
+    }
+    false
 }
 
 /// Stateful streamable-HTTP MCP session. Session ownership is explicit and
@@ -171,6 +222,20 @@ impl McpHttpSession {
             self.session_id = session_id;
         }
         Ok(value)
+    }
+
+    pub(crate) async fn stream_events(
+        &mut self,
+        request: serde_json::Value,
+    ) -> Result<Vec<super::McpStreamEvent>, String> {
+        let (events, session_id) = self
+            .client
+            .stream_events_with_session(request, self.session_id.as_deref())
+            .await?;
+        if session_id.is_some() {
+            self.session_id = session_id;
+        }
+        Ok(events)
     }
 
     pub async fn close(self) -> Result<(), String> {
