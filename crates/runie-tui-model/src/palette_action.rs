@@ -4,7 +4,7 @@ runie_core::typed_action_registry! {
         Changelog => "Changelog", CopyLastResponse => "Copy Last Response", SessionInfo => "Session Info",
         SessionHistory => "Session History", SessionHistoryQuery => "Session History Query", UndoSession => "Undo Session", SelectModel => "Select Model",
         SelectTheme => "Select Theme", ManageProviders => "Manage Providers", ScopedModels => "Scoped Models",
-        SetSessionName => "Set Session Name", CompactContext => "Compact Context", ForkSession => "Fork Session",
+        SetSessionName => "Set Session Name", CompactContext => "Compact Context", CompactContextNow => "Compact Context Now", ForkSession => "Fork Session",
         SelectTreeEntry => "Select Tree Entry", ExportSession => "Export Session", ImportSession => "Import Session",
         CloneSession => "Clone Session", ResumeSession => "Resume Session", ShareSession => "Share Session",
         Help => "Help", ContextInfo => "Context Info", ClearContext => "Clear Context", ResetContext => "Reset Context", ContextPolicy => "Context Policy", ContextPolicyOn => "Enable Context Policy", ContextPolicyOff => "Disable Context Policy", ContextPolicyReserve => "Set Context Reserve", ContextPolicyKeepRecent => "Set Context Keep Recent", Settings => "Settings", Doctor => "Doctor", DoctorInspect => "Inspect Diagnostics", DoctorFix => "Apply Diagnostic Fixes",

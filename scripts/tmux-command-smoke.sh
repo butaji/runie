@@ -17,6 +17,7 @@ labels=(
   "Pending Questions" "Pop MCP Notification" "Inspect Diagnostics" "Apply Diagnostic Fixes" "Usage Chart All" "Usage Chart Input" "Usage Chart Output" "Usage Chart Cost" "Background Jobs" "Jobs" "Job Output" "Job Output Facts" "Job Output Head" "Job Output Tail" "Cancel Queued Jobs"
   "Inspect Git Conflicts" "Cancel Git Conflict Review"
   "Clear Context" "Reset Context"
+  "Compact Context Now"
 )
 parameterized=(
   "Select Theme" "Set Session Name" "Compact Context" "Fork Session" "Select Tree Entry" "Usage Chart"

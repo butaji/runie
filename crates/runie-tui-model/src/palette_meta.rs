@@ -41,6 +41,7 @@ declare_palette_metadata! {
     (ScopedModels, "/scoped-models", "Browse scoped models"),
     (SetSessionName, "/name", "Rename the current session"),
     (CompactContext, "/compact", "Compress conversation history"),
+    (CompactContextNow, "/compact", "Compact immediately without instructions"),
     (ForkSession, "/fork", "Fork at an entry"),
     (SelectTreeEntry, "/tree", "Select a tree entry"),
     (ExportSession, "/export", "Export a JSONL session"),
@@ -167,7 +168,7 @@ macro_rules! palette_sections {
 }
 
 palette_sections! {
-    ("Context" => [CopyLastResponse, SessionInfo, PendingQuestions]),
+    ("Context" => [CopyLastResponse, SessionInfo, CompactContextNow, PendingQuestions]),
     ("Session" => [NewSession, KeyboardShortcuts, Quit, Changelog, ShareSession, SessionHistory, SessionHistoryQuery, UndoSession]),
     ("Information" => [Help, ContextInfo, ClearContext, ResetContext, ContextPolicy, ContextPolicyOn, ContextPolicyOff, ContextPolicyReserve, ContextPolicyKeepRecent, Doctor, DoctorInspect, DoctorFix, Feedback, Usage, UsageChart, UsageChartAll, UsageChartInput, UsageChartOutput, UsageChartCost, GitStatus, GitDiff, GitReview, GitWorktrees, GitConflicts, GitConflictsInspect, GitConflictsCancel]),
     ("Extensions" => [Skills, Hooks, Plugins, Mcps, CloseMcps, ReconnectMcps, McpNotifications, ClearMcpNotifications, McpPopNotifications, McpReady, McpFailed, McpBusy, McpClosed, McpStdio, McpHttp, Memory]),
