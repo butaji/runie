@@ -118,6 +118,7 @@ declare_palette_metadata! {
     (FailedJobs, "/jobs failed", "Show failed jobs"),
     (RunningJobs, "/jobs running", "Show running jobs"),
     (CancelledJobs, "/jobs cancelled", "Show cancelled jobs"),
+    (CancelledSchedulerJobs, "/jobs scheduler cancelled", "Show cancellation metrics"),
     (CancelQueuedJobs, "/jobs scheduler cancel queued", "Cancel queued tool batches"),
     (JobOutput, "/jobs output", "Inspect bounded job output"),
     (JobOutputFacts, "/jobs output", "Inspect bounded output facts"),

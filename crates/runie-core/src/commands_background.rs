@@ -7,6 +7,10 @@ pub fn parse_background_job_output_preview_query(args: &str) -> Option<&str> {
     .then(|| args.split_whitespace().nth(1).unwrap())
 }
 
+pub fn parse_background_scheduler_cancelled_query(args: &str) -> bool {
+    args.trim() == "scheduler cancelled"
+}
+
 #[cfg(test)]
 mod commands_background_tests {
     use super::parse_background_job_output_preview_query;

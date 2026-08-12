@@ -442,6 +442,12 @@ impl App {
                     .await;
                 return true;
             }
+            if runie_core::commands::parse_background_scheduler_cancelled_query(args) {
+                let lines = self.loop_actor.scheduler_metrics().await.cancelled_terminal_lines()
+                    .into_iter().map(|line| format!("scheduler {line}")).collect::<Vec<_>>();
+                self.ui.send(UiMsg::ShowCommandResult(lines.join("\n"))).await;
+                return true;
+            }
             if runie_core::commands::parse_background_scheduler_cancel_queued(args) {
                 let cancelled = self.loop_actor.cancel_queued_tools().await;
                 self.ui

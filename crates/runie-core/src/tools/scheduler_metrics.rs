@@ -132,6 +132,14 @@ impl SchedulerMetrics {
             .map(|row| format!("{}: {}", row.name, row.value))
             .collect()
     }
+
+    pub fn cancelled_terminal_lines(&self) -> Vec<String> {
+        self.rows()
+            .into_iter()
+            .filter(|row| row.name.starts_with("cancelled"))
+            .map(|row| format!("{}: {}", row.name, row.value))
+            .collect()
+    }
 }
 
 /// Pure scheduler telemetry reducer. Queue ownership remains in the executor.
@@ -313,6 +321,28 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(metrics.queued_terminal_lines(), ["queued: 2"]);
+    }
+
+    #[test]
+    fn cancelled_terminal_lines_project_aggregate_and_reason_rows() {
+        let mut metrics = SchedulerMetrics {
+            cancelled: 2,
+            cancelled_queued: 1,
+            cancelled_running: 1,
+            ..Default::default()
+        };
+        metrics
+            .cancelled_by_reason
+            .insert(SchedulerCancellationReason::User, 2);
+        assert_eq!(
+            metrics.cancelled_terminal_lines(),
+            [
+                "cancelled: 2",
+                "cancelled_queued: 1",
+                "cancelled_running: 1",
+                "cancelled_user: 2"
+            ]
+        );
     }
 
     #[test]
