@@ -1,5 +1,16 @@
 use super::*;
 
+#[test]
+fn tail_projection_keeps_order_and_bounds_lines() {
+    let output = BackgroundOutput {
+        job_id: "job".into(), command: "echo".into(), status: BackgroundStatus::Completed,
+        exit_code: Some(0), text: "one\ntwo\nthree".into(), output_lines: 3,
+        output_bytes: 13, preview: None, truncated: false,
+    };
+    assert_eq!(output.tail_lines(2), ["two", "three"]);
+    assert!(output.tail_lines(0).is_empty());
+}
+
 #[tokio::test]
 async fn jobs_are_owned_and_reduce_to_completion() {
     let actor = BackgroundProcessActor::new();

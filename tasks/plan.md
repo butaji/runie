@@ -111,6 +111,9 @@ Usage diagnostics now expose typed chart selectors (`all`, `input`, `output`,
 and `cost`) through the pure visualization projection and palette parameter
 flow; the live TUI smoke covers the selector path.
 
+Background output inspection also exposes a typed bounded tail projection,
+`/jobs output <id> tail <n>`, through the actor-owned result and palette flow.
+
 Completion evidence is: every finite matrix row has source + replay/unit test
  + live TUI evidence, the extension queue has no unverified claim, `just ci`
 is green, the fresh smoke summary is `passed=89 failed=0`, and `git status`

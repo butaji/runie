@@ -8,7 +8,6 @@ use serde::Serialize;
 #[path = "commands_usage.rs"]
 mod usage;
 pub use usage::{parse_usage_chart, UsageChartMetric};
-
 /// A command exposed by Pi's interactive command registry.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct SlashCommand {
@@ -283,6 +282,7 @@ pub fn parse_background_job_output_query(args: &str) -> Option<&str> {
 }
 
 pub use crate::background::parse_output_facts_query as parse_background_job_output_facts_query;
+pub use crate::background::parse_output_tail_query as parse_background_job_output_tail_query;
 
 pub fn parse_background_job_status_query(args: &str) -> Option<&str> {
     let status = args.trim();

@@ -1,5 +1,4 @@
 //! Owned background shell jobs. The actor owns every JoinSet task and snapshot.
-
 use crate::output::{bounded_preview, output_facts};
 use crate::task_owner::{spawn_actor_worker, TaskOwner};
 use serde::{Deserialize, Serialize};
@@ -67,6 +66,16 @@ pub fn parse_output_facts_query(args: &str) -> Option<&str> {
     .then(|| args.split_whitespace().nth(1).unwrap())
 }
 
+pub fn parse_output_tail_query(args: &str) -> Option<(&str, usize)> {
+    let mut parts = args.split_whitespace();
+    if parts.next() != Some("output") || parts.next().is_none() || parts.next() != Some("tail") {
+        return None;
+    }
+    let id = args.split_whitespace().nth(1)?;
+    let count = parts.next()?.parse().ok()?;
+    parts.next().is_none().then_some((id, count))
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct OutputMetadata {
     lines: usize,
@@ -87,6 +96,18 @@ fn output_metadata(output: &str) -> OutputMetadata {
 }
 
 impl BackgroundOutput {
+    pub fn tail_lines(&self, count: usize) -> Vec<String> {
+        self.text
+            .lines()
+            .rev()
+            .take(count)
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
+            .map(str::to_owned)
+            .collect()
+    }
+
     pub fn terminal_lines(&self) -> Vec<String> {
         let mut lines = vec![format!(
             "background output {} · {:?} · {} exit={:?} · {} lines/{} bytes{}",

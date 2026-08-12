@@ -96,7 +96,7 @@ for label in "${labels[@]}"; do
     elif [[ "$label" == "Set Context Keep Recent" ]]; then
       argument=(4 2)
     elif [[ "$label" == "Job Output" ]]; then
-      argument=(o u t p u t 0)
+      argument=(o u t p u t 0 t a i l 2)
     fi
     for character in "${argument[@]}"; do
       tmux_run send-keys -t smoke -l -- "$character"
