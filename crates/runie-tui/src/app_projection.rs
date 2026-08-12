@@ -76,6 +76,9 @@ fn parameter_command(state: &UiState) -> Option<UiCommand> {
             value: query.to_owned(),
         });
     }
+    if *action == PaletteAction::JobOutputFacts {
+        return Some(job_output_facts_command(query));
+    }
     let input = format!("{} {query}", action.slash_command());
     Some(UiCommand::ExecuteMappable(
         runie_core::commands::parse_mappable_builtin_command(&input).unwrap_or_else(|| {
@@ -85,6 +88,13 @@ fn parameter_command(state: &UiState) -> Option<UiCommand> {
             }
         }),
     ))
+}
+
+fn job_output_facts_command(job_id: &str) -> UiCommand {
+    UiCommand::ExecuteMappable(runie_core::commands::MappableBuiltinCommand::Extended {
+        name: "jobs".into(),
+        args: format!("output {job_id} facts"),
+    })
 }
 
 pub(super) fn palette_action_for(entry: &str) -> Option<PaletteAction> {

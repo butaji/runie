@@ -225,7 +225,6 @@ pub fn parse_background_job_cancel_scope(args: &str) -> Option<BackgroundCancelS
 pub fn parse_background_job_cancel_all(args: &str) -> bool {
     parse_background_job_cancel_scope(args) == Some(BackgroundCancelScope::All)
 }
-
 pub fn parse_background_job_clear_finished(args: &str) -> bool {
     args.split_whitespace().eq(["clear", "finished"])
 }
@@ -233,7 +232,6 @@ pub fn parse_background_job_clear_finished(args: &str) -> bool {
 pub fn parse_background_scheduler_query(args: &str) -> bool {
     args.trim() == "scheduler"
 }
-
 pub fn parse_background_scheduler_active_query(args: &str) -> bool {
     args.trim() == "scheduler active"
 }
@@ -267,41 +265,28 @@ pub fn parse_git_conflict_action_selection(args: &str) -> Option<crate::tools::G
 pub fn parse_git_conflict_cancel(args: &str) -> bool {
     args.trim() == "conflicts cancel"
 }
-
 pub fn parse_background_scheduler_cancel_queued(args: &str) -> bool {
     args.trim() == "scheduler cancel queued"
 }
 
-/// Parse an optional single background-job ID used by the inspection view.
-/// Control verbs such as `cancel` stay owned by their dedicated parser.
 pub fn parse_background_job_query(args: &str) -> Option<&str> {
     let mut parts = args.split_whitespace();
     let id = parts.next()?;
     (id != "cancel" && parts.next().is_none()).then_some(id)
 }
 
-/// Parse the explicit bounded-output view for one actor-owned job.
 pub fn parse_background_job_output_query(args: &str) -> Option<&str> {
     let mut parts = args.split_whitespace();
     (parts.next() == Some("output") && parts.next().is_some() && parts.next().is_none())
         .then(|| args.split_whitespace().nth(1).unwrap())
 }
 
-/// Parse the renderer-neutral facts view for one actor-owned job output card.
-pub fn parse_background_job_output_facts_query(args: &str) -> Option<&str> {
-    let mut parts = args.split_whitespace();
-    (parts.next() == Some("output")
-        && parts.next().is_some()
-        && parts.next() == Some("facts")
-        && parts.next().is_none())
-    .then(|| args.split_whitespace().nth(1).unwrap())
-}
+pub use crate::background::parse_output_facts_query as parse_background_job_output_facts_query;
 
 pub fn parse_background_job_status_query(args: &str) -> Option<&str> {
     let status = args.trim();
     crate::background::BackgroundStatus::from_wire_name(status).map(|_| status)
 }
-
 pub fn parse_mcp_transport_query(args: &str) -> Option<&str> {
     let transport = args.trim();
     crate::tools::McpTransport::from_wire_name(transport).map(|_| transport)
@@ -328,15 +313,11 @@ pub fn parse_mcp_notifications_clear(args: &str) -> bool {
     args.trim().eq_ignore_ascii_case("notifications clear")
 }
 
-/// Parse the explicit session-picker form while keeping ordinary `/sessions`
-/// output backward compatible.
 pub fn parse_session_picker_query(args: &str) -> Option<String> {
     let mut parts = args.split_whitespace();
     (parts.next() == Some("pick")).then(|| parts.collect::<Vec<_>>().join(" "))
 }
 
-/// Parse a single actor-owned history selection without making the TUI parse
-/// journal identifiers itself.
 pub fn parse_session_history_selection(args: &str) -> Option<&str> {
     let mut parts = args.split_whitespace();
     (parts.next() == Some("history") && parts.next().is_some() && parts.next().is_none())
@@ -350,7 +331,6 @@ pub fn parse_session_history_query(args: &str) -> Option<String> {
         .filter(|query| !query.is_empty())
 }
 
-/// Parse Kimi-compatible repeated undo count without allowing ambiguous input.
 pub fn parse_undo_count(args: &str) -> Option<usize> {
     let value = args.trim();
     if value.is_empty() {
@@ -362,8 +342,6 @@ pub fn parse_undo_count(args: &str) -> Option<usize> {
         .filter(|count| *count > 0)
 }
 
-/// Parse the bounded history view for `/usage`; empty input keeps the full
-/// aggregate while `last N` selects the newest N ended requests.
 pub fn parse_usage_limit(args: &str) -> Option<Option<usize>> {
     let mut parts = args.split_whitespace();
     match (parts.next(), parts.next(), parts.next()) {
@@ -378,7 +356,6 @@ pub fn parse_usage_limit(args: &str) -> Option<Option<usize>> {
 pub fn parse_usage_chart(args: &str) -> bool {
     args.trim().eq_ignore_ascii_case("chart")
 }
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ContextPolicyCommand {
     View,

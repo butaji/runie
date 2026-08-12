@@ -58,6 +58,15 @@ pub struct BackgroundOutput {
     pub truncated: bool,
 }
 
+pub fn parse_output_facts_query(args: &str) -> Option<&str> {
+    let mut parts = args.split_whitespace();
+    (parts.next() == Some("output")
+        && parts.next().is_some()
+        && parts.next() == Some("facts")
+        && parts.next().is_none())
+    .then(|| args.split_whitespace().nth(1).unwrap())
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct OutputMetadata {
     lines: usize,
