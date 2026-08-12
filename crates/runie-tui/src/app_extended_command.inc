@@ -454,6 +454,23 @@ impl App {
             return true;
         }
         if name == "questions" {
+            if let Some(id) = args
+                .trim()
+                .strip_prefix("pending ")
+                .map(str::trim)
+                .filter(|id| !id.is_empty())
+            {
+                let result = self.question_broker.pending_by_id(id);
+                self.ui
+                    .send(match result {
+                        Some(question) => UiMsg::OpenUserQuestion(question),
+                        None => UiMsg::ShowCommandResult(format!(
+                            "No pending user question with id {id}"
+                        )),
+                    })
+                    .await;
+                return true;
+            }
             if args.trim().eq_ignore_ascii_case("pending") {
                 let result = self
                     .question_broker

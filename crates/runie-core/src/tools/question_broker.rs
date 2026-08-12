@@ -374,6 +374,7 @@ mod tests {
             tokio::task::yield_now().await;
         };
         assert_pending_line(&broker);
+        assert_eq!(broker.pending_by_id(&pending.id), Some(pending.clone()));
         broker
             .answer(&pending.id, serde_json::json!({"answer": "yes"}))
             .unwrap();

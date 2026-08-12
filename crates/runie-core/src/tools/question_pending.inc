@@ -5,6 +5,18 @@ impl PendingUserQuestion {
 }
 
 impl UserQuestionBroker {
+    pub fn pending_by_id(&self, id: &str) -> Option<PendingUserQuestion> {
+        self.requests
+            .lock()
+            .expect("question requests lock")
+            .get(id)
+            .cloned()
+            .map(|request| PendingUserQuestion {
+                id: id.to_owned(),
+                request,
+            })
+    }
+
     pub fn pending(&self) -> Vec<PendingUserQuestion> {
         let mut pending = self
             .requests

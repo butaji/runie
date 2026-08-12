@@ -69,6 +69,17 @@ fn mappable_parser_rejects_unimplemented_commands_without_swallowing_text() {
 }
 
 #[test]
+fn parser_maps_pending_question_review_as_an_extended_command() {
+    assert_eq!(
+        parse_mappable_builtin_command("/questions pending 0"),
+        Some(MappableBuiltinCommand::Extended {
+            name: "questions".into(),
+            args: "pending 0".into()
+        })
+    );
+}
+
+#[test]
 fn parser_maps_git_conflict_report_as_an_extended_command() {
     assert_eq!(
         parse_mappable_builtin_command("/git conflicts"),
