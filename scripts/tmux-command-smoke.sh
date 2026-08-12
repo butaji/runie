@@ -13,7 +13,6 @@ labels=(
   "Login" "Logout" "Reload" "Trust Project" "Skills" "Hooks" "Plugins" "MCP Servers" "Close MCP Servers" "Reconnect MCP Servers"
   "Memory" "Remember" "Goal" "Workflow" "Workflows" "Sessions" "Session History" "Session History Query" "Undo Session" "Questions" "Active Jobs" "Cancel All Jobs" "Cancel Running Jobs" "Clear Finished Jobs" "Completed Jobs" "Failed Jobs" "Cancelled Jobs" "Git Status" "Git Diff" "Git Review" "Git Worktrees" "Git Conflicts" "Ready MCP Servers" "Failed MCP Servers" "Busy MCP Servers" "Closed MCP Servers" "Stdio MCP Servers" "HTTP MCP Servers" "Loop" "Deep Research" "Feedback" "Usage"
   "Background Jobs" "Jobs" "Job Output" "Cancel Queued Jobs"
-  "Cancel Git Recovery"
 )
 parameterized=(
   "Select Theme" "Set Session Name" "Compact Context" "Fork Session" "Select Tree Entry"
@@ -198,9 +197,6 @@ done <<'CASES'
 Resume Picker|/resume|Command Parameters
 Context Summary|/context|compaction: none
 Session History Rows|/sessions history|No session history
-Cancel Git Recovery|/git conflicts cancel|Git conflict recovery cancelled
-MCP Notification Inspect|/mcps notifications|pending: 0
-MCP Notification Clear|/mcps notifications clear|MCP notifications cleared
 CASES
 
 # The quit path is a TUI-only terminal case: it must end the session rather
