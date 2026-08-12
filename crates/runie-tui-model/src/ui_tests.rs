@@ -270,6 +270,7 @@ fn parameterized_palette_actions() -> Vec<PaletteAction> {
         PaletteAction::Usage,
         PaletteAction::ContextPolicyReserve,
         PaletteAction::ContextPolicyKeepRecent,
+        PaletteAction::Deny,
     ]
 }
 

@@ -10,7 +10,7 @@ runie_core::typed_action_registry! {
         Help => "Help", ContextInfo => "Context Info", ContextPolicy => "Context Policy", ContextPolicyOn => "Enable Context Policy", ContextPolicyOff => "Disable Context Policy", ContextPolicyReserve => "Set Context Reserve", ContextPolicyKeepRecent => "Set Context Keep Recent", Settings => "Settings", Doctor => "Doctor",
         RewindSession => "Rewind Session", PromptHistory => "Prompt History", FindTranscript => "Find Transcript",
         JumpTranscript => "Jump Transcript", Recap => "Recap", SetEffort => "Set Reasoning Effort",
-        AlwaysApprove => "Always Approve", AutoApprove => "Automatic Approval", PlanMode => "Plan Mode",
+        AlwaysApprove => "Always Approve", AutoApprove => "Automatic Approval", Deny => "Deny Tools", PlanMode => "Plan Mode",
         ViewPlan => "View Plan", Login => "Login", Logout => "Logout", Reload => "Reload",
         TrustProject => "Trust Project", Skills => "Skills", Hooks => "Hooks", Plugins => "Plugins",
         Mcps => "MCP Servers", CloseMcps => "Close MCP Servers", ReconnectMcps => "Reconnect MCP Servers", McpNotifications => "MCP Notifications", ClearMcpNotifications => "Clear MCP Notifications", McpReady => "Ready MCP Servers", McpFailed => "Failed MCP Servers",
