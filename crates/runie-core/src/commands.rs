@@ -8,6 +8,9 @@ use serde::Serialize;
 #[path = "commands_usage.rs"]
 mod usage;
 pub use usage::{parse_usage_chart, UsageChartMetric};
+#[path = "commands_git.rs"]
+mod git;
+pub use git::parse_git_commit_prepare;
 /// A command exposed by Pi's interactive command registry.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct SlashCommand {
@@ -200,14 +203,12 @@ pub fn parse_mappable_builtin_command(input: &str) -> Option<MappableBuiltinComm
     }
 }
 
-/// Parse the actor-owned background-job control arguments.
 pub fn parse_background_job_command(args: &str) -> Option<&str> {
     let mut parts = args.split_whitespace();
     (parts.next() == Some("cancel") && parts.next().is_some() && parts.next().is_none())
         .then(|| args.split_whitespace().nth(1).unwrap())
 }
 
-/// Parse the lifecycle-wide background cancellation control.
 pub use crate::background::BackgroundCancelScope;
 
 pub fn parse_background_job_cancel_scope(args: &str) -> Option<BackgroundCancelScope> {
@@ -262,6 +263,7 @@ pub fn parse_git_conflict_action_selection(args: &str) -> Option<crate::tools::G
 pub fn parse_git_conflict_cancel(args: &str) -> bool {
     args.trim() == "conflicts cancel"
 }
+
 pub fn parse_background_scheduler_cancel_queued(args: &str) -> bool {
     args.trim() == "scheduler cancel queued"
 }
@@ -306,7 +308,6 @@ pub fn parse_mcp_reconnect_command(args: &str) -> bool {
 pub fn parse_mcp_notifications_query(args: &str) -> bool {
     args.trim().eq_ignore_ascii_case("notifications")
 }
-
 pub fn parse_mcp_notifications_clear(args: &str) -> bool {
     args.trim().eq_ignore_ascii_case("notifications clear")
 }

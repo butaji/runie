@@ -426,6 +426,7 @@ pub struct App {
     pub background_actor: runie_core::background::BackgroundProcessActor,
     pub todo_actor: runie_core::tools::TodoActor,
     pub git_conflict_actor: runie_core::tools::GitConflictActor,
+    pub tool_executor: Option<runie_core::tools::ToolExecutorActor>,
     pub plugin_host: Option<runie_core::plugins::PluginHost>,
     submission_tx: SubmissionTx,
     _submission_owner: std::sync::Arc<runie_core::task_owner::TaskOwner>,

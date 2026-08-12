@@ -1516,7 +1516,7 @@ async fn build_live_app() -> App {
         state,
         steering,
         follow_up,
-        tool_executor,
+        tool_executor: tool_executor.clone(),
         provider,
         bus: bus.clone(),
         subscribers: runie_core::events::SubscriberRegistry::new(),
@@ -1676,6 +1676,7 @@ async fn build_live_app() -> App {
         session_actor,
     );
     app.attach_background_actor(background_actor);
+    app.attach_tool_executor(tool_executor);
     app.attach_todo_actor(todo_actor);
     let plugin_root = std::env::current_dir().ok().map(|path| path.join(".runie/plugins"));
     if let Some(plugin_root) = plugin_root {

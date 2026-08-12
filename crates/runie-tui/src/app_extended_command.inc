@@ -1,6 +1,26 @@
 impl App {
     #[allow(clippy::cognitive_complexity, clippy::too_many_lines, reason = "The extended command registry is the single typed routing boundary")]
     async fn route_extended_command(&self, name: &str, args: &str) -> bool {
+        if name == "git" {
+            if let Some(message) = runie_core::commands::parse_git_commit_prepare(args) {
+                let Some(executor) = &self.tool_executor else {
+                    self.ui.send(UiMsg::ShowCommandResult("Tool executor unavailable".into())).await;
+                    return true;
+                };
+                let result = executor
+                    .execute_command(
+                        runie_core::tools::ToolCommandRequest::new(
+                            "git_commit_prepare",
+                            serde_json::json!({"message": message}),
+                        ),
+                        runie_core::types::AgentContext::default(),
+                        Default::default(),
+                    )
+                    .await;
+                self.ui.send(UiMsg::ShowCommandResult(result.result.to_string())).await;
+                return true;
+            }
+        }
         if matches!(name, "clear" | "reset") && args.trim().is_empty() {
             self.session_actor.reset().await;
             self.ui

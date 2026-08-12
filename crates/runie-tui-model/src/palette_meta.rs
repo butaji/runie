@@ -126,6 +126,7 @@ declare_palette_metadata! {
     (GitStatus, "/git status", "Inspect repository status"),
     (GitDiff, "/git diff", "Inspect the unstaged Git diff"),
     (GitReview, "/git review", "Review the unstaged Git patch"),
+    (GitCommitPrepare, "/git commit prepare", "Preview a commit without mutating Git"),
     (GitWorktrees, "/git worktrees", "Inspect Git worktrees"),
     (GitConflicts, "/git conflicts", "Inspect unresolved Git conflicts"),
     (GitConflictsInspect, "/git conflicts action inspect", "Inspect a conflict path"),
@@ -175,7 +176,7 @@ macro_rules! palette_sections {
 palette_sections! {
     ("Context" => [CopyLastResponse, SessionInfo, CompactContextNow, Questions, AnsweredQuestions, CancelledQuestions, RejectedQuestions, ClearQuestionHistory, PendingQuestions]),
     ("Session" => [NewSession, KeyboardShortcuts, Quit, Changelog, ShareSession, SessionHistory, SessionHistoryQuery, UndoSession, ResumeSessionPicker]),
-    ("Information" => [Help, ContextInfo, ClearContext, ResetContext, ContextPolicy, ContextPolicyOn, ContextPolicyOff, ContextPolicyReserve, ContextPolicyKeepRecent, Doctor, DoctorInspect, DoctorFix, Feedback, Usage, UsageChart, UsageChartAll, UsageChartInput, UsageChartOutput, UsageChartCost, GitStatus, GitDiff, GitReview, GitWorktrees, GitConflicts, GitConflictsInspect, GitConflictsCancel]),
+    ("Information" => [Help, ContextInfo, ClearContext, ResetContext, ContextPolicy, ContextPolicyOn, ContextPolicyOff, ContextPolicyReserve, ContextPolicyKeepRecent, Doctor, DoctorInspect, DoctorFix, Feedback, Usage, UsageChart, UsageChartAll, UsageChartInput, UsageChartOutput, UsageChartCost, GitStatus, GitDiff, GitReview, GitCommitPrepare, GitWorktrees, GitConflicts, GitConflictsInspect, GitConflictsCancel]),
     ("Extensions" => [Skills, Hooks, Plugins, Mcps, CloseMcps, ReconnectMcps, McpNotifications, ClearMcpNotifications, McpPopNotifications, McpReady, McpFailed, McpBusy, McpClosed, McpStdio, McpHttp, Memory]),
     ("Automation" => [Goal, Workflow, Workflows, Loop, DeepResearch, Jobs, ActiveJobs, CancelAllJobs, CancelRunningJobs, ClearFinishedJobs, CompletedJobs, QueuedJobs, FailedJobs, RunningJobs, CancelledJobs, CancelQueuedJobs, AskBeforeTools, Deny]),
 }
@@ -240,6 +241,7 @@ impl PaletteAction {
             Self::ContextPolicyReserve => "Token count",
             Self::ContextPolicyKeepRecent => "Token count",
             Self::JobOutput | Self::JobOutputFacts => "Job id",
+            Self::GitCommitPrepare => "Commit message",
             Self::JobOutputHead | Self::JobOutputTail => "Job id and line count",
             Self::Questions => "Query (optional)",
             _ => "Value",
@@ -292,6 +294,7 @@ const PARAMETERIZED_ACTIONS: &[PaletteAction] = &[
     PaletteAction::ContextPolicyKeepRecent,
     PaletteAction::Jobs,
     PaletteAction::Questions,
+    PaletteAction::GitCommitPrepare,
     PaletteAction::JobOutput,
     PaletteAction::JobOutputFacts,
     PaletteAction::JobOutputHead,
