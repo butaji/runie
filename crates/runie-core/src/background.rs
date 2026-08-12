@@ -5,7 +5,11 @@ use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, sync::Arc};
 use tokio::sync::{mpsc, oneshot, watch};
 use tokio::task::JoinSet;
-
+#[path = "background_output_queries.rs"]
+mod output_queries;
+pub use output_queries::{
+    parse_output_tail_query, parse_output_window_query, OutputWindowDirection,
+};
 #[path = "background_controls.rs"]
 mod controls;
 #[path = "background_status.rs"]
@@ -13,12 +17,10 @@ mod status;
 
 pub use controls::BackgroundCancelScope;
 pub use status::BackgroundStatus;
-
 pub const BACKGROUND_OUTPUT_MAX_BYTES: usize = 100 * 1024;
 const OUTPUT_TRUNCATION_MARKER: &str = "\n[output truncated]";
 const BACKGROUND_PREVIEW_MAX_CHARS: usize = 256;
 type BackgroundTask = (String, Result<(String, Option<i32>), (String, Option<i32>)>);
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BackgroundJob {
     pub id: String,
@@ -66,16 +68,6 @@ pub fn parse_output_facts_query(args: &str) -> Option<&str> {
     .then(|| args.split_whitespace().nth(1).unwrap())
 }
 
-pub fn parse_output_tail_query(args: &str) -> Option<(&str, usize)> {
-    let mut parts = args.split_whitespace();
-    if parts.next() != Some("output") || parts.next().is_none() || parts.next() != Some("tail") {
-        return None;
-    }
-    let id = args.split_whitespace().nth(1)?;
-    let count = parts.next()?.parse().ok()?;
-    parts.next().is_none().then_some((id, count))
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct OutputMetadata {
     lines: usize,
@@ -96,6 +88,14 @@ fn output_metadata(output: &str) -> OutputMetadata {
 }
 
 impl BackgroundOutput {
+    pub fn window_lines(&self, direction: OutputWindowDirection, count: usize) -> Vec<String> {
+        match direction {
+            OutputWindowDirection::Head => {
+                self.text.lines().take(count).map(str::to_owned).collect()
+            }
+            OutputWindowDirection::Tail => self.tail_lines(count),
+        }
+    }
     pub fn tail_lines(&self, count: usize) -> Vec<String> {
         self.text
             .lines()

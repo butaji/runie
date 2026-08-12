@@ -121,7 +121,6 @@ pub enum MappableBuiltinCommand {
         args: String,
     },
 }
-
 /// A known Pi command whose provider/UI capability has no Runie owner yet.
 /// Keeping this closed prevents unsupported commands from becoming an
 /// accidental successful no-op when the registry grows.
@@ -150,7 +149,6 @@ pub enum UnsupportedBuiltinCommand {
     Resume,
     Quit,
 }
-
 impl UnsupportedBuiltinCommand {
     pub const fn name(self) -> &'static str {
         match self {
@@ -188,7 +186,6 @@ pub enum BuiltinCommandDisposition {
     Unsupported(UnsupportedBuiltinCommand),
     NotBuiltin,
 }
-
 /// Parse an exact Pi built-in command that Runie can currently route through
 /// an existing actor/application boundary. Non-mappable commands return
 /// `None` and remain ordinary prompt text until their capability is built.
@@ -283,6 +280,9 @@ pub fn parse_background_job_output_query(args: &str) -> Option<&str> {
 
 pub use crate::background::parse_output_facts_query as parse_background_job_output_facts_query;
 pub use crate::background::parse_output_tail_query as parse_background_job_output_tail_query;
+pub use crate::background::{
+    parse_output_window_query as parse_background_job_output_window_query, OutputWindowDirection,
+};
 
 pub fn parse_background_job_status_query(args: &str) -> Option<&str> {
     let status = args.trim();

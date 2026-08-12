@@ -8,6 +8,7 @@ fn tail_projection_keeps_order_and_bounds_lines() {
         output_bytes: 13, preview: None, truncated: false,
     };
     assert_eq!(output.tail_lines(2), ["two", "three"]);
+    assert_eq!(output.window_lines(OutputWindowDirection::Head, 2), ["one", "two"]);
     assert!(output.tail_lines(0).is_empty());
 }
 

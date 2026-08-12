@@ -386,6 +386,10 @@ fn background_job_output_query_requires_one_id() {
         parse_background_job_output_tail_query("output 7 tail 0"),
         Some(("7", 0))
     );
+    assert_eq!(
+        parse_background_job_output_window_query("output 7 head 2"),
+        Some(("7", OutputWindowDirection::Head, 2))
+    );
     assert_eq!(parse_background_job_output_facts_query("output 7"), None);
 }
 
