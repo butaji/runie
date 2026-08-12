@@ -31,6 +31,23 @@ fn output_facts_terminal_line_is_actor_owned_data() {
     );
 }
 
+#[test]
+fn preview_terminal_line_preserves_bounded_preview_data() {
+    let output = BackgroundOutput {
+        job_id: "job".into(),
+        command: "echo output".into(),
+        status: BackgroundStatus::Completed,
+        exit_code: Some(0),
+        text: "output".into(),
+        output_lines: 1,
+        output_bytes: 6,
+        preview: Some("output".into()),
+        truncated: false,
+    };
+
+    assert_eq!(output.preview_terminal_line(), "output");
+}
+
 #[tokio::test]
 async fn jobs_are_owned_and_reduce_to_completion() {
     let actor = BackgroundProcessActor::new();

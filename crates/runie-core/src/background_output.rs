@@ -1,6 +1,12 @@
 use super::BackgroundOutput;
 
 impl BackgroundOutput {
+    pub fn preview_terminal_line(&self) -> String {
+        self.preview
+            .clone()
+            .unwrap_or_else(|| "(no output preview)".into())
+    }
+
     pub fn facts_terminal_line(&self) -> String {
         format!(
             "job={} status={:?} command={:?} exit={:?} lines={} bytes={} truncated={} preview={:?}",

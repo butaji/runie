@@ -11,6 +11,7 @@ pub use usage::{parse_usage_chart, UsageChartMetric};
 #[path = "commands_git.rs"]
 mod git;
 pub use git::{parse_git_commit, parse_git_commit_prepare, parse_git_push, parse_git_revert};
+include!("commands_background.rs");
 /// A command exposed by Pi's interactive command registry.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct SlashCommand {
@@ -27,7 +28,6 @@ pub const PI_BUILTIN_SLASH_COMMANDS: &[SlashCommand] = &[
                 argument_hint: pi_slash_commands!(@hint $($hint)?),
             }),+
 ];
-
     };
     (@hint $hint:literal) => { Some($hint) };
     (@hint) => { None };
