@@ -72,6 +72,7 @@ pub enum ToolCommand {
 pub struct ToolExecutorActor {
     tx: mpsc::Sender<ToolCommand>,
     registry: Arc<ToolRegistry>,
+    scheduler: tokio::sync::watch::Receiver<SchedulerMetrics>,
     _worker: Arc<TaskOwner>,
 }
 
@@ -93,15 +94,17 @@ impl ToolExecutorActor {
 
     fn new_with_clock(registry: Arc<ToolRegistry>, tool_result_timestamp: Option<i64>) -> Self {
         let reg = registry.clone();
+        let (scheduler_tx, scheduler) = tokio::sync::watch::channel(SchedulerMetrics::default());
 
         // OWNER: ToolExecutorActor
         let (tx, worker) = spawn_actor_worker!(64, move |rx| async move {
-            run_tool_worker(rx, reg, tool_result_timestamp).await;
+            run_tool_worker(rx, reg, tool_result_timestamp, scheduler_tx).await;
         });
 
         Self {
             tx,
             registry,
+            scheduler,
             _worker: worker,
         }
     }
@@ -121,6 +124,10 @@ impl ToolExecutorActor {
             return SchedulerMetrics::default();
         }
         response.await.unwrap_or_default()
+    }
+
+    pub fn subscribe_scheduler_metrics(&self) -> tokio::sync::watch::Receiver<SchedulerMetrics> {
+        self.scheduler.clone()
     }
 
     pub async fn cancel_queued(&self) -> usize {
@@ -264,17 +271,20 @@ async fn run_tool_worker(
     mut rx: mpsc::Receiver<ToolCommand>,
     registry: Arc<ToolRegistry>,
     tool_result_timestamp: Option<i64>,
+    scheduler_tx: tokio::sync::watch::Sender<SchedulerMetrics>,
 ) {
     let mut scheduler = SchedulerMetrics::default();
     let mut pending = Vec::new();
     while let Some(cmd) = next_prioritized_command(&mut rx, &mut pending).await {
         if let ToolCommand::Metrics { reply } = cmd {
             let _ = reply.send(scheduler.clone());
+            let _ = scheduler_tx.send(scheduler.clone());
             continue;
         }
         if let ToolCommand::CancelQueued { reply } = cmd {
             let cancelled = cancel_pending(&mut pending, &mut scheduler);
             let _ = reply.send(cancelled);
+            let _ = scheduler_tx.send(scheduler.clone());
             continue;
         }
         let interactive = matches!(
@@ -286,8 +296,10 @@ async fn run_tool_worker(
         );
         apply_scheduler(&mut scheduler, SchedulerEvent::Enqueued { interactive });
         apply_scheduler(&mut scheduler, SchedulerEvent::Started);
+        let _ = scheduler_tx.send(scheduler.clone());
         let (reply, outcome) = run_tool_command(cmd, &registry, tool_result_timestamp).await;
         settle_scheduler(&mut scheduler, &outcome);
+        let _ = scheduler_tx.send(scheduler.clone());
         let _ = reply.send(attach_scheduler(outcome, &scheduler));
     }
 }

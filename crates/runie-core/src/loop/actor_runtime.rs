@@ -4,6 +4,12 @@ impl LoopActor {
         self.inner.deps.tool_executor.scheduler_metrics().await
     }
 
+    pub fn subscribe_scheduler_metrics(
+        &self,
+    ) -> tokio::sync::watch::Receiver<crate::tools::SchedulerMetrics> {
+        self.inner.deps.tool_executor.subscribe_scheduler_metrics()
+    }
+
     pub async fn cancel_queued_tools(&self) -> usize {
         self.inner.deps.tool_executor.cancel_queued().await
     }

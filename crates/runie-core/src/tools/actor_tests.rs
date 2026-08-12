@@ -57,6 +57,16 @@ async fn execute_empty_batch_completes() {
     assert_eq!(snapshot.failed, 1);
 }
 
+#[tokio::test]
+async fn scheduler_metrics_are_published_as_actor_owned_watch_data() {
+    let actor = ToolExecutorActor::new(Arc::new(ToolRegistry::new()));
+    let mut updates = actor.subscribe_scheduler_metrics();
+    let _ = execute_test_batch(&actor, vec![], ToolExecutionMode::Parallel).await;
+    updates.changed().await.unwrap();
+    assert_eq!(updates.borrow().completed, 1);
+    assert_eq!(updates.borrow().running, 0);
+}
+
 async fn execute_test_batch(
     actor: &ToolExecutorActor,
     calls: Vec<ToolCall>,
