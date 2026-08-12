@@ -109,18 +109,30 @@ pub struct McpStdioActor {
 }
 impl McpStdioActor {
     pub fn new(client: McpStdioClient) -> Self {
-        Self::new_with_persistence(client, false)
+        Self::new_with_persistence_and_notifications(
+            client,
+            false,
+            crate::tools::McpNotificationActor::new(crate::tools::MCP_NOTIFICATION_QUEUE_CAPACITY),
+        )
     }
-    pub fn new_persistent(client: McpStdioClient) -> Self {
-        Self::new_with_persistence(client, true)
+    pub fn new_persistent_with_notifications(
+        client: McpStdioClient,
+        notifications: crate::tools::McpNotificationActor,
+    ) -> Self {
+        Self::new_with_persistence_and_notifications(client, true, notifications)
     }
-    fn new_with_persistence(client: McpStdioClient, persistent: bool) -> Self {
+    fn new_with_persistence_and_notifications(
+        client: McpStdioClient,
+        persistent: bool,
+        notifications: crate::tools::McpNotificationActor,
+    ) -> Self {
         let identity = stdio_identity(&client);
         let (status_tx, status) = tokio::sync::watch::channel(McpStdioStatus::Ready);
+        let notifications_for_worker = notifications.clone();
         let (tx, owner) = crate::spawn_actor_worker!(32, move |rx: tokio::sync::mpsc::Receiver<
             McpStdioCommand,
         >| async move {
-            run_stdio_worker(rx, client, persistent, status_tx).await
+            run_stdio_worker(rx, client, persistent, notifications_for_worker, status_tx).await
         });
         Self {
             tx,
@@ -135,11 +147,6 @@ impl McpStdioActor {
     pub fn status(&self) -> McpStdioStatus {
         *self.status.borrow()
     }
-
-    pub fn subscribe_status(&self) -> tokio::sync::watch::Receiver<McpStdioStatus> {
-        self.status.clone()
-    }
-
     pub async fn call_tool(
         &self,
         tool: impl Into<String>,
@@ -158,7 +165,6 @@ impl McpStdioActor {
             .await
             .map_err(|_| "MCP stdio actor response was dropped".to_owned())?
     }
-
     pub async fn close(self) -> Result<(), String> {
         let (reply, response) = tokio::sync::oneshot::channel();
         self.tx
@@ -169,7 +175,6 @@ impl McpStdioActor {
             .await
             .map_err(|_| "MCP stdio actor close response was dropped".to_owned())
     }
-
     pub async fn reconnect(&self) -> Result<(), String> {
         let (reply, response) = tokio::sync::oneshot::channel();
         self.tx
@@ -181,11 +186,11 @@ impl McpStdioActor {
             .map_err(|_| "MCP stdio actor reconnect response was dropped".to_owned())
     }
 }
-
 async fn run_stdio_worker(
     mut rx: tokio::sync::mpsc::Receiver<McpStdioCommand>,
     client: McpStdioClient,
     persistent: bool,
+    notifications: McpNotificationActor,
     status_tx: tokio::sync::watch::Sender<McpStdioStatus>,
 ) {
     let mut session = None;
@@ -201,6 +206,7 @@ async fn run_stdio_worker(
                     &client,
                     &mut session,
                     persistent,
+                    &notifications,
                     &tool,
                     arguments,
                     &status_tx,
@@ -223,7 +229,6 @@ async fn run_stdio_worker(
         }
     }
 }
-
 async fn reconnect_stdio(
     session: &mut Option<McpStdioSession>,
     status_tx: &tokio::sync::watch::Sender<McpStdioStatus>,
@@ -235,7 +240,6 @@ async fn reconnect_stdio(
     let _ = status_tx.send(McpStdioStatus::Ready);
     let _ = reply.send(());
 }
-
 async fn close_stdio(
     reply: tokio::sync::oneshot::Sender<()>,
     session: &mut Option<McpStdioSession>,
@@ -247,11 +251,11 @@ async fn close_stdio(
         let _ = session.close().await;
     }
 }
-
 async fn call_stdio(
     client: &McpStdioClient,
     session: &mut Option<McpStdioSession>,
     persistent: bool,
+    notifications: &McpNotificationActor,
     tool: &str,
     arguments: serde_json::Value,
     status_tx: &tokio::sync::watch::Sender<McpStdioStatus>,
@@ -268,13 +272,20 @@ async fn call_stdio(
             }
         }
     }
-    session
+    let result = session
         .as_mut()
         .expect("persistent MCP session")
         .call_tool(tool, arguments)
-        .await
+        .await;
+    for notification in session
+        .as_mut()
+        .expect("persistent MCP session")
+        .take_notifications()
+    {
+        notifications.push(notification).await;
+    }
+    result
 }
-
 impl McpStdioClient {
     pub fn new(
         command: impl Into<String>,
@@ -294,7 +305,6 @@ impl McpStdioClient {
             timeout,
         })
     }
-
     pub async fn request(
         &self,
         requests: &[serde_json::Value],
@@ -311,7 +321,6 @@ impl McpStdioClient {
         let _ = child.wait().await;
         result
     }
-
     pub async fn discover(&self) -> Result<McpServer, String> {
         let responses = self
             .request(&[
@@ -338,7 +347,6 @@ impl McpStdioClient {
             tools,
         })
     }
-
     pub async fn call_tool(
         &self,
         tool: &str,
@@ -352,7 +360,6 @@ impl McpStdioClient {
             .await?;
         response_result_or_error(&responses, 1, "tools/call").cloned()
     }
-
     async fn exchange(
         &self,
         child: &mut tokio::process::Child,
@@ -379,7 +386,6 @@ impl McpStdioClient {
         read_responses(stdout, expected, self.timeout).await
     }
 }
-
 async fn read_responses(
     stdout: tokio::process::ChildStdout,
     expected: usize,
@@ -405,14 +411,12 @@ async fn read_responses(
     }
     Ok(responses)
 }
-
 fn response_result(responses: &[serde_json::Value], id: u64) -> Option<&serde_json::Value> {
     responses
         .iter()
         .find(|response| response.get("id").and_then(serde_json::Value::as_u64) == Some(id))
         .and_then(|response| response.get("result"))
 }
-
 fn response_error(responses: &[serde_json::Value], id: u64) -> Option<String> {
     responses
         .iter()
@@ -430,7 +434,6 @@ fn response_error(responses: &[serde_json::Value], id: u64) -> Option<String> {
             )
         })
 }
-
 fn response_result_or_error<'a>(
     responses: &'a [serde_json::Value],
     id: u64,
@@ -441,7 +444,6 @@ fn response_result_or_error<'a>(
             .unwrap_or_else(|| format!("MCP {operation} response has no result"))
     })
 }
-
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct McpCallRequest {
     pub server: String,
@@ -449,7 +451,6 @@ pub struct McpCallRequest {
     #[serde(default)]
     pub arguments: serde_json::Value,
 }
-
 pub type McpCallHook = Arc<
     dyn Fn(
             McpCallRequest,
@@ -458,14 +459,12 @@ pub type McpCallHook = Arc<
         > + Send
         + Sync,
 >;
-
 pub struct McpTool {
     server: String,
     spec: McpToolSpec,
     qualified: String,
     call: McpCallHook,
 }
-
 impl McpTool {
     pub fn new(
         server: impl Into<String>,
@@ -488,7 +487,6 @@ impl McpTool {
         &self.qualified
     }
 }
-
 #[async_trait::async_trait]
 impl AgentTool for McpTool {
     fn name(&self) -> &str {

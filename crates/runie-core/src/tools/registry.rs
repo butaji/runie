@@ -73,7 +73,12 @@ impl ToolRegistry {
         client: crate::tools::McpStdioClient,
     ) -> Result<usize, String> {
         let server = client.discover().await?;
-        let owner = Arc::new(crate::tools::McpStdioActor::new_persistent(client));
+        let owner = Arc::new(
+            crate::tools::McpStdioActor::new_persistent_with_notifications(
+                client,
+                self.mcp_notifications(),
+            ),
+        );
         let owner_for_call = owner.clone();
         let call: crate::tools::McpCallHook = Arc::new(move |request| {
             let owner = owner_for_call.clone();

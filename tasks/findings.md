@@ -116,6 +116,10 @@ the existing classified data boundary.
 
 As of 2026-08-09, the reduction work has these verified results:
 
+Persistent MCP stdio sessions now retain interleaved server notifications as
+data and route them through the shared notification actor; the actor regression
+and 91-case live TUI smoke suite pass.
+
 - `EventMemo` is used by the scrollback and status actors.
 - `SharedSnapshot<S>` provides an `Arc`-backed immutable transfer view for
   projections whose owning memo can be consumed.

@@ -17,6 +17,7 @@ pub struct McpStdioSession {
     timeout: Duration,
     initialized: bool,
     next_id: u64,
+    pending_notifications: Vec<serde_json::Value>,
 }
 
 impl McpStdioSession {
@@ -37,7 +38,12 @@ impl McpStdioSession {
             timeout: client.timeout,
             initialized: false,
             next_id: 1,
+            pending_notifications: Vec::new(),
         })
+    }
+
+    pub fn take_notifications(&mut self) -> Vec<serde_json::Value> {
+        std::mem::take(&mut self.pending_notifications)
     }
 
     async fn send(
@@ -73,6 +79,8 @@ impl McpStdioSession {
                 .map_err(|error| format!("invalid MCP JSON: {error}"))?;
             if matches_response(&value, &expected, &responses) {
                 responses.push(value);
+            } else if value.get("id").is_none() {
+                self.pending_notifications.push(value);
             }
         }
         Ok(responses)

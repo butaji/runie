@@ -215,3 +215,29 @@ async fn persistent_session_initializes_once_and_reuses_process() {
     );
     session.close().await.unwrap();
 }
+
+#[tokio::test]
+async fn persistent_stdio_actor_routes_interleaved_notifications_to_owner() {
+    let script = r#"while IFS= read -r line; do case "$line" in *initialize*) echo '{"id":1,"result":{}}';; *tools/list*) echo '{"id":2,"result":{"tools":[]}}';; *tools/call*) echo '{"method":"notifications/progress","params":{"step":1}}'; echo '{"id":3,"result":{"ok":true}}';; esac; done"#;
+    let client = McpStdioClient::new(
+        "sh",
+        vec!["-c".into(), script.into()],
+        Duration::from_secs(1),
+    )
+    .unwrap();
+    let notifications = McpNotificationActor::new(4);
+    let actor = McpStdioActor::new_persistent_with_notifications(client, notifications.clone());
+    assert_eq!(
+        actor
+            .call_tool("echo", serde_json::json!({}))
+            .await
+            .unwrap()["ok"],
+        true
+    );
+    assert_eq!(notifications.snapshot().queue.pending.len(), 1);
+    assert_eq!(
+        notifications.snapshot().queue.pending[0]["method"],
+        "notifications/progress"
+    );
+    actor.close().await.unwrap();
+}
