@@ -147,10 +147,20 @@ pub struct CommandState {
     pub diagnostic_report: Option<DiagnosticReport>,
     #[serde(default = "default_context_policy_enabled")]
     pub context_policy_enabled: bool,
+    #[serde(default = "default_context_reserve_tokens")]
+    pub context_policy_reserve_tokens: u64,
+    #[serde(default = "default_context_keep_recent_tokens")]
+    pub context_policy_keep_recent_tokens: u64,
 }
 
 fn default_context_policy_enabled() -> bool {
     true
+}
+fn default_context_reserve_tokens() -> u64 {
+    20_000
+}
+fn default_context_keep_recent_tokens() -> u64 {
+    20
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -206,8 +216,7 @@ fn reduce_command(state: &mut CommandState, name: &str, args: &str) {
         "always-approve" => state.approval = approval(args, ApprovalMode::Always),
         "auto" => state.approval = approval(args, ApprovalMode::Auto),
         "plan" => update_plan(state, args),
-        "context-policy" if args == "on" => state.context_policy_enabled = true,
-        "context-policy" if args == "off" => state.context_policy_enabled = false,
+        "context-policy" => reduce_context_policy(state, args),
         "memory" => update_memory(state, args),
         "remember" if !args.is_empty() => state.remembered.push(args.into()),
         "login" => add_unique(&mut state.authenticated, args),
@@ -236,6 +245,20 @@ fn reduce_command(state: &mut CommandState, name: &str, args: &str) {
             state.last_diagnostic = Some(report.summary());
             state.diagnostic_report = Some(report);
         }
+        _ => {}
+    }
+}
+
+fn reduce_context_policy(state: &mut CommandState, args: &str) {
+    let mut parts = args.split_whitespace();
+    match (
+        parts.next(),
+        parts.next().and_then(|value| value.parse().ok()),
+    ) {
+        (Some("on"), _) => state.context_policy_enabled = true,
+        (Some("off"), _) => state.context_policy_enabled = false,
+        (Some("reserve"), Some(value)) => state.context_policy_reserve_tokens = value,
+        (Some("keep"), Some(value)) => state.context_policy_keep_recent_tokens = value,
         _ => {}
     }
 }
@@ -353,6 +376,10 @@ mod tests {
         assert!(!actor.snapshot().context_policy_enabled);
         actor.invoke("context-policy", "on").await;
         assert!(actor.snapshot().context_policy_enabled);
+        actor.invoke("context-policy", "reserve 123").await;
+        actor.invoke("context-policy", "keep 42").await;
+        assert_eq!(actor.snapshot().context_policy_reserve_tokens, 123);
+        assert_eq!(actor.snapshot().context_policy_keep_recent_tokens, 42);
     }
 
     #[tokio::test]

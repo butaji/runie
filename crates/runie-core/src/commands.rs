@@ -228,14 +228,12 @@ pub fn parse_background_job_cancel_all(args: &str) -> bool {
 pub fn parse_background_job_clear_finished(args: &str) -> bool {
     args.split_whitespace().eq(["clear", "finished"])
 }
-
 pub fn parse_background_scheduler_query(args: &str) -> bool {
     args.trim() == "scheduler"
 }
 pub fn parse_background_scheduler_active_query(args: &str) -> bool {
     args.trim() == "scheduler active"
 }
-
 pub fn parse_git_conflict_path_selection(args: &str) -> Option<&str> {
     let mut parts = args.split_whitespace();
     (parts.next() == Some("conflicts")
@@ -291,16 +289,13 @@ pub fn parse_mcp_transport_query(args: &str) -> Option<&str> {
     let transport = args.trim();
     crate::tools::McpTransport::from_wire_name(transport).map(|_| transport)
 }
-
 pub fn parse_mcp_status_query(args: &str) -> Option<&str> {
     let status = args.trim();
     crate::tools::McpStdioStatus::from_wire_name(status).map(|_| status)
 }
-
 pub fn parse_mcp_close_command(args: &str) -> bool {
     args.trim().eq_ignore_ascii_case("close")
 }
-
 pub fn parse_mcp_reconnect_command(args: &str) -> bool {
     args.trim().eq_ignore_ascii_case("reconnect")
 }
@@ -360,8 +355,9 @@ pub fn parse_usage_chart(args: &str) -> bool {
 pub enum ContextPolicyCommand {
     View,
     Set(bool),
+    Reserve(u64),
+    KeepRecent(u64),
 }
-
 pub fn parse_context_policy(args: &str) -> Option<ContextPolicyCommand> {
     let mut parts = args.split_whitespace();
     match (
@@ -372,10 +368,15 @@ pub fn parse_context_policy(args: &str) -> Option<ContextPolicyCommand> {
         ("policy", None, None) => Some(ContextPolicyCommand::View),
         ("policy", Some("on"), None) => Some(ContextPolicyCommand::Set(true)),
         ("policy", Some("off"), None) => Some(ContextPolicyCommand::Set(false)),
+        ("policy", Some("reserve"), Some(value)) => {
+            value.parse().ok().map(ContextPolicyCommand::Reserve)
+        }
+        ("policy", Some("keep"), Some(value)) => {
+            value.parse().ok().map(ContextPolicyCommand::KeepRecent)
+        }
         _ => None,
     }
 }
-
 #[allow(clippy::too_many_lines)]
 fn parse_parameterized_command(value: &str) -> Option<MappableBuiltinCommand> {
     if let Some(command) = parse_compact_command(value) {
@@ -433,7 +434,6 @@ fn jsonl_command(
 ) -> Option<MappableBuiltinCommand> {
     path.ends_with(".jsonl").then(|| make(path.to_owned()))
 }
-
 #[allow(clippy::too_many_lines)]
 fn parse_extended_no_arg(value: &str) -> Option<MappableBuiltinCommand> {
     let name = value.strip_prefix('/')?;

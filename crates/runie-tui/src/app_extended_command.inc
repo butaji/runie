@@ -522,15 +522,28 @@ impl App {
             }
             "context" => {
                 let policy_command = runie_core::commands::parse_context_policy(args);
-                if let Some(runie_core::commands::ContextPolicyCommand::Set(enabled)) = policy_command {
-                    self.command_actor
-                        .invoke("context-policy", if enabled { "on" } else { "off" })
-                        .await;
+                if let Some(policy_command) = policy_command.filter(|command| {
+                    !matches!(command, runie_core::commands::ContextPolicyCommand::View)
+                }) {
+                    let result = match policy_command {
+                        runie_core::commands::ContextPolicyCommand::Set(enabled) => {
+                            self.command_actor
+                                .invoke("context-policy", if enabled { "on" } else { "off" })
+                                .await;
+                            format!("Context compaction policy: {}", if enabled { "enabled" } else { "disabled" })
+                        }
+                        runie_core::commands::ContextPolicyCommand::Reserve(value) => {
+                            self.command_actor.invoke("context-policy", format!("reserve {value}")).await;
+                            format!("Context reserve tokens: {value}")
+                        }
+                        runie_core::commands::ContextPolicyCommand::KeepRecent(value) => {
+                            self.command_actor.invoke("context-policy", format!("keep {value}")).await;
+                            format!("Context keep-recent tokens: {value}")
+                        }
+                        runie_core::commands::ContextPolicyCommand::View => unreachable!(),
+                    };
                     self.ui
-                        .send(UiMsg::ShowCommandResult(format!(
-                            "Context compaction policy: {}",
-                            if enabled { "enabled" } else { "disabled" }
-                        )))
+                        .send(UiMsg::ShowCommandResult(result))
                         .await;
                     return true;
                 }
@@ -557,12 +570,14 @@ impl App {
                 let estimate = runie_core::session::estimate_context_tokens(&messages);
                 let model = self.model_catalog.snapshot().selected;
                 let context_window = model.as_ref().map(|model| model.context_window).unwrap_or(0);
+                let policy_state = self.command_actor.snapshot();
                 let report = runie_core::session::context_report(
                     estimate.tokens,
                     context_window,
                     runie_core::session::CompactionSettings {
-                        enabled: self.command_actor.snapshot().context_policy_enabled,
-                        ..runie_core::session::CompactionSettings::default()
+                        enabled: policy_state.context_policy_enabled,
+                        reserve_tokens: policy_state.context_policy_reserve_tokens,
+                        keep_recent_tokens: policy_state.context_policy_keep_recent_tokens,
                     },
                     snapshot.compaction_context_projection(),
                 );

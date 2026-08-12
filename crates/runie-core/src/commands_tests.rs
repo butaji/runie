@@ -335,6 +335,14 @@ fn context_policy_command_is_exact_data() {
         parse_context_policy("policy off"),
         Some(ContextPolicyCommand::Set(false))
     );
+    assert_eq!(
+        parse_context_policy("policy reserve 123"),
+        Some(ContextPolicyCommand::Reserve(123))
+    );
+    assert_eq!(
+        parse_context_policy("policy keep 42"),
+        Some(ContextPolicyCommand::KeepRecent(42))
+    );
     assert_eq!(parse_context_policy("policy compact"), None);
 }
 
