@@ -12,9 +12,10 @@ pub use output_queries::{
 };
 #[path = "background_controls.rs"]
 mod controls;
+#[path = "background_output.rs"]
+mod output_projection;
 #[path = "background_status.rs"]
 mod status;
-
 pub use controls::BackgroundCancelScope;
 pub use status::BackgroundStatus;
 pub const BACKGROUND_OUTPUT_MAX_BYTES: usize = 100 * 1024;
@@ -30,7 +31,6 @@ pub struct BackgroundJob {
     #[serde(default)]
     pub exit_code: Option<i32>,
 }
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BackgroundJobSummary {
     pub id: String,

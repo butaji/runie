@@ -355,17 +355,7 @@ impl App {
             }
             if let Some(id) = runie_core::commands::parse_background_job_output_facts_query(args) {
                 let result = match self.background_actor.read_output(id).await {
-                    Some(output) => format!(
-                        "job={} status={:?} command={:?} exit={:?} lines={} bytes={} truncated={} preview={:?}",
-                        output.job_id,
-                        output.status,
-                        output.command,
-                        output.exit_code,
-                        output.output_lines,
-                        output.output_bytes,
-                        output.truncated,
-                        output.preview,
-                    ),
+                    Some(output) => output.facts_terminal_line(),
                     None => format!("Background job {id} output not found"),
                 };
                 self.ui.send(UiMsg::ShowCommandResult(result)).await;

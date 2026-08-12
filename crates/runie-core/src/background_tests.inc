@@ -12,6 +12,25 @@ fn tail_projection_keeps_order_and_bounds_lines() {
     assert!(output.tail_lines(0).is_empty());
 }
 
+#[test]
+fn output_facts_terminal_line_is_actor_owned_data() {
+    let output = BackgroundOutput {
+        job_id: "job-7".into(),
+        command: "printf output".into(),
+        status: BackgroundStatus::Failed,
+        exit_code: Some(1),
+        text: "output".into(),
+        output_lines: 1,
+        output_bytes: 6,
+        preview: Some("output".into()),
+        truncated: false,
+    };
+    assert_eq!(
+        output.facts_terminal_line(),
+        "job=job-7 status=Failed command=\"printf output\" exit=Some(1) lines=1 bytes=6 truncated=false preview=Some(\"output\")"
+    );
+}
+
 #[tokio::test]
 async fn jobs_are_owned_and_reduce_to_completion() {
     let actor = BackgroundProcessActor::new();
