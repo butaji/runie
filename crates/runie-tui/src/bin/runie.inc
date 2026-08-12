@@ -1954,8 +1954,8 @@ async fn run_app(
                 }
                 KeyCode::Enter => {
                     theme_preview.commit();
+                    let command = app.ui.parameter_submit_command();
                     app.ui.send(runie_tui_model::UiMsg::PaletteParameterSubmit).await;
-                    let command = ui_commands.recv().await.ok();
                     match command {
                         Some(UiCommand::ExecuteMappable(command)) => {
                             let _ = app.route_mappable_command(command).await;

@@ -103,6 +103,10 @@ impl UiActor {
     pub fn subscribe_commands(&self) -> broadcast::Receiver<UiCommand> {
         self.commands.subscribe()
     }
+
+    pub fn parameter_submit_command(&self) -> Option<UiCommand> {
+        app_projection::ui_command_for(&self.snapshot(), &UiMsg::PaletteParameterSubmit)
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
