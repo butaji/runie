@@ -268,6 +268,8 @@ fn parameterized_palette_actions() -> Vec<PaletteAction> {
         PaletteAction::DeepResearch,
         PaletteAction::Feedback,
         PaletteAction::Usage,
+        PaletteAction::ContextPolicyReserve,
+        PaletteAction::ContextPolicyKeepRecent,
     ]
 }
 

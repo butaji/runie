@@ -53,6 +53,8 @@ declare_palette_metadata! {
     (ContextPolicy, "/context policy", "Show compaction policy state"),
     (ContextPolicyOn, "/context policy on", "Enable automatic compaction"),
     (ContextPolicyOff, "/context policy off", "Disable automatic compaction"),
+    (ContextPolicyReserve, "/context policy reserve", "Set reserved context tokens"),
+    (ContextPolicyKeepRecent, "/context policy keep", "Set recent context tokens"),
     (Settings, "/settings", "Open persistent settings"),
     (Doctor, "/doctor", "Diagnose runtime integrations"),
     (RewindSession, "/rewind", "Restore an earlier conversation state"),
@@ -149,7 +151,7 @@ macro_rules! palette_sections {
 palette_sections! {
     ("Context" => [CopyLastResponse, SessionInfo]),
     ("Session" => [NewSession, KeyboardShortcuts, Quit, Changelog, ShareSession, SessionHistory, SessionHistoryQuery, UndoSession]),
-    ("Information" => [Help, ContextInfo, ContextPolicy, ContextPolicyOn, ContextPolicyOff, Doctor, Feedback, Usage, GitStatus, GitDiff, GitReview, GitWorktrees, GitConflicts]),
+    ("Information" => [Help, ContextInfo, ContextPolicy, ContextPolicyOn, ContextPolicyOff, ContextPolicyReserve, ContextPolicyKeepRecent, Doctor, Feedback, Usage, GitStatus, GitDiff, GitReview, GitWorktrees, GitConflicts]),
     ("Extensions" => [Skills, Hooks, Plugins, Mcps, CloseMcps, ReconnectMcps, McpNotifications, ClearMcpNotifications, McpReady, McpFailed, McpBusy, McpClosed, McpStdio, McpHttp, Memory]),
     ("Automation" => [Goal, Workflow, Workflows, Loop, DeepResearch, Jobs, ActiveJobs, CancelAllJobs, CancelRunningJobs, ClearFinishedJobs, CompletedJobs, FailedJobs, CancelledJobs, CancelQueuedJobs]),
 }
@@ -173,46 +175,8 @@ fn palette_row(label: &str) -> String {
 }
 
 impl PaletteAction {
-    pub const fn requires_parameters(&self) -> bool {
-        matches!(
-            self,
-            Self::SetSessionName
-                | Self::UndoSession
-                | Self::SessionHistoryQuery
-                | Self::SelectTheme
-                | Self::CompactContext
-                | Self::ForkSession
-                | Self::SelectTreeEntry
-                | Self::ExportSession
-                | Self::ImportSession
-                | Self::CloneSession
-                | Self::ResumeSession
-                | Self::Help
-                | Self::Settings
-                | Self::Doctor
-                | Self::RewindSession
-                | Self::PromptHistory
-                | Self::FindTranscript
-                | Self::JumpTranscript
-                | Self::SetEffort
-                | Self::AlwaysApprove
-                | Self::AutoApprove
-                | Self::PlanMode
-                | Self::Login
-                | Self::Logout
-                | Self::TrustProject
-                | Self::Remember
-                | Self::Goal
-                | Self::Workflow
-                | Self::Loop
-                | Self::DeepResearch
-                | Self::Feedback
-                | Self::Usage
-                | Self::Jobs
-                | Self::Questions
-                | Self::JobOutput
-                | Self::JobOutputFacts
-        )
+    pub fn requires_parameters(&self) -> bool {
+        PARAMETERIZED_ACTIONS.contains(self)
     }
 
     pub const fn slash_command(&self) -> &'static str {
@@ -249,6 +213,8 @@ impl PaletteAction {
             Self::Loop => "Interval and prompt",
             Self::DeepResearch => "Query",
             Self::Usage => "manage (optional)",
+            Self::ContextPolicyReserve => "Token count",
+            Self::ContextPolicyKeepRecent => "Token count",
             Self::JobOutput | Self::JobOutputFacts => "Job id",
             Self::Questions => "Query (optional)",
             _ => "Value",
@@ -263,6 +229,47 @@ impl PaletteAction {
         "builtin"
     }
 }
+
+const PARAMETERIZED_ACTIONS: &[PaletteAction] = &[
+    PaletteAction::SetSessionName,
+    PaletteAction::UndoSession,
+    PaletteAction::SessionHistoryQuery,
+    PaletteAction::SelectTheme,
+    PaletteAction::CompactContext,
+    PaletteAction::ForkSession,
+    PaletteAction::SelectTreeEntry,
+    PaletteAction::ExportSession,
+    PaletteAction::ImportSession,
+    PaletteAction::CloneSession,
+    PaletteAction::ResumeSession,
+    PaletteAction::Help,
+    PaletteAction::Settings,
+    PaletteAction::Doctor,
+    PaletteAction::RewindSession,
+    PaletteAction::PromptHistory,
+    PaletteAction::FindTranscript,
+    PaletteAction::JumpTranscript,
+    PaletteAction::SetEffort,
+    PaletteAction::AlwaysApprove,
+    PaletteAction::AutoApprove,
+    PaletteAction::PlanMode,
+    PaletteAction::Login,
+    PaletteAction::Logout,
+    PaletteAction::TrustProject,
+    PaletteAction::Remember,
+    PaletteAction::Goal,
+    PaletteAction::Workflow,
+    PaletteAction::Loop,
+    PaletteAction::DeepResearch,
+    PaletteAction::Feedback,
+    PaletteAction::Usage,
+    PaletteAction::ContextPolicyReserve,
+    PaletteAction::ContextPolicyKeepRecent,
+    PaletteAction::Jobs,
+    PaletteAction::Questions,
+    PaletteAction::JobOutput,
+    PaletteAction::JobOutputFacts,
+];
 
 const THEME_LABELS: &[&str] = &[
     "ayu-dark",

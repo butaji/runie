@@ -104,6 +104,9 @@ Priority order:
 5. Finish diagnostics/TUI polish with renderer-neutral query state and
    deterministic fixture captures.
 
+Context policy settings now include actor-owned reserve and keep-recent token
+limits, with parser, reducer, report, and TUI command-result coverage.
+
 Completion evidence is: every finite matrix row has source + replay/unit test
  + live TUI evidence, the extension queue has no unverified claim, `just ci`
 is green, the fresh smoke summary is `passed=89 failed=0`, and `git status`

@@ -13,14 +13,14 @@ labels=(
   "Doctor" "Rewind Session" "Prompt History" "Find Transcript" "Jump Transcript" "Recap"
   "Set Reasoning Effort" "Always Approve" "Automatic Approval" "Plan Mode" "View Plan"
   "Login" "Logout" "Reload" "Trust Project" "Skills" "Hooks" "Plugins" "MCP Servers" "Close MCP Servers" "Reconnect MCP Servers"
-  "Memory" "Remember" "Goal" "Workflow" "Workflows" "Sessions" "Session History" "Session History Query" "Undo Session" "Questions" "Active Jobs" "Cancel All Jobs" "Cancel Running Jobs" "Clear Finished Jobs" "Completed Jobs" "Failed Jobs" "Cancelled Jobs" "Git Status" "Git Diff" "Git Review" "Git Worktrees" "Git Conflicts" "MCP Notifications" "Clear MCP Notifications" "Ready MCP Servers" "Failed MCP Servers" "Busy MCP Servers" "Closed MCP Servers" "Stdio MCP Servers" "HTTP MCP Servers" "Loop" "Deep Research" "Feedback" "Usage" "Usage Chart" "Context Policy" "Enable Context Policy" "Disable Context Policy"
+  "Memory" "Remember" "Goal" "Workflow" "Workflows" "Sessions" "Session History" "Session History Query" "Undo Session" "Questions" "Active Jobs" "Cancel All Jobs" "Cancel Running Jobs" "Clear Finished Jobs" "Completed Jobs" "Failed Jobs" "Cancelled Jobs" "Git Status" "Git Diff" "Git Review" "Git Worktrees" "Git Conflicts" "MCP Notifications" "Clear MCP Notifications" "Ready MCP Servers" "Failed MCP Servers" "Busy MCP Servers" "Closed MCP Servers" "Stdio MCP Servers" "HTTP MCP Servers" "Loop" "Deep Research" "Feedback" "Usage" "Usage Chart" "Context Policy" "Enable Context Policy" "Disable Context Policy" "Set Context Reserve" "Set Context Keep Recent"
   "Background Jobs" "Jobs" "Job Output" "Job Output Facts" "Cancel Queued Jobs"
 )
 parameterized=(
   "Select Theme" "Set Session Name" "Compact Context" "Fork Session" "Select Tree Entry"
   "Export Session" "Import Session" "Clone Session" "Resume Session" "Help" "Settings" "Doctor"
   "Rewind Session" "Prompt History" "Find Transcript" "Jump Transcript" "Set Reasoning Effort"
-  "Always Approve" "Automatic Approval" "Plan Mode" "Login" "Logout" "Trust Project" "Remember" "Undo Session"
+  "Always Approve" "Automatic Approval" "Plan Mode" "Login" "Logout" "Trust Project" "Remember" "Undo Session" "Set Context Reserve" "Set Context Keep Recent"
   "Goal" "Workflow" "Loop" "Deep Research" "Feedback" "Usage" "Background Jobs" "Questions" "Jobs" "Completed Jobs" "Failed Jobs" "Cancelled Jobs" "Busy MCP Servers" "Closed MCP Servers" "Stdio MCP Servers" "HTTP MCP Servers" "Git Status" "Git Diff" "Git Review" "Git Worktrees" "Git Conflicts" "Job Output" "Job Output Facts" "Session History Query"
 )
 
@@ -89,6 +89,10 @@ for label in "${labels[@]}"; do
       argument=(c o n f l i c t s)
     elif [[ "$label" == "Session History Query" ]]; then
       argument=(a c t i v e _ t o o l s)
+    elif [[ "$label" == "Set Context Reserve" ]]; then
+      argument=(1 2 3)
+    elif [[ "$label" == "Set Context Keep Recent" ]]; then
+      argument=(4 2)
     elif [[ "$label" == "Job Output" ]]; then
       argument=(o u t p u t 0)
     fi
@@ -165,6 +169,16 @@ for label in "${labels[@]}"; do
     fi
     if [[ "$label" == "Clear Finished Jobs" ]] && ! wait_for 'Cleared 0 finished background job'; then
       echo "FAIL $label: expected-clear-result"
+      ((failed += 1))
+      continue
+    fi
+    if [[ "$label" == "Set Context Reserve" ]] && ! wait_for 'Context reserve tokens: 123'; then
+      echo "FAIL $label: expected-context-result"
+      ((failed += 1))
+      continue
+    fi
+    if [[ "$label" == "Set Context Keep Recent" ]] && ! wait_for 'Context keep-recent tokens: 42'; then
+      echo "FAIL $label: expected-context-result"
       ((failed += 1))
       continue
     fi
