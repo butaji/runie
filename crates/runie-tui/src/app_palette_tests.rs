@@ -127,6 +127,11 @@ fn pending_questions_palette_action_emits_extended_command() {
 }
 
 #[test]
+fn ask_before_tools_palette_action_emits_extended_command() {
+    assert_parameter_flow(super::PaletteAction::AskBeforeTools, "", "/ask");
+}
+
+#[test]
 fn mcp_notification_palette_actions_emit_extended_commands() {
     assert_parameter_flow(
         super::PaletteAction::McpNotifications,

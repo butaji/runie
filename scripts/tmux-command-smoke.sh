@@ -11,7 +11,7 @@ labels=(
   "Compact Context" "Fork Session" "Select Tree Entry" "Export Session" "Import Session"
   "Clone Session" "Resume Session" "Share Session" "Help" "Context Info" "Settings"
   "Doctor" "Rewind Session" "Prompt History" "Find Transcript" "Jump Transcript" "Recap"
-  "Set Reasoning Effort" "Always Approve" "Automatic Approval" "Deny Tools" "Plan Mode" "View Plan"
+  "Set Reasoning Effort" "Always Approve" "Automatic Approval" "Ask Before Tools" "Deny Tools" "Plan Mode" "View Plan"
   "Login" "Logout" "Reload" "Trust Project" "Skills" "Hooks" "Plugins" "MCP Servers" "Close MCP Servers" "Reconnect MCP Servers"
   "Memory" "Remember" "Goal" "Workflow" "Workflows" "Sessions" "Session History" "Session History Query" "Undo Session" "Questions" "Active Jobs" "Cancel All Jobs" "Cancel Running Jobs" "Clear Finished Jobs" "Completed Jobs" "Failed Jobs" "Cancelled Jobs" "Git Status" "Git Diff" "Git Review" "Git Worktrees" "Git Conflicts" "MCP Notifications" "Clear MCP Notifications" "Ready MCP Servers" "Failed MCP Servers" "Busy MCP Servers" "Closed MCP Servers" "Stdio MCP Servers" "HTTP MCP Servers" "Loop" "Deep Research" "Feedback" "Usage" "Usage Chart" "Context Policy" "Enable Context Policy" "Disable Context Policy" "Set Context Reserve" "Set Context Keep Recent"
   "Pending Questions" "Background Jobs" "Jobs" "Job Output" "Job Output Facts" "Job Output Head" "Job Output Tail" "Cancel Queued Jobs"

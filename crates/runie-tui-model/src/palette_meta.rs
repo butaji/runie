@@ -65,6 +65,7 @@ declare_palette_metadata! {
     (SetEffort, "/effort", "Set reasoning effort"),
     (AlwaysApprove, "/always-approve", "Toggle approval-free execution"),
     (AutoApprove, "/auto", "Automatically approve safe tools"),
+    (AskBeforeTools, "/ask", "Ask before executing tools"),
     (Deny, "/deny", "Block tool execution"),
     (PlanMode, "/plan", "Enter plan mode"),
     (ViewPlan, "/view-plan", "Show the current plan"),
@@ -157,7 +158,7 @@ palette_sections! {
     ("Session" => [NewSession, KeyboardShortcuts, Quit, Changelog, ShareSession, SessionHistory, SessionHistoryQuery, UndoSession]),
     ("Information" => [Help, ContextInfo, ContextPolicy, ContextPolicyOn, ContextPolicyOff, ContextPolicyReserve, ContextPolicyKeepRecent, Doctor, Feedback, Usage, GitStatus, GitDiff, GitReview, GitWorktrees, GitConflicts]),
     ("Extensions" => [Skills, Hooks, Plugins, Mcps, CloseMcps, ReconnectMcps, McpNotifications, ClearMcpNotifications, McpReady, McpFailed, McpBusy, McpClosed, McpStdio, McpHttp, Memory]),
-    ("Automation" => [Goal, Workflow, Workflows, Loop, DeepResearch, Jobs, ActiveJobs, CancelAllJobs, CancelRunningJobs, ClearFinishedJobs, CompletedJobs, FailedJobs, CancelledJobs, CancelQueuedJobs, Deny]),
+    ("Automation" => [Goal, Workflow, Workflows, Loop, DeepResearch, Jobs, ActiveJobs, CancelAllJobs, CancelRunningJobs, ClearFinishedJobs, CompletedJobs, FailedJobs, CancelledJobs, CancelQueuedJobs, AskBeforeTools, Deny]),
 }
 
 fn palette_row(label: &str) -> String {

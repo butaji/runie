@@ -80,6 +80,17 @@ fn parser_maps_pending_question_review_as_an_extended_command() {
 }
 
 #[test]
+fn parser_maps_ask_approval_as_an_extended_command() {
+    assert_eq!(
+        parse_mappable_builtin_command("/ask"),
+        Some(MappableBuiltinCommand::Extended {
+            name: "ask".into(),
+            args: String::new(),
+        })
+    );
+}
+
+#[test]
 fn parser_maps_git_conflict_report_as_an_extended_command() {
     assert_eq!(
         parse_mappable_builtin_command("/git conflicts"),

@@ -215,6 +215,7 @@ fn reduce_command(state: &mut CommandState, name: &str, args: &str) {
         "deny" => state.approval = approval(args, ApprovalMode::Deny),
         "always-approve" => state.approval = approval(args, ApprovalMode::Always),
         "auto" => state.approval = approval(args, ApprovalMode::Auto),
+        "ask" => state.approval = ApprovalMode::Ask,
         "plan" => update_plan(state, args),
         "context-policy" => reduce_context_policy(state, args),
         "memory" => update_memory(state, args),
@@ -352,6 +353,14 @@ mod tests {
         assert_eq!(state.settings.get("theme"), Some(&"dark".into()));
         assert_eq!(state.effort.as_deref(), Some("high"));
         assert_eq!(state.remembered, vec!["keep auth details"]);
+    }
+
+    #[tokio::test]
+    async fn ask_command_restores_interactive_approval_mode() {
+        let actor = CommandActor::new();
+        actor.invoke("deny", "").await;
+        actor.invoke("ask", "").await;
+        assert_eq!(actor.snapshot().approval, ApprovalMode::Ask);
     }
 
     #[tokio::test]

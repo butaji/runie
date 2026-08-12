@@ -404,17 +404,16 @@ fn parse_parameterized_command(value: &str) -> Option<MappableBuiltinCommand> {
         "/resume" => jsonl_command(text, resume_command),
         "/settings" | "/share" | "/trust" | "/login" | "/logout" | "/reload" | "/help"
         | "/doctor" | "/rewind" | "/history" | "/find" | "/jump" | "/context" | "/effort"
-        | "/always-approve" | "/auto" | "/deny" | "/plan" | "/remember" | "/goal" | "/workflow"
-        | "/jobs" | "/mcps" | "/git" | "/questions" | "/sessions" | "/loop" | "/deep-research"
-        | "/feedback" | "/usage" | "/memory" | "/skills" | "/hooks" | "/plugins" | "/clear"
-        | "/reset" | "/undo" => Some(MappableBuiltinCommand::Extended {
+        | "/always-approve" | "/auto" | "/ask" | "/deny" | "/plan" | "/remember" | "/goal"
+        | "/workflow" | "/jobs" | "/mcps" | "/git" | "/questions" | "/sessions" | "/loop"
+        | "/deep-research" | "/feedback" | "/usage" | "/memory" | "/skills" | "/hooks"
+        | "/plugins" | "/clear" | "/reset" | "/undo" => Some(MappableBuiltinCommand::Extended {
             name: prefix.trim_start_matches('/').to_owned(),
             args: text.to_owned(),
         }),
         _ => None,
     }
 }
-
 fn parse_compact_command(value: &str) -> Option<MappableBuiltinCommand> {
     let instructions = value.strip_prefix("/compact ")?;
     Some(MappableBuiltinCommand::Compact {
@@ -454,6 +453,7 @@ fn parse_extended_no_arg(value: &str) -> Option<MappableBuiltinCommand> {
             | "hooks"
             | "plugins"
             | "mcps"
+            | "ask"
             | "effort"
             | "resume"
             | "memory"

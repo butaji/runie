@@ -546,7 +546,7 @@ impl App {
             return true;
         }
         let state = self.command_actor.invoke(name, args).await;
-        if matches!(name, "always-approve" | "auto" | "deny") {
+        if matches!(name, "always-approve" | "auto" | "ask" | "deny") {
             self.approval_mode.set(state.approval.clone().into());
         }
         match name {
@@ -687,7 +687,7 @@ impl App {
                         "Reasoning effort: {}",
                         state.effort.as_deref().unwrap_or("unchanged")
                     ),
-                    "always-approve" | "auto" | "deny" => format!("Approval mode: {:?}", state.approval),
+                    "always-approve" | "auto" | "ask" | "deny" => format!("Approval mode: {:?}", state.approval),
                     "plan" => format!(
                         "Plan mode {}",
                         if state.plan_mode { "ON" } else { "OFF" }
