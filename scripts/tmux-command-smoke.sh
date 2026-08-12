@@ -161,6 +161,11 @@ for label in "${labels[@]}"; do
       ((failed += 1))
       continue
     fi
+    if [[ "$label" == "Cancelled Scheduler Jobs" ]] && ! wait_for 'scheduler cancelled:'; then
+      echo "FAIL $label: expected-cancellation-metrics"
+      ((failed += 1))
+      continue
+    fi
     if [[ "$label" == "MCP Servers" ]] && ! wait_for 'No MCP stdio servers'; then
       echo "FAIL $label: expected-empty-status"
       ((failed += 1))
