@@ -39,6 +39,19 @@ impl App {
                 self.ui.send(UiMsg::ShowCommandResult(format!("{}: {}", result.tool_name, result.result))).await;
                 return true;
             }
+            if let Some((remote, reference)) = runie_core::commands::parse_git_push(args) {
+                return self
+                    .execute_typed_tool(
+                        "git_push",
+                        serde_json::json!({"remote": remote, "reference": reference}),
+                    )
+                    .await;
+            }
+            if let Some(commit) = runie_core::commands::parse_git_revert(args) {
+                return self
+                    .execute_typed_tool("git_revert", serde_json::json!({"commit": commit}))
+                    .await;
+            }
         }
         if matches!(name, "clear" | "reset") && args.trim().is_empty() {
             self.session_actor.reset().await;
@@ -819,6 +832,29 @@ impl App {
                 self.session_actor.flush().await;
             }
         }
+        true
+    }
+
+    async fn execute_typed_tool(&self, tool_name: &str, arguments: serde_json::Value) -> bool {
+        let Some(executor) = &self.tool_executor else {
+            self.ui
+                .send(UiMsg::ShowCommandResult("Tool executor unavailable".into()))
+                .await;
+            return true;
+        };
+        let result = executor
+            .execute_command(
+                runie_core::tools::ToolCommandRequest::new(tool_name, arguments),
+                runie_core::types::AgentContext::default(),
+                self.tool_hooks.clone().unwrap_or_default(),
+            )
+            .await;
+        self.ui
+            .send(UiMsg::ShowCommandResult(format!(
+                "{}: {}",
+                result.tool_name, result.result
+            )))
+            .await;
         true
     }
 
