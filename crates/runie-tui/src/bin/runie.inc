@@ -2858,12 +2858,42 @@ fn _key_marker(_k: KeyEvent) {}
 mod tests {
     use super::{
         current_branch, mouse_selection_input, render_header, render_live_ready_footer,
-        repository_label, InputEvent, ThemePreview,
+        repository_label, InputEvent, PaletteAction, ThemePreview,
     };
     use crossterm::event::{MouseButton, MouseEventKind};
     use ratatui::buffer::Buffer;
     use ratatui::layout::Rect;
     use ratatui::style::Modifier;
+
+    #[test]
+    fn fixed_palette_route_table_preserves_typed_command_data() {
+        let cases = [
+            ("SessionHistory", "sessions", "history"),
+            ("UndoSession", "undo", ""),
+            ("ActiveJobs", "jobs", "scheduler active"),
+            ("GitConflicts", "git", "conflicts"),
+            ("PendingQuestions", "questions", "pending"),
+            ("GitStatus", "git", "status"),
+            ("GitDiff", "git", "diff"),
+            ("GitReview", "git", "review"),
+            ("GitWorktrees", "git", "worktrees"),
+        ];
+        let actions = [
+            PaletteAction::SessionHistory,
+            PaletteAction::UndoSession,
+            PaletteAction::ActiveJobs,
+            PaletteAction::GitConflicts,
+            PaletteAction::PendingQuestions,
+            PaletteAction::GitStatus,
+            PaletteAction::GitDiff,
+            PaletteAction::GitReview,
+            PaletteAction::GitWorktrees,
+        ];
+        for (action, (_, name, args)) in actions.iter().zip(cases) {
+            assert_eq!(super::fixed_extended_palette_command(action), Some((name, args)));
+        }
+        assert_eq!(super::fixed_extended_palette_command(&PaletteAction::Questions), None);
+    }
 
     #[test]
     fn theme_preview_restores_origin_on_cancel_and_forgets_it_on_commit() {
