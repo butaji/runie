@@ -85,9 +85,9 @@ stable names and row projection, while event reduction remains explicit.
 Provider request profiles now also declare whether effort is nested, so
 request shaping consumes the profile data instead of a provider-specific
 conditional.
-Fixed palette-to-extended-command routes now also come from one typed macro
-table, eliminating repeated command construction while preserving the same
-actor-owned route boundary.
+Fixed palette-to-extended-command routes, including job cancellation and
+status filters, now come from one typed macro table, eliminating repeated
+command construction while preserving the same actor-owned route boundary.
 
 Completion evidence: the workspace lint guard, full workspace tests, replay
 tests, and live TUI smoke all pass; repetitive registries and projections use

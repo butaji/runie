@@ -2291,34 +2291,6 @@ async fn run_app(
                                     .await;
                                 return Ok(ui_commands);
                             }
-                            if matches!(
-                                action,
-                                PaletteAction::CancelAllJobs
-                                    | PaletteAction::CancelRunningJobs
-                                    | PaletteAction::ClearFinishedJobs
-                                    | PaletteAction::CompletedJobs
-                                    | PaletteAction::FailedJobs
-                                    | PaletteAction::CancelledJobs
-                            ) {
-                                let args = match action {
-                                    PaletteAction::CancelAllJobs => "cancel all",
-                                    PaletteAction::CancelRunningJobs => "cancel running",
-                                    PaletteAction::ClearFinishedJobs => "clear finished",
-                                    PaletteAction::CompletedJobs => "completed",
-                                    PaletteAction::FailedJobs => "failed",
-                                    PaletteAction::CancelledJobs => "cancelled",
-                                    _ => unreachable!(),
-                                };
-                                let _ = app
-                                    .route_mappable_command(
-                                        runie_core::commands::MappableBuiltinCommand::Extended {
-                                            name: "jobs".into(),
-                                            args: args.into(),
-                                        },
-                                    )
-                                    .await;
-                                return Ok(ui_commands);
-                            }
                             let command = match action {
                                 PaletteAction::Changelog => Some(runie_core::commands::MappableBuiltinCommand::Changelog),
                                 PaletteAction::CopyLastResponse => Some(runie_core::commands::MappableBuiltinCommand::Copy),
@@ -2830,6 +2802,12 @@ fixed_palette_routes! {
     (GitDiff, "git", "diff"),
     (GitReview, "git", "review"),
     (GitWorktrees, "git", "worktrees"),
+    (CancelAllJobs, "jobs", "cancel all"),
+    (CancelRunningJobs, "jobs", "cancel running"),
+    (ClearFinishedJobs, "jobs", "clear finished"),
+    (CompletedJobs, "jobs", "completed"),
+    (FailedJobs, "jobs", "failed"),
+    (CancelledJobs, "jobs", "cancelled"),
 }
 
 fn extended_palette_command_name(action: &PaletteAction) -> Option<&'static str> {
@@ -2880,6 +2858,12 @@ mod tests {
             ("GitDiff", "git", "diff"),
             ("GitReview", "git", "review"),
             ("GitWorktrees", "git", "worktrees"),
+            ("CancelAllJobs", "jobs", "cancel all"),
+            ("CancelRunningJobs", "jobs", "cancel running"),
+            ("ClearFinishedJobs", "jobs", "clear finished"),
+            ("CompletedJobs", "jobs", "completed"),
+            ("FailedJobs", "jobs", "failed"),
+            ("CancelledJobs", "jobs", "cancelled"),
         ];
         let actions = [
             PaletteAction::SessionHistory,
@@ -2892,6 +2876,12 @@ mod tests {
             PaletteAction::GitDiff,
             PaletteAction::GitReview,
             PaletteAction::GitWorktrees,
+            PaletteAction::CancelAllJobs,
+            PaletteAction::CancelRunningJobs,
+            PaletteAction::ClearFinishedJobs,
+            PaletteAction::CompletedJobs,
+            PaletteAction::FailedJobs,
+            PaletteAction::CancelledJobs,
         ];
         for (action, (_, name, args)) in actions.iter().zip(cases) {
             assert_eq!(super::fixed_extended_palette_command(action), Some((name, args)));
