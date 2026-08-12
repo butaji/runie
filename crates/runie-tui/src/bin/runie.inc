@@ -2253,6 +2253,17 @@ async fn run_app(
                                     .await;
                                 return Ok(ui_commands);
                             }
+                            if action == PaletteAction::ContextPolicy {
+                                let _ = app
+                                    .route_mappable_command(
+                                        runie_core::commands::MappableBuiltinCommand::Extended {
+                                            name: "context".into(),
+                                            args: "policy".into(),
+                                        },
+                                    )
+                                    .await;
+                                return Ok(ui_commands);
+                            }
                             if action == PaletteAction::ManageProviders {
                                 app.show_provider_summary().await;
                                 return Ok(ui_commands);

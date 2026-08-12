@@ -369,6 +369,10 @@ pub fn parse_usage_chart(args: &str) -> bool {
     args.trim().eq_ignore_ascii_case("chart")
 }
 
+pub fn parse_context_policy(args: &str) -> bool {
+    args.trim().eq_ignore_ascii_case("policy")
+}
+
 #[allow(clippy::too_many_lines)]
 fn parse_parameterized_command(value: &str) -> Option<MappableBuiltinCommand> {
     if let Some(command) = parse_compact_command(value) {

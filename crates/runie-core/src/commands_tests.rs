@@ -322,6 +322,12 @@ fn usage_chart_command_is_exact_data() {
 }
 
 #[test]
+fn context_policy_command_is_exact_data() {
+    assert!(parse_context_policy("policy"));
+    assert!(!parse_context_policy("policy compact"));
+}
+
+#[test]
 fn parameterized_undo_reaches_the_typed_extended_command() {
     assert_eq!(
         parse_mappable_builtin_command("/undo 2"),

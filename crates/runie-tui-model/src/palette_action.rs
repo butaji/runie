@@ -7,7 +7,7 @@ runie_core::typed_action_registry! {
         SetSessionName => "Set Session Name", CompactContext => "Compact Context", ForkSession => "Fork Session",
         SelectTreeEntry => "Select Tree Entry", ExportSession => "Export Session", ImportSession => "Import Session",
         CloneSession => "Clone Session", ResumeSession => "Resume Session", ShareSession => "Share Session",
-        Help => "Help", ContextInfo => "Context Info", Settings => "Settings", Doctor => "Doctor",
+        Help => "Help", ContextInfo => "Context Info", ContextPolicy => "Context Policy", Settings => "Settings", Doctor => "Doctor",
         RewindSession => "Rewind Session", PromptHistory => "Prompt History", FindTranscript => "Find Transcript",
         JumpTranscript => "Jump Transcript", Recap => "Recap", SetEffort => "Set Reasoning Effort",
         AlwaysApprove => "Always Approve", AutoApprove => "Automatic Approval", PlanMode => "Plan Mode",

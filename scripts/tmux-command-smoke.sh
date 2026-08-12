@@ -3,6 +3,8 @@ set -u
 
 socket=${1:-runie-command-smoke}
 binary=${2:-target/debug/runie}
+socket_path=${RUNIE_TMUX_SOCKET:-/tmp/${socket}.sock}
+tmux_run() { tmux -S "$socket_path" "$@"; }
 labels=(
   "New Session" "Keyboard Shortcuts" "Changelog" "Copy Last Response" "Session Info"
   "Select Model" "Select Theme" "Manage Providers" "Scoped Models" "Set Session Name"
@@ -11,7 +13,7 @@ labels=(
   "Doctor" "Rewind Session" "Prompt History" "Find Transcript" "Jump Transcript" "Recap"
   "Set Reasoning Effort" "Always Approve" "Automatic Approval" "Plan Mode" "View Plan"
   "Login" "Logout" "Reload" "Trust Project" "Skills" "Hooks" "Plugins" "MCP Servers" "Close MCP Servers" "Reconnect MCP Servers"
-  "Memory" "Remember" "Goal" "Workflow" "Workflows" "Sessions" "Session History" "Session History Query" "Undo Session" "Questions" "Active Jobs" "Cancel All Jobs" "Cancel Running Jobs" "Clear Finished Jobs" "Completed Jobs" "Failed Jobs" "Cancelled Jobs" "Git Status" "Git Diff" "Git Review" "Git Worktrees" "Git Conflicts" "MCP Notifications" "Clear MCP Notifications" "Ready MCP Servers" "Failed MCP Servers" "Busy MCP Servers" "Closed MCP Servers" "Stdio MCP Servers" "HTTP MCP Servers" "Loop" "Deep Research" "Feedback" "Usage" "Usage Chart"
+  "Memory" "Remember" "Goal" "Workflow" "Workflows" "Sessions" "Session History" "Session History Query" "Undo Session" "Questions" "Active Jobs" "Cancel All Jobs" "Cancel Running Jobs" "Clear Finished Jobs" "Completed Jobs" "Failed Jobs" "Cancelled Jobs" "Git Status" "Git Diff" "Git Review" "Git Worktrees" "Git Conflicts" "MCP Notifications" "Clear MCP Notifications" "Ready MCP Servers" "Failed MCP Servers" "Busy MCP Servers" "Closed MCP Servers" "Stdio MCP Servers" "HTTP MCP Servers" "Loop" "Deep Research" "Feedback" "Usage" "Usage Chart" "Context Policy"
   "Background Jobs" "Jobs" "Job Output" "Cancel Queued Jobs"
 )
 parameterized=(
@@ -30,7 +32,7 @@ is_parameterized() {
   return 1
 }
 
-capture() { tmux -L "$socket" capture-pane -p -t smoke 2>/dev/null || true; }
+capture() { tmux_run capture-pane -p -t smoke 2>/dev/null || true; }
 
 wait_for() {
   local pattern=$1
@@ -44,24 +46,24 @@ wait_for() {
 passed=0
 failed=0
 for label in "${labels[@]}"; do
-  tmux -L "$socket" -f /dev/null kill-session -t smoke 2>/dev/null || true
-  tmux -L "$socket" -f /dev/null new-session -d -s smoke -x 120 -y 36 \
+  tmux_run -f /dev/null kill-session -t smoke 2>/dev/null || true
+  tmux_run -f /dev/null new-session -d -s smoke -x 120 -y 36 \
     "env -u NO_COLOR TERM=xterm-256color COLORTERM=truecolor $binary" >/dev/null 2>&1 || {
       echo "FAIL $label: launch"; ((failed += 1)); continue;
     }
-  tmux -L "$socket" resize-window -t smoke -x 120 -y 36 >/dev/null 2>&1
+  tmux_run resize-window -t smoke -x 120 -y 36 >/dev/null 2>&1
   if ! wait_for 'Enter:send|Type your message|Shift\\+Tab'; then
     echo "FAIL $label: startup"; ((failed += 1)); continue
   fi
-  tmux -L "$socket" send-keys -t smoke C-p
+  tmux_run send-keys -t smoke C-p
   if ! wait_for 'Commands'; then
     echo "FAIL $label: palette-open"; ((failed += 1)); continue
   fi
   for ((index = 0; index < ${#label}; index += 1)); do
-    tmux -L "$socket" send-keys -t smoke -l -- "${label:index:1}"
+    tmux_run send-keys -t smoke -l -- "${label:index:1}"
     sleep 0.08
   done
-  tmux -L "$socket" send-keys -t smoke Enter
+  tmux_run send-keys -t smoke Enter
   transitioned=0
   for _ in $(seq 1 100); do
     screen=$(capture)
@@ -91,10 +93,10 @@ for label in "${labels[@]}"; do
       argument=(o u t p u t 0)
     fi
     for character in "${argument[@]}"; do
-      tmux -L "$socket" send-keys -t smoke -l -- "$character"
+      tmux_run send-keys -t smoke -l -- "$character"
       sleep 0.08
     done
-    tmux -L "$socket" send-keys -t smoke Enter
+    tmux_run send-keys -t smoke Enter
     sleep 0.5
     if [[ "$label" == "Background Jobs" ]] && ! wait_for 'Background job smoke not found'; then
       echo "FAIL $label: expected-query-result"
@@ -177,17 +179,17 @@ done
 # Direct slash-command cases cover no-argument branches that are distinct
 # from the parameterized palette entries.
 while IFS='|' read -r label command expected; do
-  tmux -L "$socket" -f /dev/null kill-session -t smoke 2>/dev/null || true
-  tmux -L "$socket" -f /dev/null new-session -d -s smoke -x 120 -y 36 \
+  tmux_run -f /dev/null kill-session -t smoke 2>/dev/null || true
+  tmux_run -f /dev/null new-session -d -s smoke -x 120 -y 36 \
     "env -u NO_COLOR TERM=xterm-256color COLORTERM=truecolor $binary" >/dev/null 2>&1 || {
       echo "FAIL $label: launch"; ((failed += 1)); continue;
     }
-  tmux -L "$socket" resize-window -t smoke -x 120 -y 36 >/dev/null 2>&1
+  tmux_run resize-window -t smoke -x 120 -y 36 >/dev/null 2>&1
   if ! wait_for 'Enter:send|Type your message|Shift\\+Tab'; then
     echo "FAIL $label: startup"; ((failed += 1)); continue
   fi
-  tmux -L "$socket" send-keys -t smoke -l -- "$command"
-  tmux -L "$socket" send-keys -t smoke Enter
+  tmux_run send-keys -t smoke -l -- "$command"
+  tmux_run send-keys -t smoke Enter
   if wait_for "$expected" && ! capture | rg -qi 'panic|thread .* panicked|unknown command|fatal error'; then
     echo "PASS $label"; ((passed += 1))
   else
@@ -201,14 +203,14 @@ CASES
 
 # The quit path is a TUI-only terminal case: it must end the session rather
 # than transition to another overlay.
-tmux -L "$socket" -f /dev/null new-session -d -s smoke -x 120 -y 36 \
+tmux_run -f /dev/null new-session -d -s smoke -x 120 -y 36 \
   "env -u NO_COLOR TERM=xterm-256color COLORTERM=truecolor $binary" >/dev/null 2>&1
 if wait_for 'Enter:send|Type your message|Shift\\+Tab'; then
-  tmux -L "$socket" send-keys -t smoke -l -- '/quit'
-  tmux -L "$socket" send-keys -t smoke Enter
+  tmux_run send-keys -t smoke -l -- '/quit'
+  tmux_run send-keys -t smoke Enter
   exited=0
   for _ in $(seq 1 60); do
-    if ! tmux -L "$socket" has-session -t smoke 2>/dev/null; then
+    if ! tmux_run has-session -t smoke 2>/dev/null; then
       exited=1
       break
     fi
@@ -222,6 +224,6 @@ if wait_for 'Enter:send|Type your message|Shift\\+Tab'; then
 else
   echo "FAIL Quit: startup"; ((failed += 1))
 fi
-tmux -L "$socket" -f /dev/null kill-session -t smoke 2>/dev/null || true
+tmux_run -f /dev/null kill-session -t smoke 2>/dev/null || true
 echo "SUMMARY passed=$passed failed=$failed"
 ((failed == 0))

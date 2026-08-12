@@ -113,6 +113,11 @@ fn usage_chart_palette_action_emits_extended_command() {
 }
 
 #[test]
+fn context_policy_palette_action_emits_extended_command() {
+    assert_parameter_flow(super::PaletteAction::ContextPolicy, "", "/context policy");
+}
+
+#[test]
 fn mcp_notification_palette_actions_emit_extended_commands() {
     assert_parameter_flow(
         super::PaletteAction::McpNotifications,

@@ -503,6 +503,7 @@ impl App {
                 self.ui.send(UiMsg::ToggleCommandPalette).await;
             }
             "context" => {
+                let policy_view = runie_core::commands::parse_context_policy(args);
                 if let Some(instructions) = args.trim().strip_prefix("compact") {
                     if instructions.is_empty()
                         || instructions.starts_with(' ')
@@ -532,7 +533,11 @@ impl App {
                     runie_core::session::CompactionSettings::default(),
                     snapshot.compaction_context_projection(),
                 );
-                let result = report.terminal_lines().join("\n");
+                let result = if policy_view {
+                    format!("Context policy\n{}", report.terminal_lines().join("\n"))
+                } else {
+                    report.terminal_lines().join("\n")
+                };
                 self.ui.send(UiMsg::ShowCommandResult(result)).await;
             }
             "recap" => {
