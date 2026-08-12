@@ -200,6 +200,9 @@ impl ApprovalTraceStore {
         record_approval_trace(&mut traces, trace);
         let _ = self.tx.send(traces);
     }
+    pub fn clear(&self) {
+        let _ = self.tx.send(Vec::new());
+    }
     pub fn terminal_lines(&self) -> Vec<String> {
         self.snapshot()
             .into_iter()
@@ -409,5 +412,17 @@ mod tests {
             store.terminal_lines(),
             ["approval write: ask (changes files) [ask]"]
         );
+    }
+
+    #[test]
+    fn approval_trace_store_clear_reduces_to_empty_history() {
+        let store = ApprovalTraceStore::default();
+        store.record(ApprovalTrace {
+            tool: "read".into(),
+            mode: ApprovalMode::Ask,
+            decision: ApprovalDecision::Allow,
+        });
+        store.clear();
+        assert!(store.snapshot().is_empty());
     }
 }

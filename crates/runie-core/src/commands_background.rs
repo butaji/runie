@@ -13,6 +13,9 @@ pub fn parse_background_scheduler_cancelled_query(args: &str) -> bool {
 pub fn parse_approval_history_query(args: &str) -> bool {
     args.trim() == "history"
 }
+pub fn parse_approval_history_clear_query(args: &str) -> bool {
+    args.trim() == "history clear"
+}
 
 #[cfg(test)]
 mod commands_background_tests {

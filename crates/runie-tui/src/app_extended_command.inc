@@ -342,6 +342,11 @@ impl App {
             )).await;
             return true;
         }
+        if name == "approval" && runie_core::commands::parse_approval_history_clear_query(args) {
+            self.approval_traces.clear();
+            self.ui.send(UiMsg::ShowCommandResult("Approval history cleared".into())).await;
+            return true;
+        }
         if name == "jobs" {
             if let Some((id, query)) = runie_core::commands::parse_background_job_output_search_query(args) {
                 let result = match self.background_actor.read_output(id).await {

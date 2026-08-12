@@ -319,6 +319,15 @@ fn approval_history_palette_action_emits_typed_command() {
 }
 
 #[test]
+fn clear_approval_history_palette_action_emits_typed_command() {
+    assert_parameter_flow(
+        super::PaletteAction::ClearApprovalHistory,
+        "",
+        "/approval history clear",
+    );
+}
+
+#[test]
 fn job_output_search_palette_parameter_emits_typed_command() {
     let mut state = UiState::new().update(UiMsg::OpenPaletteParameters(
         super::PaletteAction::JobOutputSearch,
