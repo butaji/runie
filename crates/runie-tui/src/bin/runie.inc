@@ -2822,6 +2822,7 @@ fixed_palette_routes! {
     (SessionHistory, "sessions", "history"),
     (UndoSession, "undo", ""),
     (ActiveJobs, "jobs", "scheduler active"),
+    (QueuedJobs, "jobs", "scheduler queued"),
     (RunningJobs, "jobs", "running"),
     (GitConflicts, "git", "conflicts"),
     (PendingQuestions, "questions", "pending"),

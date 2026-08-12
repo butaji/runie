@@ -124,6 +124,14 @@ impl SchedulerMetrics {
             .map(|row| format!("{}: {}", row.name, row.value))
             .collect()
     }
+
+    pub fn queued_terminal_lines(&self) -> Vec<String> {
+        self.rows()
+            .into_iter()
+            .filter(|row| row.name == "queued")
+            .map(|row| format!("{}: {}", row.name, row.value))
+            .collect()
+    }
 }
 
 /// Pure scheduler telemetry reducer. Queue ownership remains in the executor.
@@ -295,6 +303,16 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(metrics.active_terminal_lines(), ["queued: 2", "running: 1"]);
+    }
+
+    #[test]
+    fn queued_terminal_lines_project_only_queued_work() {
+        let metrics = SchedulerMetrics {
+            queued: 2,
+            running: 1,
+            ..Default::default()
+        };
+        assert_eq!(metrics.queued_terminal_lines(), ["queued: 2"]);
     }
 
     #[test]

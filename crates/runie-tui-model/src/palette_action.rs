@@ -18,7 +18,7 @@ runie_core::typed_action_registry! {
         McpHttp => "HTTP MCP Servers", Memory => "Memory", Remember => "Remember", Goal => "Goal",
         Workflow => "Workflow", Workflows => "Workflows", Loop => "Loop", DeepResearch => "Deep Research",
         Feedback => "Feedback", Usage => "Usage", UsageChart => "Usage Chart", Jobs => "Background Jobs", ActiveJobs => "Active Jobs",
-        CancelAllJobs => "Cancel All Jobs", CancelRunningJobs => "Cancel Running Jobs", ClearFinishedJobs => "Clear Finished Jobs", CompletedJobs => "Completed Jobs",
+        CancelAllJobs => "Cancel All Jobs", CancelRunningJobs => "Cancel Running Jobs", ClearFinishedJobs => "Clear Finished Jobs", CompletedJobs => "Completed Jobs", QueuedJobs => "Queued Jobs",
         FailedJobs => "Failed Jobs", RunningJobs => "Running Jobs", CancelledJobs => "Cancelled Jobs", CancelQueuedJobs => "Cancel Queued Jobs", JobOutput => "Job Output", JobOutputFacts => "Job Output Facts", JobOutputHead => "Job Output Head", JobOutputTail => "Job Output Tail",
         GitStatus => "Git Status", GitDiff => "Git Diff", GitReview => "Git Review", GitWorktrees => "Git Worktrees",
         GitConflicts => "Git Conflicts", Questions => "User Questions", PendingQuestions => "Pending Questions",

@@ -15,7 +15,6 @@ pub struct SlashCommand {
     pub description: &'static str,
     pub argument_hint: Option<&'static str>,
 }
-
 macro_rules! pi_slash_commands {
     ($($name:literal => $description:literal $(, $hint:literal)?);+ $(;)?) => {
 pub const PI_BUILTIN_SLASH_COMMANDS: &[SlashCommand] = &[
@@ -30,7 +29,6 @@ pub const PI_BUILTIN_SLASH_COMMANDS: &[SlashCommand] = &[
     (@hint $hint:literal) => { Some($hint) };
     (@hint) => { None };
 }
-
 // Source: pi/packages/coding-agent/src/core/slash-commands.ts
 pi_slash_commands! {
     "settings" => "Open settings menu";
@@ -177,7 +175,6 @@ impl UnsupportedBuiltinCommand {
         }
     }
 }
-
 /// Classification at the slash-command boundary. Unsupported Pi commands are
 /// observable capabilities rather than silent successful no-ops.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -232,6 +229,9 @@ pub fn parse_background_scheduler_query(args: &str) -> bool {
 }
 pub fn parse_background_scheduler_active_query(args: &str) -> bool {
     args.trim() == "scheduler active"
+}
+pub fn parse_background_scheduler_queued_query(args: &str) -> bool {
+    args.trim() == "scheduler queued"
 }
 pub fn parse_git_conflict_path_selection(args: &str) -> Option<&str> {
     let mut parts = args.split_whitespace();
