@@ -626,13 +626,12 @@ impl App {
                         format!("Rewind request recorded ({})", state.rewind_requests.len())
                     }
                     "usage" => {
-                        if runie_core::commands::parse_usage_chart(args) {
+                        if let Some(chart_metric) = runie_core::commands::parse_usage_chart(args) {
                             let bundle = runie_core::diagnostics::DiagnosticBundle::from_snapshots(
                                 Default::default(),
                                 self.telemetry.snapshot(),
                             );
-                            let visualization =
-                                runie_core::diagnostics::DiagnosticVisualization::from_bundle(&bundle);
+                            let visualization = runie_core::diagnostics::DiagnosticVisualization::from_bundle(&bundle).select(chart_metric);
                             format!(
                                 "Usage chart ({})\n{}",
                                 state.usage_requests,

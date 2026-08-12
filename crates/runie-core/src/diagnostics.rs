@@ -96,6 +96,37 @@ impl DiagnosticVisualization {
         }
     }
 
+    pub fn select(&self, metric: crate::commands::UsageChartMetric) -> Self {
+        let label = match metric {
+            crate::commands::UsageChartMetric::All => None,
+            crate::commands::UsageChartMetric::Input => Some("input_tokens"),
+            crate::commands::UsageChartMetric::Output => Some("output_tokens"),
+            crate::commands::UsageChartMetric::Cost => Some("cost"),
+        };
+        Self {
+            metrics: label.map_or_else(
+                || self.metrics.clone(),
+                |name| {
+                    self.metrics
+                        .iter()
+                        .filter(|item| item.label == name)
+                        .cloned()
+                        .collect()
+                },
+            ),
+            series: label.map_or_else(
+                || self.series.clone(),
+                |name| {
+                    self.series
+                        .iter()
+                        .filter(|item| item.label == name)
+                        .cloned()
+                        .collect()
+                },
+            ),
+        }
+    }
+
     /// Project diagnostic data into stable terminal rows without terminal
     /// state, colors, or side effects. A renderer may style these rows later.
     pub fn terminal_lines(&self, bundle: &DiagnosticBundle) -> Vec<String> {
@@ -303,5 +334,27 @@ mod tests {
             .rposition(|line| line.starts_with("input_tokens: "))
             .unwrap();
         assert!(input_series > total_tokens);
+    }
+
+    #[test]
+    fn visualization_selection_is_a_pure_data_projection() {
+        let visualization = DiagnosticVisualization {
+            metrics: vec![metric("input_tokens", 1.0), metric("cost", 2.0)],
+            series: vec![
+                DiagnosticSeries {
+                    label: "input_tokens".into(),
+                    points: vec![],
+                },
+                DiagnosticSeries {
+                    label: "cost".into(),
+                    points: vec![],
+                },
+            ],
+        };
+        let selected = visualization.select(crate::commands::UsageChartMetric::Cost);
+        assert_eq!(selected.metrics.len(), 1);
+        assert_eq!(selected.metrics[0].label, "cost");
+        assert_eq!(selected.series.len(), 1);
+        assert_eq!(selected.series[0].label, "cost");
     }
 }

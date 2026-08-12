@@ -5,6 +5,9 @@
 //! presentation metadata have one source of truth here.
 
 use serde::Serialize;
+#[path = "commands_usage.rs"]
+mod usage;
+pub use usage::{parse_usage_chart, UsageChartMetric};
 
 /// A command exposed by Pi's interactive command registry.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -348,9 +351,6 @@ pub fn parse_usage_limit(args: &str) -> Option<Option<usize>> {
     }
 }
 
-pub fn parse_usage_chart(args: &str) -> bool {
-    args.trim().eq_ignore_ascii_case("chart")
-}
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ContextPolicyCommand {
     View,

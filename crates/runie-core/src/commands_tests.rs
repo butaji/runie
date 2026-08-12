@@ -317,8 +317,20 @@ fn usage_limit_accepts_only_a_positive_last_query() {
 
 #[test]
 fn usage_chart_command_is_exact_data() {
-    assert!(parse_usage_chart("chart"));
-    assert!(!parse_usage_chart("chart last 3"));
+    assert_eq!(parse_usage_chart("chart"), Some(UsageChartMetric::All));
+    assert_eq!(
+        parse_usage_chart("chart input"),
+        Some(UsageChartMetric::Input)
+    );
+    assert_eq!(
+        parse_usage_chart("chart output"),
+        Some(UsageChartMetric::Output)
+    );
+    assert_eq!(
+        parse_usage_chart("chart cost"),
+        Some(UsageChartMetric::Cost)
+    );
+    assert_eq!(parse_usage_chart("chart last 3"), None);
 }
 
 #[test]

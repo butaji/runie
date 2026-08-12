@@ -17,7 +17,7 @@ labels=(
   "Background Jobs" "Jobs" "Job Output" "Job Output Facts" "Cancel Queued Jobs"
 )
 parameterized=(
-  "Select Theme" "Set Session Name" "Compact Context" "Fork Session" "Select Tree Entry"
+  "Select Theme" "Set Session Name" "Compact Context" "Fork Session" "Select Tree Entry" "Usage Chart"
   "Export Session" "Import Session" "Clone Session" "Resume Session" "Help" "Settings" "Doctor"
   "Rewind Session" "Prompt History" "Find Transcript" "Jump Transcript" "Set Reasoning Effort"
   "Always Approve" "Automatic Approval" "Plan Mode" "Login" "Logout" "Trust Project" "Remember" "Undo Session" "Set Context Reserve" "Set Context Keep Recent"
@@ -89,6 +89,8 @@ for label in "${labels[@]}"; do
       argument=(c o n f l i c t s)
     elif [[ "$label" == "Session History Query" ]]; then
       argument=(a c t i v e _ t o o l s)
+    elif [[ "$label" == "Usage Chart" ]]; then
+      argument=(c o s t)
     elif [[ "$label" == "Set Context Reserve" ]]; then
       argument=(1 2 3)
     elif [[ "$label" == "Set Context Keep Recent" ]]; then
