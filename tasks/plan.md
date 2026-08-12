@@ -85,7 +85,7 @@ these do not invalidate the finite matrix evidence.
 
 Each extension follows the same loop: add a failing event/replay test, add the
 smallest actor-owned data boundary (use a declaration macro only for repeated
-closed vocabulary), run `just ci`, run the 107-case TUI smoke, update the
+closed vocabulary), run `just ci`, run the 109-case TUI smoke, update the
 finding, and push one focused commit.
 
 Priority order:
@@ -137,9 +137,12 @@ Git conflict review now exposes fixed typed inspect and cancel routes through
 the same actor-owned command boundary; mutation-oriented resolve/abort remains
 gated behind an explicit future approval contract.
 
+Context recovery now exposes fixed palette routes for `/clear` and `/reset`,
+reusing the existing actor-owned recovery transitions.
+
 Completion evidence is: every finite matrix row has source + replay/unit test
  + live TUI evidence, the extension queue has no unverified claim, `just ci`
- is green, the fresh smoke summary is `passed=107 failed=0`, and `git status`
+ is green, the fresh smoke summary is `passed=109 failed=0`, and `git status`
  is clean after push.
 
 The reduction backlog is now backed by declarative tables for the major closed

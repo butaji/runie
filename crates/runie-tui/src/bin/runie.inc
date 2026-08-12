@@ -2813,6 +2813,8 @@ fixed_palette_routes! {
     (McpPopNotifications, "mcps", "notifications pop"),
     (DoctorInspect, "doctor", "inspect"),
     (DoctorFix, "doctor", "fix"),
+    (ClearContext, "clear", ""),
+    (ResetContext, "reset", ""),
     (UsageChartAll, "usage", "chart"),
     (UsageChartInput, "usage", "chart input"),
     (UsageChartOutput, "usage", "chart output"),

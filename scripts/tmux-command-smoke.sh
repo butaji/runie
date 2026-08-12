@@ -16,6 +16,7 @@ labels=(
   "Memory" "Remember" "Goal" "Workflow" "Workflows" "Sessions" "Session History" "Session History Query" "Undo Session" "Questions" "Active Jobs" "Cancel All Jobs" "Cancel Running Jobs" "Clear Finished Jobs" "Completed Jobs" "Queued Jobs" "Failed Jobs" "Running Jobs" "Cancelled Jobs" "Git Status" "Git Diff" "Git Review" "Git Worktrees" "Git Conflicts" "MCP Notifications" "Clear MCP Notifications" "Ready MCP Servers" "Failed MCP Servers" "Busy MCP Servers" "Closed MCP Servers" "Stdio MCP Servers" "HTTP MCP Servers" "Loop" "Deep Research" "Feedback" "Usage" "Usage Chart" "Context Policy" "Enable Context Policy" "Disable Context Policy" "Set Context Reserve" "Set Context Keep Recent"
   "Pending Questions" "Pop MCP Notification" "Inspect Diagnostics" "Apply Diagnostic Fixes" "Usage Chart All" "Usage Chart Input" "Usage Chart Output" "Usage Chart Cost" "Background Jobs" "Jobs" "Job Output" "Job Output Facts" "Job Output Head" "Job Output Tail" "Cancel Queued Jobs"
   "Inspect Git Conflicts" "Cancel Git Conflict Review"
+  "Clear Context" "Reset Context"
 )
 parameterized=(
   "Select Theme" "Set Session Name" "Compact Context" "Fork Session" "Select Tree Entry" "Usage Chart"
