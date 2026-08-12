@@ -17,6 +17,11 @@ macro_rules! declare_palette_metadata {
                 }
             };
         }
+
+        #[allow(dead_code)]
+        pub const fn palette_metadata_count() -> usize {
+            0 $(+ { let _ = stringify!($variant); 1 })+
+        }
     };
 }
 
