@@ -37,3 +37,7 @@ Pending Questions, Ask Before Tools, and typed Job Output Head/Tail actions,
 plus the Quit lifecycle, for 99 TUI-only cases.
 Provider-backed coding prompts remain
 environment-dependent and must be recorded separately from local UI evidence.
+
+Recent MCP extension: `/mcps notifications pop` consumes the oldest queued
+notification through the owning actor and is covered by parser, actor, TUI,
+and live smoke evidence.
