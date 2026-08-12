@@ -108,6 +108,20 @@ fn reconnect_mcp_palette_action_emits_extended_command() {
 }
 
 #[test]
+fn mcp_notification_palette_actions_emit_extended_commands() {
+    assert_parameter_flow(
+        super::PaletteAction::McpNotifications,
+        "",
+        "/mcps notifications",
+    );
+    assert_parameter_flow(
+        super::PaletteAction::ClearMcpNotifications,
+        "",
+        "/mcps notifications clear",
+    );
+}
+
+#[test]
 fn parameterized_palette_storage_flows_emit_typed_commands() {
     for (action, input, expected) in [
         (

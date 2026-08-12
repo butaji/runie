@@ -2218,6 +2218,8 @@ async fn run_app(
                                     | PaletteAction::McpClosed
                                     | PaletteAction::McpStdio
                                     | PaletteAction::McpHttp
+                                    | PaletteAction::McpNotifications
+                                    | PaletteAction::ClearMcpNotifications
                             ) {
                                 let args = match action {
                                     PaletteAction::McpReady => "status=ready",
@@ -2226,6 +2228,8 @@ async fn run_app(
                                     PaletteAction::McpClosed => "status=closed",
                                     PaletteAction::McpStdio => "stdio",
                                     PaletteAction::McpHttp => "http",
+                                    PaletteAction::McpNotifications => "notifications",
+                                    PaletteAction::ClearMcpNotifications => "notifications clear",
                                     _ => unreachable!(),
                                 };
                                 let _ = app
