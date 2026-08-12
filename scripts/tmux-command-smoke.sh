@@ -115,6 +115,11 @@ for label in "${labels[@]}"; do
     done
     tmux_run send-keys -t smoke Enter
     sleep 0.5
+    if [[ "$label" == "Prepare Git Commit" ]] && ! wait_for 'git_commit_prepare'; then
+      echo "FAIL $label: expected-tool-result"
+      ((failed += 1))
+      continue
+    fi
     if [[ "$label" == "Background Jobs" ]] && ! wait_for 'Background job smoke not found'; then
       echo "FAIL $label: expected-query-result"
       ((failed += 1))

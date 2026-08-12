@@ -17,7 +17,13 @@ impl App {
                         Default::default(),
                     )
                     .await;
-                self.ui.send(UiMsg::ShowCommandResult(result.result.to_string())).await;
+                self.ui
+                    .send(UiMsg::ShowCommandResult(format!(
+                        "{}: {}",
+                        result.tool_name,
+                        result.result
+                    )))
+                    .await;
                 return true;
             }
         }
