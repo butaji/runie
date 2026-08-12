@@ -113,6 +113,7 @@ declare_palette_metadata! {
     (GitWorktrees, "/git worktrees", "Inspect Git worktrees"),
     (GitConflicts, "/git conflicts", "Inspect unresolved Git conflicts"),
     (Questions, "/questions", "Browse user-question history"),
+    (PendingQuestions, "/questions pending", "Show pending user questions"),
 }
 
 pub fn palette_display_rows(query: &str, skills: &[String]) -> Vec<String> {
@@ -150,7 +151,7 @@ macro_rules! palette_sections {
 }
 
 palette_sections! {
-    ("Context" => [CopyLastResponse, SessionInfo]),
+    ("Context" => [CopyLastResponse, SessionInfo, PendingQuestions]),
     ("Session" => [NewSession, KeyboardShortcuts, Quit, Changelog, ShareSession, SessionHistory, SessionHistoryQuery, UndoSession]),
     ("Information" => [Help, ContextInfo, ContextPolicy, ContextPolicyOn, ContextPolicyOff, ContextPolicyReserve, ContextPolicyKeepRecent, Doctor, Feedback, Usage, GitStatus, GitDiff, GitReview, GitWorktrees, GitConflicts]),
     ("Extensions" => [Skills, Hooks, Plugins, Mcps, CloseMcps, ReconnectMcps, McpNotifications, ClearMcpNotifications, McpReady, McpFailed, McpBusy, McpClosed, McpStdio, McpHttp, Memory]),

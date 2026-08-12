@@ -224,3 +224,4 @@ an implicit failure of H01–H20.
    A serializable diagnostic report-row projection now drives `/doctor`; add
    remaining provider media formats and interactive diagnostic controls only
    after their renderer-neutral data contracts are covered.
+Recent verification: the user-question broker now has a dedicated `Pending Questions` command-palette action, routing to the actor-owned pending projection and covered by the live palette smoke matrix.

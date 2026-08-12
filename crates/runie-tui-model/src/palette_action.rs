@@ -21,6 +21,6 @@ runie_core::typed_action_registry! {
         CancelAllJobs => "Cancel All Jobs", CancelRunningJobs => "Cancel Running Jobs", ClearFinishedJobs => "Clear Finished Jobs", CompletedJobs => "Completed Jobs",
         FailedJobs => "Failed Jobs", CancelledJobs => "Cancelled Jobs", CancelQueuedJobs => "Cancel Queued Jobs", JobOutput => "Job Output", JobOutputFacts => "Job Output Facts",
         GitStatus => "Git Status", GitDiff => "Git Diff", GitReview => "Git Review", GitWorktrees => "Git Worktrees",
-        GitConflicts => "Git Conflicts", Questions => "User Questions",
+        GitConflicts => "Git Conflicts", Questions => "User Questions", PendingQuestions => "Pending Questions",
     }
 }

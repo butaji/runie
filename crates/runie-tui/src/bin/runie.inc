@@ -2324,6 +2324,17 @@ async fn run_app(
                                     .await;
                                 return Ok(ui_commands);
                             }
+                            if action == PaletteAction::PendingQuestions {
+                                let _ = app
+                                    .route_mappable_command(
+                                        runie_core::commands::MappableBuiltinCommand::Extended {
+                                            name: "questions".into(),
+                                            args: "pending".into(),
+                                        },
+                                    )
+                                    .await;
+                                return Ok(ui_commands);
+                            }
                             if action == PaletteAction::GitStatus {
                                 let _ = app
                                     .route_mappable_command(
