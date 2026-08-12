@@ -112,6 +112,9 @@ is green, the fresh smoke summary is `passed=86 failed=0`, and `git status`
 The reduction backlog is now backed by declarative tables for the major closed
 vocabularies, so the next work is functional parity. Each item remains open
 until its source change, event/replay tests, and live TUI evidence are recorded.
+The finite acceptance boundary and its evidence are tracked separately in
+[`completion-audit.md`](completion-audit.md); the extension queue below is not
+an implicit failure of H01–H20.
 
 1. Provider-specific request adapters — `harness-04` and `harness-14`.
    MiniMax effort projection is now covered by a pure request-body regression;

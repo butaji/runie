@@ -9,6 +9,8 @@ boundaries.
 
 - [`plan.md`](plan.md) — current workstreams, acceptance criteria, and next steps.
 - [`findings.md`](findings.md) — source-backed architectural and parity findings.
+- [`completion-audit.md`](completion-audit.md) — finite acceptance evidence and
+  explicitly queued extensions.
 - [`index.json`](index.json) — machine-readable summary for tooling.
 
 Completed work is documented in the code, tests, and product documentation;
