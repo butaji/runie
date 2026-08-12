@@ -2280,100 +2280,12 @@ async fn run_app(
                                 app.show_provider_summary().await;
                                 return Ok(ui_commands);
                             }
-                            if action == PaletteAction::SessionHistory {
+                            if let Some((name, args)) = fixed_extended_palette_command(&action) {
                                 let _ = app
                                     .route_mappable_command(
                                         runie_core::commands::MappableBuiltinCommand::Extended {
-                                            name: "sessions".into(),
-                                            args: "history".into(),
-                                        },
-                                    )
-                                    .await;
-                                return Ok(ui_commands);
-                            }
-                            if action == PaletteAction::UndoSession {
-                                let _ = app
-                                    .route_mappable_command(
-                                        runie_core::commands::MappableBuiltinCommand::Extended {
-                                            name: "undo".into(),
-                                            args: String::new(),
-                                        },
-                                    )
-                                    .await;
-                                return Ok(ui_commands);
-                            }
-                            if action == PaletteAction::ActiveJobs {
-                                let _ = app
-                                    .route_mappable_command(
-                                        runie_core::commands::MappableBuiltinCommand::Extended {
-                                            name: "jobs".into(),
-                                            args: "scheduler active".into(),
-                                        },
-                                    )
-                                    .await;
-                                return Ok(ui_commands);
-                            }
-                            if action == PaletteAction::GitConflicts {
-                                let _ = app
-                                    .route_mappable_command(
-                                        runie_core::commands::MappableBuiltinCommand::Extended {
-                                            name: "git".into(),
-                                            args: "conflicts".into(),
-                                        },
-                                    )
-                                    .await;
-                                return Ok(ui_commands);
-                            }
-                            if action == PaletteAction::PendingQuestions {
-                                let _ = app
-                                    .route_mappable_command(
-                                        runie_core::commands::MappableBuiltinCommand::Extended {
-                                            name: "questions".into(),
-                                            args: "pending".into(),
-                                        },
-                                    )
-                                    .await;
-                                return Ok(ui_commands);
-                            }
-                            if action == PaletteAction::GitStatus {
-                                let _ = app
-                                    .route_mappable_command(
-                                        runie_core::commands::MappableBuiltinCommand::Extended {
-                                            name: "git".into(),
-                                            args: "status".into(),
-                                        },
-                                    )
-                                    .await;
-                                return Ok(ui_commands);
-                            }
-                            if action == PaletteAction::GitDiff {
-                                let _ = app
-                                    .route_mappable_command(
-                                        runie_core::commands::MappableBuiltinCommand::Extended {
-                                            name: "git".into(),
-                                            args: "diff".into(),
-                                        },
-                                    )
-                                    .await;
-                                return Ok(ui_commands);
-                            }
-                            if action == PaletteAction::GitReview {
-                                let _ = app
-                                    .route_mappable_command(
-                                        runie_core::commands::MappableBuiltinCommand::Extended {
-                                            name: "git".into(),
-                                            args: "review".into(),
-                                        },
-                                    )
-                                    .await;
-                                return Ok(ui_commands);
-                            }
-                            if action == PaletteAction::GitWorktrees {
-                                let _ = app
-                                    .route_mappable_command(
-                                        runie_core::commands::MappableBuiltinCommand::Extended {
-                                            name: "git".into(),
-                                            args: "worktrees".into(),
+                                            name: name.into(),
+                                            args: args.into(),
                                         },
                                     )
                                     .await;
@@ -2891,6 +2803,31 @@ async fn persist_question_trace(app: &App, id: &str) {
             }
         }
     }
+}
+
+macro_rules! fixed_palette_routes {
+    ($(($variant:ident, $name:literal, $args:literal)),+ $(,)?) => {
+        fn fixed_extended_palette_command(
+            action: &PaletteAction,
+        ) -> Option<(&'static str, &'static str)> {
+            match action {
+                $(PaletteAction::$variant => Some(($name, $args)),)+
+                _ => None,
+            }
+        }
+    };
+}
+
+fixed_palette_routes! {
+    (SessionHistory, "sessions", "history"),
+    (UndoSession, "undo", ""),
+    (ActiveJobs, "jobs", "scheduler active"),
+    (GitConflicts, "git", "conflicts"),
+    (PendingQuestions, "questions", "pending"),
+    (GitStatus, "git", "status"),
+    (GitDiff, "git", "diff"),
+    (GitReview, "git", "review"),
+    (GitWorktrees, "git", "worktrees"),
 }
 
 fn extended_palette_command_name(action: &PaletteAction) -> Option<&'static str> {
