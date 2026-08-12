@@ -2808,6 +2808,7 @@ fixed_palette_routes! {
     (CompletedJobs, "jobs", "completed"),
     (FailedJobs, "jobs", "failed"),
     (CancelledJobs, "jobs", "cancelled"),
+    (McpPopNotifications, "mcps", "notifications pop"),
 }
 
 fn extended_palette_command_name(action: &PaletteAction) -> Option<&'static str> {

@@ -15,7 +15,7 @@ runie_core::typed_action_registry! {
         TrustProject => "Trust Project", Skills => "Skills", Hooks => "Hooks", Plugins => "Plugins",
         Mcps => "MCP Servers", CloseMcps => "Close MCP Servers", ReconnectMcps => "Reconnect MCP Servers", McpNotifications => "MCP Notifications", ClearMcpNotifications => "Clear MCP Notifications", McpReady => "Ready MCP Servers", McpFailed => "Failed MCP Servers",
         McpBusy => "Busy MCP Servers", McpClosed => "Closed MCP Servers", McpStdio => "Stdio MCP Servers",
-        McpHttp => "HTTP MCP Servers", Memory => "Memory", Remember => "Remember", Goal => "Goal",
+        McpHttp => "HTTP MCP Servers", McpPopNotifications => "Pop MCP Notification", Memory => "Memory", Remember => "Remember", Goal => "Goal",
         Workflow => "Workflow", Workflows => "Workflows", Loop => "Loop", DeepResearch => "Deep Research",
         Feedback => "Feedback", Usage => "Usage", UsageChart => "Usage Chart", Jobs => "Background Jobs", ActiveJobs => "Active Jobs",
         CancelAllJobs => "Cancel All Jobs", CancelRunningJobs => "Cancel Running Jobs", ClearFinishedJobs => "Clear Finished Jobs", CompletedJobs => "Completed Jobs", QueuedJobs => "Queued Jobs",

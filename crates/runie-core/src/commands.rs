@@ -310,25 +310,24 @@ pub fn parse_mcp_notifications_query(args: &str) -> bool {
 pub fn parse_mcp_notifications_clear(args: &str) -> bool {
     args.trim().eq_ignore_ascii_case("notifications clear")
 }
-
+pub fn parse_mcp_notifications_pop(args: &str) -> bool {
+    args.trim().eq_ignore_ascii_case("notifications pop")
+}
 pub fn parse_session_picker_query(args: &str) -> Option<String> {
     let mut parts = args.split_whitespace();
     (parts.next() == Some("pick")).then(|| parts.collect::<Vec<_>>().join(" "))
 }
-
 pub fn parse_session_history_selection(args: &str) -> Option<&str> {
     let mut parts = args.split_whitespace();
     (parts.next() == Some("history") && parts.next().is_some() && parts.next().is_none())
         .then(|| args.split_whitespace().nth(1).unwrap())
 }
-
 pub fn parse_session_history_query(args: &str) -> Option<String> {
     let mut parts = args.split_whitespace();
     (parts.next() == Some("history") && parts.next() == Some("query"))
         .then(|| parts.collect::<Vec<_>>().join(" "))
         .filter(|query| !query.is_empty())
 }
-
 pub fn parse_undo_count(args: &str) -> Option<usize> {
     let value = args.trim();
     if value.is_empty() {

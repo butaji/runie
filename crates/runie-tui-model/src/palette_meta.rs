@@ -81,6 +81,7 @@ declare_palette_metadata! {
     (ReconnectMcps, "/mcps reconnect", "Reconnect MCP servers"),
     (McpNotifications, "/mcps notifications", "Inspect MCP notifications"),
     (ClearMcpNotifications, "/mcps notifications clear", "Clear MCP notifications"),
+    (McpPopNotifications, "/mcps notifications pop", "Pop the oldest MCP notification"),
     (McpReady, "/mcps status=ready", "Show ready MCP servers"),
     (McpFailed, "/mcps status=failed", "Show failed MCP servers"),
     (McpBusy, "/mcps status=busy", "Show busy MCP servers"),
@@ -159,7 +160,7 @@ palette_sections! {
     ("Context" => [CopyLastResponse, SessionInfo, PendingQuestions]),
     ("Session" => [NewSession, KeyboardShortcuts, Quit, Changelog, ShareSession, SessionHistory, SessionHistoryQuery, UndoSession]),
     ("Information" => [Help, ContextInfo, ContextPolicy, ContextPolicyOn, ContextPolicyOff, ContextPolicyReserve, ContextPolicyKeepRecent, Doctor, Feedback, Usage, GitStatus, GitDiff, GitReview, GitWorktrees, GitConflicts]),
-    ("Extensions" => [Skills, Hooks, Plugins, Mcps, CloseMcps, ReconnectMcps, McpNotifications, ClearMcpNotifications, McpReady, McpFailed, McpBusy, McpClosed, McpStdio, McpHttp, Memory]),
+    ("Extensions" => [Skills, Hooks, Plugins, Mcps, CloseMcps, ReconnectMcps, McpNotifications, ClearMcpNotifications, McpPopNotifications, McpReady, McpFailed, McpBusy, McpClosed, McpStdio, McpHttp, Memory]),
     ("Automation" => [Goal, Workflow, Workflows, Loop, DeepResearch, Jobs, ActiveJobs, CancelAllJobs, CancelRunningJobs, ClearFinishedJobs, CompletedJobs, QueuedJobs, FailedJobs, RunningJobs, CancelledJobs, CancelQueuedJobs, AskBeforeTools, Deny]),
 }
 

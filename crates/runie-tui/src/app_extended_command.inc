@@ -9,6 +9,16 @@ impl App {
             return true;
         }
         if name == "mcps" {
+            if runie_core::commands::parse_mcp_notifications_pop(args) {
+                let result = self
+                    .loop_actor
+                    .pop_mcp_notification()
+                    .await
+                    .map(|value| value.to_string())
+                    .unwrap_or_else(|| "No pending MCP notifications".into());
+                self.ui.send(UiMsg::ShowCommandResult(result)).await;
+                return true;
+            }
             if runie_core::commands::parse_mcp_notifications_clear(args) {
                 self.loop_actor.clear_mcp_notifications().await;
                 self.ui

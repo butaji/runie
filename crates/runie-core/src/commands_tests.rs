@@ -284,6 +284,7 @@ fn mcp_reconnect_command_requires_an_exact_argument() {
 fn mcp_notification_controls_are_typed_and_exact() {
     assert!(parse_mcp_notifications_query("notifications"));
     assert!(parse_mcp_notifications_clear("notifications clear"));
+    assert!(parse_mcp_notifications_pop("notifications pop"));
     assert!(!parse_mcp_notifications_query("notifications clear"));
     assert!(!parse_mcp_notifications_clear("notifications now"));
 }

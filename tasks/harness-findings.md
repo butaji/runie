@@ -30,10 +30,10 @@ Existing foundations are not duplicated here: actors/events, provider registry,
 model catalog, replay/session storage, compaction primitives, queues, hooks,
 telemetry, pure snapshots, command palette, and TUI smoke infrastructure.
 
-Smoke evidence: `scripts/tmux-command-smoke.sh` now covers 82 palette cases,
+Smoke evidence: `scripts/tmux-command-smoke.sh` now covers 83 palette cases,
 including parameterized background-job and session-history inspection, five
 direct command cases (including reserve/keep context policy settings), the
 Pending Questions, Ask Before Tools, and typed Job Output Head/Tail actions,
-plus the Quit lifecycle, for 98 TUI-only cases.
+plus the Quit lifecycle, for 99 TUI-only cases.
 Provider-backed coding prompts remain
 environment-dependent and must be recorded separately from local UI evidence.

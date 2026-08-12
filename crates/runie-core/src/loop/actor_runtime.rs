@@ -53,6 +53,16 @@ impl LoopActor {
             .await;
     }
 
+    pub async fn pop_mcp_notification(&self) -> Option<serde_json::Value> {
+        self.inner
+            .deps
+            .tool_executor
+            .registry()
+            .mcp_notifications()
+            .pop()
+            .await
+    }
+
     /// Project the next context-recovery operation without mutating any
     /// actor. Callers can route `Prepare` through the session owner and keep
     /// summarization in the provider owner.
