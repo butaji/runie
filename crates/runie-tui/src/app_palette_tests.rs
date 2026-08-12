@@ -310,6 +310,25 @@ fn job_output_preview_palette_parameter_emits_typed_command() {
 }
 
 #[test]
+fn job_output_search_palette_parameter_emits_typed_command() {
+    let mut state = UiState::new().update(UiMsg::OpenPaletteParameters(
+        super::PaletteAction::JobOutputSearch,
+    ));
+    for ch in "job-7 warning line".chars() {
+        state = state.update(UiMsg::PaletteParameterChar(ch));
+    }
+    assert_eq!(
+        super::app_projection::ui_command_for(&state, &UiMsg::PaletteParameterSubmit),
+        Some(super::UiCommand::ExecuteMappable(
+            runie_core::commands::MappableBuiltinCommand::Extended {
+                name: "jobs".into(),
+                args: "output job-7 search warning line".into(),
+            }
+        ))
+    );
+}
+
+#[test]
 fn job_output_window_palette_parameters_emit_typed_commands() {
     for (action, direction) in [
         (super::PaletteAction::JobOutputHead, "head"),

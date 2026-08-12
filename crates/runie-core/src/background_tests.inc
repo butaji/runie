@@ -48,6 +48,16 @@ fn preview_terminal_line_preserves_bounded_preview_data() {
     assert_eq!(output.preview_terminal_line(), "output");
 }
 
+#[test]
+fn search_lines_projects_matching_output_in_original_order() {
+    let output = BackgroundOutput {
+        job_id: "job".into(), command: "demo".into(), status: BackgroundStatus::Completed,
+        exit_code: Some(0), text: "keep\nskip\nkeep again".into(), output_lines: 3,
+        output_bytes: 23, preview: None, truncated: false,
+    };
+    assert_eq!(output.search_lines("keep"), ["keep", "keep again"]);
+}
+
 #[tokio::test]
 async fn jobs_are_owned_and_reduce_to_completion() {
     let actor = BackgroundProcessActor::new();

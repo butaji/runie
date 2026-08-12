@@ -6,7 +6,7 @@ use std::{collections::BTreeMap, sync::Arc};
 use tokio::sync::{mpsc, oneshot, watch};
 use tokio::task::JoinSet;
 #[path = "background_output_queries.rs"]
-mod output_queries;
+pub(crate) mod output_queries;
 pub use output_queries::{
     parse_output_tail_query, parse_output_window_query, OutputWindowDirection,
 };

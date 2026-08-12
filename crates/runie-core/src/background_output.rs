@@ -1,6 +1,14 @@
 use super::BackgroundOutput;
 
 impl BackgroundOutput {
+    pub fn search_lines(&self, query: &str) -> Vec<String> {
+        self.text
+            .lines()
+            .filter(|line| line.contains(query))
+            .map(str::to_owned)
+            .collect()
+    }
+
     pub fn preview_terminal_line(&self) -> String {
         self.preview
             .clone()

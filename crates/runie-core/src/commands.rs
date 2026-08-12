@@ -280,12 +280,12 @@ pub fn parse_background_job_output_query(args: &str) -> Option<&str> {
         .then(|| args.split_whitespace().nth(1).unwrap())
 }
 
+pub use crate::background::output_queries::parse_output_search_query as parse_background_job_output_search_query;
 pub use crate::background::parse_output_facts_query as parse_background_job_output_facts_query;
 pub use crate::background::parse_output_tail_query as parse_background_job_output_tail_query;
 pub use crate::background::{
     parse_output_window_query as parse_background_job_output_window_query, OutputWindowDirection,
 };
-
 pub fn parse_background_job_status_query(args: &str) -> Option<&str> {
     let status = args.trim();
     crate::background::BackgroundStatus::from_wire_name(status).map(|_| status)

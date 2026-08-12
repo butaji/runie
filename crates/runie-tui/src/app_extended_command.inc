@@ -337,6 +337,14 @@ impl App {
             return true;
         }
         if name == "jobs" {
+            if let Some((id, query)) = runie_core::commands::parse_background_job_output_search_query(args) {
+                let result = match self.background_actor.read_output(id).await {
+                    Some(output) => output.search_lines(&query).join("\n"),
+                    None => format!("Background job {id} output not found"),
+                };
+                self.ui.send(UiMsg::ShowCommandResult(result)).await;
+                return true;
+            }
             if let Some((id, direction, count)) = runie_core::commands::parse_background_job_output_window_query(args) {
                 let result = match self.background_actor.read_output(id).await {
                     Some(output) => output.window_lines(direction, count).join("\n"),

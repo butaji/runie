@@ -14,7 +14,7 @@ labels=(
   "Set Reasoning Effort" "Always Approve" "Automatic Approval" "Ask Before Tools" "Deny Tools" "Plan Mode" "View Plan"
   "Login" "Logout" "Reload" "Trust Project" "Skills" "Hooks" "Plugins" "MCP Servers" "Close MCP Servers" "Reconnect MCP Servers"
   "Memory" "Remember" "Goal" "Workflow" "Workflows" "Sessions" "Session History" "Session History Query" "Undo Session" "Questions" "Active Jobs" "Cancel All Jobs" "Cancel Running Jobs" "Clear Finished Jobs" "Completed Jobs" "Queued Jobs" "Failed Jobs" "Running Jobs" "Cancelled Jobs" "Git Status" "Git Diff" "Git Review" "Git Worktrees" "Git Conflicts" "MCP Notifications" "Clear MCP Notifications" "Ready MCP Servers" "Failed MCP Servers" "Busy MCP Servers" "Closed MCP Servers" "Stdio MCP Servers" "HTTP MCP Servers" "Loop" "Deep Research" "Feedback" "Usage" "Usage Chart" "Context Policy" "Enable Context Policy" "Disable Context Policy" "Set Context Reserve" "Set Context Keep Recent"
-  "Pending Questions" "Pop MCP Notification" "Inspect Diagnostics" "Apply Diagnostic Fixes" "Usage Chart All" "Usage Chart Input" "Usage Chart Output" "Usage Chart Cost" "Background Jobs" "Jobs" "Job Output" "Job Output Facts" "Job Output Preview" "Job Output Head" "Job Output Tail" "Cancel Queued Jobs"
+  "Pending Questions" "Pop MCP Notification" "Inspect Diagnostics" "Apply Diagnostic Fixes" "Usage Chart All" "Usage Chart Input" "Usage Chart Output" "Usage Chart Cost" "Background Jobs" "Jobs" "Job Output" "Job Output Facts" "Job Output Preview" "Job Output Search" "Job Output Head" "Job Output Tail" "Cancel Queued Jobs"
   "Inspect Git Conflicts" "Cancel Git Conflict Review"
   "Prepare Git Commit" "Commit Git" "Push Git" "Revert Git"
   "Clear Context" "Reset Context"
@@ -28,7 +28,7 @@ parameterized=(
   "Export Session" "Import Session" "Clone Session" "Resume Session" "Help" "Settings" "Doctor"
   "Rewind Session" "Prompt History" "Find Transcript" "Jump Transcript" "Set Reasoning Effort"
   "Always Approve" "Automatic Approval" "Plan Mode" "Login" "Logout" "Trust Project" "Remember" "Undo Session" "Set Context Reserve" "Set Context Keep Recent"
-  "Goal" "Workflow" "Loop" "Deep Research" "Feedback" "Usage" "Prepare Git Commit" "Commit Git" "Push Git" "Revert Git" "Background Jobs" "Questions" "Jobs" "Completed Jobs" "Failed Jobs" "Cancelled Jobs" "Busy MCP Servers" "Closed MCP Servers" "Stdio MCP Servers" "HTTP MCP Servers" "Git Status" "Git Diff" "Git Review" "Git Worktrees" "Git Conflicts" "Job Output" "Job Output Facts" "Job Output Preview" "Job Output Head" "Job Output Tail" "Session History Query"
+  "Goal" "Workflow" "Loop" "Deep Research" "Feedback" "Usage" "Prepare Git Commit" "Commit Git" "Push Git" "Revert Git" "Background Jobs" "Questions" "Jobs" "Completed Jobs" "Failed Jobs" "Cancelled Jobs" "Busy MCP Servers" "Closed MCP Servers" "Stdio MCP Servers" "HTTP MCP Servers" "Git Status" "Git Diff" "Git Review" "Git Worktrees" "Git Conflicts" "Job Output" "Job Output Facts" "Job Output Preview" "Job Output Search" "Job Output Head" "Job Output Tail" "Session History Query"
 )
 
 is_parameterized() {
@@ -110,6 +110,8 @@ for label in "${labels[@]}"; do
       argument=(o u t p u t 0 t a i l 2)
     elif [[ "$label" == "Job Output Head" ]]; then
       argument=(0 2)
+    elif [[ "$label" == "Job Output Search" ]]; then
+      argument=(s m o k e ' ' o u t p u t)
     elif [[ "$label" == "Job Output Tail" ]]; then
       argument=(0 2)
     fi
@@ -146,6 +148,11 @@ for label in "${labels[@]}"; do
     fi
     if [[ "$label" == "Job Output Preview" ]] && ! wait_for 'Background job smoke output not found'; then
       echo "FAIL $label: expected-preview-query-result"
+      ((failed += 1))
+      continue
+    fi
+    if [[ "$label" == "Job Output Search" ]] && ! wait_for 'Background job smoke output not found'; then
+      echo "FAIL $label: expected-search-query-result"
       ((failed += 1))
       continue
     fi

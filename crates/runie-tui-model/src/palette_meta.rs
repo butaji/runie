@@ -122,6 +122,7 @@ declare_palette_metadata! {
     (JobOutput, "/jobs output", "Inspect bounded job output"),
     (JobOutputFacts, "/jobs output", "Inspect bounded output facts"),
     (JobOutputPreview, "/jobs output", "Inspect the bounded output preview"),
+    (JobOutputSearch, "/jobs output", "Search bounded job output"),
     (JobOutputHead, "/jobs output", "Inspect the first output lines"),
     (JobOutputTail, "/jobs output", "Inspect the last output lines"),
     (GitStatus, "/git status", "Inspect repository status"),
@@ -245,6 +246,7 @@ impl PaletteAction {
             Self::ContextPolicyReserve => "Token count",
             Self::ContextPolicyKeepRecent => "Token count",
             Self::JobOutput | Self::JobOutputFacts | Self::JobOutputPreview => "Job id",
+            Self::JobOutputSearch => "Job id and search text",
             Self::GitCommitPrepare | Self::GitCommit => "Commit message",
             Self::GitPush => "Remote and reference",
             Self::GitRevert => "Commit id",
@@ -307,6 +309,7 @@ const PARAMETERIZED_ACTIONS: &[PaletteAction] = &[
     PaletteAction::JobOutput,
     PaletteAction::JobOutputFacts,
     PaletteAction::JobOutputPreview,
+    PaletteAction::JobOutputSearch,
     PaletteAction::JobOutputHead,
     PaletteAction::JobOutputTail,
 ];

@@ -23,3 +23,17 @@ pub fn parse_output_tail_query(args: &str) -> Option<(&str, usize)> {
         .filter(|(_, direction, _)| *direction == OutputWindowDirection::Tail)
         .map(|(id, _, count)| (id, count))
 }
+
+pub fn parse_output_search_query(args: &str) -> Option<(&str, String)> {
+    let mut parts = args.split_whitespace();
+    (parts.next() == Some("output") && parts.next().is_some() && parts.next() == Some("search"))
+        .then(|| {
+            let id = args.split_whitespace().nth(1).unwrap();
+            let query = args
+                .split_whitespace()
+                .skip(3)
+                .collect::<Vec<_>>()
+                .join(" ");
+            (!query.is_empty()).then_some((id, query))
+        })?
+}
