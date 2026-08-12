@@ -183,7 +183,7 @@ pub fn decide_registered(mode: ApprovalMode, tool: &str, registered: bool) -> Ap
     let class = classify_tool(tool);
     if matches!(mode, ApprovalMode::Auto | ApprovalMode::Yolo)
         || class == ToolClass::ReadOnly
-        || (registered && mode != ApprovalMode::Deny)
+        || (registered && class != ToolClass::Mutating && mode != ApprovalMode::Deny)
     {
         ApprovalDecision::Allow
     } else if mode == ApprovalMode::Deny {
@@ -259,6 +259,14 @@ mod tests {
             decide_registered(ApprovalMode::Ask, "plugin__demo__inspect", true),
             ApprovalDecision::Allow
         );
+    }
+
+    #[test]
+    fn registered_mutating_tools_still_require_approval_in_ask_mode() {
+        assert!(matches!(
+            decide_registered(ApprovalMode::Ask, "git_push", true),
+            ApprovalDecision::Ask { .. }
+        ));
     }
 
     #[test]

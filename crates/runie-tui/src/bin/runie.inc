@@ -1955,16 +1955,17 @@ async fn run_app(
                 KeyCode::Enter => {
                     theme_preview.commit();
                     app.ui.send(runie_tui_model::UiMsg::PaletteParameterSubmit).await;
-                    match ui_commands.try_recv() {
-                        Ok(UiCommand::ExecuteMappable(command)) => {
+                    let command = ui_commands.recv().await.ok();
+                    match command {
+                        Some(UiCommand::ExecuteMappable(command)) => {
                             let _ = app.route_mappable_command(command).await;
                         }
-                        Ok(UiCommand::SelectTheme(value)) => {
+                        Some(UiCommand::SelectTheme(value)) => {
                             if let Some(theme) = parse_theme_name(&value) {
                                 app.set_theme(theme).await;
                             }
                         }
-                        Ok(UiCommand::ProviderAction {
+                        Some(UiCommand::ProviderAction {
                             action: PaletteAction::ManageProviders,
                             value,
                         }) =>

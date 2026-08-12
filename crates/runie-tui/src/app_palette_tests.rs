@@ -204,7 +204,7 @@ fn extended_palette_parameters_emit_typed_invocations() {
         (super::PaletteAction::PlanMode, "ship it", "plan"),
         (super::PaletteAction::Remember, "keep this", "remember"),
     ] {
-        let mut state = UiState::new().update(UiMsg::OpenPaletteParameters(action));
+        let mut state = UiState::new().update(UiMsg::OpenPaletteParameters(action.clone()));
         for ch in input.chars() {
             state = state.update(UiMsg::PaletteParameterChar(ch));
         }
@@ -214,6 +214,35 @@ fn extended_palette_parameters_emit_typed_invocations() {
                 runie_core::commands::MappableBuiltinCommand::Extended {
                     name: name.into(),
                     args: input.into(),
+                }
+            ))
+        );
+    }
+}
+
+#[test]
+fn multiword_git_palette_routes_preserve_command_prefix_data() {
+    for (action, args) in [
+        (super::PaletteAction::GitPush, "origin main"),
+        (super::PaletteAction::GitRevert, "deadbee"),
+    ] {
+        let mut state = UiState::new().update(UiMsg::OpenPaletteParameters(action.clone()));
+        for ch in args.chars() {
+            state = state.update(UiMsg::PaletteParameterChar(ch));
+        }
+        assert_eq!(
+            super::app_projection::ui_command_for(&state, &UiMsg::PaletteParameterSubmit),
+            Some(super::UiCommand::ExecuteMappable(
+                runie_core::commands::MappableBuiltinCommand::Extended {
+                    name: "git".into(),
+                    args: format!(
+                        "{} {args}",
+                        if action == super::PaletteAction::GitPush {
+                            "push"
+                        } else {
+                            "revert"
+                        }
+                    ),
                 }
             ))
         );

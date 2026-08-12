@@ -79,15 +79,29 @@ fn parameter_command(state: &UiState) -> Option<UiCommand> {
     if let Some(command) = job_output_parameter_command(action, query) {
         return Some(command);
     }
+    Some(UiCommand::ExecuteMappable(parameterized_command(
+        action, query,
+    )))
+}
+
+fn parameterized_command(
+    action: &PaletteAction,
+    query: &str,
+) -> runie_core::commands::MappableBuiltinCommand {
     let input = format!("{} {query}", action.slash_command());
-    Some(UiCommand::ExecuteMappable(
-        runie_core::commands::parse_mappable_builtin_command(&input).unwrap_or_else(|| {
-            runie_core::commands::MappableBuiltinCommand::Extended {
-                name: action.slash_command().trim_start_matches('/').to_owned(),
-                args: query.to_owned(),
-            }
-        }),
-    ))
+    runie_core::commands::parse_mappable_builtin_command(&input).unwrap_or_else(|| {
+        let mut command = action
+            .slash_command()
+            .trim_start_matches('/')
+            .splitn(2, ' ');
+        runie_core::commands::MappableBuiltinCommand::Extended {
+            name: command.next().unwrap_or_default().to_owned(),
+            args: command
+                .next()
+                .map(|prefix| format!("{prefix} {query}"))
+                .unwrap_or_else(|| query.to_owned()),
+        }
+    })
 }
 
 fn job_output_facts_command(job_id: &str) -> UiCommand {
