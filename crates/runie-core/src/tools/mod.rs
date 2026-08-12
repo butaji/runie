@@ -4,6 +4,7 @@ pub mod actor;
 pub mod ask_user;
 pub mod background;
 pub mod command;
+mod command_actor;
 pub mod executor;
 pub mod git;
 mod git_conflict_actor;
