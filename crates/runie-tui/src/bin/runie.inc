@@ -2797,6 +2797,8 @@ fixed_palette_routes! {
     (QueuedJobs, "jobs", "scheduler queued"),
     (RunningJobs, "jobs", "running"),
     (GitConflicts, "git", "conflicts"),
+    (GitConflictsInspect, "git", "conflicts action inspect"),
+    (GitConflictsCancel, "git", "conflicts cancel"),
     (PendingQuestions, "questions", "pending"),
     (GitStatus, "git", "status"),
     (GitDiff, "git", "diff"),
