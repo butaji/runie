@@ -107,6 +107,10 @@ impl UiActor {
     pub fn parameter_submit_command(&self) -> Option<UiCommand> {
         app_projection::ui_command_for(&self.snapshot(), &UiMsg::PaletteParameterSubmit)
     }
+
+    pub fn question_submit_command(&self) -> Option<UiCommand> {
+        app_projection::ui_command_for(&self.snapshot(), &UiMsg::SubmitUserQuestion)
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -432,12 +436,56 @@ pub struct App {
     pub git_conflict_actor: runie_core::tools::GitConflictActor,
     pub tool_executor: Option<runie_core::tools::ToolExecutorActor>,
     pub tool_hooks: Option<runie_core::tools::executor::ToolExecHooks>,
+    tool_command_tasks: ToolCommandTaskActor,
     pub plugin_host: Option<runie_core::plugins::PluginHost>,
     submission_tx: SubmissionTx,
     _submission_owner: std::sync::Arc<runie_core::task_owner::TaskOwner>,
 }
 type Submission = (Vec<AgentMessage>, tokio::sync::oneshot::Sender<()>);
 type SubmissionTx = mpsc::Sender<Submission>;
+
+#[derive(Clone)]
+struct ToolCommandTaskActor {
+    tx: mpsc::Sender<ToolCommandTask>,
+    _owner: std::sync::Arc<runie_core::task_owner::TaskOwner>,
+}
+
+struct ToolCommandTask {
+    executor: runie_core::tools::ToolExecutorActor,
+    hooks: runie_core::tools::executor::ToolExecHooks,
+    ui: UiActor,
+    name: String,
+    arguments: serde_json::Value,
+}
+
+impl ToolCommandTaskActor {
+    fn new() -> Self {
+        let (tx, mut rx) = mpsc::channel::<ToolCommandTask>(16);
+        let owner = runie_core::spawn_owned_worker!(async move {
+            while let Some(task) = rx.recv().await {
+                let result = task
+                    .executor
+                    .execute_command(
+                        runie_core::tools::ToolCommandRequest::new(&task.name, task.arguments),
+                        runie_core::types::AgentContext::default(),
+                        task.hooks,
+                    )
+                    .await;
+                task.ui
+                    .send(UiMsg::ShowCommandResult(format!(
+                        "{}: {}",
+                        result.tool_name, result.result
+                    )))
+                    .await;
+            }
+        });
+        Self { tx, _owner: owner }
+    }
+
+    async fn submit(&self, task: ToolCommandTask) {
+        let _ = self.tx.send(task).await;
+    }
+}
 
 fn submission_actor(
     loop_actor: LoopActor,

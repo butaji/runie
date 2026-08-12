@@ -119,6 +119,21 @@ for label in "${labels[@]}"; do
     done
     tmux_run send-keys -t smoke Enter
     sleep 0.5
+    if [[ "$label" == "Push Git" || "$label" == "Revert Git" ]]; then
+      if ! wait_for 'Tool approval'; then
+        echo "FAIL $label: missing-approval-dialog"
+        ((failed += 1))
+        continue
+      fi
+      tmux_run send-keys -t smoke Down
+      sleep 0.3
+      tmux_run send-keys -t smoke Enter
+      if ! wait_for 'Type your message'; then
+        echo "FAIL $label: approval-dialog-not-closed"
+        ((failed += 1))
+        continue
+      fi
+    fi
     if [[ "$label" == "Prepare Git Commit" ]] && ! wait_for 'git_commit_prepare'; then
       echo "FAIL $label: expected-tool-result"
       ((failed += 1))

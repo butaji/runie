@@ -1913,8 +1913,9 @@ async fn run_app(
                 KeyCode::Down => app.ui.send(runie_tui_model::UiMsg::UserQuestionMove(1)).await,
                 KeyCode::Char(' ') => app.ui.send(runie_tui_model::UiMsg::ToggleUserQuestionSelection).await,
                 KeyCode::Enter => {
+                    let command = app.ui.question_submit_command();
                     app.ui.send(runie_tui_model::UiMsg::SubmitUserQuestion).await;
-                    if let Ok(UiCommand::AnswerUserQuestion { id, answer }) = ui_commands.recv().await {
+                    if let Some(UiCommand::AnswerUserQuestion { id, answer }) = command {
                         let _ = app.question_broker.answer(&id, answer);
                         persist_question_trace(app, &id).await;
                     }

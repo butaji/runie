@@ -842,18 +842,14 @@ impl App {
                 .await;
             return true;
         };
-        let result = executor
-            .execute_command(
-                runie_core::tools::ToolCommandRequest::new(tool_name, arguments),
-                runie_core::types::AgentContext::default(),
-                self.tool_hooks.clone().unwrap_or_default(),
-            )
-            .await;
-        self.ui
-            .send(UiMsg::ShowCommandResult(format!(
-                "{}: {}",
-                result.tool_name, result.result
-            )))
+        self.tool_command_tasks
+            .submit(crate::app::ToolCommandTask {
+                executor: executor.clone(),
+                hooks: self.tool_hooks.clone().unwrap_or_default(),
+                ui: self.ui.clone(),
+                name: tool_name.to_owned(),
+                arguments,
+            })
             .await;
         true
     }

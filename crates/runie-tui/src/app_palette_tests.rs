@@ -31,6 +31,27 @@ async fn ui_actor_turns_parameter_form_submission_into_a_builtin_command() {
 }
 
 #[tokio::test]
+async fn ui_actor_submits_git_push_as_a_typed_extended_command() {
+    let bus = runie_core::events::EventBus::new();
+    let actor = UiActor::new(&bus);
+    let mut commands = actor.subscribe_commands();
+    actor
+        .send(UiMsg::OpenPaletteParameters(super::PaletteAction::GitPush))
+        .await;
+    for ch in "origin main".chars() {
+        actor.send(UiMsg::PaletteParameterChar(ch)).await;
+    }
+    actor.send(UiMsg::PaletteParameterSubmit).await;
+    assert_eq!(
+        commands.recv().await.unwrap(),
+        super::UiCommand::ExecuteMappable(runie_core::commands::MappableBuiltinCommand::Extended {
+            name: "git".into(),
+            args: "push origin main".into(),
+        })
+    );
+}
+
+#[tokio::test]
 async fn ui_actor_publishes_select_model_as_an_immediate_picker_action() {
     let bus = runie_core::events::EventBus::new();
     let actor = UiActor::new(&bus);
