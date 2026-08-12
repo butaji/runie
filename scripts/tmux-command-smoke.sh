@@ -18,6 +18,7 @@ labels=(
   "Inspect Git Conflicts" "Cancel Git Conflict Review"
   "Clear Context" "Reset Context"
   "Compact Context Now"
+  "Clear Question History"
 )
 parameterized=(
   "Select Theme" "Set Session Name" "Compact Context" "Fork Session" "Select Tree Entry" "Usage Chart"

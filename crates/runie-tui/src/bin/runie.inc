@@ -2801,6 +2801,7 @@ fixed_palette_routes! {
     (GitConflictsInspect, "git", "conflicts action inspect"),
     (GitConflictsCancel, "git", "conflicts cancel"),
     (PendingQuestions, "questions", "pending"),
+    (ClearQuestionHistory, "questions", "clear"),
     (GitStatus, "git", "status"),
     (GitDiff, "git", "diff"),
     (GitReview, "git", "review"),
