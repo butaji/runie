@@ -1,0 +1,9 @@
+- !Enqueued
+  interactive: true
+- !Started
+- !Enqueued
+  interactive: false
+- !CancelledRunning
+  reason: abort
+- !CancelledQueued
+  reason: user

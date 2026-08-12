@@ -32,8 +32,8 @@ pub use background::{
     BackgroundShellTool,
 };
 pub use executor::{
-    execute_parallel, execute_sequential, SchedulerMetricRow, SchedulerMetrics, ToolExecContext,
-    ToolExecHooks,
+    execute_parallel, execute_sequential, reduce_scheduler_event, SchedulerEvent,
+    SchedulerMetricRow, SchedulerMetrics, ToolExecContext, ToolExecHooks,
 };
 pub use git::{
     begin_conflict_recovery, classify_conflicts, plan_conflict_recovery, reduce_conflict_recovery,

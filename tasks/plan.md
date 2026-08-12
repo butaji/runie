@@ -116,6 +116,9 @@ Background output inspection also exposes a typed bounded tail projection,
 The same data contract now supports `head <n>` without duplicating the
 projection logic.
 
+Scheduler lifecycle metrics now also have a checked-in YAML replay trace for
+queued, running, and distinct queued/running cancellation transitions.
+
 Completion evidence is: every finite matrix row has source + replay/unit test
  + live TUI evidence, the extension queue has no unverified claim, `just ci`
 is green, the fresh smoke summary is `passed=89 failed=0`, and `git status`
