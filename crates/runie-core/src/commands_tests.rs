@@ -316,6 +316,12 @@ fn usage_limit_accepts_only_a_positive_last_query() {
 }
 
 #[test]
+fn usage_chart_command_is_exact_data() {
+    assert!(parse_usage_chart("chart"));
+    assert!(!parse_usage_chart("chart last 3"));
+}
+
+#[test]
 fn parameterized_undo_reaches_the_typed_extended_command() {
     assert_eq!(
         parse_mappable_builtin_command("/undo 2"),

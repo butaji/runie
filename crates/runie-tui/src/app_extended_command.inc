@@ -570,6 +570,19 @@ impl App {
                         format!("Rewind request recorded ({})", state.rewind_requests.len())
                     }
                     "usage" => {
+                        if runie_core::commands::parse_usage_chart(args) {
+                            let bundle = runie_core::diagnostics::DiagnosticBundle::from_snapshots(
+                                Default::default(),
+                                self.telemetry.snapshot(),
+                            );
+                            let visualization =
+                                runie_core::diagnostics::DiagnosticVisualization::from_bundle(&bundle);
+                            format!(
+                                "Usage chart ({})\n{}",
+                                state.usage_requests,
+                                visualization.terminal_lines(&bundle).join("\n")
+                            )
+                        } else {
                         match runie_core::commands::parse_usage_limit(args) {
                             Some(limit) => {
                                 let usage = runie_core::telemetry::usage_summary_limited(
@@ -579,6 +592,7 @@ impl App {
                                 format!("Usage requested ({})\n{}", state.usage_requests, usage.terminal_lines().join("\n"))
                             }
                             None => "Usage expects optional `last N`".into(),
+                        }
                         }
                     }
                     "effort" => format!(

@@ -365,6 +365,10 @@ pub fn parse_usage_limit(args: &str) -> Option<Option<usize>> {
     }
 }
 
+pub fn parse_usage_chart(args: &str) -> bool {
+    args.trim().eq_ignore_ascii_case("chart")
+}
+
 #[allow(clippy::too_many_lines)]
 fn parse_parameterized_command(value: &str) -> Option<MappableBuiltinCommand> {
     if let Some(command) = parse_compact_command(value) {

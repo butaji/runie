@@ -2242,6 +2242,17 @@ async fn run_app(
                                     .await;
                                 return Ok(ui_commands);
                             }
+                            if action == PaletteAction::UsageChart {
+                                let _ = app
+                                    .route_mappable_command(
+                                        runie_core::commands::MappableBuiltinCommand::Extended {
+                                            name: "usage".into(),
+                                            args: "chart".into(),
+                                        },
+                                    )
+                                    .await;
+                                return Ok(ui_commands);
+                            }
                             if action == PaletteAction::ManageProviders {
                                 app.show_provider_summary().await;
                                 return Ok(ui_commands);

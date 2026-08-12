@@ -84,6 +84,7 @@ declare_palette_metadata! {
     (DeepResearch, "/deep-research", "Run bounded research"),
     (Feedback, "/feedback", "Submit feedback"),
     (Usage, "/usage", "Show usage or billing information"),
+    (UsageChart, "/usage chart", "Show usage series chart"),
     (Jobs, "/jobs", "Inspect owned background jobs"),
     (ActiveJobs, "/jobs scheduler active", "Show queued and running work"),
     (CancelAllJobs, "/jobs cancel all", "Cancel all running jobs"),
