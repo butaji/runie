@@ -2811,6 +2811,10 @@ fixed_palette_routes! {
     (McpPopNotifications, "mcps", "notifications pop"),
     (DoctorInspect, "doctor", "inspect"),
     (DoctorFix, "doctor", "fix"),
+    (UsageChartAll, "usage", "chart"),
+    (UsageChartInput, "usage", "chart input"),
+    (UsageChartOutput, "usage", "chart output"),
+    (UsageChartCost, "usage", "chart cost"),
 }
 
 fn extended_palette_command_name(action: &PaletteAction) -> Option<&'static str> {

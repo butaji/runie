@@ -100,6 +100,10 @@ declare_palette_metadata! {
     (Feedback, "/feedback", "Submit feedback"),
     (Usage, "/usage", "Show usage or billing information"),
     (UsageChart, "/usage chart", "Show usage series chart"),
+    (UsageChartAll, "/usage chart", "Show all usage series"),
+    (UsageChartInput, "/usage chart input", "Show input usage series"),
+    (UsageChartOutput, "/usage chart output", "Show output usage series"),
+    (UsageChartCost, "/usage chart cost", "Show cost usage series"),
     (Jobs, "/jobs", "Inspect owned background jobs"),
     (ActiveJobs, "/jobs scheduler active", "Show queued and running work"),
     (CancelAllJobs, "/jobs cancel all", "Cancel all running jobs"),
@@ -161,7 +165,7 @@ macro_rules! palette_sections {
 palette_sections! {
     ("Context" => [CopyLastResponse, SessionInfo, PendingQuestions]),
     ("Session" => [NewSession, KeyboardShortcuts, Quit, Changelog, ShareSession, SessionHistory, SessionHistoryQuery, UndoSession]),
-    ("Information" => [Help, ContextInfo, ContextPolicy, ContextPolicyOn, ContextPolicyOff, ContextPolicyReserve, ContextPolicyKeepRecent, Doctor, DoctorInspect, DoctorFix, Feedback, Usage, GitStatus, GitDiff, GitReview, GitWorktrees, GitConflicts]),
+    ("Information" => [Help, ContextInfo, ContextPolicy, ContextPolicyOn, ContextPolicyOff, ContextPolicyReserve, ContextPolicyKeepRecent, Doctor, DoctorInspect, DoctorFix, Feedback, Usage, UsageChart, UsageChartAll, UsageChartInput, UsageChartOutput, UsageChartCost, GitStatus, GitDiff, GitReview, GitWorktrees, GitConflicts]),
     ("Extensions" => [Skills, Hooks, Plugins, Mcps, CloseMcps, ReconnectMcps, McpNotifications, ClearMcpNotifications, McpPopNotifications, McpReady, McpFailed, McpBusy, McpClosed, McpStdio, McpHttp, Memory]),
     ("Automation" => [Goal, Workflow, Workflows, Loop, DeepResearch, Jobs, ActiveJobs, CancelAllJobs, CancelRunningJobs, ClearFinishedJobs, CompletedJobs, QueuedJobs, FailedJobs, RunningJobs, CancelledJobs, CancelQueuedJobs, AskBeforeTools, Deny]),
 }

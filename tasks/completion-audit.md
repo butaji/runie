@@ -9,8 +9,8 @@ work is queued separately and must not make the finite boundary ambiguous.
 
 The twenty rows in [`completion-matrix.md`](completion-matrix.md) are covered
 by the corresponding `harness-findings.md` entries, workspace tests, and the
-live TUI smoke matrix. The latest live run exercised 101 TUI cases with
-`passed=101 failed=0`; all workspace test binaries passed. Formatting, clippy,
+live TUI smoke matrix. The latest live run exercised 105 TUI cases with
+`passed=105 failed=0`; all workspace test binaries passed. Formatting, clippy,
 structural lint, and
 `git diff --check` are green.
 
