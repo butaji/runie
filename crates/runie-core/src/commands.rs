@@ -208,7 +208,6 @@ pub fn parse_background_job_command(args: &str) -> Option<&str> {
     (parts.next() == Some("cancel") && parts.next().is_some() && parts.next().is_none())
         .then(|| args.split_whitespace().nth(1).unwrap())
 }
-
 pub use crate::background::BackgroundCancelScope;
 
 pub fn parse_background_job_cancel_scope(args: &str) -> Option<BackgroundCancelScope> {
@@ -218,7 +217,6 @@ pub fn parse_background_job_cancel_scope(args: &str) -> Option<BackgroundCancelS
         _ => None,
     }
 }
-
 pub fn parse_background_job_cancel_all(args: &str) -> bool {
     parse_background_job_cancel_scope(args) == Some(BackgroundCancelScope::All)
 }
@@ -407,10 +405,12 @@ fn parse_parameterized_command(value: &str) -> Option<MappableBuiltinCommand> {
         | "/always-approve" | "/auto" | "/ask" | "/deny" | "/plan" | "/remember" | "/goal"
         | "/workflow" | "/jobs" | "/mcps" | "/git" | "/questions" | "/sessions" | "/loop"
         | "/deep-research" | "/feedback" | "/usage" | "/memory" | "/skills" | "/hooks"
-        | "/plugins" | "/clear" | "/reset" | "/undo" => Some(MappableBuiltinCommand::Extended {
-            name: prefix.trim_start_matches('/').to_owned(),
-            args: text.to_owned(),
-        }),
+        | "/plugins" | "/clear" | "/reset" | "/undo" | "/approval" => {
+            Some(MappableBuiltinCommand::Extended {
+                name: prefix.trim_start_matches('/').to_owned(),
+                args: text.to_owned(),
+            })
+        }
         _ => None,
     }
 }

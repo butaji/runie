@@ -1418,6 +1418,7 @@ async fn build_live_app() -> App {
     let bus = EventBus::new();
     let question_broker = runie_core::tools::UserQuestionBroker::default();
     let approval_mode = runie_core::tools::ApprovalModeStore::default();
+    let approval_traces = runie_core::tools::ApprovalTraceStore::default();
     let subagent_loop = std::sync::Arc::new(tokio::sync::OnceCell::<LoopActor>::new());
     let background_actor = runie_core::background::BackgroundProcessActor::new();
     let todo_actor = runie_core::tools::TodoActor::default();
@@ -1514,6 +1515,7 @@ async fn build_live_app() -> App {
     );
     let live_tool_hooks = ToolExecHooks {
         approval_mode: ApprovalMode::Ask,
+        approval_traces: Some(approval_traces.clone()),
         before_tool_call: Some({
             let broker = question_broker.clone();
             let approval_mode = approval_mode.clone();
@@ -1579,6 +1581,7 @@ async fn build_live_app() -> App {
         approval_mode,
         session_actor,
     );
+    app.approval_traces = approval_traces;
     app.attach_background_actor(background_actor);
     app.attach_tool_executor(tool_executor);
     app.attach_tool_hooks(live_tool_hooks);

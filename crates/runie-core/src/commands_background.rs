@@ -10,6 +10,9 @@ pub fn parse_background_job_output_preview_query(args: &str) -> Option<&str> {
 pub fn parse_background_scheduler_cancelled_query(args: &str) -> bool {
     args.trim() == "scheduler cancelled"
 }
+pub fn parse_approval_history_query(args: &str) -> bool {
+    args.trim() == "history"
+}
 
 #[cfg(test)]
 mod commands_background_tests {

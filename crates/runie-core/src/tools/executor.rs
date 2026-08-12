@@ -373,11 +373,19 @@ async fn run_before_tool_gate(
 }
 
 fn approval_decision(ctx: &ToolExecContext, call: &ToolCall) -> ApprovalDecision {
-    crate::tools::policy::decide_registered(
+    let decision = crate::tools::policy::decide_registered(
         ctx.hooks.approval_mode,
         &call.name,
         ctx.registry.lookup(&call.name).is_some(),
-    )
+    );
+    if let Some(store) = &ctx.hooks.approval_traces {
+        store.record(crate::tools::policy::ApprovalTrace {
+            tool: call.name.clone(),
+            mode: ctx.hooks.approval_mode,
+            decision: decision.clone(),
+        });
+    }
+    decision
 }
 
 fn run_abort_requested(ctx: &ToolExecContext) -> bool {

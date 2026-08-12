@@ -431,6 +431,7 @@ pub struct App {
     pub command_actor: runie_core::command_actor::CommandActor,
     pub question_broker: runie_core::tools::UserQuestionBroker,
     pub approval_mode: runie_core::tools::ApprovalModeStore,
+    pub approval_traces: runie_core::tools::ApprovalTraceStore,
     pub background_actor: runie_core::background::BackgroundProcessActor,
     pub todo_actor: runie_core::tools::TodoActor,
     pub git_conflict_actor: runie_core::tools::GitConflictActor,

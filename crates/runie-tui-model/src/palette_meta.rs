@@ -72,6 +72,7 @@ declare_palette_metadata! {
     (AlwaysApprove, "/always-approve", "Toggle approval-free execution"),
     (AutoApprove, "/auto", "Automatically approve safe tools"),
     (AskBeforeTools, "/ask", "Ask before executing tools"),
+    (ApprovalHistory, "/approval history", "Show recent approval decisions"),
     (Deny, "/deny", "Block tool execution"),
     (PlanMode, "/plan", "Enter plan mode"),
     (ViewPlan, "/view-plan", "Show the current plan"),

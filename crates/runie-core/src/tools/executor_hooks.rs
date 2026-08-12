@@ -1,11 +1,12 @@
 use super::AfterToolCallInputs;
-use crate::tools::policy::ApprovalMode;
+use crate::tools::policy::{ApprovalMode, ApprovalTraceStore};
 use crate::types::{BeforeToolCallContext, BeforeToolCallResult};
 use std::{future::Future, pin::Pin, sync::Arc};
 
 #[derive(Default, Clone)]
 pub struct ToolExecHooks {
     pub approval_mode: ApprovalMode,
+    pub approval_traces: Option<ApprovalTraceStore>,
     pub before_tool_call: Option<BeforeToolCallHook>,
     pub after_tool_call: Option<AfterToolCallHook>,
     pub ask_user_question: Option<AskUserQuestionHook>,

@@ -175,6 +175,39 @@ pub fn record_approval_trace(traces: &mut Vec<ApprovalTrace>, trace: ApprovalTra
     }
 }
 
+#[derive(Clone)]
+pub struct ApprovalTraceStore {
+    tx: tokio::sync::watch::Sender<Vec<ApprovalTrace>>,
+    rx: tokio::sync::watch::Receiver<Vec<ApprovalTrace>>,
+}
+
+impl Default for ApprovalTraceStore {
+    fn default() -> Self {
+        let (tx, rx) = tokio::sync::watch::channel(Vec::new());
+        Self { tx, rx }
+    }
+}
+
+impl ApprovalTraceStore {
+    pub fn snapshot(&self) -> Vec<ApprovalTrace> {
+        self.rx.borrow().clone()
+    }
+    pub fn subscribe(&self) -> tokio::sync::watch::Receiver<Vec<ApprovalTrace>> {
+        self.rx.clone()
+    }
+    pub fn record(&self, trace: ApprovalTrace) {
+        let mut traces = self.snapshot();
+        record_approval_trace(&mut traces, trace);
+        let _ = self.tx.send(traces);
+    }
+    pub fn terminal_lines(&self) -> Vec<String> {
+        self.snapshot()
+            .into_iter()
+            .map(|trace| trace.terminal_line())
+            .collect()
+    }
+}
+
 pub fn decide(mode: ApprovalMode, tool: &str) -> ApprovalDecision {
     decide_registered(mode, tool, false)
 }
@@ -360,5 +393,21 @@ mod tests {
             decision: ApprovalDecision::Allow,
         };
         assert_eq!(trace.terminal_line(), "approval bash: allow [yolo]");
+    }
+
+    #[test]
+    fn approval_trace_store_is_bounded_and_projects_owned_history() {
+        let store = ApprovalTraceStore::default();
+        store.record(ApprovalTrace {
+            tool: "write".into(),
+            mode: ApprovalMode::Ask,
+            decision: ApprovalDecision::Ask {
+                reason: "changes files".into(),
+            },
+        });
+        assert_eq!(
+            store.terminal_lines(),
+            ["approval write: ask (changes files) [ask]"]
+        );
     }
 }
