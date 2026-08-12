@@ -34,8 +34,8 @@ Smoke evidence: `scripts/tmux-command-smoke.sh` now covers 83 palette cases,
 including parameterized background-job and session-history inspection, five
 direct command cases (including reserve/keep context policy settings), the
 Pending Questions, Ask Before Tools, and typed Job Output Head/Tail actions,
-plus the Quit lifecycle and approval-gated Git push/revert routes, for 119
-TUI-only cases.
+plus the Quit lifecycle and palette approval-gated Git push/revert routes, for
+119 TUI-only cases.
 Provider-backed coding prompts remain
 environment-dependent and must be recorded separately from local UI evidence.
 
