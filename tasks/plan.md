@@ -135,7 +135,9 @@ an implicit failure of H01–H20.
    including unsupported-effort behavior, normalized failures, Gemini
    `usageMetadata` token aliases, and native candidate finish reasons. A native
    Gemini replay trace now drives the actual terminal reducer and verifies
-   `MAX_TOKENS` plus usage projection.
+   `MAX_TOKENS` plus usage projection. Effort fallback follows Kimi’s
+   model-declared middle-level rule when a model omits an explicit default,
+   with a regression test and live smoke.
 2. Tool output and background lifecycle UX — `harness-01` and `harness-03`.
    `/jobs cancel all` now reduces every running job through the actor mailbox;
    serializable `ToolCardSummary` and `BackgroundJobSummary` now expose card
