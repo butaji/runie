@@ -1,6 +1,20 @@
 use super::App;
 
 impl App {
+    pub(super) fn resolve_effort_command(
+        model: &runie_core::types::Model,
+        requested: &str,
+    ) -> Option<runie_core::types::ThinkingLevel> {
+        if requested.eq_ignore_ascii_case("on") && Self::model_has_declared_effort(model) {
+            return Some(Self::default_effort_for_model(model));
+        }
+        runie_core::types::ThinkingLevel::from_name(requested).filter(|level| {
+            model
+                .thinking_level_map
+                .as_ref()
+                .is_some_and(|map| map.value(*level).is_some())
+        })
+    }
     pub(super) async fn open_effort_picker(&self, model: &runie_core::types::Model) {
         self.ui
             .send(crate::app::UiMsg::SetPaletteParameterOptions(
@@ -28,21 +42,6 @@ impl App {
             .thinking_level_map
             .as_ref()
             .is_some_and(|map| map.declared().any(|(_, wire)| wire.is_some()))
-    }
-
-    pub(super) fn model_supports_effort(&self, effort: &str) -> bool {
-        let Some(map) = self
-            .model_catalog
-            .snapshot()
-            .selected
-            .and_then(|model| model.thinking_level_map)
-        else {
-            return false;
-        };
-        let Some(level) = runie_core::types::ThinkingLevel::from_name(effort) else {
-            return false;
-        };
-        map.value(level).is_some()
     }
 
     pub(super) fn default_effort_for_model(
@@ -185,6 +184,23 @@ mod tests {
         assert_eq!(
             super::App::default_effort_for_model(&model),
             runie_core::types::ThinkingLevel::High
+        );
+    }
+
+    #[test]
+    fn effort_on_resolves_to_model_default_for_effort_models() {
+        let model = runie_core::types::Model {
+            thinking_level_map: Some(runie_core::types::ThinkingLevelMap {
+                low: Some("low-wire".into()),
+                high: Some("high-wire".into()),
+                max: Some("max-wire".into()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        assert_eq!(
+            super::App::resolve_effort_command(&model, "on"),
+            Some(runie_core::types::ThinkingLevel::High)
         );
     }
 

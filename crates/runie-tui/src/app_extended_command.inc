@@ -576,15 +576,18 @@ impl App {
             "recap" => {
                 self.ui.send(UiMsg::ToggleSessionInfo).await;
             }
-            "effort" if self.model_supports_effort(args.trim()) => {
-                let level = runie_core::types::ThinkingLevel::from_name(args.trim())
-                    .expect("validated effort");
-                self.loop_actor.set_thinking_level(level).await;
-                self.ui
-                    .send(UiMsg::ShowCommandResult(format!("Reasoning effort: {}", args.trim())))
-                    .await;
-            }
             "effort" => {
+                let selected = self.model_catalog.snapshot().selected;
+                let level = selected
+                    .as_ref()
+                    .and_then(|model| Self::resolve_effort_command(model, args.trim()));
+                if let Some(level) = level {
+                    self.loop_actor.set_thinking_level(level).await;
+                    self.ui
+                        .send(UiMsg::ShowCommandResult(format!("Reasoning effort: {}", level.name())))
+                        .await;
+                    return true;
+                }
                 self.ui
                     .send(UiMsg::ShowCommandResult(format!(
                         "Unsupported effort {:?} for the current model",
