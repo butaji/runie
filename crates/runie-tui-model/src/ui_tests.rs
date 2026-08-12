@@ -85,6 +85,17 @@ fn parameterized_palette_actions_are_marked_for_nested_forms() {
 }
 
 #[test]
+fn diagnostic_palette_routes_keep_typed_actions() {
+    assert_eq!(
+        PaletteAction::DoctorInspect.slash_command(),
+        "/doctor inspect"
+    );
+    assert_eq!(PaletteAction::DoctorFix.slash_command(), "/doctor fix");
+    assert!(!PaletteAction::DoctorInspect.requires_parameters());
+    assert!(!PaletteAction::DoctorFix.requires_parameters());
+}
+
+#[test]
 fn command_result_is_renderable_as_a_stack_owned_dialog() {
     let state = UiState::new().update(UiMsg::ShowCommandResult("Approval mode: Auto".into()));
     assert_eq!(state.dialog_stack.top_id(), Some("command-result"));

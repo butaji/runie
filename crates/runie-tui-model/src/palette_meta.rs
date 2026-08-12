@@ -57,6 +57,8 @@ declare_palette_metadata! {
     (ContextPolicyKeepRecent, "/context policy keep", "Set recent context tokens"),
     (Settings, "/settings", "Open persistent settings"),
     (Doctor, "/doctor", "Diagnose runtime integrations"),
+    (DoctorInspect, "/doctor inspect", "Inspect runtime integrations"),
+    (DoctorFix, "/doctor fix", "Apply diagnostic fixes"),
     (RewindSession, "/rewind", "Restore an earlier conversation state"),
     (PromptHistory, "/history", "Search previous prompts"),
     (FindTranscript, "/find", "Search the transcript"),
@@ -159,7 +161,7 @@ macro_rules! palette_sections {
 palette_sections! {
     ("Context" => [CopyLastResponse, SessionInfo, PendingQuestions]),
     ("Session" => [NewSession, KeyboardShortcuts, Quit, Changelog, ShareSession, SessionHistory, SessionHistoryQuery, UndoSession]),
-    ("Information" => [Help, ContextInfo, ContextPolicy, ContextPolicyOn, ContextPolicyOff, ContextPolicyReserve, ContextPolicyKeepRecent, Doctor, Feedback, Usage, GitStatus, GitDiff, GitReview, GitWorktrees, GitConflicts]),
+    ("Information" => [Help, ContextInfo, ContextPolicy, ContextPolicyOn, ContextPolicyOff, ContextPolicyReserve, ContextPolicyKeepRecent, Doctor, DoctorInspect, DoctorFix, Feedback, Usage, GitStatus, GitDiff, GitReview, GitWorktrees, GitConflicts]),
     ("Extensions" => [Skills, Hooks, Plugins, Mcps, CloseMcps, ReconnectMcps, McpNotifications, ClearMcpNotifications, McpPopNotifications, McpReady, McpFailed, McpBusy, McpClosed, McpStdio, McpHttp, Memory]),
     ("Automation" => [Goal, Workflow, Workflows, Loop, DeepResearch, Jobs, ActiveJobs, CancelAllJobs, CancelRunningJobs, ClearFinishedJobs, CompletedJobs, QueuedJobs, FailedJobs, RunningJobs, CancelledJobs, CancelQueuedJobs, AskBeforeTools, Deny]),
 }

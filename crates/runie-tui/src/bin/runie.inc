@@ -2809,6 +2809,8 @@ fixed_palette_routes! {
     (FailedJobs, "jobs", "failed"),
     (CancelledJobs, "jobs", "cancelled"),
     (McpPopNotifications, "mcps", "notifications pop"),
+    (DoctorInspect, "doctor", "inspect"),
+    (DoctorFix, "doctor", "fix"),
 }
 
 fn extended_palette_command_name(action: &PaletteAction) -> Option<&'static str> {
@@ -2888,6 +2890,18 @@ mod tests {
             assert_eq!(super::fixed_extended_palette_command(action), Some((name, args)));
         }
         assert_eq!(super::fixed_extended_palette_command(&PaletteAction::Questions), None);
+    }
+
+    #[test]
+    fn fixed_palette_diagnostic_routes_preserve_action_data() {
+        assert_eq!(
+            super::fixed_extended_palette_command(&PaletteAction::DoctorInspect),
+            Some(("doctor", "inspect"))
+        );
+        assert_eq!(
+            super::fixed_extended_palette_command(&PaletteAction::DoctorFix),
+            Some(("doctor", "fix"))
+        );
     }
 
     #[test]
