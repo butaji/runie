@@ -26,6 +26,19 @@ impl App {
                     .await;
                 return true;
             }
+            if let Some(message) = runie_core::commands::parse_git_commit(args) {
+                let Some(executor) = &self.tool_executor else {
+                    self.ui.send(UiMsg::ShowCommandResult("Tool executor unavailable".into())).await;
+                    return true;
+                };
+                let result = executor.execute_command(
+                    runie_core::tools::ToolCommandRequest::new("git_commit", serde_json::json!({"message": message})),
+                    runie_core::types::AgentContext::default(),
+                    self.tool_hooks.clone().unwrap_or_default(),
+                ).await;
+                self.ui.send(UiMsg::ShowCommandResult(format!("{}: {}", result.tool_name, result.result))).await;
+                return true;
+            }
         }
         if matches!(name, "clear" | "reset") && args.trim().is_empty() {
             self.session_actor.reset().await;

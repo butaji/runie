@@ -10,7 +10,7 @@ mod usage;
 pub use usage::{parse_usage_chart, UsageChartMetric};
 #[path = "commands_git.rs"]
 mod git;
-pub use git::parse_git_commit_prepare;
+pub use git::{parse_git_commit, parse_git_commit_prepare};
 /// A command exposed by Pi's interactive command registry.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct SlashCommand {

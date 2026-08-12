@@ -49,6 +49,7 @@ impl App {
             todo_actor: runie_core::tools::TodoActor::default(),
             git_conflict_actor: runie_core::tools::GitConflictActor::default(),
             tool_executor: None,
+            tool_hooks: None,
             plugin_host: None,
             submission_tx,
             _submission_owner: submission_owner,
@@ -57,6 +58,10 @@ impl App {
 
     pub fn attach_tool_executor(&mut self, executor: runie_core::tools::ToolExecutorActor) {
         self.tool_executor = Some(executor);
+    }
+
+    pub fn attach_tool_hooks(&mut self, hooks: runie_core::tools::executor::ToolExecHooks) {
+        self.tool_hooks = Some(hooks);
     }
 
     pub fn new_with_session(
@@ -98,6 +103,7 @@ impl App {
             todo_actor: runie_core::tools::TodoActor::default(),
             git_conflict_actor: runie_core::tools::GitConflictActor::default(),
             tool_executor: None,
+            tool_hooks: None,
             plugin_host: None,
             submission_tx,
             _submission_owner: submission_owner,

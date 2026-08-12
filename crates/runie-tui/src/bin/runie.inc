@@ -39,7 +39,7 @@ use runie_core::state::AgentStateActor;
 use runie_core::tools::executor::ToolExecHooks;
 use runie_core::tools::ToolExecutorActor;
 use runie_core::tools::ToolRegistry;
-use runie_core::tools::{ApprovalMode, AskUserQuestionTool, BackgroundCancelTool, BackgroundJobsTool, BackgroundShellTool, BashTool, EditFileTool, GitCommitPrepareTool, GitCommitTool, GitDiffTool, GitPushTool, GitReviewTool, GitRevertTool, GitStatusTool, GitWorktreeTool, GlobTool, GrepTool, ReadFileTool, SubagentTool, TodoWriteTool, WebSearchHttpClient, WebSearchTool, WriteFileTool};
+use runie_core::tools::{ApprovalMode, AskUserQuestionTool, BackgroundCancelTool, BackgroundJobsTool, BackgroundShellTool, BashTool, EditFileTool, GitCommitPrepareTool, GitCommitTool, GitDiffTool, GitPushTool, GitReviewTool, GitRevertTool, GitStatusTool, GitWorktreeTool, GlobTool, GrepTool, ReadFileTool, SubagentTool, TodoWriteTool, WebSearchTool, WriteFileTool};
 use runie_core::types::{
     AgentContext, AgentTool, AgentToolResult, AssistantMessage, AssistantMessageEvent, Model,
     QueueMode, SimpleStreamOptions, StopReason, ThemeKind, ToolCall, ToolExecutionMode,
@@ -1512,6 +1512,41 @@ async fn build_live_app() -> App {
             })
         }),
     );
+    let live_tool_hooks = ToolExecHooks {
+        approval_mode: ApprovalMode::Ask,
+        before_tool_call: Some({
+            let broker = question_broker.clone();
+            let approval_mode = approval_mode.clone();
+            std::sync::Arc::new(move |input| {
+                let broker = broker.clone();
+                let approval_mode = approval_mode.clone();
+                Box::pin(async move {
+                    if matches!(runie_core::tools::approval_decision(approval_mode.current(), &input.tool_call.name), runie_core::tools::ApprovalDecision::Allow) {
+                        return runie_core::types::BeforeToolCallResult::default();
+                    }
+                    if matches!(runie_core::tools::approval_decision(approval_mode.current(), &input.tool_call.name), runie_core::tools::ApprovalDecision::Deny { .. }) {
+                        return runie_core::types::BeforeToolCallResult { block: true, reason: Some("Tool execution denied by approval mode".into()) };
+                    }
+                    let request = runie_core::tools::UserQuestionRequest {
+                        question: format!("Allow tool '{}' to run?", input.tool_call.name),
+                        header: Some("Tool approval".into()),
+                        body: Some("Review this action before it runs.".into()),
+                        options: vec![
+                            runie_core::tools::UserQuestionOption { id: Some("allow".into()), label: "Allow".into(), description: "Run this tool once.".into() },
+                            runie_core::tools::UserQuestionOption { id: Some("reject".into()), label: "Reject".into(), description: "Block this tool call.".into() },
+                        ],
+                        allow_multiple: false,
+                    };
+                    let Ok(answer) = broker.ask(request).await else {
+                        return runie_core::types::BeforeToolCallResult { block: true, reason: Some("Approval UI was closed".into()) };
+                    };
+                    let allowed = answer.get("answers").and_then(|v| v.as_array()).is_some_and(|answers| answers.iter().any(|v| v.as_str() == Some("allow")));
+                    runie_core::types::BeforeToolCallResult { block: !allowed, reason: (!allowed).then_some("Tool execution rejected".into()) }
+                })
+            })
+        }),
+        ..ToolExecHooks::default()
+    };
     let deps = LoopDeps {
         state,
         steering,
@@ -1520,138 +1555,7 @@ async fn build_live_app() -> App {
         provider,
         bus: bus.clone(),
         subscribers: runie_core::events::SubscriberRegistry::new(),
-        hooks: ToolExecHooks {
-            approval_mode: ApprovalMode::Ask,
-            before_tool_call: Some({
-                let broker = question_broker.clone();
-                let approval_mode = approval_mode.clone();
-                std::sync::Arc::new(move |input| {
-                    let broker = broker.clone();
-                    let approval_mode = approval_mode.clone();
-                    Box::pin(async move {
-                        if matches!(
-                            runie_core::tools::approval_decision(
-                                approval_mode.current(),
-                                &input.tool_call.name,
-                            ),
-                            runie_core::tools::ApprovalDecision::Allow
-                        ) {
-                            return runie_core::types::BeforeToolCallResult::default();
-                        }
-                        if matches!(runie_core::tools::approval_decision(approval_mode.current(), &input.tool_call.name), runie_core::tools::ApprovalDecision::Deny { .. }) {
-                            return runie_core::types::BeforeToolCallResult { block: true, reason: Some("Tool execution denied by approval mode".into()) };
-                        }
-                        let request = runie_core::tools::UserQuestionRequest {
-                            question: format!("Allow tool '{}' to run?", input.tool_call.name),
-                            header: Some("Tool approval".into()),
-                            body: Some("Review this action before it runs.".into()),
-                            options: vec![
-                                runie_core::tools::UserQuestionOption {
-                                    id: Some("allow".into()),
-                                    label: "Allow".into(),
-                                    description: "Run this tool once.".into(),
-                                },
-                                runie_core::tools::UserQuestionOption {
-                                    id: Some("reject".into()),
-                                    label: "Reject".into(),
-                                    description: "Block this tool call.".into(),
-                                },
-                            ],
-                            allow_multiple: false,
-                        };
-                        let Ok(answer) = broker.ask(request).await else {
-                            return runie_core::types::BeforeToolCallResult {
-                                block: true,
-                                reason: Some("Approval UI was closed".into()),
-                            };
-                        };
-                        let allowed = answer["answers"]
-                            .as_array()
-                            .and_then(|answers| answers.first())
-                            .and_then(serde_json::Value::as_str)
-                            == Some("Allow");
-                        runie_core::types::BeforeToolCallResult {
-                            block: !allowed,
-                            reason: (!allowed).then(|| "Tool call rejected by user".into()),
-                        }
-                    })
-                })
-            }),
-            ask_user_question: Some({
-                let broker = question_broker.clone();
-                std::sync::Arc::new(move |request| {
-                    let broker = broker.clone();
-                    Box::pin(async move { broker.ask(request).await })
-                })
-            }),
-            subagent: Some({
-                let loop_cell = subagent_loop.clone();
-                std::sync::Arc::new(move |request| {
-                    let loop_cell = loop_cell.clone();
-                    Box::pin(async move {
-                        let loop_actor = loop_cell
-                            .get()
-                            .ok_or_else(|| "subagent loop is not initialized".to_owned())?;
-                        let prompt = format!("[subagent:{}]\n{}\n{}", serde_json::to_string(&request.role).unwrap_or_default(), request.task, request.context);
-                        let messages = loop_actor
-                            .prompt(
-                                vec![runie_core::types::AgentMessage::User(runie_core::types::UserMessage {
-                                    content: vec![runie_core::types::UserContent::Text { text: prompt }],
-                                    timestamp: 0,
-                                })],
-                                AgentContext { system_prompt: request.role.clone().system_prompt().into(), ..AgentContext::default() },
-                            )
-                            .await
-                            .map_err(|error| error.to_string())?;
-                        let output = serde_json::json!({"messages": messages});
-                        let usage = request.role.clone().usage_for_output(&output)?;
-                        Ok(runie_core::tools::SubagentExecution { output, usage })
-                    })
-                })
-            }),
-            background_shell: Some({
-                let actor = background_actor.clone();
-                std::sync::Arc::new(move |request| {
-                    let actor = actor.clone();
-                    Box::pin(async move {
-                        let id = actor.start(request.command).await?;
-                        Ok(serde_json::json!({"job_id": id, "status": "running"}))
-                    })
-                })
-            }),
-            background_jobs: Some({
-                let actor = background_actor.clone();
-                std::sync::Arc::new(move || {
-                    let actor = actor.clone();
-                    Box::pin(async move {
-                        serde_json::to_value(actor.snapshot()).map_err(|error| error.to_string())
-                    })
-                })
-            }),
-            background_cancel: Some({
-                let actor = background_actor.clone();
-                std::sync::Arc::new(move |request| {
-                    let actor = actor.clone();
-                    Box::pin(async move {
-                        Ok(serde_json::json!({"job_id": request.job_id, "cancelled": actor.cancel(request.job_id).await}))
-                    })
-                })
-            }),
-            todo_write: Some({
-                let actor = todo_actor.clone();
-                std::sync::Arc::new(move |snapshot| {
-                    let actor = actor.clone();
-                    Box::pin(async move {
-                        let snapshot = actor.replace(snapshot).await?;
-                        serde_json::to_value(snapshot).map_err(|error| error.to_string())
-                    })
-                })
-            }),
-            web_search: std::env::var("RUNIE_WEB_SEARCH_ENDPOINT").ok().and_then(|endpoint| {
-                WebSearchHttpClient::new(endpoint, std::env::var("RUNIE_WEB_SEARCH_TOKEN").ok(), std::time::Duration::from_secs(20)).ok().map(|client| client.hook())
-            }),
-            ..ToolExecHooks::default()
-        },
+        hooks: live_tool_hooks.clone(),
         turn_hooks: runie_core::hooks::TurnHooks::default(),
         transform_context: None,
         api_key_resolver: None,
@@ -1677,6 +1581,7 @@ async fn build_live_app() -> App {
     );
     app.attach_background_actor(background_actor);
     app.attach_tool_executor(tool_executor);
+    app.attach_tool_hooks(live_tool_hooks);
     app.attach_todo_actor(todo_actor);
     let plugin_root = std::env::current_dir().ok().map(|path| path.join(".runie/plugins"));
     if let Some(plugin_root) = plugin_root {
