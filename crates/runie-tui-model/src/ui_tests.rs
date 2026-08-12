@@ -271,6 +271,8 @@ fn parameterized_palette_actions() -> Vec<PaletteAction> {
         PaletteAction::ContextPolicyReserve,
         PaletteAction::ContextPolicyKeepRecent,
         PaletteAction::Deny,
+        PaletteAction::JobOutputHead,
+        PaletteAction::JobOutputTail,
     ]
 }
 

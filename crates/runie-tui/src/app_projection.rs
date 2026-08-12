@@ -76,8 +76,8 @@ fn parameter_command(state: &UiState) -> Option<UiCommand> {
             value: query.to_owned(),
         });
     }
-    if *action == PaletteAction::JobOutputFacts {
-        return Some(job_output_facts_command(query));
+    if let Some(command) = job_output_parameter_command(action, query) {
+        return Some(command);
     }
     let input = format!("{} {query}", action.slash_command());
     Some(UiCommand::ExecuteMappable(
@@ -94,6 +94,25 @@ fn job_output_facts_command(job_id: &str) -> UiCommand {
     UiCommand::ExecuteMappable(runie_core::commands::MappableBuiltinCommand::Extended {
         name: "jobs".into(),
         args: format!("output {job_id} facts"),
+    })
+}
+
+fn job_output_parameter_command(action: &PaletteAction, query: &str) -> Option<UiCommand> {
+    match action {
+        PaletteAction::JobOutputFacts => Some(job_output_facts_command(query)),
+        PaletteAction::JobOutputHead => Some(job_output_window_command(query, "head")),
+        PaletteAction::JobOutputTail => Some(job_output_window_command(query, "tail")),
+        _ => None,
+    }
+}
+
+fn job_output_window_command(query: &str, direction: &str) -> UiCommand {
+    let mut fields = query.split_whitespace();
+    let job_id = fields.next().unwrap_or_default();
+    let count = fields.next().unwrap_or_default();
+    UiCommand::ExecuteMappable(runie_core::commands::MappableBuiltinCommand::Extended {
+        name: "jobs".into(),
+        args: format!("output {job_id} {direction} {count}"),
     })
 }
 

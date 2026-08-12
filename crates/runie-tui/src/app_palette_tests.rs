@@ -211,6 +211,28 @@ fn job_output_facts_palette_parameter_emits_typed_command() {
     );
 }
 
+#[test]
+fn job_output_window_palette_parameters_emit_typed_commands() {
+    for (action, direction) in [
+        (super::PaletteAction::JobOutputHead, "head"),
+        (super::PaletteAction::JobOutputTail, "tail"),
+    ] {
+        let mut state = UiState::new().update(UiMsg::OpenPaletteParameters(action));
+        for ch in "job-7 3".chars() {
+            state = state.update(UiMsg::PaletteParameterChar(ch));
+        }
+        assert_eq!(
+            super::app_projection::ui_command_for(&state, &UiMsg::PaletteParameterSubmit),
+            Some(super::UiCommand::ExecuteMappable(
+                runie_core::commands::MappableBuiltinCommand::Extended {
+                    name: "jobs".into(),
+                    args: format!("output job-7 {direction} 3"),
+                }
+            ))
+        );
+    }
+}
+
 fn assert_parameter_flow(action: super::PaletteAction, input: &str, expected: &str) {
     let mut state = UiState::new().update(UiMsg::OpenPaletteParameters(action));
     for ch in input.chars() {

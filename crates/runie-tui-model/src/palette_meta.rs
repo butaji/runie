@@ -107,6 +107,8 @@ declare_palette_metadata! {
     (CancelQueuedJobs, "/jobs scheduler cancel queued", "Cancel queued tool batches"),
     (JobOutput, "/jobs output", "Inspect bounded job output"),
     (JobOutputFacts, "/jobs output", "Inspect bounded output facts"),
+    (JobOutputHead, "/jobs output", "Inspect the first output lines"),
+    (JobOutputTail, "/jobs output", "Inspect the last output lines"),
     (GitStatus, "/git status", "Inspect repository status"),
     (GitDiff, "/git diff", "Inspect the unstaged Git diff"),
     (GitReview, "/git review", "Review the unstaged Git patch"),
@@ -218,6 +220,7 @@ impl PaletteAction {
             Self::ContextPolicyReserve => "Token count",
             Self::ContextPolicyKeepRecent => "Token count",
             Self::JobOutput | Self::JobOutputFacts => "Job id",
+            Self::JobOutputHead | Self::JobOutputTail => "Job id and line count",
             Self::Questions => "Query (optional)",
             _ => "Value",
         }
@@ -271,6 +274,8 @@ const PARAMETERIZED_ACTIONS: &[PaletteAction] = &[
     PaletteAction::Questions,
     PaletteAction::JobOutput,
     PaletteAction::JobOutputFacts,
+    PaletteAction::JobOutputHead,
+    PaletteAction::JobOutputTail,
 ];
 
 const THEME_LABELS: &[&str] = &[
