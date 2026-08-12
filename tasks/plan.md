@@ -113,6 +113,9 @@ flow; the live TUI smoke covers the selector path.
 
 Background output inspection also exposes a typed bounded tail projection,
 `/jobs output <id> tail <n>`, through the actor-owned result and palette flow.
+
+MCP notification inspection now also has an actor-owned FIFO pop command,
+`/mcps notifications pop`, with parser, TUI, and live smoke coverage.
 The same data contract now supports `head <n>` without duplicating the
 projection logic.
 
