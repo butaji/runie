@@ -2,7 +2,7 @@
   "plan": "Runie current delivery plan",
   "objective": "Maintain actor-owned event state, Pi-compatible core behavior, Grok-shaped TUI parity, and a typed declarative dialog/command surface.",
   "completionCriterion": "Relevant source, replay/runtime evidence, tests, workspace checks, and structural lint are green for each workstream.",
-  "updatedAt": "2026-08-09",
+  "updatedAt": "2026-08-12",
   "canonicalDocs": ["tasks/plan.md", "tasks/findings.md"],
   "references": {
     "pi": "/Users/admin/Code/agents/pi/packages/agent/src",

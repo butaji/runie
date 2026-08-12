@@ -229,9 +229,11 @@ and 91-case live TUI smoke suite pass.
   provider-backed coding prompt path remains unverified because
   `MINIMAX_API_KEY` is absent from the environment.
 
-The active backlog is intentionally not marked complete: normalized feed
-records, paint-data rendering, generic YAML traces, and semantic module
-consolidation still require source changes and dedicated verification.
+The active backlog now separates the adopted reduction work from the optional
+harness extensions. Normalized feed records, shared snapshot allocation
+measurement, and additional YAML trace integration remain explicitly tracked
+as follow-up work; declarative schema generation, paint-data rendering, and
+semantic module consolidation have completed their acceptance boundaries.
 
 ## Code-reduction backlog
 
