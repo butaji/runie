@@ -287,6 +287,16 @@ pub fn parse_background_job_output_query(args: &str) -> Option<&str> {
         .then(|| args.split_whitespace().nth(1).unwrap())
 }
 
+/// Parse the renderer-neutral facts view for one actor-owned job output card.
+pub fn parse_background_job_output_facts_query(args: &str) -> Option<&str> {
+    let mut parts = args.split_whitespace();
+    (parts.next() == Some("output")
+        && parts.next().is_some()
+        && parts.next() == Some("facts")
+        && parts.next().is_none())
+    .then(|| args.split_whitespace().nth(1).unwrap())
+}
+
 pub fn parse_background_job_status_query(args: &str) -> Option<&str> {
     let status = args.trim();
     crate::background::BackgroundStatus::from_wire_name(status).map(|_| status)

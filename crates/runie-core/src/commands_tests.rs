@@ -354,6 +354,11 @@ fn background_job_output_query_requires_one_id() {
     assert_eq!(parse_background_job_output_query("output 7"), Some("7"));
     assert_eq!(parse_background_job_output_query("output"), None);
     assert_eq!(parse_background_job_output_query("output 7 extra"), None);
+    assert_eq!(
+        parse_background_job_output_facts_query("output 7 facts"),
+        Some("7")
+    );
+    assert_eq!(parse_background_job_output_facts_query("output 7"), None);
 }
 
 #[test]
