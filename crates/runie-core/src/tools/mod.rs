@@ -3,6 +3,7 @@
 pub mod actor;
 pub mod ask_user;
 pub mod background;
+pub mod command;
 pub mod executor;
 pub mod git;
 mod git_conflict_actor;
@@ -31,6 +32,7 @@ pub use background::{
     BackgroundCancelRequest, BackgroundCancelTool, BackgroundJobsTool, BackgroundShellRequest,
     BackgroundShellTool,
 };
+pub use command::{ToolCommandRequest, ToolCommandResult};
 pub use executor::{
     execute_parallel, execute_sequential, reduce_scheduler_event, SchedulerEvent,
     SchedulerMetricRow, SchedulerMetrics, ToolExecContext, ToolExecHooks,
