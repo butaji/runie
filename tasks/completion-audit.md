@@ -9,8 +9,8 @@ work is queued separately and must not make the finite boundary ambiguous.
 
 The twenty rows in [`completion-matrix.md`](completion-matrix.md) are covered
 by the corresponding `harness-findings.md` entries, workspace tests, and the
-live TUI smoke matrix. The latest live run exercised 86 TUI cases with
-`passed=86 failed=0`; the workspace test run passed 552 core tests and all
+live TUI smoke matrix. The latest live run exercised 88 TUI cases with
+`passed=88 failed=0`; the workspace test run passed 553 core tests and all
 other workspace test binaries. Formatting, clippy, structural lint, and
 `git diff --check` are green.
 
@@ -30,7 +30,7 @@ These are real follow-up improvements, not hidden acceptance failures:
    have bounded data contracts plus deterministic fixtures.
 
 Each extension follows the same proof loop: failing event/replay test, minimal
-actor-owned implementation, focused tests, `just ci`, 86-case live TUI smoke,
+actor-owned implementation, focused tests, `just ci`, 88-case live TUI smoke,
 finding update, commit, and push.
 
 ## Why the previous status was misleading

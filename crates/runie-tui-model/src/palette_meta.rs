@@ -46,6 +46,8 @@ declare_palette_metadata! {
     (Help, "/help", "Show commands and usage"),
     (ContextInfo, "/context", "Show context-window usage"),
     (ContextPolicy, "/context policy", "Show compaction policy state"),
+    (ContextPolicyOn, "/context policy on", "Enable automatic compaction"),
+    (ContextPolicyOff, "/context policy off", "Disable automatic compaction"),
     (Settings, "/settings", "Open persistent settings"),
     (Doctor, "/doctor", "Diagnose runtime integrations"),
     (RewindSession, "/rewind", "Restore an earlier conversation state"),
@@ -141,7 +143,7 @@ macro_rules! palette_sections {
 palette_sections! {
     ("Context" => [CopyLastResponse, SessionInfo]),
     ("Session" => [NewSession, KeyboardShortcuts, Quit, Changelog, ShareSession, SessionHistory, SessionHistoryQuery, UndoSession]),
-    ("Information" => [Help, ContextInfo, ContextPolicy, Doctor, Feedback, Usage, GitStatus, GitDiff, GitReview, GitWorktrees, GitConflicts]),
+    ("Information" => [Help, ContextInfo, ContextPolicy, ContextPolicyOn, ContextPolicyOff, Doctor, Feedback, Usage, GitStatus, GitDiff, GitReview, GitWorktrees, GitConflicts]),
     ("Extensions" => [Skills, Hooks, Plugins, Mcps, CloseMcps, ReconnectMcps, McpNotifications, ClearMcpNotifications, McpReady, McpFailed, McpBusy, McpClosed, McpStdio, McpHttp, Memory]),
     ("Automation" => [Goal, Workflow, Workflows, Loop, DeepResearch, Jobs, ActiveJobs, CancelAllJobs, CancelRunningJobs, ClearFinishedJobs, CompletedJobs, FailedJobs, CancelledJobs, CancelQueuedJobs]),
 }

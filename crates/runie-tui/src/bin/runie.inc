@@ -2264,6 +2264,18 @@ async fn run_app(
                                     .await;
                                 return Ok(ui_commands);
                             }
+                            if matches!(action, PaletteAction::ContextPolicyOn | PaletteAction::ContextPolicyOff) {
+                                let args = if action == PaletteAction::ContextPolicyOn { "policy on" } else { "policy off" };
+                                let _ = app
+                                    .route_mappable_command(
+                                        runie_core::commands::MappableBuiltinCommand::Extended {
+                                            name: "context".into(),
+                                            args: args.into(),
+                                        },
+                                    )
+                                    .await;
+                                return Ok(ui_commands);
+                            }
                             if action == PaletteAction::ManageProviders {
                                 app.show_provider_summary().await;
                                 return Ok(ui_commands);

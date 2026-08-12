@@ -369,8 +369,24 @@ pub fn parse_usage_chart(args: &str) -> bool {
     args.trim().eq_ignore_ascii_case("chart")
 }
 
-pub fn parse_context_policy(args: &str) -> bool {
-    args.trim().eq_ignore_ascii_case("policy")
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ContextPolicyCommand {
+    View,
+    Set(bool),
+}
+
+pub fn parse_context_policy(args: &str) -> Option<ContextPolicyCommand> {
+    let mut parts = args.split_whitespace();
+    match (
+        parts.next()?.to_ascii_lowercase().as_str(),
+        parts.next(),
+        parts.next(),
+    ) {
+        ("policy", None, None) => Some(ContextPolicyCommand::View),
+        ("policy", Some("on"), None) => Some(ContextPolicyCommand::Set(true)),
+        ("policy", Some("off"), None) => Some(ContextPolicyCommand::Set(false)),
+        _ => None,
+    }
 }
 
 #[allow(clippy::too_many_lines)]

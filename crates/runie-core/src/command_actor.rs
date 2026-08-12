@@ -145,6 +145,12 @@ pub struct CommandState {
     pub last_diagnostic: Option<String>,
     #[serde(default)]
     pub diagnostic_report: Option<DiagnosticReport>,
+    #[serde(default = "default_context_policy_enabled")]
+    pub context_policy_enabled: bool,
+}
+
+fn default_context_policy_enabled() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -200,6 +206,8 @@ fn reduce_command(state: &mut CommandState, name: &str, args: &str) {
         "always-approve" => state.approval = approval(args, ApprovalMode::Always),
         "auto" => state.approval = approval(args, ApprovalMode::Auto),
         "plan" => update_plan(state, args),
+        "context-policy" if args == "on" => state.context_policy_enabled = true,
+        "context-policy" if args == "off" => state.context_policy_enabled = false,
         "memory" => update_memory(state, args),
         "remember" if !args.is_empty() => state.remembered.push(args.into()),
         "login" => add_unique(&mut state.authenticated, args),
@@ -336,6 +344,15 @@ mod tests {
         assert!(actor.snapshot().plan_mode);
         actor.invoke("plan", "view").await;
         assert!(actor.snapshot().plan_mode);
+    }
+
+    #[tokio::test]
+    async fn context_policy_reduces_to_actor_owned_data() {
+        let actor = CommandActor::new();
+        actor.invoke("context-policy", "off").await;
+        assert!(!actor.snapshot().context_policy_enabled);
+        actor.invoke("context-policy", "on").await;
+        assert!(actor.snapshot().context_policy_enabled);
     }
 
     #[tokio::test]

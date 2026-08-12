@@ -323,8 +323,19 @@ fn usage_chart_command_is_exact_data() {
 
 #[test]
 fn context_policy_command_is_exact_data() {
-    assert!(parse_context_policy("policy"));
-    assert!(!parse_context_policy("policy compact"));
+    assert_eq!(
+        parse_context_policy("policy"),
+        Some(ContextPolicyCommand::View)
+    );
+    assert_eq!(
+        parse_context_policy("policy on"),
+        Some(ContextPolicyCommand::Set(true))
+    );
+    assert_eq!(
+        parse_context_policy("policy off"),
+        Some(ContextPolicyCommand::Set(false))
+    );
+    assert_eq!(parse_context_policy("policy compact"), None);
 }
 
 #[test]
