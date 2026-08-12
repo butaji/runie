@@ -48,6 +48,7 @@ pub struct UserQuestionHistoryPage {
     pub has_more: bool,
     pub rows: Vec<UserQuestionHistoryRow>,
 }
+
 impl From<UserQuestionTrace> for UserQuestionHistoryRow {
     fn from(trace: UserQuestionTrace) -> Self {
         Self {
@@ -387,6 +388,7 @@ mod tests {
             "0 · pending · Continue?"
         );
     }
+
     #[tokio::test]
     async fn broker_cancellation_is_a_typed_terminal_answer() {
         let broker = UserQuestionBroker::default();

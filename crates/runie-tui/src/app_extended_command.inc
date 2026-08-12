@@ -568,19 +568,7 @@ impl App {
                 query.offset,
                 query.limit,
             );
-            let has_more = page.has_more;
-            let has_rows = !page.rows.is_empty();
-            let mut result = page
-                .rows
-                .into_iter()
-                .map(|row| row.terminal_line())
-                .collect::<Vec<_>>();
-            if has_rows {
-                result.push(format!(
-                    "history offset={} limit={} more={}",
-                    query.offset, query.limit, has_more
-                ));
-            }
+            let result = page.terminal_lines();
             self.ui
                 .send(UiMsg::ShowCommandResult(if result.is_empty() {
                     "No matching user questions".into()

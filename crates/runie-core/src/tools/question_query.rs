@@ -1,3 +1,22 @@
+use super::{UserQuestionHistoryPage, UserQuestionHistoryRow};
+
+impl UserQuestionHistoryPage {
+    pub fn terminal_lines(&self) -> Vec<String> {
+        let mut lines = self
+            .rows
+            .iter()
+            .map(UserQuestionHistoryRow::terminal_line)
+            .collect::<Vec<_>>();
+        if !self.rows.is_empty() {
+            lines.push(format!(
+                "history offset={} limit={} more={}",
+                self.offset, self.limit, self.has_more
+            ));
+        }
+        lines
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct QuestionHistoryQuery {
     pub text: String,
@@ -86,5 +105,22 @@ mod tests {
         let restored: QuestionHistoryQuery =
             serde_json::from_value(serde_json::to_value(&query).unwrap()).unwrap();
         assert_eq!(restored, query);
+    }
+
+    #[test]
+    fn history_page_owns_rows_and_pagination_terminal_projection() {
+        let page = UserQuestionHistoryPage {
+            offset: 4,
+            limit: 2,
+            has_more: true,
+            rows: vec![UserQuestionHistoryRow {
+                id: "q1".into(),
+                question: "Continue?".into(),
+                outcome: "answered".into(),
+                detail: None,
+            }],
+        };
+        assert_eq!(page.terminal_lines().len(), 2);
+        assert!(page.terminal_lines()[1].contains("offset=4"));
     }
 }
