@@ -19,6 +19,7 @@ labels=(
   "Clear Context" "Reset Context"
   "Compact Context Now"
   "Clear Question History"
+  "Answered Questions" "Cancelled Questions" "Rejected Questions"
   "Resume Session Picker"
 )
 parameterized=(

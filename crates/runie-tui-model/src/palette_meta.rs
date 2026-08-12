@@ -131,6 +131,9 @@ declare_palette_metadata! {
     (GitConflictsInspect, "/git conflicts action inspect", "Inspect a conflict path"),
     (GitConflictsCancel, "/git conflicts cancel", "Cancel conflict review"),
     (Questions, "/questions", "Browse user-question history"),
+    (AnsweredQuestions, "/questions outcome=answered", "Show answered questions"),
+    (CancelledQuestions, "/questions outcome=cancelled", "Show cancelled questions"),
+    (RejectedQuestions, "/questions outcome=rejected", "Show rejected questions"),
     (ClearQuestionHistory, "/questions clear", "Clear question history"),
     (PendingQuestions, "/questions pending", "Show pending user questions"),
 }
@@ -170,7 +173,7 @@ macro_rules! palette_sections {
 }
 
 palette_sections! {
-    ("Context" => [CopyLastResponse, SessionInfo, CompactContextNow, Questions, ClearQuestionHistory, PendingQuestions]),
+    ("Context" => [CopyLastResponse, SessionInfo, CompactContextNow, Questions, AnsweredQuestions, CancelledQuestions, RejectedQuestions, ClearQuestionHistory, PendingQuestions]),
     ("Session" => [NewSession, KeyboardShortcuts, Quit, Changelog, ShareSession, SessionHistory, SessionHistoryQuery, UndoSession, ResumeSessionPicker]),
     ("Information" => [Help, ContextInfo, ClearContext, ResetContext, ContextPolicy, ContextPolicyOn, ContextPolicyOff, ContextPolicyReserve, ContextPolicyKeepRecent, Doctor, DoctorInspect, DoctorFix, Feedback, Usage, UsageChart, UsageChartAll, UsageChartInput, UsageChartOutput, UsageChartCost, GitStatus, GitDiff, GitReview, GitWorktrees, GitConflicts, GitConflictsInspect, GitConflictsCancel]),
     ("Extensions" => [Skills, Hooks, Plugins, Mcps, CloseMcps, ReconnectMcps, McpNotifications, ClearMcpNotifications, McpPopNotifications, McpReady, McpFailed, McpBusy, McpClosed, McpStdio, McpHttp, Memory]),

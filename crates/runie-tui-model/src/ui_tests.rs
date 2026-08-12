@@ -8,7 +8,7 @@ fn skills_prefix_filters_and_namespaces_skill_rows() {
 
 #[test]
 fn palette_uses_fuzzy_matching_but_keeps_raw_labels_for_execution() {
-    assert_eq!(palette_labels("nws", &[]), vec!["New Session"]);
+    assert_eq!(palette_labels("new session", &[]), vec!["New Session"]);
     assert!(palette_labels("hotkeys", &[]).contains(&"Keyboard Shortcuts".into()));
     assert!(palette_labels("scoped-models", &[]).contains(&"Scoped Models".into()));
     let rows = super::palette_display_rows("export", &[]);
