@@ -85,7 +85,7 @@ these do not invalidate the finite matrix evidence.
 
 Each extension follows the same loop: add a failing event/replay test, add the
 smallest actor-owned data boundary (use a declaration macro only for repeated
-closed vocabulary), run `just ci`, run the 111-case TUI smoke, update the
+closed vocabulary), run `just ci`, run the 112-case TUI smoke, update the
 finding, and push one focused commit.
 
 Priority order:
@@ -146,9 +146,12 @@ while the existing `Compact Context` form remains available for instructions.
 Question history clearing now has an explicit `Clear Question History` route
 (`/questions clear`) so its destructive intent is visible in the palette.
 
+Session recovery now also has a distinct `Resume Session Picker` palette
+route for the no-argument `/resume` actor-owned picker.
+
 Completion evidence is: every finite matrix row has source + replay/unit test
  + live TUI evidence, the extension queue has no unverified claim, `just ci`
- is green, the fresh smoke summary is `passed=111 failed=0`, and `git status`
+ is green, the fresh smoke summary is `passed=112 failed=0`, and `git status`
  is clean after push.
 
 The reduction backlog is now backed by declarative tables for the major closed

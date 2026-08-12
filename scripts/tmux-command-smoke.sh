@@ -19,6 +19,7 @@ labels=(
   "Clear Context" "Reset Context"
   "Compact Context Now"
   "Clear Question History"
+  "Resume Session Picker"
 )
 parameterized=(
   "Select Theme" "Set Session Name" "Compact Context" "Fork Session" "Select Tree Entry" "Usage Chart"

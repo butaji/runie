@@ -48,6 +48,7 @@ declare_palette_metadata! {
     (ImportSession, "/import", "Import a JSONL session"),
     (CloneSession, "/clone", "Clone a JSONL session"),
     (ResumeSession, "/resume", "Resume a JSONL session"),
+    (ResumeSessionPicker, "/resume", "Open the session picker"),
     (ShareSession, "/share", "Create a shareable session link"),
     (Help, "/help", "Show commands and usage"),
     (ContextInfo, "/context", "Show context-window usage"),
@@ -170,7 +171,7 @@ macro_rules! palette_sections {
 
 palette_sections! {
     ("Context" => [CopyLastResponse, SessionInfo, CompactContextNow, Questions, ClearQuestionHistory, PendingQuestions]),
-    ("Session" => [NewSession, KeyboardShortcuts, Quit, Changelog, ShareSession, SessionHistory, SessionHistoryQuery, UndoSession]),
+    ("Session" => [NewSession, KeyboardShortcuts, Quit, Changelog, ShareSession, SessionHistory, SessionHistoryQuery, UndoSession, ResumeSessionPicker]),
     ("Information" => [Help, ContextInfo, ClearContext, ResetContext, ContextPolicy, ContextPolicyOn, ContextPolicyOff, ContextPolicyReserve, ContextPolicyKeepRecent, Doctor, DoctorInspect, DoctorFix, Feedback, Usage, UsageChart, UsageChartAll, UsageChartInput, UsageChartOutput, UsageChartCost, GitStatus, GitDiff, GitReview, GitWorktrees, GitConflicts, GitConflictsInspect, GitConflictsCancel]),
     ("Extensions" => [Skills, Hooks, Plugins, Mcps, CloseMcps, ReconnectMcps, McpNotifications, ClearMcpNotifications, McpPopNotifications, McpReady, McpFailed, McpBusy, McpClosed, McpStdio, McpHttp, Memory]),
     ("Automation" => [Goal, Workflow, Workflows, Loop, DeepResearch, Jobs, ActiveJobs, CancelAllJobs, CancelRunningJobs, ClearFinishedJobs, CompletedJobs, QueuedJobs, FailedJobs, RunningJobs, CancelledJobs, CancelQueuedJobs, AskBeforeTools, Deny]),

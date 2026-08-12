@@ -2792,6 +2792,7 @@ macro_rules! fixed_palette_routes {
 
 fixed_palette_routes! {
     (SessionHistory, "sessions", "history"),
+    (ResumeSessionPicker, "resume", ""),
     (UndoSession, "undo", ""),
     (CompactContextNow, "compact", ""),
     (ActiveJobs, "jobs", "scheduler active"),

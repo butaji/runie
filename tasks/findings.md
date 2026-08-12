@@ -119,7 +119,7 @@ As of 2026-08-09, the reduction work has these verified results:
 Persistent MCP stdio sessions now retain interleaved server notifications as
 data and route them through the shared notification actor; actor-owned
 notification pop/clear/query controls are covered, and the live TUI smoke
-suite passes 111 cases.
+suite passes 112 cases.
 
 - `EventMemo` is used by the scrollback and status actors.
 - `SharedSnapshot<S>` provides an `Arc`-backed immutable transfer view for
