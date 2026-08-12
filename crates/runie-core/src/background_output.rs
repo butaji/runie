@@ -4,8 +4,9 @@ impl BackgroundOutput {
     pub fn search_lines(&self, query: &str) -> Vec<String> {
         self.text
             .lines()
-            .filter(|line| line.contains(query))
-            .map(str::to_owned)
+            .enumerate()
+            .filter(|(_, line)| line.contains(query))
+            .map(|(index, line)| format!("{}:{line}", index + 1))
             .collect()
     }
 

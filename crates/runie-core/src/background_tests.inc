@@ -55,7 +55,7 @@ fn search_lines_projects_matching_output_in_original_order() {
         exit_code: Some(0), text: "keep\nskip\nkeep again".into(), output_lines: 3,
         output_bytes: 23, preview: None, truncated: false,
     };
-    assert_eq!(output.search_lines("keep"), ["keep", "keep again"]);
+    assert_eq!(output.search_lines("keep"), ["1:keep", "3:keep again"]);
 }
 
 #[tokio::test]
